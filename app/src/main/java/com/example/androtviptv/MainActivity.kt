@@ -50,7 +50,7 @@ class MainActivity : Activity() {
     private lateinit var username: EditText
     private lateinit var password: EditText
     private lateinit var sourceMode: RadioGroup
-    private var selectedType = "Canlı TV"
+    private var selectedType = "Tümü"
     private var xtreamUser = ""
     private var xtreamPass = ""
     private var xtreamBase = ""
