@@ -26,7 +26,7 @@ private data class SavedSource(val id: String, val name: String, val mode: Strin
 
 private data class MediaItem(
     val id: String, val name: String, val url: String, val group: String,
-    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = "", val sourceId: String = ""
+    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = "", val sourceId: String = "", val plot: String = "", val actors: String = ""
 ) {
     val favoriteKey: String get() = "$type:$id:$url"
 }
@@ -41,6 +41,7 @@ class MainActivity : Activity() {
     private lateinit var sourceName: EditText
     private val favorites = mutableSetOf<String>()
     private val recent = mutableListOf<MediaItem>()
+    private val hiddenCategories = mutableSetOf<String>()
     private var selectedGroup = "Tüm kategoriler"
     private lateinit var categoryBar: LinearLayout
     private lateinit var content: LinearLayout
@@ -69,9 +70,10 @@ class MainActivity : Activity() {
             val saved = JSONArray(getSharedPreferences("androtv", MODE_PRIVATE).getString("recent", "[]"))
             for (i in 0 until saved.length()) {
                 val o = saved.optJSONObject(i) ?: continue
-                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId")))
+                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors")))
             }
         } catch (_: Exception) { }
+        hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         buildUi()
         loadSavedSources()
     }
@@ -95,10 +97,10 @@ class MainActivity : Activity() {
             setPadding(14, 16, 14, 14)
             background = roundedDrawable(Color.rgb(14, 19, 29), 20, Color.rgb(35, 42, 56))
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(330, -1).apply { setMargins(0, 0, 22, 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(360, -1).apply { setMargins(0, 0, 20, 0) })
 
         sidebar.addView(TextView(this).apply {
-            text = "KAISERTV"; textSize = 15f; setTextColor(Color.WHITE)
+            text = "KAISERTV"; textSize = 13f; setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.01f
             setPadding(2, 0, 0, 24)
         })
@@ -112,7 +114,8 @@ class MainActivity : Activity() {
         sidebar.addView(makeButton("＋ Kaynak ekle", true) { showConnectionDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
         sidebar.addView(makeButton("Kaynaklar", false) { showSourcesDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER },
-            LinearLayout.LayoutParams(-1, 42))
+            LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
+        sidebar.addView(makeButton("⚙ Ayarlar", false) { showSettingsDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER }, LinearLayout.LayoutParams(-1, 42))
 
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -173,6 +176,7 @@ class MainActivity : Activity() {
         }, FrameLayout.LayoutParams(-1, -1))
         hero.addView(heroArt, LinearLayout.LayoutParams(164, 150).apply { setMargins(16, 0, 0, 0) })
         main.addView(hero, LinearLayout.LayoutParams(-1, 190).apply { setMargins(0, 0, 0, 10) })
+        hero.visibility = View.GONE
 
         status = TextView(this).apply {
             text = "Kaisertv hazır. Kaynak ekleyerek içeriklerini yükleyebilirsin."
@@ -344,6 +348,7 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
+                    saveCachedItems()
                     selectedGroup = "Tüm kategoriler"
                     status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."
                     render()
@@ -402,16 +407,19 @@ class MainActivity : Activity() {
                         val group = o.optString("category_name").takeIf { it.isNotBlank() } ?: categories[categoryId] ?: "Diğer"
                         val type = when (action) { "get_live_streams" -> "Canlı TV"; "get_vod_streams" -> "Filmler"; else -> "Diziler" }
                         val ext = o.optString("container_extension", if (type == "Canlı TV") "ts" else "mp4")
+                        val plot = o.optString("plot", o.optString("description", ""))
+                        val actors = o.optString("cast", o.optString("actors", ""))
                         val streamUrl = when (type) {
                             "Canlı TV" -> "$base/live/$u/$p/$id.$ext"
                             "Filmler" -> "$base/movie/$u/$p/$id.$ext"
                             else -> ""
                         }
-                        loaded.add(MediaItem(id, name, streamUrl, group, type, o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("stream_icon", "")), ext, if (type == "Diziler") id else "", source.id))
+                        loaded.add(MediaItem(id, name, streamUrl, group, type, o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("stream_icon", "")), ext, if (type == "Diziler") id else "", source.id, plot, actors))
                     }
                 }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }; items.addAll(loaded)
+                    saveCachedItems()
                     selectedGroup = "Tüm kategoriler"; xtreamBase = base; xtreamUser = user; xtreamPass = pass
                     status.text = "${source.name}: ${loaded.size} içerik yüklendi. ${items.size} toplam içerik."; render()
                 }
@@ -478,7 +486,7 @@ class MainActivity : Activity() {
             "Son İzlenenler" -> recent.toList()
             else -> items.filter { it.type == selectedType }
         }
-        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().filter { it !in hiddenCategories }.sorted()
         categoryBar.removeAllViews()
         (listOf("Tüm kategoriler") + groupsAvailable.take(100)).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
@@ -489,8 +497,8 @@ class MainActivity : Activity() {
                 setPadding(12, 0, 12, 0)
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
         }
-        val visible = if (selectedGroup == "Tüm kategoriler") baseVisible
-            else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
+        val visible = if (selectedGroup == "Tüm kategoriler") baseVisible.filter { (it.group.ifBlank { "Diğer" }) !in hiddenCategories }
+            else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup && it.group !in hiddenCategories }
         if (visible.isEmpty()) {
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
