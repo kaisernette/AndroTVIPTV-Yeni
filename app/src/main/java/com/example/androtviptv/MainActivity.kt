@@ -95,46 +95,23 @@ class MainActivity : Activity() {
             setPadding(14, 16, 14, 14)
             background = roundedDrawable(Color.rgb(14, 19, 29), 20, Color.rgb(35, 42, 56))
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(205, -1).apply { setMargins(0, 0, 18, 0) })
-
-        val brand = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        brand.addView(TextView(this).apply {
-            text = "KAISER"; textSize = 25f; setTextColor(Color.WHITE)
-            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.015f
-        })
-        brand.addView(TextView(this).apply {
-            text = "TV"; textSize = 25f; setTextColor(accent)
-            setTypeface(null, android.graphics.Typeface.BOLD)
-        })
-        sidebar.addView(brand)
-        sidebar.addView(TextView(this).apply {
-            text = "SİNEMA  •  DİZİ  •  CANLI TV"; textSize = 9f
-            setTextColor(muted); setPadding(1, 2, 0, 18); letterSpacing = 0.04f
-        })
+        root.addView(sidebar, LinearLayout.LayoutParams(175, -1).apply { setMargins(0, 0, 18, 0) })
 
         sidebar.addView(TextView(this).apply {
-            text = "MENÜ"; textSize = 10f; setTextColor(accentBright)
-            letterSpacing = 0.12f; setPadding(2, 8, 0, 7)
+            text = "KAISERTV"; textSize = 18f; setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.01f
+            setPadding(2, 0, 0, 24)
         })
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebar.addView(navBar, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         rebuildNavigation()
 
+        navBar.layoutParams = LinearLayout.LayoutParams(-1, 0, 1f)
         sidebar.addView(View(this).apply { setBackgroundColor(Color.rgb(39, 46, 60)) },
-            LinearLayout.LayoutParams(-1, 1).apply { setMargins(0, 14, 0, 10) })
-        sidebar.addView(TextView(this).apply {
-            text = "KATEGORİLER"; textSize = 10f; setTextColor(accentBright)
-            letterSpacing = 0.12f; setPadding(2, 4, 0, 7)
-        })
-        categoryBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        sidebar.addView(ScrollView(this).apply {
-            isVerticalScrollBarEnabled = false
-            addView(categoryBar)
-        }, LinearLayout.LayoutParams(-1, 0, 1f))
-
-        sidebar.addView(makeButton("＋  Kaynak ekle", true) { showConnectionDialog() },
-            LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 12, 0, 5) })
-        sidebar.addView(makeButton("Kaynaklar", false) { showSourcesDialog() },
+            LinearLayout.LayoutParams(-1, 1).apply { setMargins(0, 12, 0, 10) })
+        sidebar.addView(makeButton("＋ Kaynak ekle", true) { showConnectionDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER },
+            LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
+        sidebar.addView(makeButton("Kaynaklar", false) { showSourcesDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(-1, 42))
 
         val main = LinearLayout(this).apply {
@@ -202,6 +179,11 @@ class MainActivity : Activity() {
             textSize = 12f; setTextColor(muted); setPadding(3, 2, 0, 8); maxLines = 2
         }
         main.addView(status)
+        categoryBar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        main.addView(HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false; clipToPadding = false
+            addView(categoryBar)
+        }, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 0, 0, 8) })
         val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
         content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 2, 0, 12) }
         scroll.addView(content)
@@ -213,14 +195,14 @@ class MainActivity : Activity() {
     private fun rebuildNavigation() {
         if (!::navBar.isInitialized) return
         navBar.removeAllViews()
-        listOf("Ana sayfa", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler", "Tümü").forEach { tab ->
+        listOf("Ana sayfa", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler").forEach { tab ->
             val key = if (tab == "Ana sayfa") "Tümü" else tab
-            navBar.addView(makeButton(if (selectedType == key) "●  $tab" else "   $tab", selectedType == key) {
+            navBar.addView(makeButton(if (selectedType == key) "●  $tab" else tab, selectedType == key) {
                 selectedType = key
                 selectedGroup = "Tüm kategoriler"
                 rebuildNavigation()
                 render()
-            }, LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 2, 0, 2) })
+            }.apply { textSize = 12f; gravity = Gravity.START; setPadding(10, 0, 5, 0) }, LinearLayout.LayoutParams(-1, 40).apply { setMargins(0, 2, 0, 2) })
         }
     }
 
@@ -485,13 +467,13 @@ class MainActivity : Activity() {
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
         categoryBar.removeAllViews()
         (listOf("Tüm kategoriler") + groupsAvailable.take(100)).forEach { group ->
-            categoryBar.addView(makeButton(if (group == selectedGroup) "●  $group" else group, group == selectedGroup) {
+            categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
                 render()
             }.apply {
-                textSize = 10f; minWidth = 0; minimumWidth = 0; gravity = Gravity.START
-                setPadding(9, 7, 5, 7)
-            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 1, 0, 4) })
+                textSize = 11f; minWidth = 0; minimumWidth = 0
+                setPadding(12, 0, 12, 0)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
         }
         val visible = if (selectedGroup == "Tüm kategoriler") baseVisible
             else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
