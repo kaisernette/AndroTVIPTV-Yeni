@@ -188,7 +188,7 @@ class MainActivity : Activity() {
         main.addView(HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false; clipToPadding = false
             addView(categoryBar)
-        }, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 0, 0, 8) })
+        }, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 0, 0, 8) }).visibility = View.GONE
         val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
         content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 2, 0, 12) }
         scroll.addView(content)
