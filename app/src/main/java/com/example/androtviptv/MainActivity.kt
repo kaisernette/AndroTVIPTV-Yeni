@@ -505,7 +505,14 @@ class MainActivity : Activity() {
         val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         info.addView(TextView(this).apply { text = item.name; textSize = 22f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
         info.addView(TextView(this).apply { text = item.type + "  •  " + item.group.ifBlank { "Diğer" }; textSize = 13f; setTextColor(accent); setPadding(0, 8, 0, 8) })
-        info.addView(TextView(this).apply { text = "Bu içerik sağlayıcının sunduğu bağlantı üzerinden açılır."; textSize = 14f; setTextColor(muted); setPadding(0, 0, 0, 14) })
+        val metaScroll = ScrollView(this)
+        val meta = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        meta.addView(TextView(this).apply { text = "KONU"; textSize = 12f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accent); setPadding(0, 4, 0, 3) })
+        meta.addView(TextView(this).apply { text = item.plot.ifBlank { "Bu kaynak film konusu bilgisi sağlamıyor." }; textSize = 14f; setTextColor(muted); setPadding(0, 0, 0, 10) })
+        meta.addView(TextView(this).apply { text = "OYUNCULAR"; textSize = 12f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accent); setPadding(0, 4, 0, 3) })
+        meta.addView(TextView(this).apply { text = item.actors.ifBlank { "Oyuncu bilgisi bu kaynakta bulunmuyor." }; textSize = 14f; setTextColor(muted); setPadding(0, 0, 0, 14) })
+        metaScroll.addView(meta)
+        info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
         info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
         info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
         body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -568,7 +575,7 @@ class MainActivity : Activity() {
                 selectedType == "Diziler" -> "Bir sonraki bölüm seni bekliyor"
                 selectedType == "Favoriler" -> "Favorilerin burada"
                 selectedType == "Son İzlenenler" -> "Kaldığın yerden devam et"
-                else -> "Eğlenceye yeniden hoş geldin"
+                else -> "Kütüphaneni keşfet"
             }
             heroSubtitle.text = if (items.isEmpty()) "Kaynağını ekle, içeriklerini keşfet." else "${items.size} içerik kütüphanende hazır."
             if (::heroArt.isInitialized) {
