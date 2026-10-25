@@ -168,8 +168,8 @@ class MainActivity : Activity() {
         root.addView(status)
         categoryBar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 3, 0, 3) }
         root.addView(HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false; addView(categoryBar)
-        }, LinearLayout.LayoutParams(-1, 42))
+            isHorizontalScrollBarEnabled = false; clipToPadding = false; setPadding(0, 2, 0, 2); addView(categoryBar)
+        }, LinearLayout.LayoutParams(-1, 48))
         val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
         content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 4, 0, 12) }
         scroll.addView(content); root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -358,10 +358,10 @@ class MainActivity : Activity() {
         }
         val groupsAvailable = baseVisible.map { it.group.ifBlank { it.type } }.distinct().sorted()
         categoryBar.removeAllViews()
-        (listOf("Tüm kategoriler") + groupsAvailable).forEach { group ->
+        (listOf("Tüm kategoriler") + groupsAvailable.take(80)).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "• $group" else group, group == selectedGroup) {
                 selectedGroup = group; render()
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 0, 8, 0) })
+            }.apply { textSize = 11f; minWidth = 0; minimumWidth = 0 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 38).apply { setMargins(0, 0, 8, 0) })
         }
         val visible = if (selectedGroup == "Tüm kategoriler") baseVisible
             else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
@@ -392,7 +392,7 @@ class MainActivity : Activity() {
             content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
             return
         }
-        val groups = visible.groupBy {
+        val groups = visible.take(1200).groupBy {
             if (selectedType == "Tümü" || selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
             else it.group.ifBlank { selectedType }
         }
@@ -420,10 +420,13 @@ class MainActivity : Activity() {
                     }
                     setOnClickListener { play(item) }
                 }
+                val liveCard = item.type == "Canlı TV"
                 val poster = ImageView(this).apply {
-                    scaleType = ImageView.ScaleType.CENTER_CROP; contentDescription = item.name
+                    scaleType = if (liveCard) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+                    contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
-                    layoutParams = LinearLayout.LayoutParams(-1, 205)
+                    setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
+                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else 205)
                 }
                 card.addView(poster)
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
@@ -446,7 +449,7 @@ class MainActivity : Activity() {
                     render()
                 }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                 card.addView(actions)
-                row.addView(card, LinearLayout.LayoutParams(190, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 12, 8) })
+                row.addView(card, LinearLayout.LayoutParams(if (item.type == "Canlı TV") 158 else 172, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 12, 8) })
             }
             content.addView(HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
