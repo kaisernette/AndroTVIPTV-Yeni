@@ -185,10 +185,12 @@ class MainActivity : Activity() {
         }
         main.addView(status)
         categoryBar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        main.addView(HorizontalScrollView(this).apply {
+        val categoryScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false; clipToPadding = false
             addView(categoryBar)
-        }, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 0, 0, 8) }).visibility = View.GONE
+            visibility = View.GONE
+        }
+        main.addView(categoryScroll, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 0, 0, 8) })
         val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
         content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 2, 0, 12) }
         scroll.addView(content)
@@ -511,14 +513,21 @@ class MainActivity : Activity() {
             selectedGroup = "Tüm kategoriler"
             render()
             rebuildNavigation()
-        } else if (selectedType != "Tümü") {
+            return
+        }
+        if (selectedType != "Tümü") {
             selectedType = "Tümü"
             selectedGroup = "Tüm kategoriler"
             render()
             rebuildNavigation()
-        } else {
-            super.onBackPressed()
+            return
         }
+        AlertDialog.Builder(this)
+            .setTitle("Kaisertv'den çıkılsın mı?")
+            .setMessage("Uygulamadan çıkmak istediğine emin misin?")
+            .setNegativeButton("Uygulamaya dön", null)
+            .setPositiveButton("Çıkış yap") { _, _ -> finish() }
+            .show()
     }
 
     private fun showSettingsDialog() {
@@ -742,15 +751,7 @@ class MainActivity : Activity() {
         }
     }
 
-    @Suppress("DEPRECATION")
-    override fun onBackPressed() {
-        AlertDialog.Builder(this)
-            .setTitle("Kaisertv'den çıkılsın mı?")
-            .setMessage("Uygulamadan çıkmak istediğine emin misin?")
-            .setNegativeButton("Uygulamaya dön", null)
-            .setPositiveButton("Çıkış yap") { _, _ -> finish() }
-            .show()
-    }
+
 
     override fun onDestroy() {
         posterExecutor.shutdownNow()
