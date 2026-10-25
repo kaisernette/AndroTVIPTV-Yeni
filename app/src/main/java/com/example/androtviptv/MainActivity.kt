@@ -207,7 +207,31 @@ class MainActivity : Activity() {
                 selectedGroup = "Tüm kategoriler"
                 rebuildNavigation()
                 render()
-            }.apply { textSize = 18f; gravity = Gravity.START; setPadding(18, 0, 12, 0) }, LinearLayout.LayoutParams(-1, 54).apply { setMargins(0, 4, 0, 4) })
+            }.apply { textSize = 18f; gravity = Gravity.CENTER_VERTICAL or Gravity.START; isSingleLine = true; setPadding(18, 0, 12, 0) }, LinearLayout.LayoutParams(-1, 54).apply { setMargins(0, 4, 0, 4) })
+        }
+        val categoryType = when (selectedType) {
+            "Canlı TV" -> "Canlı TV"
+            "Filmler" -> "Filmler"
+            "Diziler" -> "Diziler"
+            else -> ""
+        }
+        if (categoryType.isNotEmpty()) {
+            val categories = items.filter { it.type == categoryType }
+                .map { it.group.ifBlank { "Diğer" } }.distinct()
+                .filter { it !in hiddenCategories }.sorted()
+            navBar.addView(TextView(this).apply {
+                text = "KATEGORİLER"; textSize = 12f; setTextColor(accentBright); setPadding(18, 12, 0, 6)
+            })
+            navBar.addView(makeButton(if (selectedGroup == "Tüm kategoriler") "• Tüm kategoriler" else "Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
+                selectedGroup = "Tüm kategoriler"; render(); rebuildNavigation()
+            }.apply { textSize = 14f; gravity = Gravity.CENTER_VERTICAL or Gravity.START; isSingleLine = true; setPadding(18, 0, 8, 0) },
+                LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 2, 0, 2) })
+            categories.take(150).forEach { category ->
+                navBar.addView(makeButton(if (selectedGroup == category) "• $category" else category, selectedGroup == category) {
+                    selectedGroup = category; render(); rebuildNavigation()
+                }.apply { textSize = 14f; gravity = Gravity.CENTER_VERTICAL or Gravity.START; isSingleLine = true; setPadding(18, 0, 8, 0) },
+                    LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 2, 0, 2) })
+            }
         }
     }
 
@@ -481,6 +505,22 @@ class MainActivity : Activity() {
         } catch (_: Exception) { }
     }
 
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (selectedGroup != "Tüm kategoriler") {
+            selectedGroup = "Tüm kategoriler"
+            render()
+            rebuildNavigation()
+        } else if (selectedType != "Tümü") {
+            selectedType = "Tümü"
+            selectedGroup = "Tüm kategoriler"
+            render()
+            rebuildNavigation()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
     private fun showSettingsDialog() {
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(20, 8, 20, 8); setBackgroundColor(bg) }
         box.addView(TextView(this).apply { text = "Genel ayarlar"; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(0, 8, 0, 8) })
@@ -665,7 +705,7 @@ class MainActivity : Activity() {
                     render()
                 }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                 card.addView(actions)
-                row.addView(card, LinearLayout.LayoutParams(if (liveCard) 158 else 180, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 12, 8) })
+                row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 16, 10) })
             }
             content.addView(HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
