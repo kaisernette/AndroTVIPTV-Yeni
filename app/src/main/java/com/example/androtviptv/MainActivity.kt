@@ -95,10 +95,10 @@ class MainActivity : Activity() {
             setPadding(14, 16, 14, 14)
             background = roundedDrawable(Color.rgb(14, 19, 29), 20, Color.rgb(35, 42, 56))
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(175, -1).apply { setMargins(0, 0, 18, 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(330, -1).apply { setMargins(0, 0, 22, 0) })
 
         sidebar.addView(TextView(this).apply {
-            text = "KAISERTV"; textSize = 18f; setTextColor(Color.WHITE)
+            text = "KAISERTV"; textSize = 15f; setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.01f
             setPadding(2, 0, 0, 24)
         })
@@ -195,14 +195,14 @@ class MainActivity : Activity() {
     private fun rebuildNavigation() {
         if (!::navBar.isInitialized) return
         navBar.removeAllViews()
-        listOf("Ana sayfa", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler").forEach { tab ->
-            val key = if (tab == "Ana sayfa") "Tümü" else tab
+        listOf("Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler").forEach { tab ->
+            val key = when (tab) { "Ana sayfa" -> "Tümü"; "TV" -> "Canlı TV"; "İzlenenler" -> "Son İzlenenler"; else -> tab }
             navBar.addView(makeButton(if (selectedType == key) "●  $tab" else tab, selectedType == key) {
                 selectedType = key
                 selectedGroup = "Tüm kategoriler"
                 rebuildNavigation()
                 render()
-            }.apply { textSize = 12f; gravity = Gravity.START; setPadding(10, 0, 5, 0) }, LinearLayout.LayoutParams(-1, 40).apply { setMargins(0, 2, 0, 2) })
+            }.apply { textSize = 18f; gravity = Gravity.START; setPadding(18, 0, 12, 0) }, LinearLayout.LayoutParams(-1, 54).apply { setMargins(0, 4, 0, 4) })
         }
     }
 
