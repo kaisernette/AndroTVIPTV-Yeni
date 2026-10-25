@@ -54,6 +54,7 @@ class MainActivity : Activity() {
     private var xtreamUser = ""
     private var xtreamPass = ""
     private var xtreamBase = ""
+    private val prefs by lazy { getSharedPreferences("androtv", MODE_PRIVATE) }
     private val bg = Color.rgb(7, 10, 17)
     private val panel = Color.rgb(20, 26, 39)
     private val accent = Color.rgb(222, 181, 91)
@@ -273,7 +274,9 @@ class MainActivity : Activity() {
 
 
     private fun saveSource(source: SavedSource) {
-        savedSources.removeAll { it.id == source.id }; savedSources.add(source); persistSources()
+        savedSources.removeAll { it.id == source.id }; savedSources.add(source)
+        prefs.edit().putString("last_source_id", source.id).apply()
+        persistSources()
     }
     private fun persistSources() {
         val arr = JSONArray()
@@ -289,8 +292,10 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) { }
         if (savedSources.isNotEmpty()) {
-            status.text = "Kayıtlı ${savedSources.size} kaynak yükleniyor…"
-            savedSources.forEachIndexed { index, s -> if (s.mode == "xtream") loadXtream(s, index > 0) else loadM3u(s, index > 0) }
+            val lastId = prefs.getString("last_source_id", "") ?: ""
+            val ordered = savedSources.sortedBy { if (it.id == lastId) 0 else 1 }
+            status.text = "Kayıtlı kaynaklar yükleniyor…"
+            ordered.forEach { s -> if (s.mode == "xtream") loadXtream(s, true) else loadM3u(s, true) }
         }
     }
     private fun showSourcesDialog() {
@@ -309,6 +314,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadM3u(source: SavedSource, append: Boolean) {
+        prefs.edit().putString("last_source_id", source.id).apply()
         status.text = "${source.name}: oynatma listesi yükleniyor…"
         thread {
             try {
@@ -330,7 +336,8 @@ class MainActivity : Activity() {
         if (!(base.startsWith("http://") || base.startsWith("https://")) || user.isBlank() || pass.isBlank()) {
             status.text = "Sunucu, kullanıcı adı ve şifre alanlarını doldur."; return
         }
-        status.text = "Xtream içerikleri yükleniyor…"
+        prefs.edit().putString("last_source_id", source.id).apply()
+        status.text = "${source.name}: Xtream içerikleri yükleniyor…"
         thread {
             try {
                 val u = URLEncoder.encode(user, "UTF-8"); val p = URLEncoder.encode(pass, "UTF-8")
@@ -373,7 +380,6 @@ class MainActivity : Activity() {
                     }
                 }
                 runOnUiThread {
-                    if (!append) items.clear()
                     items.removeAll { it.sourceId == source.id }; items.addAll(loaded)
                     selectedGroup = "Tüm kategoriler"; xtreamBase = base; xtreamUser = user; xtreamPass = pass
                     status.text = "${source.name}: ${loaded.size} içerik yüklendi. ${items.size} toplam içerik."; render()
