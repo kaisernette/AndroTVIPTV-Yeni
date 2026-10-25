@@ -5,6 +5,8 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.graphics.Bitmap
+import android.util.LruCache
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -18,6 +20,7 @@ import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
 import kotlin.concurrent.thread
+import java.util.concurrent.Executors
 
 private data class MediaItem(
     val id: String, val name: String, val url: String, val group: String,
@@ -27,6 +30,10 @@ private data class MediaItem(
 }
 
 class MainActivity : Activity() {
+    private val posterExecutor = Executors.newFixedThreadPool(3)
+    private val posterCache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+    }
     private val items = mutableListOf<MediaItem>()
     private val favorites = mutableSetOf<String>()
     private val recent = mutableListOf<MediaItem>()
@@ -448,13 +455,37 @@ class MainActivity : Activity() {
     }
 
     private fun loadPoster(address: String, target: ImageView) {
-        thread {
+        target.tag = address
+        val cached = posterCache.get(address)
+        if (cached != null) {
+            target.setImageBitmap(cached)
+            return
+        }
+        posterExecutor.execute {
             try {
-                val conn = (URL(address).openConnection() as HttpURLConnection).apply { connectTimeout = 8000; readTimeout = 8000 }
-                val bitmap = try { conn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) } } finally { conn.disconnect() }
-                if (bitmap != null) runOnUiThread { target.setImageBitmap(bitmap) }
+                val conn = (URL(address).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 6000
+                    readTimeout = 6000
+                    instanceFollowRedirects = true
+                }
+                val bitmap = try {
+                    conn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+                } finally {
+                    conn.disconnect()
+                }
+                if (bitmap != null) {
+                    posterCache.put(address, bitmap)
+                    runOnUiThread {
+                        if (target.tag == address) target.setImageBitmap(bitmap)
+                    }
+                }
             } catch (_: Exception) { }
         }
+    }
+
+    override fun onDestroy() {
+        posterExecutor.shutdownNow()
+        super.onDestroy()
     }
 
     private fun saveRecent(item: MediaItem) {
