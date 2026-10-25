@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -42,10 +43,11 @@ class MainActivity : Activity() {
     private var xtreamUser = ""
     private var xtreamPass = ""
     private var xtreamBase = ""
-    private val bg = Color.rgb(12, 14, 23)
-    private val panel = Color.rgb(27, 31, 46)
-    private val accent = Color.rgb(229, 9, 20)
-    private val muted = Color.rgb(166, 174, 192)
+    private val bg = Color.rgb(7, 10, 17)
+    private val panel = Color.rgb(20, 26, 39)
+    private val accent = Color.rgb(222, 181, 91)
+    private val accentBright = Color.rgb(246, 218, 151)
+    private val muted = Color.rgb(157, 169, 188)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,29 +64,131 @@ class MainActivity : Activity() {
     }
 
     private fun buildUi() {
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(28, 18, 28, 16); setBackgroundColor(bg) }
-        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        header.addView(TextView(this).apply { text = "ANDRO"; textSize = 30f; setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD) })
-        header.addView(TextView(this).apply { text = "TV"; textSize = 30f; setTextColor(accent); setTypeface(null, android.graphics.Typeface.BOLD) })
-        header.addView(TextView(this).apply { text = "   IPTV  •  SİNEMA KEYFİ"; textSize = 13f; setTextColor(muted) })
+        window.statusBarColor = bg
+        window.navigationBarColor = bg
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(34, 18, 34, 16)
+            setBackgroundColor(bg)
+        }
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(TextView(this).apply {
+            text = "KAISER"; textSize = 29f; setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.08f
+        })
+        header.addView(TextView(this).apply {
+            text = "TV"; textSize = 29f; setTextColor(accent)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        })
+        header.addView(TextView(this).apply {
+            text = "    SİNEMA  •  DİZİ  •  CANLI TV"; textSize = 11f
+            setTextColor(muted); letterSpacing = 0.08f
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(makeButton("＋  Kaynak ekle", true) { showConnectionDialog() },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
         root.addView(header)
-        root.addView(TextView(this).apply { text = "İzlemeye devam et, favorilerini keşfet."; textSize = 16f; setTextColor(muted); setPadding(0, 3, 0, 14) })
 
+        val tabsScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false; clipToPadding = false; setPadding(0, 14, 0, 10)
+        }
+        val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        listOf("Ana sayfa", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler", "Tümü").forEach { tab ->
+            val key = if (tab == "Ana sayfa") "Tümü" else tab
+            tabs.addView(makeButton(tab, selectedType == key) {
+                selectedType = key; selectedGroup = "Tüm kategoriler"; render()
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 0, 8, 0) })
+        }
+        tabsScroll.addView(tabs); root.addView(tabsScroll)
+
+        val hero = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(26, 20, 20, 20)
+            background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(Color.rgb(28, 35, 49), Color.rgb(13, 18, 29))).apply {
+                cornerRadius = 22f; setStroke(1, Color.rgb(58, 62, 73))
+            }
+        }
+        val heroCopy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        heroCopy.addView(TextView(this).apply {
+            text = "KAISERTV  /  SENİN EĞLENCE DÜNYAN"; textSize = 11f
+            setTextColor(accentBright); letterSpacing = 0.12f
+        })
+        heroCopy.addView(TextView(this).apply {
+            text = if (items.isEmpty()) "İzleme keyfi\nyeni bir seviyede." else "İzlemeye\ndevam et."
+            textSize = 29f; setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(0, 8, 0, 4); maxLines = 2
+        })
+        heroCopy.addView(TextView(this).apply {
+            text = if (items.isEmpty()) "Kendi yayın listeni ekle, içeriklerini tek ekranda keşfet." else "${items.size} içerik keşfedilmeyi bekliyor."
+            textSize = 14f; setTextColor(muted); maxLines = 2
+        })
+        heroCopy.addView(makeButton(if (items.isEmpty()) "İLK KAYNAĞINI EKLE  →" else "İÇERİKLERİ KEŞFET  →", true) {
+            if (items.isEmpty()) showConnectionDialog() else {
+                selectedType = "Tümü"; selectedGroup = "Tüm kategoriler"; render()
+            }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 0, 0) })
+        hero.addView(heroCopy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+
+        val heroArt = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(180, 170).apply { setMargins(18, 0, 0, 0) }
+            background = roundedDrawable(Color.rgb(29, 35, 49), 18); clipToOutline = true
+        }
+        val featured = items.firstOrNull { it.icon.startsWith("http://") || it.icon.startsWith("https://") }
+        if (featured != null) {
+            val poster = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; contentDescription = featured.name }
+            heroArt.addView(poster, FrameLayout.LayoutParams(-1, -1)); loadPoster(featured.icon, poster)
+            heroArt.addView(TextView(this).apply {
+                text = featured.name; textSize = 12f; setTextColor(Color.WHITE)
+                setPadding(10, 26, 10, 8); gravity = Gravity.BOTTOM
+                background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(Color.TRANSPARENT, 0xDD070A11.toInt()))
+            }, FrameLayout.LayoutParams(-1, -1))
+        } else {
+            heroArt.addView(TextView(this).apply {
+                text = "K"; textSize = 94f; setTextColor(accent)
+                setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+            }, FrameLayout.LayoutParams(-1, -1))
+        }
+        hero.addView(heroArt)
+        root.addView(hero, LinearLayout.LayoutParams(-1, 205).apply { setMargins(0, 0, 0, 12) })
+
+        status = TextView(this).apply {
+            text = "Kaisertv hazır. Başlamak için kendi M3U/M3U8 listen veya Xtream hesabınla bağlan."
+            textSize = 12f; setTextColor(muted); setPadding(2, 0, 0, 5); maxLines = 2
+        }
+        root.addView(status)
+        categoryBar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 3, 0, 3) }
+        root.addView(HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false; addView(categoryBar)
+        }, LinearLayout.LayoutParams(-1, 42))
+        val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
+        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 4, 0, 12) }
+        scroll.addView(content); root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        setContentView(root); render()
+    }
+
+    private fun showConnectionDialog() {
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; setPadding(18, 8, 18, 4); setBackgroundColor(bg)
+        }
         sourceMode = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
-        val m3u = RadioButton(this).apply { id = View.generateViewId(); text = "M3U / M3U8"; setTextColor(Color.WHITE); isChecked = true }
-        val xtream = RadioButton(this).apply { id = View.generateViewId(); text = "Xtream Codes"; setTextColor(Color.WHITE) }
-        sourceMode.addView(m3u); sourceMode.addView(xtream); root.addView(sourceMode)
-        val inputs = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 4, 0, 4) }
+        val m3u = RadioButton(this).apply {
+            id = View.generateViewId(); text = "M3U / M3U8"; setTextColor(Color.WHITE); isChecked = true
+        }
+        val xtream = RadioButton(this).apply {
+            id = View.generateViewId(); text = "Xtream Codes"; setTextColor(Color.WHITE)
+        }
+        sourceMode.addView(m3u); sourceMode.addView(xtream); form.addView(sourceMode)
         playlistUrl = edit("M3U / M3U8 oynatma listesi URL'si", false)
-        server = edit("Sunucu adresi (örn. https://sunucu:8080)", false)
-        username = edit("Kullanıcı adı", false)
-        password = edit("Şifre", true)
-        inputs.addView(playlistUrl, fieldParams()); inputs.addView(server, fieldParams())
+        server = edit("Sunucu adresi (https://...)", false)
+        username = edit("Kullanıcı adı", false); password = edit("Şifre", true)
+        form.addView(playlistUrl, fieldParams()); form.addView(server, fieldParams())
         val creds = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        creds.addView(username, LinearLayout.LayoutParams(0, 48, 1f).apply { setMargins(0, 0, 6, 0) })
-        creds.addView(password, LinearLayout.LayoutParams(0, 48, 1f).apply { setMargins(6, 0, 0, 0) })
-        inputs.addView(creds, fieldParams())
-        root.addView(inputs)
+        creds.addView(username, LinearLayout.LayoutParams(0, 50, 1f).apply { setMargins(0, 3, 6, 3) })
+        creds.addView(password, LinearLayout.LayoutParams(0, 50, 1f).apply { setMargins(6, 3, 0, 3) })
+        form.addView(creds)
         sourceMode.setOnCheckedChangeListener { _, checked ->
             val useXtream = checked == xtream.id
             playlistUrl.visibility = if (useXtream) View.GONE else View.VISIBLE
@@ -92,23 +196,38 @@ class MainActivity : Activity() {
             creds.visibility = if (useXtream) View.VISIBLE else View.GONE
         }
         server.visibility = View.GONE; creds.visibility = View.GONE
-        root.addView(makeButton("BAĞLAN  /  LİSTEYİ YÜKLE", true) {
-            hideKeyboard(); if (sourceMode.checkedRadioButtonId == xtream.id) loadXtream() else loadM3u(playlistUrl.text.toString().trim())
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 48).apply { setMargins(0, 3, 0, 8) })
-        status = TextView(this).apply { text = "Kendi M3U listen veya Xtream hesap bilgilerinle bağlan."; textSize = 13f; setTextColor(muted); setPadding(0, 3, 0, 8) }
-        root.addView(status)
-        val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        listOf("Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler", "Tümü").forEach { tab ->
-            tabs.addView(makeButton(tab, false) { selectedType = tab; selectedGroup = "Tüm kategoriler"; render() }, LinearLayout.LayoutParams(0, 42, 1f).apply { setMargins(2, 0, 2, 0) })
+        val dialog = AlertDialog.Builder(this).setTitle("İzleme kaynağı ekle")
+            .setMessage("Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle.")
+            .setView(form).setNegativeButton("İptal", null).setPositiveButton("BAĞLAN", null).create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val useXtream = sourceMode.checkedRadioButtonId == xtream.id
+                if (useXtream) {
+                    if (!(server.text.toString().trim().startsWith("http://") || server.text.toString().trim().startsWith("https://")) ||
+                        username.text.isNullOrBlank() || password.text.isNullOrBlank()) {
+                        Toast.makeText(this, "Sunucu, kullanıcı adı ve şifreyi doldur.", Toast.LENGTH_LONG).show()
+                        return@setOnClickListener
+                    }
+                    hideKeyboard(); dialog.dismiss(); loadXtream()
+                } else {
+                    val address = playlistUrl.text.toString().trim()
+                    if (!address.startsWith("http://") && !address.startsWith("https://")) {
+                        Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
+                        return@setOnClickListener
+                    }
+                    hideKeyboard(); dialog.dismiss(); loadM3u(address)
+                }
+            }
         }
-        root.addView(tabs)
-        categoryBar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 2) }
-        root.addView(ScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(categoryBar) }, LinearLayout.LayoutParams(-1, 44))
-        val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
-        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 10, 0, 8) }
-        scroll.addView(content); root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        setContentView(root); render()
+        dialog.show()
     }
+
+    private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = radiusDp * resources.displayMetrics.density
+            if (strokeColor != null) setStroke((2 * resources.displayMetrics.density).toInt().coerceAtLeast(1), strokeColor)
+        }
 
     private fun edit(hintText: String, secret: Boolean): EditText = EditText(this).apply {
         hint = hintText; textSize = 14f; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(muted)
@@ -117,8 +236,18 @@ class MainActivity : Activity() {
     }
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
-        text = label; textSize = 13f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
-        setTextColor(Color.WHITE); setBackgroundColor(if (primary) accent else panel); setOnClickListener { action() }
+        text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
+        setPadding(16, 0, 16, 0)
+        setTextColor(if (primary) Color.rgb(12, 14, 19) else Color.WHITE)
+        background = roundedDrawable(if (primary) accent else panel, 12,
+            if (primary) accentBright else Color.rgb(44, 52, 68))
+        stateListAnimator = null
+        setOnFocusChangeListener { v, hasFocus ->
+            v.background = roundedDrawable(if (primary) accent else if (hasFocus) Color.rgb(39, 47, 63) else panel,
+                12, if (hasFocus) accentBright else if (primary) accentBright else Color.rgb(44, 52, 68))
+            v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
+        }
+        setOnClickListener { action() }
     }
     private fun hideKeyboard() { (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(playlistUrl.windowToken, 0) }
 
@@ -212,7 +341,7 @@ class MainActivity : Activity() {
     }
 
     private fun render() {
-        if (!::content.isInitialized) return
+        if (!::content.isInitialized || !::categoryBar.isInitialized) return
         content.removeAllViews()
         val baseVisible = when (selectedType) {
             "Tümü" -> items.toList()
@@ -225,37 +354,96 @@ class MainActivity : Activity() {
         (listOf("Tüm kategoriler") + groupsAvailable).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "• $group" else group, group == selectedGroup) {
                 selectedGroup = group; render()
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 38).apply { setMargins(0, 0, 6, 0) })
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 0, 8, 0) })
         }
-        val visible = if (selectedGroup == "Tüm kategoriler") baseVisible else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
+        val visible = if (selectedGroup == "Tüm kategoriler") baseVisible
+            else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
         if (visible.isEmpty()) {
-            content.addView(TextView(this).apply { text = if (selectedType == "Favoriler") "Henüz favorin yok. İçeriklerin yanındaki ☆ düğmesine bas." else if (selectedType == "Son İzlenenler") "Henüz izlenen içerik yok." else "İçerik görünmüyor. Önce M3U veya Xtream bağlantısı yükle."; textSize = 17f; setTextColor(muted); setPadding(12, 26, 12, 26) }); return
-        }
-        val groups = visible.groupBy { if (selectedType == "Tümü" || selectedType == "Favoriler") it.type else it.group.ifBlank { selectedType } }
-        groups.forEach { (groupName, entries) ->
-            content.addView(TextView(this).apply { text = groupName.uppercase(); textSize = 17f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(4, 12, 0, 6) })
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            entries.take(100).forEach { item ->
-                val card = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(8, 8, 8, 8); setBackgroundColor(panel); isFocusable = true; isFocusableInTouchMode = true }
-                if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) {
-                    val poster = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; layoutParams = LinearLayout.LayoutParams(-1, 118); contentDescription = item.name }
-                    card.addView(poster)
-                    loadPoster(item.icon, poster)
-                } else {
-                    card.addView(TextView(this).apply { text = "🎬"; textSize = 32f; setTextColor(muted); gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(-1, 118) })
+            val empty = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
+                setPadding(24, 24, 24, 24); background = roundedDrawable(panel, 18, Color.rgb(42, 49, 64))
+            }
+            empty.addView(TextView(this).apply {
+                text = when (selectedType) {
+                    "Favoriler" -> "Henüz favori eklemedin"
+                    "Son İzlenenler" -> "İzleme geçmişin burada görünecek"
+                    else -> "Kütüphanen seni bekliyor"
                 }
-                card.addView(TextView(this).apply { text = when (item.type) { "Canlı TV" -> "▶ LIVE"; "Filmler" -> "▶ FİLM"; "Bölümler" -> "▶ BÖLÜM"; else -> "▶ DİZİ" }; textSize = 12f; setTextColor(accent); setPadding(0, 0, 0, 8) })
-                card.addView(TextView(this).apply { text = item.name; textSize = 15f; setTextColor(Color.WHITE); maxLines = 2; minHeight = 42 })
+                textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            })
+            empty.addView(TextView(this).apply {
+                text = when {
+                    selectedType == "Favoriler" -> "Bir içerikte yıldız düğmesine basarak favorilerine ekle."
+                    selectedType == "Son İzlenenler" -> "Bir içerik oynattığında burada kolayca devam edebilirsin."
+                    items.isEmpty() -> "Başlamak için kendi M3U/M3U8 veya Xtream kaynağını ekle."
+                    else -> "Bu bölümde şu anda gösterilecek içerik yok."
+                }
+                textSize = 14f; setTextColor(muted); setPadding(0, 7, 0, 14)
+            })
+            if (items.isEmpty()) empty.addView(makeButton("KAYNAK EKLE  →", true) { showConnectionDialog() },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
+            content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
+            return
+        }
+        val groups = visible.groupBy {
+            if (selectedType == "Tümü" || selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
+            else it.group.ifBlank { selectedType }
+        }
+        groups.forEach { (groupName, entries) ->
+            val sectionHeader = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, 16, 2, 8)
+            }
+            sectionHeader.addView(TextView(this).apply {
+                text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            sectionHeader.addView(TextView(this).apply {
+                text = "${entries.size} içerik   ›"; textSize = 12f; setTextColor(accent)
+            })
+            content.addView(sectionHeader)
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            entries.take(80).forEach { item ->
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL; setPadding(7, 7, 7, 9)
+                    background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
+                    isFocusable = true; isFocusableInTouchMode = true
+                    setOnFocusChangeListener { v, hasFocus ->
+                        v.background = roundedDrawable(if (hasFocus) Color.rgb(31, 39, 54) else panel, 15,
+                            if (hasFocus) accent else Color.rgb(38, 45, 60))
+                        v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
+                    }
+                    setOnClickListener { play(item) }
+                }
+                val poster = ImageView(this).apply {
+                    scaleType = ImageView.ScaleType.CENTER_CROP; contentDescription = item.name
+                    background = roundedDrawable(Color.rgb(31, 37, 50), 10)
+                    layoutParams = LinearLayout.LayoutParams(-1, 205)
+                }
+                card.addView(poster)
+                if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
+                else poster.setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
+                card.addView(TextView(this).apply {
+                    text = if (item.type == "Canlı TV") "●  CANLI YAYIN" else item.type.uppercase()
+                    textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
+                })
+                card.addView(TextView(this).apply {
+                    text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
+                    minHeight = 40; setPadding(3, 0, 3, 0)
+                })
                 val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                actions.addView(makeButton("▶ İzle", true) { play(item) }, LinearLayout.LayoutParams(0, 38, 1f).apply { setMargins(0, 8, 4, 0) })
+                actions.addView(makeButton("▶ İzle", true) { play(item) },
+                    LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
                 actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
                     if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                    getSharedPreferences("androtv", MODE_PRIVATE).edit().putStringSet("favorites", favorites.toSet()).apply(); render()
-                }, LinearLayout.LayoutParams(48, 38).apply { setMargins(4, 8, 0, 0) })
+                    getSharedPreferences("androtv", MODE_PRIVATE).edit().putStringSet("favorites", favorites.toSet()).apply()
+                    render()
+                }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                 card.addView(actions)
-                row.addView(card, LinearLayout.LayoutParams(210, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 10, 8) })
+                row.addView(card, LinearLayout.LayoutParams(190, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 12, 8) })
             }
-            content.addView(ScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(row) }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            content.addView(HorizontalScrollView(this).apply {
+                isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
     }
 
