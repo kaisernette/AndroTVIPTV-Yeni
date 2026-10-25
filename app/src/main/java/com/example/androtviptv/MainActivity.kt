@@ -482,12 +482,16 @@ class MainActivity : Activity() {
             "Son İzlenenler" -> recent.toList()
             else -> items.filter { it.type == selectedType }
         }
-        val groupsAvailable = baseVisible.map { it.group.ifBlank { it.type } }.distinct().sorted()
+        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
         categoryBar.removeAllViews()
-        (listOf("Tüm kategoriler") + groupsAvailable.take(80)).forEach { group ->
-            categoryBar.addView(makeButton(if (group == selectedGroup) "• $group" else group, group == selectedGroup) {
-                selectedGroup = group; render()
-            }.apply { textSize = 11f; minWidth = 0; minimumWidth = 0 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 38).apply { setMargins(0, 0, 8, 0) })
+        (listOf("Tüm kategoriler") + groupsAvailable.take(100)).forEach { group ->
+            categoryBar.addView(makeButton(if (group == selectedGroup) "●  $group" else group, group == selectedGroup) {
+                selectedGroup = group
+                render()
+            }.apply {
+                textSize = 10f; minWidth = 0; minimumWidth = 0; gravity = Gravity.START
+                setPadding(9, 7, 5, 7)
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 1, 0, 4) })
         }
         val visible = if (selectedGroup == "Tüm kategoriler") baseVisible
             else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
@@ -518,6 +522,37 @@ class MainActivity : Activity() {
             content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
             return
         }
+        if (::heroTitle.isInitialized) {
+            heroTitle.text = when {
+                selectedType == "Canlı TV" -> "Canlı yayın zamanı"
+                selectedType == "Filmler" -> "Film gecesi başlasın"
+                selectedType == "Diziler" -> "Bir sonraki bölüm seni bekliyor"
+                selectedType == "Favoriler" -> "Favorilerin burada"
+                selectedType == "Son İzlenenler" -> "Kaldığın yerden devam et"
+                else -> "Eğlenceye yeniden hoş geldin"
+            }
+            heroSubtitle.text = if (items.isEmpty()) "Kaynağını ekle, içeriklerini keşfet." else "${items.size} içerik kütüphanende hazır."
+            if (::heroArt.isInitialized) {
+                heroArt.removeAllViews()
+                val featured = baseVisible.firstOrNull { it.icon.startsWith("http://") || it.icon.startsWith("https://") }
+                if (featured != null) {
+                    val image = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; contentDescription = featured.name }
+                    heroArt.addView(image, FrameLayout.LayoutParams(-1, -1))
+                    loadPoster(featured.icon, image)
+                    heroArt.addView(TextView(this).apply {
+                        text = featured.name; textSize = 11f; setTextColor(Color.WHITE)
+                        gravity = Gravity.BOTTOM; setPadding(8, 24, 8, 8)
+                        background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.TRANSPARENT, 0xDD070A11.toInt()))
+                    }, FrameLayout.LayoutParams(-1, -1))
+                } else {
+                    heroArt.addView(TextView(this).apply {
+                        text = "K"; textSize = 88f; setTextColor(accent)
+                        setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+                    }, FrameLayout.LayoutParams(-1, -1))
+                }
+            }
+        }
+        rebuildNavigation()
         val groups = visible.take(1200).groupBy {
             if (selectedType == "Tümü" || selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
             else it.group.ifBlank { selectedType }
