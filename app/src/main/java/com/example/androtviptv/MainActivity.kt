@@ -346,8 +346,17 @@ class MainActivity : Activity() {
                 val userInfo = root.optJSONObject("user_info")
                 if (userInfo != null && userInfo.optString("auth", "1") == "0") throw Exception("Giriş bilgileri kabul edilmedi.")
                 val loaded = mutableListOf<MediaItem>()
+                val actions = listOf("get_live_categories", "get_vod_categories", "get_series_categories",
+                    "get_live_streams", "get_vod_streams", "get_series")
+                val pool = Executors.newFixedThreadPool(6)
+                val responses = try {
+                    val futures = actions.associateWith { action ->
+                        pool.submit<String> { request("$api&action=$action") }
+                    }
+                    futures.mapValues { it.value.get() }
+                } finally { pool.shutdown() }
                 fun categoryMap(action: String): Map<String, String> {
-                    val arr = JSONArray(request("$api&action=$action"))
+                    val arr = JSONArray(responses[action] ?: "[]")
                     val result = mutableMapOf<String, String>()
                     for (i in 0 until arr.length()) {
                         val item = arr.optJSONObject(i) ?: continue
@@ -360,7 +369,7 @@ class MainActivity : Activity() {
                 val vodCategories = categoryMap("get_vod_categories")
                 val seriesCategories = categoryMap("get_series_categories")
                 listOf("get_live_streams", "get_vod_streams", "get_series").forEach { action ->
-                    val arr = JSONArray(request("$api&action=$action"))
+                    val arr = JSONArray(responses[action] ?: "[]")
                     for (i in 0 until arr.length()) {
                         val o = arr.optJSONObject(i) ?: continue
                         val id = o.optString(if (action == "get_series") "series_id" else "stream_id", "")
