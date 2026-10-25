@@ -188,7 +188,7 @@ class MainActivity : Activity() {
         val categoryScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false; clipToPadding = false
             addView(categoryBar)
-            visibility = View.GONE
+            visibility = View.VISIBLE
         }
         main.addView(categoryScroll, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 0, 0, 8) })
         val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
@@ -211,30 +211,7 @@ class MainActivity : Activity() {
                 render()
             }.apply { textSize = 18f; gravity = Gravity.CENTER_VERTICAL or Gravity.START; isSingleLine = true; setPadding(18, 0, 12, 0) }, LinearLayout.LayoutParams(-1, 54).apply { setMargins(0, 4, 0, 4) })
         }
-        val categoryType = when (selectedType) {
-            "Canlı TV" -> "Canlı TV"
-            "Filmler" -> "Filmler"
-            "Diziler" -> "Diziler"
-            else -> ""
-        }
-        if (categoryType.isNotEmpty()) {
-            val categories = items.filter { it.type == categoryType }
-                .map { it.group.ifBlank { "Diğer" } }.distinct()
-                .filter { it !in hiddenCategories }.sorted()
-            navBar.addView(TextView(this).apply {
-                text = "KATEGORİLER"; textSize = 12f; setTextColor(accentBright); setPadding(18, 12, 0, 6)
-            })
-            navBar.addView(makeButton(if (selectedGroup == "Tüm kategoriler") "• Tüm kategoriler" else "Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
-                selectedGroup = "Tüm kategoriler"; render(); rebuildNavigation()
-            }.apply { textSize = 14f; gravity = Gravity.CENTER_VERTICAL or Gravity.START; isSingleLine = true; setPadding(18, 0, 8, 0) },
-                LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 2, 0, 2) })
-            categories.take(150).forEach { category ->
-                navBar.addView(makeButton(if (selectedGroup == category) "• $category" else category, selectedGroup == category) {
-                    selectedGroup = category; render(); rebuildNavigation()
-                }.apply { textSize = 14f; gravity = Gravity.CENTER_VERTICAL or Gravity.START; isSingleLine = true; setPadding(18, 0, 8, 0) },
-                    LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 2, 0, 2) })
-            }
-        }
+
     }
 
     private fun showConnectionDialog() {
