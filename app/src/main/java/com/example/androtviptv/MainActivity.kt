@@ -76,112 +76,152 @@ class MainActivity : Activity() {
         loadSavedSources()
     }
 
+    private lateinit var heroTitle: TextView
+    private lateinit var heroSubtitle: TextView
+    private lateinit var heroArt: FrameLayout
+    private lateinit var navBar: LinearLayout
+
     private fun buildUi() {
         window.statusBarColor = bg
         window.navigationBarColor = bg
         val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(34, 18, 34, 16)
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(18, 14, 18, 12)
             setBackgroundColor(bg)
         }
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+
+        val sidebar = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(14, 16, 14, 14)
+            background = roundedDrawable(Color.rgb(14, 19, 29), 20, Color.rgb(35, 42, 56))
         }
-        header.addView(TextView(this).apply {
-            text = "KAISER"; textSize = 29f; setTextColor(Color.WHITE)
-            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.08f
+        root.addView(sidebar, LinearLayout.LayoutParams(205, -1).apply { setMargins(0, 0, 18, 0) })
+
+        val brand = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        brand.addView(TextView(this).apply {
+            text = "KAISER"; textSize = 25f; setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.015f
         })
-        header.addView(TextView(this).apply {
-            text = "TV"; textSize = 29f; setTextColor(accent)
+        brand.addView(TextView(this).apply {
+            text = "TV"; textSize = 25f; setTextColor(accent)
             setTypeface(null, android.graphics.Typeface.BOLD)
         })
-        header.addView(TextView(this).apply {
-            text = "    SİNEMA  •  DİZİ  •  CANLI TV"; textSize = 11f
-            setTextColor(muted); letterSpacing = 0.08f
-        }, LinearLayout.LayoutParams(0, -2, 1f))
-        header.addView(makeButton("＋ Kaynak ekle", true) { showConnectionDialog() },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
-        header.addView(makeButton("Kaynaklar", false) { showSourcesDialog() },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(8, 0, 0, 0) })
-        root.addView(header)
+        sidebar.addView(brand)
+        sidebar.addView(TextView(this).apply {
+            text = "SİNEMA  •  DİZİ  •  CANLI TV"; textSize = 9f
+            setTextColor(muted); setPadding(1, 2, 0, 18); letterSpacing = 0.04f
+        })
 
-        val tabsScroll = HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false; clipToPadding = false; setPadding(0, 14, 0, 10)
+        sidebar.addView(TextView(this).apply {
+            text = "MENÜ"; textSize = 10f; setTextColor(accentBright)
+            letterSpacing = 0.12f; setPadding(2, 8, 0, 7)
+        })
+        navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        sidebar.addView(navBar, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        rebuildNavigation()
+
+        sidebar.addView(View(this).apply { setBackgroundColor(Color.rgb(39, 46, 60)) },
+            LinearLayout.LayoutParams(-1, 1).apply { setMargins(0, 14, 0, 10) })
+        sidebar.addView(TextView(this).apply {
+            text = "KATEGORİLER"; textSize = 10f; setTextColor(accentBright)
+            letterSpacing = 0.12f; setPadding(2, 4, 0, 7)
+        })
+        categoryBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        sidebar.addView(ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            addView(categoryBar)
+        }, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        sidebar.addView(makeButton("＋  Kaynak ekle", true) { showConnectionDialog() },
+            LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 12, 0, 5) })
+        sidebar.addView(makeButton("Kaynaklar", false) { showSourcesDialog() },
+            LinearLayout.LayoutParams(-1, 42))
+
+        val main = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, 0, 0)
         }
-        val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        listOf("Ana sayfa", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler", "Tümü").forEach { tab ->
-            val key = if (tab == "Ana sayfa") "Tümü" else tab
-            tabs.addView(makeButton(tab, selectedType == key) {
-                selectedType = key; selectedGroup = "Tüm kategoriler"; render()
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 0, 8, 0) })
+        root.addView(main, LinearLayout.LayoutParams(0, -1, 1f))
+
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            setPadding(4, 0, 4, 12)
         }
-        tabsScroll.addView(tabs); root.addView(tabsScroll)
+        header.addView(TextView(this).apply {
+            text = "EĞLENCE DÜNYAN"; textSize = 11f; setTextColor(muted)
+            letterSpacing = 0.16f
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(TextView(this).apply {
+            text = "KAISERTV  /  PREMIUM"; textSize = 10f; setTextColor(accentBright)
+            letterSpacing = 0.08f
+        })
+        main.addView(header)
 
         val hero = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(26, 20, 20, 20)
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            setPadding(26, 18, 18, 18)
             background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(Color.rgb(28, 35, 49), Color.rgb(13, 18, 29))).apply {
-                cornerRadius = 22f; setStroke(1, Color.rgb(58, 62, 73))
+                intArrayOf(Color.rgb(33, 42, 59), Color.rgb(12, 17, 28))).apply {
+                cornerRadius = 24f; setStroke(1, Color.rgb(54, 64, 82))
             }
         }
         val heroCopy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         heroCopy.addView(TextView(this).apply {
-            text = "KAISERTV  /  SENİN EĞLENCE DÜNYAN"; textSize = 11f
-            setTextColor(accentBright); letterSpacing = 0.12f
+            text = "KAISERTV ORIGINAL  •  SENİN KÜTÜPHANEN"; textSize = 10f
+            setTextColor(accentBright); letterSpacing = 0.10f
         })
-        heroCopy.addView(TextView(this).apply {
-            text = if (items.isEmpty()) "İzleme keyfi\nyeni bir seviyede." else "İzlemeye\ndevam et."
-            textSize = 29f; setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD)
+        heroTitle = TextView(this).apply {
+            text = "Eğlenceye yeniden hoş geldin"; textSize = 27f
+            setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD)
             setPadding(0, 8, 0, 4); maxLines = 2
-        })
-        heroCopy.addView(TextView(this).apply {
-            text = if (items.isEmpty()) "Kendi yayın listeni ekle, içeriklerini tek ekranda keşfet." else "${items.size} içerik keşfedilmeyi bekliyor."
-            textSize = 14f; setTextColor(muted); maxLines = 2
-        })
-        heroCopy.addView(makeButton(if (items.isEmpty()) "İLK KAYNAĞINI EKLE  →" else "İÇERİKLERİ KEŞFET  →", true) {
-            if (items.isEmpty()) showConnectionDialog() else {
-                selectedType = "Tümü"; selectedGroup = "Tüm kategoriler"; render()
-            }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 0, 0) })
+        }
+        heroCopy.addView(heroTitle)
+        heroSubtitle = TextView(this).apply {
+            text = "Canlı yayınlarını, filmlerini ve dizilerini keşfet."; textSize = 13f
+            setTextColor(muted); maxLines = 2
+        }
+        heroCopy.addView(heroSubtitle)
+        heroCopy.addView(makeButton("İÇERİKLERİ KEŞFET  →", true) {
+            selectedType = "Tümü"; selectedGroup = "Tüm kategoriler"; rebuildNavigation(); render()
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 13, 0, 0) })
         hero.addView(heroCopy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
-        val heroArt = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(180, 170).apply { setMargins(18, 0, 0, 0) }
-            background = roundedDrawable(Color.rgb(29, 35, 49), 18); clipToOutline = true
+        heroArt = FrameLayout(this).apply {
+            background = roundedDrawable(Color.rgb(25, 33, 48), 18, Color.rgb(60, 70, 89))
+            clipToOutline = true
         }
-        val featured = items.firstOrNull { it.icon.startsWith("http://") || it.icon.startsWith("https://") }
-        if (featured != null) {
-            val poster = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; contentDescription = featured.name }
-            heroArt.addView(poster, FrameLayout.LayoutParams(-1, -1)); loadPoster(featured.icon, poster)
-            heroArt.addView(TextView(this).apply {
-                text = featured.name; textSize = 12f; setTextColor(Color.WHITE)
-                setPadding(10, 26, 10, 8); gravity = Gravity.BOTTOM
-                background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                    intArrayOf(Color.TRANSPARENT, 0xDD070A11.toInt()))
-            }, FrameLayout.LayoutParams(-1, -1))
-        } else {
-            heroArt.addView(TextView(this).apply {
-                text = "K"; textSize = 94f; setTextColor(accent)
-                setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
-            }, FrameLayout.LayoutParams(-1, -1))
-        }
-        hero.addView(heroArt)
-        root.addView(hero, LinearLayout.LayoutParams(-1, 205).apply { setMargins(0, 0, 0, 12) })
+        heroArt.addView(TextView(this).apply {
+            text = "K"; textSize = 88f; setTextColor(accent)
+            setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+        }, FrameLayout.LayoutParams(-1, -1))
+        hero.addView(heroArt, LinearLayout.LayoutParams(164, 150).apply { setMargins(16, 0, 0, 0) })
+        main.addView(hero, LinearLayout.LayoutParams(-1, 190).apply { setMargins(0, 0, 0, 10) })
 
         status = TextView(this).apply {
-            text = "Kaisertv hazır. Başlamak için kendi M3U/M3U8 listen veya Xtream hesabınla bağlan."
-            textSize = 12f; setTextColor(muted); setPadding(2, 0, 0, 5); maxLines = 2
+            text = "Kaisertv hazır. Kaynak ekleyerek içeriklerini yükleyebilirsin."
+            textSize = 12f; setTextColor(muted); setPadding(3, 2, 0, 8); maxLines = 2
         }
-        root.addView(status)
-        categoryBar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 3, 0, 3) }
-        root.addView(HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false; clipToPadding = false; setPadding(0, 2, 0, 2); addView(categoryBar)
-        }, LinearLayout.LayoutParams(-1, 48))
+        main.addView(status)
         val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
-        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 4, 0, 12) }
-        scroll.addView(content); root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        setContentView(root); render()
+        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 2, 0, 12) }
+        scroll.addView(content)
+        main.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        setContentView(root)
+        render()
+    }
+
+    private fun rebuildNavigation() {
+        if (!::navBar.isInitialized) return
+        navBar.removeAllViews()
+        listOf("Ana sayfa", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler", "Tümü").forEach { tab ->
+            val key = if (tab == "Ana sayfa") "Tümü" else tab
+            navBar.addView(makeButton(if (selectedType == key) "●  $tab" else "   $tab", selectedType == key) {
+                selectedType = key
+                selectedGroup = "Tüm kategoriler"
+                rebuildNavigation()
+                render()
+            }, LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 2, 0, 2) })
+        }
     }
 
     private fun showConnectionDialog() {
