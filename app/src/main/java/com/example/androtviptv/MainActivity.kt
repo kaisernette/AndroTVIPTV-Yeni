@@ -563,6 +563,16 @@ class MainActivity : Activity() {
         }
     }
 
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        AlertDialog.Builder(this)
+            .setTitle("Kaisertv'den çıkılsın mı?")
+            .setMessage("Uygulamadan çıkmak istediğine emin misin?")
+            .setNegativeButton("Uygulamaya dön", null)
+            .setPositiveButton("Çıkış yap") { _, _ -> finish() }
+            .show()
+    }
+
     override fun onDestroy() {
         posterExecutor.shutdownNow()
         super.onDestroy()
