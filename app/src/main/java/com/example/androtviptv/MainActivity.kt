@@ -314,7 +314,6 @@ class MainActivity : Activity() {
             try {
                 val parsed = parseM3u(request(source.address)).map { it.copy(sourceId = source.id) }
                 runOnUiThread {
-                    if (!append) items.clear()
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
                     selectedGroup = "Tüm kategoriler"
