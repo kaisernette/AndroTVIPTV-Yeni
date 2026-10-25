@@ -22,9 +22,11 @@ import java.net.URL
 import kotlin.concurrent.thread
 import java.util.concurrent.Executors
 
+private data class SavedSource(val id: String, val name: String, val mode: String, val address: String, val username: String = "", val password: String = "")
+
 private data class MediaItem(
     val id: String, val name: String, val url: String, val group: String,
-    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = ""
+    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = "", val sourceId: String = ""
 ) {
     val favoriteKey: String get() = "$type:$id:$url"
 }
@@ -35,6 +37,8 @@ class MainActivity : Activity() {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
+    private val savedSources = mutableListOf<SavedSource>()
+    private lateinit var sourceName: EditText
     private val favorites = mutableSetOf<String>()
     private val recent = mutableListOf<MediaItem>()
     private var selectedGroup = "Tüm kategoriler"
@@ -64,10 +68,11 @@ class MainActivity : Activity() {
             val saved = JSONArray(getSharedPreferences("androtv", MODE_PRIVATE).getString("recent", "[]"))
             for (i in 0 until saved.length()) {
                 val o = saved.optJSONObject(i) ?: continue
-                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId")))
+                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId")))
             }
         } catch (_: Exception) { }
         buildUi()
+        loadSavedSources()
     }
 
     private fun buildUi() {
@@ -94,8 +99,10 @@ class MainActivity : Activity() {
             text = "    SİNEMA  •  DİZİ  •  CANLI TV"; textSize = 11f
             setTextColor(muted); letterSpacing = 0.08f
         }, LinearLayout.LayoutParams(0, -2, 1f))
-        header.addView(makeButton("＋  Kaynak ekle", true) { showConnectionDialog() },
+        header.addView(makeButton("＋ Kaynak ekle", true) { showConnectionDialog() },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
+        header.addView(makeButton("Kaynaklar", false) { showSourcesDialog() },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(8, 0, 0, 0) })
         root.addView(header)
 
         val tabsScroll = HorizontalScrollView(this).apply {
@@ -180,6 +187,8 @@ class MainActivity : Activity() {
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; setPadding(18, 8, 18, 4); setBackgroundColor(bg)
         }
+        sourceName = edit("Kaynak adı (ör. Ev Xtream)", false)
+        form.addView(sourceName, fieldParams())
         sourceMode = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
         val m3u = RadioButton(this).apply {
             id = View.generateViewId(); text = "M3U / M3U8"; setTextColor(Color.WHITE); isChecked = true
@@ -215,14 +224,18 @@ class MainActivity : Activity() {
                         Toast.makeText(this, "Sunucu, kullanıcı adı ve şifreyi doldur.", Toast.LENGTH_LONG).show()
                         return@setOnClickListener
                     }
-                    hideKeyboard(); dialog.dismiss(); loadXtream()
+                    val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
+                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "xtream", server.text.toString().trim().trimEnd('/'), username.text.toString().trim(), password.text.toString())
+                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadXtream(src, false)
                 } else {
                     val address = playlistUrl.text.toString().trim()
                     if (!address.startsWith("http://") && !address.startsWith("https://")) {
                         Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
                         return@setOnClickListener
                     }
-                    hideKeyboard(); dialog.dismiss(); loadM3u(address)
+                    val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
+                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "m3u", address)
+                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadM3u(src, false)
                 }
             }
         }
@@ -258,21 +271,63 @@ class MainActivity : Activity() {
     }
     private fun hideKeyboard() { (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(playlistUrl.windowToken, 0) }
 
-    private fun loadM3u(address: String) {
-        if (!address.startsWith("http://") && !address.startsWith("https://")) { status.text = "Geçerli bir http(s) M3U URL'si gir."; return }
-        status.text = "Oynatma listesi yükleniyor…"
+
+    private fun saveSource(source: SavedSource) {
+        savedSources.removeAll { it.id == source.id }; savedSources.add(source); persistSources()
+    }
+    private fun persistSources() {
+        val arr = JSONArray()
+        savedSources.forEach { s -> arr.put(JSONObject().put("id", s.id).put("name", s.name).put("mode", s.mode).put("address", s.address).put("username", s.username).put("password", s.password)) }
+        getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("sources", arr.toString()).apply()
+    }
+    private fun loadSavedSources() {
+        try {
+            val arr = JSONArray(getSharedPreferences("androtv", MODE_PRIVATE).getString("sources", "[]"))
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                savedSources.add(SavedSource(o.optString("id"), o.optString("name"), o.optString("mode"), o.optString("address"), o.optString("username"), o.optString("password")))
+            }
+        } catch (_: Exception) { }
+        if (savedSources.isNotEmpty()) {
+            status.text = "Kayıtlı ${savedSources.size} kaynak yükleniyor…"
+            savedSources.forEachIndexed { index, s -> if (s.mode == "xtream") loadXtream(s, index > 0) else loadM3u(s, index > 0) }
+        }
+    }
+    private fun showSourcesDialog() {
+        if (savedSources.isEmpty()) {
+            AlertDialog.Builder(this).setTitle("Kaynaklar").setMessage("Henüz kayıtlı kaynak yok.")
+                .setPositiveButton("Kaynak ekle") { _, _ -> showConnectionDialog() }.setNegativeButton("Kapat", null).show(); return
+        }
+        val labels = savedSources.map { "${it.name} • ${if (it.mode == "xtream") "Xtream" else "M3U"}" }.toTypedArray()
+        AlertDialog.Builder(this).setTitle("Kayıtlı kaynaklar").setItems(labels) { _, which ->
+            val s = savedSources[which]
+            AlertDialog.Builder(this).setTitle(s.name).setItems(arrayOf("Yenile", "Sil")) { _, action ->
+                if (action == 0) { if (s.mode == "xtream") loadXtream(s, true) else loadM3u(s, true) }
+                else { savedSources.removeAll { it.id == s.id }; persistSources(); items.removeAll { it.sourceId == s.id }; render() }
+            }.setNegativeButton("İptal", null).show()
+        }.setPositiveButton("Kaynak ekle") { _, _ -> showConnectionDialog() }.setNegativeButton("Kapat", null).show()
+    }
+
+    private fun loadM3u(source: SavedSource, append: Boolean) {
+        status.text = "${source.name}: oynatma listesi yükleniyor…"
         thread {
             try {
-                val text = request(address)
-                val parsed = parseM3u(text)
-                runOnUiThread { items.clear(); items.addAll(parsed); selectedGroup = "Tüm kategoriler"; status.text = "${parsed.size} içerik yüklendi."; render() }
-            } catch (e: Exception) { runOnUiThread { status.text = "Yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
+                val parsed = parseM3u(request(source.address)).map { it.copy(sourceId = source.id) }
+                runOnUiThread {
+                    if (!append) items.clear()
+                    items.removeAll { it.sourceId == source.id }
+                    items.addAll(parsed)
+                    selectedGroup = "Tüm kategoriler"
+                    status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."
+                    render()
+                }
+            } catch (e: Exception) { runOnUiThread { status.text = "${source.name} yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
         }
     }
 
-    private fun loadXtream() {
-        val base = server.text.toString().trim().trimEnd('/')
-        val user = username.text.toString().trim(); val pass = password.text.toString()
+    private fun loadXtream(source: SavedSource, append: Boolean) {
+        val base = source.address.trimEnd('/')
+        val user = source.username; val pass = source.password
         if (!(base.startsWith("http://") || base.startsWith("https://")) || user.isBlank() || pass.isBlank()) {
             status.text = "Sunucu, kullanıcı adı ve şifre alanlarını doldur."; return
         }
@@ -285,6 +340,19 @@ class MainActivity : Activity() {
                 val userInfo = root.optJSONObject("user_info")
                 if (userInfo != null && userInfo.optString("auth", "1") == "0") throw Exception("Giriş bilgileri kabul edilmedi.")
                 val loaded = mutableListOf<MediaItem>()
+                fun categoryMap(action: String): Map<String, String> {
+                    val arr = JSONArray(request("$api&action=$action"))
+                    val result = mutableMapOf<String, String>()
+                    for (i in 0 until arr.length()) {
+                        val item = arr.optJSONObject(i) ?: continue
+                        val id = item.optString("category_id"); val name = item.optString("category_name")
+                        if (id.isNotBlank() && name.isNotBlank()) result[id] = name
+                    }
+                    return result
+                }
+                val liveCategories = categoryMap("get_live_categories")
+                val vodCategories = categoryMap("get_vod_categories")
+                val seriesCategories = categoryMap("get_series_categories")
                 listOf("get_live_streams", "get_vod_streams", "get_series").forEach { action ->
                     val arr = JSONArray(request("$api&action=$action"))
                     for (i in 0 until arr.length()) {
@@ -292,7 +360,9 @@ class MainActivity : Activity() {
                         val id = o.optString(if (action == "get_series") "series_id" else "stream_id", "")
                         if (id.isBlank()) continue
                         val name = o.optString("name", "İsimsiz içerik")
-                        val group = o.optString("category_name", if (action == "get_live_streams") "Canlı TV" else if (action == "get_vod_streams") "Filmler" else "Diziler")
+                        val categoryId = o.optString("category_id")
+                        val categories = when (action) { "get_live_streams" -> liveCategories; "get_vod_streams" -> vodCategories; else -> seriesCategories }
+                        val group = o.optString("category_name").takeIf { it.isNotBlank() } ?: categories[categoryId] ?: "Diğer"
                         val type = when (action) { "get_live_streams" -> "Canlı TV"; "get_vod_streams" -> "Filmler"; else -> "Diziler" }
                         val ext = o.optString("container_extension", if (type == "Canlı TV") "ts" else "mp4")
                         val streamUrl = when (type) {
@@ -300,12 +370,14 @@ class MainActivity : Activity() {
                             "Filmler" -> "$base/movie/$u/$p/$id.$ext"
                             else -> ""
                         }
-                        loaded.add(MediaItem(id, name, streamUrl, group, type, o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("stream_icon", "")), ext, if (type == "Diziler") id else ""))
+                        loaded.add(MediaItem(id, name, streamUrl, group, type, o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("stream_icon", "")), ext, if (type == "Diziler") id else "", source.id))
                     }
                 }
                 runOnUiThread {
-                    items.clear(); items.addAll(loaded); selectedGroup = "Tüm kategoriler"; xtreamBase = base; xtreamUser = user; xtreamPass = pass
-                    status.text = "${loaded.size} içerik yüklendi. Xtream bağlantısı hazır."; render()
+                    if (!append) items.clear()
+                    items.removeAll { it.sourceId == source.id }; items.addAll(loaded)
+                    selectedGroup = "Tüm kategoriler"; xtreamBase = base; xtreamUser = user; xtreamPass = pass
+                    status.text = "${source.name}: ${loaded.size} içerik yüklendi. ${items.size} toplam içerik."; render()
                 }
             } catch (e: Exception) { runOnUiThread { status.text = "Xtream yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
         }
@@ -496,7 +568,7 @@ class MainActivity : Activity() {
         recent.add(0, item)
         while (recent.size > 20) recent.removeAt(recent.lastIndex)
         val arr = JSONArray()
-        recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId)) }
+        recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId).put("sourceId", r.sourceId)) }
         getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
     }
 
