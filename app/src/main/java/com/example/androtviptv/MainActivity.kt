@@ -74,6 +74,7 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
+        loadCachedItems()
         buildUi()
         loadSavedSources()
     }
@@ -319,9 +320,10 @@ class MainActivity : Activity() {
         } catch (_: Exception) { }
         if (savedSources.isNotEmpty()) {
             val lastId = prefs.getString("last_source_id", "") ?: ""
-            val ordered = savedSources.sortedBy { if (it.id == lastId) 0 else 1 }
-            status.text = "Kayıtlı kaynaklar yükleniyor…"
-            ordered.forEach { s -> if (s.mode == "xtream") loadXtream(s, true) else loadM3u(s, true) }
+            val last = savedSources.firstOrNull { it.id == lastId }
+            status.text = if (items.isNotEmpty()) "${items.size} kayıtlı içerik hazır. Yenilemek için Kaynaklar bölümünü aç." else "Kayıtlı kaynak bulundu. İçerikleri ilk kez yüklemek için Kaynaklar bölümünden yenile."
+            if (last != null && prefs.getBoolean("resume_home", true)) selectedType = prefs.getString("last_section", "Tümü") ?: "Tümü"
+            render()
         }
     }
     private fun showSourcesDialog() {
@@ -463,6 +465,38 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun saveCachedItems() {
+        val arr = JSONArray()
+        items.forEach { x -> arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group).put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId).put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors)) }
+        prefs.edit().putString("cached_items", arr.toString()).apply()
+    }
+
+    private fun loadCachedItems() {
+        try {
+            val arr = JSONArray(prefs.getString("cached_items", "[]"))
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                items.add(MediaItem(o.optString("id"),o.optString("name"),o.optString("url"),o.optString("group"),o.optString("type"),o.optString("icon"),o.optString("extension"),o.optString("seriesId"),o.optString("sourceId"),o.optString("plot"),o.optString("actors")))
+            }
+        } catch (_: Exception) { }
+    }
+
+    private fun showSettingsDialog() {
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(20, 8, 20, 8); setBackgroundColor(bg) }
+        box.addView(TextView(this).apply { text = "Genel ayarlar"; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(0, 8, 0, 8) })
+        val compact = CheckBox(this).apply { text = "Afiş kartlarını daha kompakt göster"; setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent); isChecked = prefs.getBoolean("compact_cards", false) }
+        val resume = CheckBox(this).apply { text = "Uygulama açıldığında son bölümü seç"; setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent); isChecked = prefs.getBoolean("resume_home", true) }
+        box.addView(compact); box.addView(resume)
+        box.addView(TextView(this).apply { text = "Gizlenecek kategoriler"; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(0, 14, 0, 8) })
+        val available = items.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+        if (available.isEmpty()) box.addView(TextView(this).apply { text = "Kategoriler kaynak yüklendikten sonra burada görünür."; setTextColor(muted); textSize = 14f })
+        available.forEach { category ->
+            box.addView(CheckBox(this).apply { text = category; setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent); isChecked = category in hiddenCategories; setOnCheckedChangeListener { _, checked -> if (checked) hiddenCategories.add(category) else hiddenCategories.remove(category); prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply(); if (selectedGroup == category && checked) selectedGroup = "Tüm kategoriler"; render() } })
+        }
+        val scroll = ScrollView(this).apply { addView(box) }
+        AlertDialog.Builder(this).setTitle("Ayarlar").setView(scroll).setPositiveButton("Kaydet") { _, _ -> prefs.edit().putBoolean("compact_cards", compact.isChecked).putBoolean("resume_home", resume.isChecked).apply(); render() }.setNegativeButton("Kapat", null).show()
+    }
+
     private fun showItemDetails(item: MediaItem) {
         val body = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(18, 18, 18, 18); background = roundedDrawable(panel, 18, Color.rgb(45, 54, 71)) }
         val poster = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; background = roundedDrawable(Color.rgb(31, 37, 50), 12) }
@@ -476,6 +510,7 @@ class MainActivity : Activity() {
         info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
         body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog; dialog.show()
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.78f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
     }
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
