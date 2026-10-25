@@ -401,39 +401,44 @@ class MainActivity : Activity() {
                 val userInfo = root.optJSONObject("user_info")
                 if (userInfo != null && userInfo.optString("auth", "1") == "0") throw Exception("Giriş bilgileri kabul edilmedi.")
                 val loaded = mutableListOf<MediaItem>()
-                val actions = listOf("get_live_categories", "get_vod_categories", "get_series_categories",
-                    "get_live_streams", "get_vod_streams", "get_series")
-                val pool = Executors.newFixedThreadPool(6)
-                val responses = try {
-                    val futures = actions.associateWith { action ->
-                        pool.submit<String> { request("$api&action=$action") }
-                    }
-                    futures.mapValues { it.value.get() }
-                } finally { pool.shutdown() }
+
+                // TV cihazlarında aynı anda altı büyük JSON yanıtını bellekte tutma.
+                // Kategorileri ve içerik listelerini sırayla alıp her yanıtı hemen işle.
                 fun categoryMap(action: String): Map<String, String> {
-                    val arr = JSONArray(responses[action] ?: "[]")
+                    val arr = JSONArray(request("$api&action=$action"))
                     val result = mutableMapOf<String, String>()
                     for (i in 0 until arr.length()) {
                         val item = arr.optJSONObject(i) ?: continue
-                        val id = item.optString("category_id"); val name = item.optString("category_name")
+                        val id = item.optString("category_id")
+                        val name = item.optString("category_name")
                         if (id.isNotBlank() && name.isNotBlank()) result[id] = name
                     }
                     return result
                 }
+
                 val liveCategories = categoryMap("get_live_categories")
                 val vodCategories = categoryMap("get_vod_categories")
                 val seriesCategories = categoryMap("get_series_categories")
+
                 listOf("get_live_streams", "get_vod_streams", "get_series").forEach { action ->
-                    val arr = JSONArray(responses[action] ?: "[]")
+                    val arr = JSONArray(request("$api&action=$action"))
+                    val categories = when (action) {
+                        "get_live_streams" -> liveCategories
+                        "get_vod_streams" -> vodCategories
+                        else -> seriesCategories
+                    }
                     for (i in 0 until arr.length()) {
                         val o = arr.optJSONObject(i) ?: continue
                         val id = o.optString(if (action == "get_series") "series_id" else "stream_id", "")
                         if (id.isBlank()) continue
                         val name = o.optString("name", "İsimsiz içerik")
                         val categoryId = o.optString("category_id")
-                        val categories = when (action) { "get_live_streams" -> liveCategories; "get_vod_streams" -> vodCategories; else -> seriesCategories }
                         val group = o.optString("category_name").takeIf { it.isNotBlank() } ?: categories[categoryId] ?: "Diğer"
-                        val type = when (action) { "get_live_streams" -> "Canlı TV"; "get_vod_streams" -> "Filmler"; else -> "Diziler" }
+                        val type = when (action) {
+                            "get_live_streams" -> "Canlı TV"
+                            "get_vod_streams" -> "Filmler"
+                            else -> "Diziler"
+                        }
                         val ext = o.optString("container_extension", if (type == "Canlı TV") "ts" else "mp4")
                         val plot = o.optString("plot", o.optString("description", ""))
                         val actors = o.optString("cast", o.optString("actors", ""))
@@ -442,7 +447,11 @@ class MainActivity : Activity() {
                             "Filmler" -> "$base/movie/$u/$p/$id.$ext"
                             else -> ""
                         }
-                        loaded.add(MediaItem(id, name, streamUrl, group, type, o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("stream_icon", "")), ext, if (type == "Diziler") id else "", source.id, plot, actors))
+                        loaded.add(MediaItem(
+                            id, name, streamUrl, group, type,
+                            o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("stream_icon", "")),
+                            ext, if (type == "Diziler") id else "", source.id, plot, actors
+                        ))
                     }
                 }
                 runOnUiThread {
