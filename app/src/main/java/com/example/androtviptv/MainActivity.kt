@@ -535,9 +535,17 @@ class MainActivity : Activity() {
             }
         }
         rebuildNavigation()
-        val groups = visible.take(1200).groupBy {
-            if (selectedType == "Tümü" || selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
-            else it.group.ifBlank { selectedType }
+        val groups: List<Pair<String, List<MediaItem>>> = if (selectedType == "Tümü") {
+            listOf(
+                "Haftanın Filmleri" to items.filter { it.type == "Filmler" }.take(24),
+                "Haftanın Dizileri" to items.filter { it.type == "Diziler" }.take(24),
+                "Son İzlenenler" to recent.take(24)
+            ).filter { it.second.isNotEmpty() }
+        } else {
+            visible.take(1200).groupBy {
+                if (selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
+                else it.group.ifBlank { "Diğer" }
+            }.map { it.key to it.value }
         }
         groups.forEach { (groupName, entries) ->
             val sectionHeader = LinearLayout(this).apply {
@@ -561,7 +569,7 @@ class MainActivity : Activity() {
                             if (hasFocus) accent else Color.rgb(38, 45, 60))
                         v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
                     }
-                    setOnClickListener { play(item) }
+                    setOnClickListener { showItemDetails(item) }
                 }
                 val liveCard = item.type == "Canlı TV"
                 val poster = ImageView(this).apply {
