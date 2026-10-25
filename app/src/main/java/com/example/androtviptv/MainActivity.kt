@@ -455,6 +455,20 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun showItemDetails(item: MediaItem) {
+        val body = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(18, 18, 18, 18); background = roundedDrawable(panel, 18, Color.rgb(45, 54, 71)) }
+        val poster = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; background = roundedDrawable(Color.rgb(31, 37, 50), 12) }
+        body.addView(poster, LinearLayout.LayoutParams(150, 220).apply { setMargins(0, 0, 18, 0) })
+        if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
+        val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        info.addView(TextView(this).apply { text = item.name; textSize = 22f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
+        info.addView(TextView(this).apply { text = item.type + "  •  " + item.group.ifBlank { "Diğer" }; textSize = 13f; setTextColor(accent); setPadding(0, 8, 0, 8) })
+        info.addView(TextView(this).apply { text = "Bu içerik sağlayıcının sunduğu bağlantı üzerinden açılır."; textSize = 14f; setTextColor(muted); setPadding(0, 0, 0, 14) })
+        info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
+        info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
+        body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog; dialog.show()
+    }
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
         content.removeAllViews()
@@ -572,12 +586,13 @@ class MainActivity : Activity() {
                     setOnClickListener { showItemDetails(item) }
                 }
                 val liveCard = item.type == "Canlı TV"
+                val homeCard = selectedType == "Tümü"
                 val poster = ImageView(this).apply {
                     scaleType = if (liveCard) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
-                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else 205)
+                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (homeCard) 230 else 210)
                 }
                 card.addView(poster)
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
@@ -592,15 +607,15 @@ class MainActivity : Activity() {
                     minHeight = 40; setPadding(3, 0, 3, 0)
                 })
                 val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                actions.addView(makeButton("▶ İzle", true) { play(item) },
+                if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
                     LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
                 actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
                     if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                    getSharedPreferences("androtv", MODE_PRIVATE).edit().putStringSet("favorites", favorites.toSet()).apply()
+                    prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
                     render()
                 }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                 card.addView(actions)
-                row.addView(card, LinearLayout.LayoutParams(if (item.type == "Canlı TV") 158 else 172, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 12, 8) })
+                row.addView(card, LinearLayout.LayoutParams(if (liveCard) 158 else 180, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 12, 8) })
             }
             content.addView(HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
