@@ -26,7 +26,7 @@ private data class SavedSource(val id: String, val name: String, val mode: Strin
 
 private data class MediaItem(
     val id: String, val name: String, val url: String, val group: String,
-    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = "", val sourceId: String = "", val plot: String = "", val actors: String = ""
+    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = "", val sourceId: String = "", val plot: String = "", val actors: String = "", val rating: String = "", val releaseDate: String = "", val genre: String = ""
 ) {
     val favoriteKey: String get() = "$type:$id:$url"
 }
@@ -70,7 +70,7 @@ class MainActivity : Activity() {
             val saved = JSONArray(getSharedPreferences("androtv", MODE_PRIVATE).getString("recent", "[]"))
             for (i in 0 until saved.length()) {
                 val o = saved.optJSONObject(i) ?: continue
-                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors")))
+                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors"), o.optString("rating"), o.optString("releaseDate"), o.optString("genre"))))
             }
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
@@ -493,7 +493,7 @@ class MainActivity : Activity() {
 
     private fun saveCachedItems() {
         val arr = JSONArray()
-        items.forEach { x -> arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group).put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId).put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors)) }
+        items.forEach { x -> arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group).put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId).put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors).put("rating",x.rating).put("releaseDate",x.releaseDate).put("genre",x.genre)) }
         prefs.edit().putString("cached_items", arr.toString()).apply()
     }
 
@@ -502,7 +502,7 @@ class MainActivity : Activity() {
             val arr = JSONArray(prefs.getString("cached_items", "[]"))
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
-                items.add(MediaItem(o.optString("id"),o.optString("name"),o.optString("url"),o.optString("group"),o.optString("type"),o.optString("icon"),o.optString("extension"),o.optString("seriesId"),o.optString("sourceId"),o.optString("plot"),o.optString("actors")))
+                items.add(MediaItem(o.optString("id"),o.optString("name"),o.optString("url"),o.optString("group"),o.optString("type"),o.optString("icon"),o.optString("extension"),o.optString("seriesId"),o.optString("sourceId"),o.optString("plot"),o.optString("actors"),o.optString("rating"),o.optString("releaseDate"),o.optString("genre")))
             }
         } catch (_: Exception) { }
     }
@@ -556,18 +556,71 @@ class MainActivity : Activity() {
         info.addView(TextView(this).apply { text = item.type + "  •  " + item.group.ifBlank { "Diğer" }; textSize = 13f; setTextColor(accent); setPadding(0, 8, 0, 8) })
         val metaScroll = ScrollView(this)
         val meta = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        meta.addView(TextView(this).apply { text = "KONU"; textSize = 12f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accent); setPadding(0, 4, 0, 3) })
-        meta.addView(TextView(this).apply { text = item.plot.ifBlank { "Bu kaynak film konusu bilgisi sağlamıyor." }; textSize = 14f; setTextColor(muted); setPadding(0, 0, 0, 10) })
-        meta.addView(TextView(this).apply { text = "OYUNCULAR"; textSize = 12f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accent); setPadding(0, 4, 0, 3) })
-        meta.addView(TextView(this).apply { text = item.actors.ifBlank { "Oyuncu bilgisi bu kaynakta bulunmuyor." }; textSize = 14f; setTextColor(muted); setPadding(0, 0, 0, 14) })
+        fun field(label: String, value: String, fallback: String = ""): TextView {
+            meta.addView(TextView(this).apply { text = label; textSize = 12f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accent); setPadding(0, 4, 0, 3) })
+            return TextView(this).apply { text = value.ifBlank { fallback }; textSize = 14f; setTextColor(muted); setPadding(0, 0, 0, 8) }.also { meta.addView(it) }
+        }
+        val ratingView = field("PUAN", item.rating, "Bilgi yükleniyor…")
+        val dateView = field("YAYIN TARİHİ", item.releaseDate, "")
+        val genreView = field("TÜR", item.genre, "")
+        val plotView = field("KONU", item.plot, if (item.sourceId.isNotBlank()) "Bilgiler yükleniyor…" else "Bu kaynak konu bilgisi sağlamıyor.")
+        val actorsView = field("OYUNCULAR", item.actors, if (item.sourceId.isNotBlank()) "Bilgiler yükleniyor…" else "Oyuncu bilgisi bulunmuyor.")
         metaScroll.addView(meta)
         info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
         info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
         info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
         body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog; dialog.show()
+        val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog
+        dialog.show()
         dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.78f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        if (item.type == "Filmler" || item.type == "Diziler") {
+            val source = savedSources.firstOrNull { it.id == item.sourceId && it.mode == "xtream" }
+            if (source != null) thread {
+                try {
+                    val u = URLEncoder.encode(source.username, "UTF-8")
+                    val p = URLEncoder.encode(source.password, "UTF-8")
+                    val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p"
+                    val action = if (item.type == "Diziler") "get_series_info&series_id=" else "get_vod_info&vod_id="
+                    val root = JSONObject(request("$api&action=$action${URLEncoder.encode(item.id, "UTF-8")}"))
+                    val detail = root.optJSONObject("info") ?: root.optJSONObject("movie_data") ?: root
+                    fun pick(vararg keys: String): String {
+                        for (key in keys) {
+                            val value = detail.opt(key)
+                            if (value != null && value != JSONObject.NULL) {
+                                val text = if (value is String) value else value.toString()
+                                if (text.isNotBlank() && text != "0" && text != "null") return text
+                            }
+                        }
+                        return ""
+                    }
+                    val plot = pick("plot", "description", "overview")
+                    val actors = pick("cast", "actors")
+                    val rating = pick("rating", "rating_5based", "vote_average")
+                    val date = pick("releasedate", "releaseDate", "release_date", "year")
+                    val genre = pick("genre", "genres")
+                    runOnUiThread {
+                        plotView.text = plot.ifBlank { "Konu bilgisi kaynakta bulunmuyor." }
+                        actorsView.text = actors.ifBlank { "Oyuncu bilgisi kaynakta bulunmuyor." }
+                        ratingView.text = rating.ifBlank { "Puan bilgisi bulunmuyor." }
+                        dateView.text = date
+                        genreView.text = genre
+                        val updated = item.copy(plot = plot, actors = actors, rating = rating, releaseDate = date, genre = genre)
+                        val index = items.indexOfFirst { it.id == item.id && it.type == item.type && it.sourceId == item.sourceId }
+                        if (index >= 0) items[index] = updated
+                        saveCachedItems()
+                    }
+                } catch (_: Exception) {
+                    runOnUiThread {
+                        if (plotView.text.toString() == "Bilgiler yükleniyor…") plotView.text = "Konu bilgisi alınamadı."
+                        if (actorsView.text.toString() == "Bilgiler yükleniyor…") actorsView.text = "Oyuncu bilgisi alınamadı."
+                        if (ratingView.text.toString() == "Bilgi yükleniyor…") ratingView.text = "Puan bilgisi alınamadı."
+                    }
+                }
+            }
+        }
     }
+
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
         content.removeAllViews()
@@ -655,7 +708,7 @@ class MainActivity : Activity() {
                 "Son İzlenenler" to recent.take(24)
             ).filter { it.second.isNotEmpty() }
         } else {
-            visible.take(1200).groupBy {
+            visible.take(60).groupBy {
                 if (selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
                 else it.group.ifBlank { "Diğer" }
             }.map { it.key to it.value }
