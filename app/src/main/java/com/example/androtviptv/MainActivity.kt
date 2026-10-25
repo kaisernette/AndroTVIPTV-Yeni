@@ -372,7 +372,7 @@ class MainActivity : Activity() {
         status.text = "${source.name}: oynatma listesi yükleniyor…"
         thread {
             try {
-                val parsed = parseM3u(request(source.address)).map { it.copy(sourceId = source.id) }
+                val parsed = parseM3u(request(source.address)).take(1200).map { it.copy(sourceId = source.id) }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
@@ -427,7 +427,9 @@ class MainActivity : Activity() {
                         "get_vod_streams" -> vodCategories
                         else -> seriesCategories
                     }
-                    for (i in 0 until arr.length()) {
+                    // Limit memory usage on low-RAM TV devices.
+                    val count = minOf(arr.length(), 400)
+                    for (i in 0 until count) {
                         val o = arr.optJSONObject(i) ?: continue
                         val id = o.optString(if (action == "get_series") "series_id" else "stream_id", "")
                         if (id.isBlank()) continue
@@ -502,7 +504,13 @@ class MainActivity : Activity() {
 
     private fun saveCachedItems() {
         val arr = JSONArray()
-        items.forEach { x -> arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group).put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId).put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors).put("rating",x.rating).put("releaseDate",x.releaseDate).put("genre",x.genre)) }
+        // Keep large playlists from exhausting app memory while serializing the cache.
+        items.take(1200).forEach { x ->
+            arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group)
+                .put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId)
+                .put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors).put("rating",x.rating)
+                .put("releaseDate",x.releaseDate).put("genre",x.genre))
+        }
         prefs.edit().putString("cached_items", arr.toString()).apply()
     }
 
