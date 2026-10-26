@@ -86,6 +86,9 @@ class MainActivity : Activity() {
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         loadCachedItems()
+        // Restore the last library section when the app is launched again.
+        selectedType = prefs.getString("last_section", "Filmler") ?: "Filmler"
+        if (selectedType !in setOf("Tümü", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler")) selectedType = "Filmler"
         buildUi()
         loadSavedSources()
     }
@@ -514,10 +517,11 @@ class MainActivity : Activity() {
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
             status.text = if (items.isNotEmpty()) "${items.size} kayıtlı içerik hazır. Yenilemek için Kaynaklar bölümünü aç." else "Kayıtlı kaynak bulundu. İçerikleri ilk kez yüklemek için Kaynaklar bölümünden yenile."
-            selectedType = "Tümü"
-        selectedGroup = "Tüm kategoriler"
-        sidebarMode = "main"
-        prefs.edit().putString("last_section", "Tümü").apply()
+            if (items.isNotEmpty() && items.none { it.type == selectedType }) {
+                selectedType = if (items.any { it.type == "Filmler" }) "Filmler" else "Tümü"
+            }
+            selectedGroup = "Tüm kategoriler"
+            sidebarMode = "main"
             render()
         }
     }
