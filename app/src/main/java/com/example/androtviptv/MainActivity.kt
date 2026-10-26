@@ -146,7 +146,7 @@ class MainActivity : Activity() {
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(8, 12, 8, 10)
-            background = roundedDrawable(Color.rgb(19, 18, 32), 18, Color.rgb(43, 40, 65))
+            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
         root.addView(sidebar, LinearLayout.LayoutParams(104, -1).apply { setMargins(0, 0, 14, 0) })
 
@@ -172,11 +172,11 @@ class MainActivity : Activity() {
 
         sidebar.addView(View(this).apply { setBackgroundColor(Color.rgb(39, 46, 60)) },
             LinearLayout.LayoutParams(-1, 1).apply { setMargins(0, 12, 0, 10) })
-        sidebar.addView(makeButton("＋", true) { showConnectionDialog() }.apply { textSize = 22f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0) },
+        sidebar.addView(makeButton("＋", true) { showConnectionDialog() }.apply { textSize = 24f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0); background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(accentBright) },
             LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
-        sidebar.addView(makeButton("▤", false) { showSourcesDialog() }.apply { textSize = 22f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0) },
+        sidebar.addView(makeButton("▤", false) { showSourcesDialog() }.apply { textSize = 24f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0); background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(Color.rgb(185, 190, 210)) },
             LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
-        sidebar.addView(makeButton("⚙︎", false) { showSettingsDialog() }.apply { textSize = 22f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0) }, LinearLayout.LayoutParams(-1, 42))
+        sidebar.addView(makeButton("⚙︎", false) { showSettingsDialog() }.apply { textSize = 24f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0); background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(Color.rgb(185, 190, 210)) }, LinearLayout.LayoutParams(-1, 42))
 
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -281,7 +281,17 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                textSize = if (label.length > 2) 14f else 22f
+                // Flat icon-only rail: no pill/box around each navigation icon.
+                if (label.length <= 2) {
+                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    setTextColor(if (selected) accentBright else Color.rgb(185, 190, 210))
+                    setOnFocusChangeListener { v, hasFocus ->
+                        v.setTextColor(if (hasFocus || selected) accentBright else Color.rgb(185, 190, 210))
+                        v.scaleX = if (hasFocus) 1.12f else 1f
+                        v.scaleY = if (hasFocus) 1.12f else 1f
+                    }
+                }
+                textSize = if (label.length > 2) 14f else 26f
                 gravity = if (label.length > 2) Gravity.CENTER_VERTICAL else Gravity.CENTER
                 isSingleLine = label.length <= 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
@@ -291,7 +301,7 @@ class MainActivity : Activity() {
                 minimumWidth = 0
                 setPadding(if (label.length > 2) 12 else 0, 0, if (label.length > 2) 8 else 0, 0)
                 minHeight = 42
-            }, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 7, 0, 7) })
+            }, LinearLayout.LayoutParams(-1, if (label.length <= 2) 52 else 46).apply { setMargins(0, if (label.length <= 2) 4 else 7, 0, if (label.length <= 2) 4 else 7) })
         }
 
         fun returnToMainMenu() {
