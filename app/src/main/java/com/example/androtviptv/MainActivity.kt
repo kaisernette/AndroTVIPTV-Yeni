@@ -44,7 +44,13 @@ class MainActivity : Activity() {
     private val hiddenCategories = mutableSetOf<String>()
     private var selectedGroup = "Tüm kategoriler"
     private lateinit var categoryBar: LinearLayout
+    private lateinit var categoryScroll: HorizontalScrollView
+    private lateinit var mainHeader: LinearLayout
     private lateinit var content: LinearLayout
+    private var detailSeries: MediaItem? = null
+    private var seriesEpisodeRows: List<Pair<String, List<MediaItem>>> = emptyList()
+    private var seriesEpisodesLoading = false
+    private var seriesEpisodesError = ""
     private lateinit var status: TextView
     private lateinit var playlistUrl: EditText
     private lateinit var server: EditText
@@ -124,19 +130,19 @@ class MainActivity : Activity() {
         }
         root.addView(main, LinearLayout.LayoutParams(0, -1, 1f))
 
-        val header = LinearLayout(this).apply {
+        mainHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setPadding(4, 0, 4, 12)
         }
-        header.addView(TextView(this).apply {
+        mainHeader.addView(TextView(this).apply {
             text = "EĞLENCE DÜNYAN"; textSize = 11f; setTextColor(muted)
             letterSpacing = 0.16f
         }, LinearLayout.LayoutParams(0, -2, 1f))
-        header.addView(TextView(this).apply {
+        mainHeader.addView(TextView(this).apply {
             text = "KAISERTV  /  PREMIUM"; textSize = 10f; setTextColor(accentBright)
             letterSpacing = 0.08f
         })
-        main.addView(header)
+        main.addView(mainHeader)
 
         val hero = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
@@ -185,7 +191,7 @@ class MainActivity : Activity() {
         }
         main.addView(status)
         categoryBar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val categoryScroll = HorizontalScrollView(this).apply {
+        categoryScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false; clipToPadding = false
             addView(categoryBar)
             visibility = View.VISIBLE
@@ -205,6 +211,10 @@ class MainActivity : Activity() {
         listOf("Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler").forEach { tab ->
             val key = when (tab) { "Ana sayfa" -> "Tümü"; "TV" -> "Canlı TV"; "İzlenenler" -> "Son İzlenenler"; else -> tab }
             navBar.addView(makeButton(if (selectedType == key) "●  $tab" else tab, selectedType == key) {
+                detailSeries = null
+                seriesEpisodeRows = emptyList()
+                seriesEpisodesLoading = false
+                seriesEpisodesError = ""
                 selectedType = key
                 selectedGroup = "Tüm kategoriler"
                 rebuildNavigation()
@@ -503,6 +513,14 @@ class MainActivity : Activity() {
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
+        if (detailSeries != null) {
+            detailSeries = null
+            seriesEpisodeRows = emptyList()
+            seriesEpisodesLoading = false
+            seriesEpisodesError = ""
+            render()
+            return
+        }
         if (selectedGroup != "Tüm kategoriler") {
             selectedGroup = "Tüm kategoriler"
             render()
@@ -618,6 +636,15 @@ class MainActivity : Activity() {
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
         content.removeAllViews()
+        val detailMode = detailSeries != null
+        val fullContentMode = detailMode || selectedType == "Filmler" || selectedType == "Diziler"
+        if (::mainHeader.isInitialized) mainHeader.visibility = if (fullContentMode) View.GONE else View.VISIBLE
+        if (::status.isInitialized) status.visibility = if (fullContentMode) View.GONE else View.VISIBLE
+        if (::categoryScroll.isInitialized) categoryScroll.visibility = if (fullContentMode) View.GONE else View.VISIBLE
+        if (detailSeries != null) {
+            renderSeriesDetail(detailSeries!!)
+            return
+        }
         val baseVisible = when (selectedType) {
             "Tümü" -> items.toList()
             "Favoriler" -> items.filter { favorites.contains(it.favoriteKey) }
@@ -729,7 +756,9 @@ class MainActivity : Activity() {
                             if (hasFocus) accent else Color.rgb(38, 45, 60))
                         v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
                     }
-                    setOnClickListener { showItemDetails(item) }
+                    setOnClickListener {
+                        if (item.type == "Diziler") showSeriesDetail(item) else showItemDetails(item)
+                    }
                 }
                 val liveCard = item.type == "Canlı TV"
                 val homeCard = selectedType == "Tümü"
@@ -766,6 +795,155 @@ class MainActivity : Activity() {
             content.addView(HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+    }
+
+    private fun showSeriesDetail(series: MediaItem) {
+        detailSeries = series
+        seriesEpisodeRows = emptyList()
+        seriesEpisodesLoading = true
+        seriesEpisodesError = ""
+        render()
+
+        val source = savedSources.firstOrNull { it.id == series.sourceId && it.mode == "xtream" }
+        if (source == null) {
+            seriesEpisodesLoading = false
+            seriesEpisodesError = "Bölümleri göstermek için bu dizinin Xtream kaynağına bağlan."
+            render()
+            return
+        }
+
+        thread {
+            try {
+                val u = URLEncoder.encode(source.username, "UTF-8")
+                val p = URLEncoder.encode(source.password, "UTF-8")
+                val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p&action=get_series_info&series_id=${URLEncoder.encode(series.seriesId.ifBlank { series.id }, "UTF-8")}"
+                val data = JSONObject(request(api))
+                val episodes = data.optJSONObject("episodes") ?: JSONObject()
+                val rows = mutableListOf<Pair<String, List<MediaItem>>>()
+                val keys = episodes.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val arr = episodes.optJSONArray(key) ?: continue
+                    val seasonItems = mutableListOf<MediaItem>()
+                    for (i in 0 until arr.length()) {
+                        val ep = arr.optJSONObject(i) ?: continue
+                        val id = ep.optString("id", ep.optString("episode_id", ""))
+                        if (id.isBlank()) continue
+                        val ext = ep.optString("container_extension", "mp4")
+                        val name = ep.optString("title", ep.optString("name", "Bölüm ${i + 1}"))
+                        val stream = "${source.address.trimEnd('/')}/series/$u/$p/$id.$ext"
+                        seasonItems.add(MediaItem(id, name, stream, "${series.name} • Sezon $key", "Bölümler", "", ext, series.seriesId, source.id))
+                    }
+                    if (seasonItems.isNotEmpty()) rows.add(Pair(key, seasonItems))
+                }
+                val sortedRows = rows.sortedWith(compareBy { it.first.toIntOrNull() ?: Int.MAX_VALUE })
+                runOnUiThread {
+                    if (detailSeries?.favoriteKey != series.favoriteKey) return@runOnUiThread
+                    seriesEpisodeRows = sortedRows
+                    seriesEpisodesLoading = false
+                    if (sortedRows.isEmpty()) seriesEpisodesError = "Bu dizi için bölüm bulunamadı."
+                    render()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    if (detailSeries?.favoriteKey != series.favoriteKey) return@runOnUiThread
+                    seriesEpisodesLoading = false
+                    seriesEpisodesError = "Bölümler yüklenemedi. Kaynağı kontrol edip yeniden dene."
+                    render()
+                }
+            }
+        }
+    }
+
+    private fun renderSeriesDetail(series: MediaItem) {
+        val hero = FrameLayout(this).apply {
+            background = roundedDrawable(Color.rgb(24, 31, 45), 18, Color.rgb(50, 60, 78))
+            clipToOutline = true
+        }
+        val poster = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            contentDescription = series.name
+            alpha = 0.82f
+        }
+        hero.addView(poster, FrameLayout.LayoutParams(-1, -1))
+        if (series.icon.startsWith("http://") || series.icon.startsWith("https://")) loadPoster(series.icon, poster)
+        val shade = View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0x22070A11, 0xEE070A11.toInt()))
+        }
+        hero.addView(shade, FrameLayout.LayoutParams(-1, -1))
+        val copy = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.BOTTOM
+            setPadding(24, 22, 24, 22)
+        }
+        copy.addView(TextView(this).apply {
+            text = "DİZİ  •  ${series.group.ifBlank { "DİĞER" }.uppercase()}"
+            textSize = 12f; setTextColor(accentBright); letterSpacing = 0.08f
+        })
+        copy.addView(TextView(this).apply {
+            text = series.name; textSize = 30f; maxLines = 2
+            setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            setPadding(0, 8, 0, 6)
+        })
+        copy.addView(TextView(this).apply {
+            text = series.plot.ifBlank { "Sezonları ve bölümleri aşağıdan seç." }
+            textSize = 14f; maxLines = 3; setTextColor(Color.rgb(226, 230, 238))
+        })
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        actions.addView(makeButton(if (favorites.contains(series.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
+            if (!favorites.add(series.favoriteKey)) favorites.remove(series.favoriteKey)
+            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+            render()
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 10, 0) })
+        actions.addView(makeButton("← Geri", false) {
+            detailSeries = null
+            seriesEpisodeRows = emptyList()
+            render()
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
+        copy.addView(actions)
+        hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
+        content.addView(hero, LinearLayout.LayoutParams(-1, 300).apply { setMargins(0, 0, 0, 18) })
+
+        content.addView(TextView(this).apply {
+            text = "SEZONLAR VE BÖLÜMLER"
+            textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            setPadding(4, 0, 0, 10)
+        })
+        when {
+            seriesEpisodesLoading -> content.addView(TextView(this).apply {
+                text = "Bölümler yükleniyor…"; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
+            })
+            seriesEpisodesError.isNotBlank() -> content.addView(TextView(this).apply {
+                text = seriesEpisodesError; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
+            })
+            seriesEpisodeRows.isEmpty() -> content.addView(TextView(this).apply {
+                text = "Bu dizi için bölüm bulunamadı."; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
+            })
+            else -> seriesEpisodeRows.forEach { (season, episodes) ->
+                content.addView(TextView(this).apply {
+                    text = "Sezon $season"; textSize = 18f
+                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accentBright)
+                    setPadding(4, 12, 4, 8)
+                })
+                episodes.forEachIndexed { index, episode ->
+                    val episodeRow = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                        setPadding(14, 10, 12, 10)
+                        background = roundedDrawable(panel, 12, Color.rgb(42, 50, 66))
+                    }
+                    episodeRow.addView(TextView(this).apply {
+                        text = "${index + 1}."; textSize = 15f; setTextColor(accentBright)
+                    }, LinearLayout.LayoutParams(38, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    episodeRow.addView(TextView(this).apply {
+                        text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    episodeRow.addView(makeButton("▶ İzle", true) { play(episode) },
+                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(12, 0, 0, 0) })
+                    content.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, 8) })
+                }
+            }
         }
     }
 
