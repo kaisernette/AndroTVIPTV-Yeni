@@ -4,10 +4,17 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -17,6 +24,12 @@ import androidx.media3.ui.PlayerView
 class PlayerActivity : Activity() {
     private var player: ExoPlayer? = null
     private var resumeKey: String = ""
+    private var playerView: PlayerView? = null
+    private var channelOverlay: LinearLayout? = null
+    private var channelRows: List<String> = emptyList()
+    private var channelUrls: List<String> = emptyList()
+    private var selectedChannelIndex = 0
+    private var highlightedChannelIndex = 0
     private val playbackPrefs by lazy { getSharedPreferences("androtv_playback", Context.MODE_PRIVATE) }
 
     private fun savePlaybackPosition() {
