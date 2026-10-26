@@ -714,8 +714,10 @@ class MainActivity : Activity() {
 
     private fun saveCachedItems() {
         val arr = JSONArray()
-        // Keep large playlists from exhausting app memory while serializing the cache.
-        items.take(1200).forEach { x ->
+        // Cache each media type separately so a long live-TV list cannot crowd
+        // movies and series out of the saved library after app restart.
+        val cached = items.groupBy { it.type }.values.flatMap { group -> group.take(1200) }
+        cached.forEach { x ->
             arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group)
                 .put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId)
                 .put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors).put("rating",x.rating)
