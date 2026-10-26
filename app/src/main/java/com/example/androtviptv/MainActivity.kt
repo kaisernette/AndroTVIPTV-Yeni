@@ -76,14 +76,18 @@ class MainActivity : Activity() {
     private data class ThemeOption(val id: String, val title: String, val bg: Int, val panel: Int, val accent: Int, val bright: Int, val muted: Int)
     private val themeOptions by lazy { listOf(
         ThemeOption("purple", "Mor Gece (Varsayılan)", Color.rgb(10, 9, 20), Color.rgb(27, 25, 43), Color.rgb(111, 91, 255), Color.rgb(190, 181, 255), Color.rgb(158, 163, 184)),
-        ThemeOption("blue", "Gece Mavisi", Color.rgb(5,12,27), Color.rgb(18,32,54), Color.rgb(76,166,255), Color.rgb(166,218,255), Color.rgb(160,181,207)),
+        ThemeOption("blue", "Antrasit & Mavi (Varsayılan)", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(55, 145, 255), Color.rgb(145, 198, 255), Color.rgb(164, 171, 185)),
         ThemeOption("gold", "Siyah & Altın", Color.rgb(7,10,17), Color.rgb(20,26,39), Color.rgb(222,181,91), Color.rgb(246,218,151), Color.rgb(157,169,188)),
         ThemeOption("green", "Zümrüt", Color.rgb(4,17,15), Color.rgb(17,37,33), Color.rgb(52,211,153), Color.rgb(167,243,208), Color.rgb(153,184,174)),
         ThemeOption("red", "Bordo & Kırmızı", Color.rgb(20,7,12), Color.rgb(43,20,28), Color.rgb(244,92,118), Color.rgb(255,183,193), Color.rgb(194,164,171))
     ) }
 
     private fun applySavedTheme() {
-        val selected = themeOptions.firstOrNull { it.id == prefs.getString("color_theme", "purple") } ?: themeOptions.first()
+        val savedTheme = prefs.getString("color_theme", "blue") ?: "blue"
+        // Switch users from the former purple default to the requested anthracite/blue theme.
+        val themeId = if (savedTheme == "purple") "blue" else savedTheme
+        val selected = themeOptions.firstOrNull { it.id == themeId } ?: themeOptions.first { it.id == "blue" }
+        if (savedTheme != themeId) prefs.edit().putString("color_theme", themeId).apply()
         bg = selected.bg; panel = selected.panel; accent = selected.accent; accentBright = selected.bright; muted = selected.muted
     }
 
@@ -645,13 +649,13 @@ class MainActivity : Activity() {
                     return result
                 }
 
-                runOnUiThread { loadProgress = 10; render() }
+                runOnUiThread { loadProgress = 10; status.text = "${source.name}: TV kategorileri alınıyor…" }
                 val liveCategories = categoryMap("get_live_categories")
-                runOnUiThread { loadProgress = 20; render() }
+                runOnUiThread { loadProgress = 20; status.text = "${source.name}: film kategorileri alınıyor…" }
                 val vodCategories = categoryMap("get_vod_categories")
-                runOnUiThread { loadProgress = 30; render() }
+                runOnUiThread { loadProgress = 30; status.text = "${source.name}: dizi kategorileri alınıyor…" }
                 val seriesCategories = categoryMap("get_series_categories")
-                runOnUiThread { loadProgress = 40; render() }
+                runOnUiThread { loadProgress = 40; status.text = "${source.name}: içerik listeleri alınıyor…" }
 
                 listOf("get_live_streams", "get_vod_streams", "get_series").forEachIndexed { actionIndex, action ->
                     runOnUiThread {
@@ -702,7 +706,7 @@ class MainActivity : Activity() {
                         if (i % 100 == 0) {
                             val baseProgress = 40 + actionIndex * 20
                             val within = if (arr.length() == 0) 20 else (i * 20 / arr.length())
-                            runOnUiThread { loadProgress = (baseProgress + within).coerceIn(0, 99); render() }
+                            runOnUiThread { loadProgress = (baseProgress + within).coerceIn(0, 99); status.text = "${source.name}: $type yükleniyor… %$loadProgress" }
                         }
                     }
                 }
