@@ -831,8 +831,9 @@ class MainActivity : Activity() {
         content.removeAllViews()
         val detailMode = detailSeries != null || detailMovie != null
         val firstEntry = items.isEmpty() && !isLoadingSource
-        if (::brandView.isInitialized) brandView.visibility = if (firstEntry) View.VISIBLE else View.GONE
-        if (::navBar.isInitialized) navBar.visibility = if (firstEntry) View.GONE else View.VISIBLE
+        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::brandView.isInitialized) brandView.visibility = View.GONE
+        if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = if (firstEntry || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
