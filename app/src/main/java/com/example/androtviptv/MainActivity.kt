@@ -756,9 +756,31 @@ class MainActivity : Activity() {
         }
         rebuildNavigation()
         val groups: List<Pair<String, List<MediaItem>>> = if (selectedType == "Tümü") {
+            val trendingMovies = listOf(
+                "gençlik", "organize işler: sazan sarmalı", "harry potter ve ateş kadehi",
+                "sevimli hayalet casper", "harry potter ve ölüm yadigârları", "hizmetçi",
+                "aşk hipotezi", "aquaman ve kayıp krallık", "arıcı: ölüm kovanı"
+            )
+            val trendingSeries = listOf(
+                "organize işler: karun hazinesi", "mezarlık", "prens", "from",
+                "çekiç ve gül", "tulsa king", "sex education", "konuşanlar"
+            )
+            fun rankedByTrend(source: List<MediaItem>, terms: List<String>): List<MediaItem> {
+                val remaining = source.toMutableList()
+                val ranked = mutableListOf<MediaItem>()
+                terms.forEach { term ->
+                    val match = remaining.firstOrNull { it.name.lowercase().contains(term) }
+                    if (match != null) {
+                        ranked.add(match)
+                        remaining.remove(match)
+                    }
+                }
+                ranked.addAll(remaining)
+                return ranked
+            }
             listOf(
-                "Haftanın Filmleri" to items.filter { it.type == "Filmler" }.take(24),
-                "Haftanın Dizileri" to items.filter { it.type == "Diziler" }.take(24),
+                "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(items.filter { it.type == "Filmler" }, trendingMovies).take(24),
+                "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(items.filter { it.type == "Diziler" }, trendingSeries).take(24),
                 "Son İzlenenler" to recent.take(24)
             ).filter { it.second.isNotEmpty() }
         } else {
