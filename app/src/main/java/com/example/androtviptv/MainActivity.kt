@@ -122,11 +122,11 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 0)
         }
-        brand.addView(TextView(this).apply {
+        brandView.addView(TextView(this).apply {
             text = "♛"; textSize = 25f; setTextColor(accent)
             gravity = Gravity.CENTER; setTypeface(null, android.graphics.Typeface.BOLD)
         }, LinearLayout.LayoutParams(-1, dp(28)))
-        brand.addView(TextView(this).apply {
+        brandView.addView(TextView(this).apply {
             text = "KAISER"; textSize = 18f; setTextColor(Color.rgb(16, 43, 79))
             setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.07f
             gravity = Gravity.CENTER
