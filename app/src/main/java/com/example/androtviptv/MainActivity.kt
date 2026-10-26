@@ -131,7 +131,7 @@ class MainActivity : Activity() {
             setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.07f
             gravity = Gravity.CENTER
         }, LinearLayout.LayoutParams(-1, dp(23)))
-        brand.addView(TextView(this).apply {
+        brandView.addView(TextView(this).apply {
             text = "—  TV  —"; textSize = 12f; setTextColor(accent)
             setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.12f
             gravity = Gravity.CENTER
