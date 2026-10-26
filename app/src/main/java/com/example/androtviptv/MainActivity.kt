@@ -108,26 +108,25 @@ class MainActivity : Activity() {
         root.addView(sidebar, LinearLayout.LayoutParams(360, -1).apply { setMargins(0, 0, 20, 0) })
 
         val brand = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 0)
         }
-        val brandMark = TextView(this).apply {
-            text = "K"; textSize = 20f; setTextColor(Color.rgb(12, 14, 19))
-            setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(accent)
-                setStroke((1 * resources.displayMetrics.density).toInt().coerceAtLeast(1), accentBright)
-            }
-        }
-        brand.addView(brandMark, LinearLayout.LayoutParams(34, 34).apply { setMargins(0, 0, 8, 0) })
         brand.addView(TextView(this).apply {
-            text = "KAISERTV"; textSize = 17f; setTextColor(Color.WHITE)
-            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.06f
-            gravity = Gravity.CENTER_VERTICAL
-        })
-        sidebar.addView(brand, LinearLayout.LayoutParams(-1, 62))
+            text = "♛"; textSize = 25f; setTextColor(accent)
+            gravity = Gravity.CENTER; setTypeface(null, android.graphics.Typeface.BOLD)
+        }, LinearLayout.LayoutParams(-1, dp(28)))
+        brand.addView(TextView(this).apply {
+            text = "KAISER"; textSize = 18f; setTextColor(Color.rgb(16, 43, 79))
+            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.07f
+            gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(-1, dp(23)))
+        brand.addView(TextView(this).apply {
+            text = "—  TV  —"; textSize = 12f; setTextColor(accent)
+            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.12f
+            gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(-1, dp(18)))
+        sidebar.addView(brand, LinearLayout.LayoutParams(-1, dp(76)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebar.addView(navBar, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         rebuildNavigation()
