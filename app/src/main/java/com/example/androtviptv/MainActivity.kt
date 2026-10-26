@@ -99,6 +99,13 @@ class MainActivity : Activity() {
     private lateinit var sidebar: LinearLayout
     private lateinit var rootLayout: LinearLayout
     private lateinit var mainContentScroll: ScrollView
+    private fun kaiserLogoView(): ImageView = ImageView(this).apply {
+        setImageResource(R.drawable.kaisertv_app_icon)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        setBackgroundColor(Color.BLACK)
+        contentDescription = "KaiserTV+"
+    }
+
     private var previewPlayer: ExoPlayer? = null
     private var previewView: PlayerView? = null
     private var previewUrl: String = ""
@@ -129,20 +136,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 0)
         }
-        brandView.addView(TextView(this).apply {
-            text = "♛"; textSize = 25f; setTextColor(accent)
-            gravity = Gravity.CENTER; setTypeface(null, android.graphics.Typeface.BOLD)
-        }, LinearLayout.LayoutParams(-1, dp(28)))
-        brandView.addView(TextView(this).apply {
-            text = "KAISER"; textSize = 18f; setTextColor(Color.rgb(16, 43, 79))
-            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.07f
-            gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(-1, dp(23)))
-        brandView.addView(TextView(this).apply {
-            text = "—  TV  —"; textSize = 12f; setTextColor(accent)
-            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.12f
-            gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(-1, dp(18)))
+        brandView.addView(kaiserLogoView(), LinearLayout.LayoutParams(-1, dp(72)))
         sidebar.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebarMenuScroll = ScrollView(this).apply {
@@ -864,15 +858,7 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
-            welcome.addView(TextView(this).apply {
-                text = "♛"
-                textSize = 64f; setTextColor(accent); gravity = Gravity.CENTER
-            }, LinearLayout.LayoutParams(-1, dp(86)))
-            welcome.addView(TextView(this).apply {
-                text = "KAISERTV"
-                textSize = 28f; setTextColor(accentBright)
-                setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
-            }, LinearLayout.LayoutParams(-1, dp(48)))
+            welcome.addView(kaiserLogoView(), LinearLayout.LayoutParams(dp(430), dp(220)))
             welcome.addView(TextView(this).apply {
                 text = "İzleme kaynağını ekleyerek başla"
                 textSize = 16f; setTextColor(muted); gravity = Gravity.CENTER
@@ -1042,7 +1028,7 @@ class MainActivity : Activity() {
                 "Son İzlenenler" to recent.take(24)
             ).filter { it.second.isNotEmpty() }
         } else {
-            visible.take(60).groupBy {
+            visible.groupBy {
                 if (selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
                 else it.group.ifBlank { "Diğer" }
             }.map { it.key to it.value }
