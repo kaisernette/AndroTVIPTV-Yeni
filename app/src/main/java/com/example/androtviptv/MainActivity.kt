@@ -1131,10 +1131,34 @@ class MainActivity : Activity() {
                         v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
                     }
                     setOnClickListener {
-                        when (item.type) {
-                            "Diziler" -> showSeriesDetail(item)
-                            "Filmler" -> showMovieDetail(item)
-                            else -> showItemDetails(item)
+                        // Search results for live channels should start playback immediately.
+                        if (sidebarMode == "search" && item.type == "Canlı TV") {
+                            play(item)
+                        } else {
+                            when (item.type) {
+                                "Diziler" -> showSeriesDetail(item)
+                                "Filmler" -> showMovieDetail(item)
+                                else -> showItemDetails(item)
+                            }
+                        }
+                    }
+                    setOnLongClickListener {
+                        // Long-press a live-channel search result to toggle its favorite state.
+                        if (sidebarMode == "search" && item.type == "Canlı TV") {
+                            val added = if (favorites.contains(item.favoriteKey)) {
+                                favorites.remove(item.favoriteKey)
+                                false
+                            } else {
+                                favorites.add(item.favoriteKey)
+                                true
+                            }
+                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            Toast.makeText(this@MainActivity,
+                                if (added) "${item.name} favorilere eklendi" else "${item.name} favorilerden çıkarıldı",
+                                Toast.LENGTH_SHORT).show()
+                            true
+                        } else {
+                            false
                         }
                     }
                 }
