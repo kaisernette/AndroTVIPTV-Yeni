@@ -1325,7 +1325,7 @@ class MainActivity : Activity() {
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            setPadding(26, 22, 26, 22)
+            setPadding(26, 22, 26, dp(42))
         }
         copy.addView(TextView(this).apply {
             text = "FİLM  •  ${movie.group.ifBlank { "DİĞER" }.uppercase()}"
