@@ -304,6 +304,7 @@ class MainActivity : Activity() {
                     selectedGroup = "Tüm kategoriler"
                     selectedType = key
                     sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
+                    prefs.edit().putString("last_section", key).apply()
                     rebuildNavigation()
                     render()
                 }
@@ -1094,7 +1095,7 @@ class MainActivity : Activity() {
             })
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            entries.forEach { item ->
+            entries.take(80).forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL; setPadding(7, 7, 7, 9)
                     background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
