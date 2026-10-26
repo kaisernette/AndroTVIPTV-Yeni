@@ -45,12 +45,17 @@ class PlayerActivity : Activity() {
         super.onCreate(savedInstanceState)
         val title = intent.getStringExtra("name") ?: "Oynatıcı"
         val url = intent.getStringExtra("url") ?: run { finish(); return }
+        channelRows = intent.getStringArrayListExtra("channel_names")?.toList() ?: emptyList()
+        channelUrls = intent.getStringArrayListExtra("channel_urls")?.toList() ?: emptyList()
+        selectedChannelIndex = intent.getIntExtra("channel_index", 0).coerceIn(0, (channelUrls.size - 1).coerceAtLeast(0))
+        highlightedChannelIndex = selectedChannelIndex
         resumeKey = "position_" + url.hashCode().toString()
         window.statusBarColor = Color.BLACK
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.BLACK) }
-        root.addView(TextView(this).apply { text = title; textSize = 18f; setTextColor(Color.WHITE); setPadding(16, 8, 16, 8) })
-        val view = PlayerView(this).apply { useController = true; setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING) }
-        root.addView(view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        window.navigationBarColor = Color.BLACK
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
+        val view = PlayerView(this).apply { useController = true; setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING); isFocusable = true; isFocusableInTouchMode = true }
+        playerView = view
+        root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         setContentView(root)
         player = ExoPlayer.Builder(this).build().also { exo ->
             view.player = exo
@@ -65,6 +70,7 @@ class PlayerActivity : Activity() {
             if (resumePosition > 5000L) exo.seekTo(resumePosition)
             exo.playWhenReady = true
         }
+        if (channelUrls.size > 1) view.requestFocus()
     }
     override fun onPause() { savePlaybackPosition(); super.onPause() }
     override fun onStop() { savePlaybackPosition(); player?.pause(); super.onStop() }
