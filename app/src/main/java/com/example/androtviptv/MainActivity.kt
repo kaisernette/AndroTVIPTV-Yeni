@@ -924,7 +924,7 @@ class MainActivity : Activity() {
                 }
                 private val textPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     color = accentBright
-                    textSize = sp(22).toFloat()
+                    textSize = 22f * resources.displayMetrics.scaledDensity
                     typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
