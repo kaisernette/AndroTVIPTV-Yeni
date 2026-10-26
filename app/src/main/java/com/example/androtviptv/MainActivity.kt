@@ -779,27 +779,49 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun cachedItemsFile() = java.io.File(filesDir, "kaisertv_media_cache.json")
+
     private fun saveCachedItems() {
+        // Persist the complete library to an app-private file. SharedPreferences
+        // and the old 1,200-items-per-type cap caused categories to disappear
+        // after restart when a provider returned tens of thousands of entries.
         val arr = JSONArray()
-        // Cache each media type separately so a long live-TV list cannot crowd
-        // movies and series out of the saved library after app restart.
-        val cached = items.groupBy { it.type }.values.flatMap { group -> group.take(1200) }
-        cached.forEach { x ->
+        items.forEach { x ->
             arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group)
                 .put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId)
                 .put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors).put("rating",x.rating)
                 .put("releaseDate",x.releaseDate).put("genre",x.genre))
         }
-        prefs.edit().putString("cached_items", arr.toString()).apply()
+        try {
+            val target = cachedItemsFile()
+            val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
+            temp.writeText(arr.toString(), Charsets.UTF_8)
+            if (!temp.renameTo(target)) {
+                target.writeText(temp.readText(Charsets.UTF_8), Charsets.UTF_8)
+                temp.delete()
+            }
+        } catch (_: Exception) {
+            // Keep the previous SharedPreferences cache as a fallback if storage fails.
+            prefs.edit().putString("cached_items", arr.toString()).apply()
+        }
     }
 
     private fun loadCachedItems() {
         try {
-            val arr = JSONArray(prefs.getString("cached_items", "[]"))
+            val file = cachedItemsFile()
+            val raw = if (file.exists() && file.length() > 0L) {
+                file.readText(Charsets.UTF_8)
+            } else {
+                prefs.getString("cached_items", "[]") ?: "[]"
+            }
+            val arr = JSONArray(raw)
+            val restored = ArrayList<MediaItem>(arr.length())
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
-                items.add(MediaItem(o.optString("id"),o.optString("name"),o.optString("url"),o.optString("group"),o.optString("type"),o.optString("icon"),o.optString("extension"),o.optString("seriesId"),o.optString("sourceId"),o.optString("plot"),o.optString("actors"),o.optString("rating"),o.optString("releaseDate"),o.optString("genre")))
+                restored.add(MediaItem(o.optString("id"),o.optString("name"),o.optString("url"),o.optString("group"),o.optString("type"),o.optString("icon"),o.optString("extension"),o.optString("seriesId"),o.optString("sourceId"),o.optString("plot"),o.optString("actors"),o.optString("rating"),o.optString("releaseDate"),o.optString("genre")))
             }
+            items.clear()
+            items.addAll(restored)
         } catch (_: Exception) { }
     }
 
