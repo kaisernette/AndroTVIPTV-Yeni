@@ -175,12 +175,6 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(this@MainActivity).apply {
-                text = "♛"
-                textSize = 22f
-                setTextColor(accentBright)
-                setPadding(0, 0, dp(6), 0)
-            })
-            addView(TextView(this@MainActivity).apply {
                 text = "KAISERTV+"
                 textSize = 13f
                 setTextColor(accentBright)
