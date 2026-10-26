@@ -67,14 +67,29 @@ class MainActivity : Activity() {
     private var xtreamPass = ""
     private var xtreamBase = ""
     private val prefs by lazy { getSharedPreferences("androtv", MODE_PRIVATE) }
-    private val bg = Color.rgb(7, 10, 17)
-    private val panel = Color.rgb(20, 26, 39)
-    private val accent = Color.rgb(222, 181, 91)
-    private val accentBright = Color.rgb(246, 218, 151)
-    private val muted = Color.rgb(157, 169, 188)
+    private var bg = Color.rgb(7, 10, 17)
+    private var panel = Color.rgb(20, 26, 39)
+    private var accent = Color.rgb(222, 181, 91)
+    private var accentBright = Color.rgb(246, 218, 151)
+    private var muted = Color.rgb(157, 169, 188)
+
+    private data class ThemeOption(val id: String, val title: String, val bg: Int, val panel: Int, val accent: Int, val bright: Int, val muted: Int)
+    private val themeOptions by lazy { listOf(
+        ThemeOption("gold", "Siyah & Altın (Varsayılan)", Color.rgb(7,10,17), Color.rgb(20,26,39), Color.rgb(222,181,91), Color.rgb(246,218,151), Color.rgb(157,169,188)),
+        ThemeOption("blue", "Gece Mavisi", Color.rgb(5,12,27), Color.rgb(18,32,54), Color.rgb(76,166,255), Color.rgb(166,218,255), Color.rgb(160,181,207)),
+        ThemeOption("purple", "Mor Gece", Color.rgb(15,7,24), Color.rgb(34,22,48), Color.rgb(183,111,255), Color.rgb(220,184,255), Color.rgb(181,165,197)),
+        ThemeOption("green", "Zümrüt", Color.rgb(4,17,15), Color.rgb(17,37,33), Color.rgb(52,211,153), Color.rgb(167,243,208), Color.rgb(153,184,174)),
+        ThemeOption("red", "Bordo & Kırmızı", Color.rgb(20,7,12), Color.rgb(43,20,28), Color.rgb(244,92,118), Color.rgb(255,183,193), Color.rgb(194,164,171))
+    ) }
+
+    private fun applySavedTheme() {
+        val selected = themeOptions.firstOrNull { it.id == prefs.getString("color_theme", "gold") } ?: themeOptions.first()
+        bg = selected.bg; panel = selected.panel; accent = selected.accent; accentBright = selected.bright; muted = selected.muted
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applySavedTheme()
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
         try {
@@ -794,7 +809,21 @@ class MainActivity : Activity() {
 
     private fun showSettingsDialog() {
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(20, 8, 20, 8); setBackgroundColor(bg) }
-        box.addView(TextView(this).apply { text = "Genel ayarlar"; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(0, 8, 0, 8) })
+        box.addView(TextView(this).apply { text = "Renk teması"; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(0, 8, 0, 4) })
+        box.addView(TextView(this).apply { text = "Uygulamanın arka planını ve vurgu rengini seç."; textSize = 13f; setTextColor(muted); setPadding(0, 0, 0, 8) })
+        val themeGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
+        val currentTheme = prefs.getString("color_theme", "gold") ?: "gold"
+        themeOptions.forEach { theme ->
+            val radio = RadioButton(this).apply {
+                text = theme.title; tag = theme.id; textSize = 15f; setTextColor(Color.WHITE)
+                buttonTintList = android.content.res.ColorStateList.valueOf(theme.accent)
+                setPadding(4, 5, 4, 5)
+            }
+            themeGroup.addView(radio)
+            if (theme.id == currentTheme) radio.isChecked = true
+        }
+        box.addView(themeGroup)
+        box.addView(TextView(this).apply { text = "Genel ayarlar"; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(0, 14, 0, 8) })
         val compact = CheckBox(this).apply { text = "Afiş kartlarını daha kompakt göster"; setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent); isChecked = prefs.getBoolean("compact_cards", false) }
         val resume = CheckBox(this).apply { text = "Uygulama açıldığında son bölümü seç"; setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent); isChecked = prefs.getBoolean("resume_home", true) }
         box.addView(compact); box.addView(resume)
@@ -805,7 +834,11 @@ class MainActivity : Activity() {
             box.addView(CheckBox(this).apply { text = category; setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent); isChecked = category in hiddenCategories; setOnCheckedChangeListener { _, checked -> if (checked) hiddenCategories.add(category) else hiddenCategories.remove(category); prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply(); if (selectedGroup == category && checked) selectedGroup = "Tüm kategoriler"; render() } })
         }
         val scroll = ScrollView(this).apply { addView(box) }
-        AlertDialog.Builder(this).setTitle("Ayarlar").setView(scroll).setPositiveButton("Kaydet") { _, _ -> prefs.edit().putBoolean("compact_cards", compact.isChecked).putBoolean("resume_home", resume.isChecked).apply(); render() }.setNegativeButton("Kapat", null).show()
+        AlertDialog.Builder(this).setTitle("Ayarlar").setView(scroll).setPositiveButton("Kaydet") { _, _ ->
+            val pickedTheme = themeOptions.firstOrNull { it.id == themeGroup.findViewById<RadioButton>(themeGroup.checkedRadioButtonId)?.tag as? String }?.id ?: currentTheme
+            prefs.edit().putBoolean("compact_cards", compact.isChecked).putBoolean("resume_home", resume.isChecked).putString("color_theme", pickedTheme).apply()
+            if (pickedTheme != currentTheme) recreate() else render()
+        }.setNegativeButton("Kapat", null).show()
     }
 
     private fun showItemDetails(item: MediaItem) {
