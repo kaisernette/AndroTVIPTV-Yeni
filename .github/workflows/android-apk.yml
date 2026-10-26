@@ -3,7 +3,7 @@ name: Build Kaisertv APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, kaisertv-redesign, series-fullscreen-detail, tv-channel-menu-home]
+    branches: [main, kaisertv-redesign, series-fullscreen-detail, tv-channel-menu-home, kaisertv-purple-ui]
 
 permissions:
   contents: read
