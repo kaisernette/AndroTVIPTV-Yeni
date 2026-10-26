@@ -48,6 +48,7 @@ class MainActivity : Activity() {
     private lateinit var mainHeader: LinearLayout
     private lateinit var content: LinearLayout
     private var detailSeries: MediaItem? = null
+    private var detailMovie: MediaItem? = null
     private var seriesEpisodeRows: List<Pair<String, List<MediaItem>>> = emptyList()
     private var seriesEpisodesLoading = false
     private var seriesEpisodesError = ""
@@ -106,11 +107,27 @@ class MainActivity : Activity() {
         }
         root.addView(sidebar, LinearLayout.LayoutParams(360, -1).apply { setMargins(0, 0, 20, 0) })
 
-        sidebar.addView(TextView(this).apply {
-            text = "KAISERTV"; textSize = 13f; setTextColor(Color.WHITE)
-            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.01f
-            setPadding(2, 0, 0, 24)
+        val brand = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(0, 2, 0, 24)
+        }
+        val brandMark = TextView(this).apply {
+            text = "K"; textSize = 20f; setTextColor(Color.rgb(12, 14, 19))
+            setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(accent)
+                setStroke((1 * resources.displayMetrics.density).toInt().coerceAtLeast(1), accentBright)
+            }
+        }
+        brand.addView(brandMark, LinearLayout.LayoutParams(34, 34).apply { setMargins(0, 0, 8, 0) })
+        brand.addView(TextView(this).apply {
+            text = "KAISERTV"; textSize = 17f; setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.06f
+            gravity = Gravity.CENTER_VERTICAL
         })
+        sidebar.addView(brand, LinearLayout.LayoutParams(-1, 54))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebar.addView(navBar, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         rebuildNavigation()
@@ -212,6 +229,7 @@ class MainActivity : Activity() {
             val key = when (tab) { "Ana sayfa" -> "Tümü"; "TV" -> "Canlı TV"; "İzlenenler" -> "Son İzlenenler"; else -> tab }
             navBar.addView(makeButton(if (selectedType == key) "●  $tab" else tab, selectedType == key) {
                 detailSeries = null
+                detailMovie = null
                 seriesEpisodeRows = emptyList()
                 seriesEpisodesLoading = false
                 seriesEpisodesError = ""
@@ -219,7 +237,14 @@ class MainActivity : Activity() {
                 selectedGroup = "Tüm kategoriler"
                 rebuildNavigation()
                 render()
-            }.apply { textSize = 18f; gravity = Gravity.CENTER_VERTICAL or Gravity.START; isSingleLine = true; setPadding(18, 0, 12, 0) }, LinearLayout.LayoutParams(-1, 54).apply { setMargins(0, 4, 0, 4) })
+            }.apply {
+                textSize = 16f
+                gravity = Gravity.CENTER
+                isSingleLine = true
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(8, 0, 8, 0)
+                minHeight = 48
+            }, LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) })
         }
 
     }
@@ -513,8 +538,9 @@ class MainActivity : Activity() {
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        if (detailSeries != null) {
+        if (detailSeries != null || detailMovie != null) {
             detailSeries = null
+            detailMovie = null
             seriesEpisodeRows = emptyList()
             seriesEpisodesLoading = false
             seriesEpisodesError = ""
@@ -636,13 +662,17 @@ class MainActivity : Activity() {
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
         content.removeAllViews()
-        val detailMode = detailSeries != null
+        val detailMode = detailSeries != null || detailMovie != null
         val fullContentMode = detailMode || selectedType == "Filmler" || selectedType == "Diziler"
         if (::mainHeader.isInitialized) mainHeader.visibility = if (fullContentMode) View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = if (fullContentMode) View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = if (fullContentMode) View.GONE else View.VISIBLE
         if (detailSeries != null) {
             renderSeriesDetail(detailSeries!!)
+            return
+        }
+        if (detailMovie != null) {
+            renderMovieDetail(detailMovie!!)
             return
         }
         val baseVisible = when (selectedType) {
@@ -757,7 +787,11 @@ class MainActivity : Activity() {
                         v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
                     }
                     setOnClickListener {
-                        if (item.type == "Diziler") showSeriesDetail(item) else showItemDetails(item)
+                        when (item.type) {
+                            "Diziler" -> showSeriesDetail(item)
+                            "Filmler" -> showMovieDetail(item)
+                            else -> showItemDetails(item)
+                        }
                     }
                 }
                 val liveCard = item.type == "Canlı TV"
@@ -854,6 +888,79 @@ class MainActivity : Activity() {
                 }
             }
         }
+    }
+
+    private fun showMovieDetail(movie: MediaItem) {
+        detailSeries = null
+        detailMovie = movie
+        render()
+    }
+
+    private fun renderMovieDetail(movie: MediaItem) {
+        val hero = FrameLayout(this).apply {
+            background = roundedDrawable(Color.rgb(24, 31, 45), 18, Color.rgb(50, 60, 78))
+            clipToOutline = true
+        }
+        val poster = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            contentDescription = movie.name
+            alpha = 0.78f
+        }
+        hero.addView(poster, FrameLayout.LayoutParams(-1, -1))
+        if (movie.icon.startsWith("http://") || movie.icon.startsWith("https://")) loadPoster(movie.icon, poster)
+        hero.addView(View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0x22070A11, 0xF5070A11.toInt()))
+        }, FrameLayout.LayoutParams(-1, -1))
+        val copy = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.BOTTOM
+            setPadding(26, 22, 26, 22)
+        }
+        copy.addView(TextView(this).apply {
+            text = "FİLM  •  ${movie.group.ifBlank { "DİĞER" }.uppercase()}"
+            textSize = 12f; setTextColor(accentBright); letterSpacing = 0.08f
+        })
+        copy.addView(TextView(this).apply {
+            text = movie.name; textSize = 30f; maxLines = 2
+            setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            setPadding(0, 8, 0, 6)
+        })
+        val metadata = listOf(movie.releaseDate, movie.genre, movie.rating.takeIf { it.isNotBlank() }?.let { "Puan $it" })
+            .filterNotNull().filter { it.isNotBlank() }.joinToString("   •   ")
+        if (metadata.isNotBlank()) copy.addView(TextView(this).apply {
+            text = metadata; textSize = 13f; setTextColor(accentBright); setPadding(0, 0, 0, 8)
+        })
+        copy.addView(TextView(this).apply {
+            text = movie.plot.ifBlank { "Film bilgileri kaynakta bulunmuyorsa doğrudan izleyebilirsin." }
+            textSize = 14f; maxLines = 3; setTextColor(Color.rgb(226, 230, 238))
+        })
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 10, 0) })
+        actions.addView(makeButton(if (favorites.contains(movie.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
+            if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
+            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+            render()
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 10, 0) })
+        actions.addView(makeButton("← Geri", false) {
+            detailMovie = null
+            render()
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 0, 0) })
+        copy.addView(actions)
+        hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
+        content.addView(hero, LinearLayout.LayoutParams(-1, 340).apply { setMargins(0, 0, 0, 18) })
+
+        val infoTitle = TextView(this).apply {
+            text = "FİLM HAKKINDA"; textSize = 20f
+            setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            setPadding(4, 0, 0, 8)
+        }
+        content.addView(infoTitle)
+        if (movie.actors.isNotBlank()) content.addView(TextView(this).apply {
+            text = "Oyuncular: ${movie.actors}"; textSize = 14f; setTextColor(muted)
+            setPadding(4, 0, 4, 12)
+        })
     }
 
     private fun renderSeriesDetail(series: MediaItem) {
