@@ -90,6 +90,9 @@ class MainActivity : Activity() {
     private lateinit var heroSubtitle: TextView
     private lateinit var heroArt: FrameLayout
     private lateinit var navBar: LinearLayout
+    private lateinit var sidebarMenuScroll: ScrollView
+    private var sidebarMode = "main"
+    private var searchQuery = ""
 
     private fun buildUi() {
         window.statusBarColor = bg
@@ -128,10 +131,14 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(-1, dp(18)))
         sidebar.addView(brand, LinearLayout.LayoutParams(-1, dp(76)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        sidebar.addView(navBar, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        sidebarMenuScroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(navBar)
+        }
+        sidebar.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         rebuildNavigation()
 
-        navBar.layoutParams = LinearLayout.LayoutParams(-1, 0, 1f)
         sidebar.addView(View(this).apply { setBackgroundColor(Color.rgb(39, 46, 60)) },
             LinearLayout.LayoutParams(-1, 1).apply { setMargins(0, 12, 0, 10) })
         sidebar.addView(makeButton("＋ Kaynak ekle", true) { showConnectionDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER },
@@ -224,32 +231,160 @@ class MainActivity : Activity() {
     private fun rebuildNavigation() {
         if (!::navBar.isInitialized) return
         navBar.removeAllViews()
-        listOf("Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler").forEach { tab ->
-            val key = when (tab) { "Ana sayfa" -> "Tümü"; "TV" -> "Canlı TV"; "İzlenenler" -> "Son İzlenenler"; else -> tab }
-            navBar.addView(makeButton(if (selectedType == key) "●  $tab" else tab, selectedType == key) {
-                if (tab == "TV") {
-                    showLiveChannelDialog()
-                    return@makeButton
+
+        fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
+            navBar.addView(makeButton(if (selected) "●  $label" else label, selected, action).apply {
+                textSize = 15f
+                gravity = Gravity.CENTER_VERTICAL
+                isSingleLine = true
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(14, 0, 8, 0)
+                minHeight = 46
+            }, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 2, 0, 2) })
+        }
+
+        fun returnToMainMenu() {
+            detailSeries = null
+            detailMovie = null
+            seriesEpisodeRows = emptyList()
+            seriesEpisodesLoading = false
+            seriesEpisodesError = ""
+            selectedType = "Tümü"
+            selectedGroup = "Tüm kategoriler"
+            sidebarMode = "main"
+            searchQuery = ""
+            rebuildNavigation()
+            render()
+        }
+
+        if (sidebarMode == "main") {
+            listOf("⌕  Ara", "Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler").forEach { tab ->
+                val normalizedTab = tab.substringAfter("  ", tab)
+                val key = when (normalizedTab) {
+                    "Ana sayfa" -> "Tümü"
+                    "TV" -> "Canlı TV"
+                    "İzlenenler" -> "Son İzlenenler"
+                    else -> normalizedTab
                 }
-                detailSeries = null
-                detailMovie = null
-                seriesEpisodeRows = emptyList()
-                seriesEpisodesLoading = false
-                seriesEpisodesError = ""
-                selectedType = key
+                addSidebarButton(normalizedTab, selectedType == key && normalizedTab != "Ara") {
+                    if (normalizedTab == "Ara") {
+                        detailSeries = null
+                        detailMovie = null
+                        sidebarMode = "search"
+                        searchQuery = ""
+                        selectedType = "Tümü"
+                        selectedGroup = "Tüm kategoriler"
+                        rebuildNavigation()
+                        render()
+                        return@addSidebarButton
+                    }
+                    detailSeries = null
+                    detailMovie = null
+                    seriesEpisodeRows = emptyList()
+                    seriesEpisodesLoading = false
+                    seriesEpisodesError = ""
+                    selectedGroup = "Tüm kategoriler"
+                    selectedType = key
+                    sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
+                    rebuildNavigation()
+                    render()
+                }
+            }
+            return
+        }
+
+        addSidebarButton("← Ana menü") { returnToMainMenu() }
+
+        if (sidebarMode == "search") {
+            navBar.addView(TextView(this).apply {
+                text = "İÇERİK ARA"
+                textSize = 11f
+                setTextColor(accentBright)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                letterSpacing = 0.08f
+                setPadding(14, dp(12), 8, dp(8))
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            val searchInput = EditText(this).apply {
+                hint = "Film, dizi veya kanal ara"
+                setSingleLine(true)
+                textSize = 14f
+                setTextColor(Color.WHITE)
+                setHintTextColor(muted)
+                setPadding(dp(12), 0, dp(12), 0)
+                background = roundedDrawable(Color.rgb(28, 35, 49), 12, Color.rgb(58, 68, 86))
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+                setText(searchQuery)
+                setSelection(text.length)
+                addTextChangedListener(object : android.text.TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                        searchQuery = s?.toString().orEmpty()
+                        selectedGroup = "Tüm kategoriler"
+                        render()
+                    }
+                    override fun afterTextChanged(s: android.text.Editable?) {}
+                })
+            }
+            navBar.addView(searchInput, LinearLayout.LayoutParams(-1, dp(46)).apply {
+                setMargins(dp(6), dp(2), dp(6), dp(8))
+            })
+            addSidebarButton("Temizle") {
+                searchQuery = ""
+                rebuildNavigation()
+                render()
+                navBar.findViewById<EditText>(searchInput.id)?.requestFocus()
+            }
+            return
+        }
+
+        val heading = when (selectedType) {
+            "Canlı TV" -> "CANLI KANALLAR"
+            "Filmler" -> "FİLM KATEGORİLERİ"
+            "Diziler" -> "DİZİ KATEGORİLERİ"
+            else -> "KATEGORİLER"
+        }
+        navBar.addView(TextView(this).apply {
+            text = heading
+            textSize = 11f
+            setTextColor(accentBright)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.08f
+            setPadding(14, dp(12), 8, dp(8))
+        }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        if (selectedType == "Canlı TV") {
+            val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+            if (channels.isEmpty()) {
+                navBar.addView(TextView(this).apply {
+                    text = if (items.isEmpty()) "Önce bir yayın kaynağı ekle." else "Canlı kanal bulunamadı."
+                    textSize = 13f
+                    setTextColor(muted)
+                    setPadding(14, 8, 8, 8)
+                })
+            } else {
+                channels.take(300).forEach { channel ->
+                    addSidebarButton(channel.name) { play(channel) }
+                }
+            }
+        } else {
+            addSidebarButton("Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
                 selectedGroup = "Tüm kategoriler"
                 rebuildNavigation()
                 render()
-            }.apply {
-                textSize = 16f
-                gravity = Gravity.CENTER
-                isSingleLine = true
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                setPadding(8, 0, 8, 0)
-                minHeight = 48
-            }, LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) })
+            }
+            val categories = items.filter { it.type == selectedType }
+                .map { it.group.ifBlank { "Diğer" } }
+                .distinct()
+                .filter { it !in hiddenCategories }
+                .sorted()
+            categories.take(200).forEach { category ->
+                addSidebarButton(category, selectedGroup == category) {
+                    selectedGroup = category
+                    rebuildNavigation()
+                    render()
+                }
+            }
         }
-
     }
 
     private fun showConnectionDialog() {
@@ -669,10 +804,7 @@ class MainActivity : Activity() {
         val fullContentMode = detailMode || selectedType == "Filmler" || selectedType == "Diziler"
         if (::mainHeader.isInitialized) mainHeader.visibility = if (fullContentMode) View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = if (fullContentMode) View.GONE else View.VISIBLE
-        if (::categoryScroll.isInitialized) {
-            val showCategories = detailMode || selectedType == "Canlı TV" || selectedType == "Filmler" || selectedType == "Diziler"
-            categoryScroll.visibility = if (showCategories && !detailMode) View.VISIBLE else View.GONE
-        }
+        if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (detailSeries != null) {
             renderSeriesDetail(detailSeries!!)
             return
@@ -681,11 +813,18 @@ class MainActivity : Activity() {
             renderMovieDetail(detailMovie!!)
             return
         }
-        val baseVisible = when (selectedType) {
-            "Tümü" -> items.toList()
-            "Favoriler" -> items.filter { favorites.contains(it.favoriteKey) }
-            "Son İzlenenler" -> recent.toList()
+        val unfilteredBase = when {
+            sidebarMode == "search" -> items.toList()
+            selectedType == "Tümü" -> items.toList()
+            selectedType == "Favoriler" -> items.filter { favorites.contains(it.favoriteKey) }
+            selectedType == "Son İzlenenler" -> recent.toList()
             else -> items.filter { it.type == selectedType }
+        }
+        val query = if (sidebarMode == "search") searchQuery.trim() else ""
+        val baseVisible = if (query.isBlank()) unfilteredBase else unfilteredBase.filter {
+            it.name.contains(query, ignoreCase = true) ||
+            it.group.contains(query, ignoreCase = true) ||
+            it.type.contains(query, ignoreCase = true)
         }
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().filter { it !in hiddenCategories }.sorted()
         categoryBar.removeAllViews()
@@ -698,7 +837,7 @@ class MainActivity : Activity() {
                 setPadding(12, 0, 12, 0)
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
         }
-        val visible = if (selectedGroup == "Tüm kategoriler") baseVisible.filter { (it.group.ifBlank { "Diğer" }) !in hiddenCategories }
+        val visible = if (selectedGroup == "Tüm kategoriler" || sidebarMode == "search") baseVisible.filter { (it.group.ifBlank { "Diğer" }) !in hiddenCategories }
             else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup && it.group !in hiddenCategories }
         if (visible.isEmpty()) {
             val empty = LinearLayout(this).apply {
@@ -1130,6 +1269,33 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
+    @Deprecated("Deprecated in Android API; retained for Android TV Back-key handling")
+    override fun onBackPressed() {
+        if (detailSeries != null) {
+            detailSeries = null
+            seriesEpisodeRows = emptyList()
+            seriesEpisodesLoading = false
+            seriesEpisodesError = ""
+            render()
+            return
+        }
+        if (detailMovie != null) {
+            detailMovie = null
+            render()
+            return
+        }
+        if (sidebarMode != "main") {
+            selectedType = "Tümü"
+            selectedGroup = "Tüm kategoriler"
+            sidebarMode = "main"
+            searchQuery = ""
+            rebuildNavigation()
+            render()
+            return
+        }
+        super.onBackPressed()
+    }
+
     private fun saveRecent(item: MediaItem) {
         recent.removeAll { it.favoriteKey == item.favoriteKey }
         recent.add(0, item)
@@ -1137,25 +1303,6 @@ class MainActivity : Activity() {
         val arr = JSONArray()
         recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId).put("sourceId", r.sourceId)) }
         getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
-    }
-
-    private fun showLiveChannelDialog() {
-        val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
-        if (channels.isEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle("Canlı kanallar")
-                .setMessage(if (items.isEmpty()) "Önce bir yayın kaynağı ekleyip yükle." else "Kaynakta canlı TV kanalı bulunamadı.")
-                .setPositiveButton("Tamam", null)
-                .show()
-            return
-        }
-        AlertDialog.Builder(this)
-            .setTitle("CANLI KANALLAR")
-            .setItems(channels.map { it.name }.toTypedArray()) { _, which ->
-                if (which in channels.indices) play(channels[which])
-            }
-            .setNegativeButton("Kapat", null)
-            .show()
     }
 
     private fun play(item: MediaItem) {
