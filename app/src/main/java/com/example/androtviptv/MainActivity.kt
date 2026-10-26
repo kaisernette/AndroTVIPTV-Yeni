@@ -58,7 +58,7 @@ class MainActivity : Activity() {
     private lateinit var username: EditText
     private lateinit var password: EditText
     private lateinit var sourceMode: RadioGroup
-    private var selectedType = "Tümü"
+    private var selectedType = "Canlı TV"
     private var xtreamUser = ""
     private var xtreamPass = ""
     private var xtreamBase = ""
@@ -82,14 +82,68 @@ class MainActivity : Activity() {
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         loadCachedItems()
-        buildUi()
         loadSavedSources()
+        if (savedSources.isEmpty()) {
+            showWelcomeScreen()
+        } else {
+            val lastSection = prefs.getString("last_section", "Canlı TV") ?: "Canlı TV"
+            selectedType = if (lastSection == "Tümü" || lastSection == "Ana sayfa") "Canlı TV" else lastSection
+            buildUi()
+            if (::status.isInitialized) {
+                status.text = if (items.isNotEmpty()) "${items.size} kayıtlı içerik hazır. Yenilemek için Kaynaklar bölümünü aç."
+                    else "Kayıtlı kaynak bulundu. İçerikleri yüklemek için Kaynaklar bölümünden yenile."
+            }
+        }
     }
 
     private lateinit var heroTitle: TextView
     private lateinit var heroSubtitle: TextView
     private lateinit var heroArt: FrameLayout
     private lateinit var navBar: LinearLayout
+
+    private fun showWelcomeScreen() {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(28), dp(24), dp(28), dp(24))
+            setBackgroundColor(bg)
+        }
+        root.addView(TextView(this).apply {
+            text = "♛"
+            textSize = 64f
+            gravity = Gravity.CENTER
+            setTextColor(accent)
+        }, LinearLayout.LayoutParams(-1, dp(76)))
+        root.addView(TextView(this).apply {
+            text = "KAISER"
+            textSize = 34f
+            gravity = Gravity.CENTER
+            letterSpacing = 0.12f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(16, 43, 79))
+        }, LinearLayout.LayoutParams(-1, dp(52)))
+        root.addView(TextView(this).apply {
+            text = "—  TV  —"
+            textSize = 20f
+            gravity = Gravity.CENTER
+            letterSpacing = 0.18f
+            setTextColor(accent)
+        }, LinearLayout.LayoutParams(-1, dp(38)))
+        root.addView(TextView(this).apply {
+            text = "Eğlence dünyana hoş geldin"
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setPadding(0, dp(22), 0, dp(18))
+        })
+        root.addView(makeButton("＋  KAYNAK EKLE", true) { showConnectionDialog() }.apply {
+            textSize = 16f
+            gravity = Gravity.CENTER
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }, LinearLayout.LayoutParams(dp(260), dp(52)))
+        setContentView(root)
+    }
 
     private fun buildUi() {
         window.statusBarColor = bg
@@ -224,8 +278,8 @@ class MainActivity : Activity() {
     private fun rebuildNavigation() {
         if (!::navBar.isInitialized) return
         navBar.removeAllViews()
-        listOf("Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler").forEach { tab ->
-            val key = when (tab) { "Ana sayfa" -> "Tümü"; "TV" -> "Canlı TV"; "İzlenenler" -> "Son İzlenenler"; else -> tab }
+        listOf("TV", "Filmler", "Diziler", "Favoriler", "İzlenenler").forEach { tab ->
+            val key = when (tab) { "TV" -> "Canlı TV"; "İzlenenler" -> "Son İzlenenler"; else -> tab }
             navBar.addView(makeButton(if (selectedType == key) "●  $tab" else tab, selectedType == key) {
                 detailSeries = null
                 detailMovie = null
@@ -291,7 +345,7 @@ class MainActivity : Activity() {
                     }
                     val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
                     val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "xtream", server.text.toString().trim().trimEnd('/'), username.text.toString().trim(), password.text.toString())
-                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadXtream(src, false)
+                    saveSource(src); hideKeyboard(); dialog.dismiss(); if (!::status.isInitialized) buildUi(); loadXtream(src, false)
                 } else {
                     val address = playlistUrl.text.toString().trim()
                     if (!address.startsWith("http://") && !address.startsWith("https://")) {
@@ -300,7 +354,7 @@ class MainActivity : Activity() {
                     }
                     val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
                     val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "m3u", address)
-                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadM3u(src, false)
+                    saveSource(src); hideKeyboard(); dialog.dismiss(); if (!::status.isInitialized) buildUi(); loadM3u(src, false)
                 }
             }
         }
@@ -358,9 +412,15 @@ class MainActivity : Activity() {
         if (savedSources.isNotEmpty()) {
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
-            status.text = if (items.isNotEmpty()) "${items.size} kayıtlı içerik hazır. Yenilemek için Kaynaklar bölümünü aç." else "Kayıtlı kaynak bulundu. İçerikleri ilk kez yüklemek için Kaynaklar bölümünden yenile."
-            if (last != null && prefs.getBoolean("resume_home", true)) selectedType = prefs.getString("last_section", "Tümü") ?: "Tümü"
-            render()
+            if (last != null && prefs.getBoolean("resume_home", true)) {
+                val savedSection = prefs.getString("last_section", "Canlı TV") ?: "Canlı TV"
+                selectedType = if (savedSection == "Tümü" || savedSection == "Ana sayfa") "Canlı TV" else savedSection
+            }
+            if (::status.isInitialized) {
+                status.text = if (items.isNotEmpty()) "${items.size} kayıtlı içerik hazır. Yenilemek için Kaynaklar bölümünü aç."
+                    else "Kayıtlı kaynak bulundu. İçerikleri yüklemek için Kaynaklar bölümünden yenile."
+                render()
+            }
         }
     }
     private fun showSourcesDialog() {
@@ -754,38 +814,32 @@ class MainActivity : Activity() {
             }
         }
         rebuildNavigation()
-        val groups: List<Pair<String, List<MediaItem>>> = if (selectedType == "Tümü") {
-            // Weekly Turkey streaming chart, 19–26 Oct 2026. Existing playlist items are
-            // prioritized by title; titles missing from the user's source are not fabricated.
-            val trendingMovies = listOf(
-                "gençlik", "organize işler: sazan sarmalı", "harry potter ve ateş kadehi",
-                "iyi ki aldatılmışım", "sevimli hayalet casper",
-                "harry potter ve ölüm yadigârları", "hizmetçi", "addams ailesi", "aşk hipotezi"
-            )
-            val trendingSeries = listOf(
-                "organize işler: karun hazinesi", "off campus", "game of thrones", "from",
-                "mezarlık", "çekiç ve gül", "tulsa king", "prens", "sex education", "konuşanlar"
-            )
-            fun rankedByTrend(source: List<MediaItem>, terms: List<String>): List<MediaItem> {
-                val remaining = source.toMutableList()
-                val ranked = mutableListOf<MediaItem>()
-                terms.forEach { term ->
-                    val match = remaining.firstOrNull { it.name.lowercase().contains(term) }
-                    if (match != null) {
-                        ranked.add(match)
-                        remaining.remove(match)
-                    }
+        val trendingMovies = listOf(
+            "gençlik", "organize işler: sazan sarmalı", "harry potter ve ateş kadehi",
+            "iyi ki aldatılmışım", "sevimli hayalet casper",
+            "harry potter ve ölüm yadigârları", "hizmetçi", "addams ailesi", "aşk hipotezi"
+        )
+        val trendingSeries = listOf(
+            "organize işler: karun hazinesi", "off campus", "game of thrones", "from",
+            "mezarlık", "çekiç ve gül", "tulsa king", "prens", "sex education", "konuşanlar"
+        )
+        fun rankedByTrend(source: List<MediaItem>, terms: List<String>): List<MediaItem> {
+            val remaining = source.toMutableList()
+            val ranked = mutableListOf<MediaItem>()
+            terms.forEach { term ->
+                val match = remaining.firstOrNull { it.name.lowercase().contains(term) }
+                if (match != null) {
+                    ranked.add(match)
+                    remaining.remove(match)
                 }
-                ranked.addAll(remaining)
-                return ranked
             }
-            listOf(
-                "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(items.filter { it.type == "Filmler" }, trendingMovies).take(24),
-                "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(items.filter { it.type == "Diziler" }, trendingSeries).take(24),
-                "Son İzlenenler" to recent.take(24)
-            ).filter { it.second.isNotEmpty() }
-        } else {
-            visible.take(60).groupBy {
+            ranked.addAll(remaining)
+            return ranked
+        }
+        val groups: List<Pair<String, List<MediaItem>>> = when (selectedType) {
+            "Filmler" -> listOf("Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(visible, trendingMovies).take(60))
+            "Diziler" -> listOf("Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(visible, trendingSeries).take(60))
+            else -> visible.take(60).groupBy {
                 if (selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
                 else it.group.ifBlank { "Diğer" }
             }.map { it.key to it.value }
