@@ -145,10 +145,10 @@ class MainActivity : Activity() {
         rootLayout = root
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(14, 16, 14, 14)
+            setPadding(7, 12, 7, 10)
             background = roundedDrawable(Color.rgb(19, 18, 32), 18, Color.rgb(43, 40, 65))
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(250, -1).apply { setMargins(0, 0, 16, 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(88, -1).apply { setMargins(0, 0, 14, 0) })
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -172,11 +172,11 @@ class MainActivity : Activity() {
 
         sidebar.addView(View(this).apply { setBackgroundColor(Color.rgb(39, 46, 60)) },
             LinearLayout.LayoutParams(-1, 1).apply { setMargins(0, 12, 0, 10) })
-        sidebar.addView(makeButton("＋", true) { showConnectionDialog() }.apply { textSize = 22f; gravity = Gravity.CENTER },
+        sidebar.addView(makeButton("➕", true) { showConnectionDialog() }.apply { textSize = 22f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0) },
             LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
-        sidebar.addView(makeButton("▤", false) { showSourcesDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER },
+        sidebar.addView(makeButton("📂", false) { showSourcesDialog() }.apply { textSize = 22f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0) },
             LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
-        sidebar.addView(makeButton("⚙", false) { showSettingsDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER }, LinearLayout.LayoutParams(-1, 42))
+        sidebar.addView(makeButton("⚙️", false) { showSettingsDialog() }.apply { textSize = 22f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0) }, LinearLayout.LayoutParams(-1, 42))
 
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -268,11 +268,14 @@ class MainActivity : Activity() {
         navBar.removeAllViews()
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
-            navBar.addView(makeButton(if (selected) "●" else label, selected, action).apply {
+            navBar.addView(makeButton(label, selected, action).apply {
                 textSize = 22f
                 gravity = Gravity.CENTER
                 isSingleLine = true
                 contentDescription = label
+                includeFontPadding = false
+                minWidth = 0
+                minimumWidth = 0
                 setPadding(0, 0, 0, 0)
                 minHeight = 42
             }, LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 3, 0, 3) })
@@ -294,7 +297,7 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "main") {
-            listOf("⌕", "⌂", "▣", "🎬", "▤", "★", "◷").forEachIndexed { index, iconLabel ->
+            listOf("🔍", "🏠", "📺", "🎬", "📚", "⭐", "🕘").forEachIndexed { index, iconLabel ->
                 val tab = listOf("⌕  Ara", "Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler")[index]
                 val normalizedTab = if (tab.startsWith("⌕")) "Ara" else tab
                 val key = when (normalizedTab) {
