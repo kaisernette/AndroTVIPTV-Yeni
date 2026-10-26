@@ -2,7 +2,6 @@ package com.example.androtviptv
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.app.Dialog
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -104,7 +103,7 @@ class MainActivity : Activity() {
         }
         root.addView(tabs)
         categoryBar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 2) }
-        root.addView(ScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(categoryBar) }, LinearLayout.LayoutParams(-1, 56))
+        root.addView(ScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(categoryBar) }, LinearLayout.LayoutParams(-1, 44))
         val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
         content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 10, 0, 8) }
         scroll.addView(content); root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -118,7 +117,7 @@ class MainActivity : Activity() {
     }
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
-        text = label; textSize = 14f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
+        text = label; textSize = 13f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setTextColor(Color.WHITE); setBackgroundColor(if (primary) accent else panel); setOnClickListener { action() }
     }
     private fun hideKeyboard() { (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(playlistUrl.windowToken, 0) }
@@ -226,7 +225,7 @@ class MainActivity : Activity() {
         (listOf("Tüm kategoriler") + groupsAvailable).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "• $group" else group, group == selectedGroup) {
                 selectedGroup = group; render()
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 48).apply { setMargins(0, 0, 6, 0) })
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 38).apply { setMargins(0, 0, 6, 0) })
         }
         val visible = if (selectedGroup == "Tüm kategoriler") baseVisible else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
         if (visible.isEmpty()) {
@@ -281,95 +280,8 @@ class MainActivity : Activity() {
 
     private fun play(item: MediaItem) {
         if (item.type == "Diziler" && item.url.isBlank()) { loadSeriesEpisodes(item); return }
-        if (item.type == "Filmler") { showMovieDetails(item); return }
-        startPlayback(item)
-    }
-
-    private fun startPlayback(item: MediaItem) {
         saveRecent(item)
         startActivity(Intent(this, PlayerActivity::class.java).putExtra("name", item.name).putExtra("url", item.url))
-    }
-
-    private fun showMovieDetails(item: MediaItem) {
-        val dialog = Dialog(this)
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(28, 20, 28, 24)
-            setBackgroundColor(bg)
-            isFocusableInTouchMode = true
-        }
-        root.addView(makeButton("✕  Kapat", false) { dialog.dismiss() },
-            LinearLayout.LayoutParams(-1, 52))
-        val poster = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = item.name
-            layoutParams = LinearLayout.LayoutParams(-1, 0, 1f).apply { setMargins(0, 12, 0, 12) }
-        }
-        root.addView(poster)
-        if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
-        root.addView(TextView(this).apply {
-            text = item.name; textSize = 26f; setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.WHITE); gravity = Gravity.CENTER; setPadding(0, 8, 0, 16)
-        })
-        root.addView(makeButton("▶  FİLMİ BAŞLAT", true) { dialog.dismiss(); startPlayback(item) },
-            LinearLayout.LayoutParams(-1, 64).apply { setMargins(0, 4, 0, 4) })
-        dialog.setContentView(root)
-        dialog.show()
-        dialog.window?.apply {
-            setBackgroundDrawableResource(android.R.color.transparent)
-            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                or View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
-        }
-        root.requestFocus()
-    }
-
-    private fun showSeriesDetails(series: MediaItem, seasons: List<Pair<String, List<MediaItem>>>) {
-        val dialog = Dialog(this)
-        val page = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; setBackgroundColor(bg); setPadding(24, 16, 24, 24)
-        }
-        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        top.addView(TextView(this).apply {
-            text = series.name; textSize = 24f; setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.WHITE)
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        top.addView(makeButton("✕ Kapat", false) { dialog.dismiss() }, LinearLayout.LayoutParams(130, 52))
-        page.addView(top)
-        val poster = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER; contentDescription = series.name
-            layoutParams = LinearLayout.LayoutParams(-1, 250).apply { setMargins(0, 10, 0, 12) }
-        }
-        page.addView(poster)
-        if (series.icon.startsWith("http://") || series.icon.startsWith("https://")) loadPoster(series.icon, poster)
-        val scroll = ScrollView(this)
-        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        seasons.forEach { (season, episodes) ->
-            list.addView(TextView(this).apply {
-                text = "SEZON $season"; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.WHITE); setPadding(4, 16, 4, 8)
-            })
-            episodes.forEachIndexed { index, episode ->
-                list.addView(makeButton("▶  ${episode.name.ifBlank { "Bölüm ${index + 1}" }}", false) {
-                    dialog.dismiss(); startPlayback(episode)
-                }, LinearLayout.LayoutParams(-1, 54).apply { setMargins(0, 3, 0, 3) })
-            }
-        }
-        scroll.addView(list)
-        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        dialog.setContentView(page)
-        dialog.show()
-        dialog.window?.apply {
-            setBackgroundDrawableResource(android.R.color.transparent)
-            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                or View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
-        }
-        page.requestFocus()
     }
 
     private fun loadSeriesEpisodes(series: MediaItem) {
@@ -401,8 +313,13 @@ class MainActivity : Activity() {
                 }
                 runOnUiThread {
                     status.text = "Dizi bölümleri hazır."
-                    if (episodeRows.isEmpty()) { Toast.makeText(this, "Bu dizi için bölüm bulunamadı.", Toast.LENGTH_LONG).show(); return@runOnUiThread }
-                    showSeriesDetails(series, episodeRows)
+                    if (episodeRows.isEmpty()) { AlertDialog.Builder(this).setTitle(series.name).setMessage("Bu dizi için bölüm bulunamadı.").setPositiveButton("Tamam", null).show(); return@runOnUiThread }
+                    val seasonLabels = episodeRows.map { pair -> "Sezon ${pair.first}" }
+                    AlertDialog.Builder(this).setTitle(series.name).setItems(seasonLabels.toTypedArray()) { _, which ->
+                        val chosen = episodeRows[which].second
+                        if (chosen.isEmpty()) { Toast.makeText(this, "Bu sezonda bölüm bulunamadı.", Toast.LENGTH_SHORT).show(); return@setItems }
+                        AlertDialog.Builder(this).setTitle(seasonLabels[which]).setItems(chosen.map { it.name }.toTypedArray()) { _, epIndex -> play(chosen[epIndex]) }.setNegativeButton("Geri", null).show()
+                    }.setNegativeButton("Kapat", null).show()
                 }
             } catch (e: Exception) { runOnUiThread { status.text = "Bölümler yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
         }
