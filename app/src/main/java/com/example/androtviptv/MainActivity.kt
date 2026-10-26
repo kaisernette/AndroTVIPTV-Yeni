@@ -315,7 +315,7 @@ class MainActivity : Activity() {
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                 setText(searchQuery)
                 setSelection(text.length)
-                addTextChangedListener(object : android.text.TextWatcher {
+                val searchWatcher = object : android.text.TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                         searchQuery = s?.toString().orEmpty()
@@ -323,7 +323,8 @@ class MainActivity : Activity() {
                         render()
                     }
                     override fun afterTextChanged(s: android.text.Editable?) {}
-                })
+                }
+                addTextChangedListener(searchWatcher)
             }
             navBar.addView(searchInput, LinearLayout.LayoutParams(-1, dp(46)).apply {
                 setMargins(dp(6), dp(2), dp(6), dp(8))
