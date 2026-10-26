@@ -265,18 +265,31 @@ class MainActivity : Activity() {
 
     private fun rebuildNavigation() {
         if (!::navBar.isInitialized) return
+        // Keep the main navigation icon-only, but expand the sidebar when a
+        // category list is open so full category names remain readable.
+        if (::sidebar.isInitialized) {
+            val showReadableCategories = sidebarMode == "context" &&
+                selectedType in listOf("Canlı TV", "Filmler", "Diziler")
+            val params = sidebar.layoutParams
+            val desiredWidth = if (showReadableCategories) 260 else 104
+            if (params != null && params.width != desiredWidth) {
+                params.width = desiredWidth
+                sidebar.layoutParams = params
+            }
+        }
         navBar.removeAllViews()
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                textSize = 22f
-                gravity = Gravity.CENTER
-                isSingleLine = true
+                textSize = if (label.length > 2) 14f else 22f
+                gravity = if (label.length > 2) Gravity.CENTER_VERTICAL else Gravity.CENTER
+                isSingleLine = label.length <= 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
                 contentDescription = label
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(0, 0, 0, 0)
+                setPadding(if (label.length > 2) 12 else 0, 0, if (label.length > 2) 8 else 0, 0)
                 minHeight = 42
             }, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 7, 0, 7) })
         }
@@ -386,10 +399,10 @@ class MainActivity : Activity() {
         }
         navBar.addView(TextView(this).apply {
             text = heading
-            textSize = 10f
+            textSize = 12f
             setTextColor(accentBright)
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.04f
+            letterSpacing = 0.02f
             setPadding(10, dp(10), 6, dp(6))
         }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
