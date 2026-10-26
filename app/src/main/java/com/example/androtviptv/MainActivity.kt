@@ -648,7 +648,10 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }; items.addAll(loaded)
                     saveCachedItems()
-                    selectedGroup = "Tüm kategoriler"; xtreamBase = base; xtreamUser = user; xtreamPass = pass
+                    selectedType = "Tümü"
+                    selectedGroup = "Tüm kategoriler"
+                    sidebarMode = "main"
+                    xtreamBase = base; xtreamUser = user; xtreamPass = pass
                     status.text = "${source.name}: ${loaded.size} içerik yüklendi. ${items.size} toplam içerik."
                     isLoadingSource = false
                     hasLoadedSource = true
