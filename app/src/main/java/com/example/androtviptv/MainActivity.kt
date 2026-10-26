@@ -649,13 +649,13 @@ class MainActivity : Activity() {
                     return result
                 }
 
-                runOnUiThread { loadProgress = 10; status.text = "${source.name}: TV kategorileri alınıyor…" }
+                runOnUiThread { loadProgress = 10; status.text = "${source.name}: TV kategorileri alınıyor…"; render() }
                 val liveCategories = categoryMap("get_live_categories")
-                runOnUiThread { loadProgress = 20; status.text = "${source.name}: film kategorileri alınıyor…" }
+                runOnUiThread { loadProgress = 20; status.text = "${source.name}: film kategorileri alınıyor…"; render() }
                 val vodCategories = categoryMap("get_vod_categories")
-                runOnUiThread { loadProgress = 30; status.text = "${source.name}: dizi kategorileri alınıyor…" }
+                runOnUiThread { loadProgress = 30; status.text = "${source.name}: dizi kategorileri alınıyor…"; render() }
                 val seriesCategories = categoryMap("get_series_categories")
-                runOnUiThread { loadProgress = 40; status.text = "${source.name}: içerik listeleri alınıyor…" }
+                runOnUiThread { loadProgress = 40; status.text = "${source.name}: içerik listeleri alınıyor…"; render() }
 
                 listOf("get_live_streams", "get_vod_streams", "get_series").forEachIndexed { actionIndex, action ->
                     runOnUiThread {
@@ -706,7 +706,7 @@ class MainActivity : Activity() {
                         if (i % 100 == 0) {
                             val baseProgress = 40 + actionIndex * 20
                             val within = if (arr.length() == 0) 20 else (i * 20 / arr.length())
-                            runOnUiThread { loadProgress = (baseProgress + within).coerceIn(0, 99); status.text = "${source.name}: $type yükleniyor… %$loadProgress" }
+                            runOnUiThread { loadProgress = (baseProgress + within).coerceIn(1, 99); status.text = "${source.name}: $type yükleniyor… %$loadProgress"; if (i % 500 == 0 || i == 0) render() }
                         }
                     }
                 }
