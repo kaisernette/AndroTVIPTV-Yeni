@@ -6,20 +6,22 @@ plugins {
 android {
     namespace = "com.example.androtviptv"
     compileSdk = 35
+
     defaultConfig {
         applicationId = "com.example.androtviptv"
         minSdk = 23
         targetSdk = 28
-        versionCode = 2
-        versionName = "2.1"
-compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
+        versionCode = 3
+        versionName = "3.0"
+    }
 
-kotlinOptions {
-    jvmTarget = "17"
-}
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
