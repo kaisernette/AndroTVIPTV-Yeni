@@ -286,7 +286,7 @@ class MainActivity : Activity() {
                     background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     setTextColor(if (selected) accentBright else Color.rgb(185, 190, 210))
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.setTextColor(if (hasFocus || selected) accentBright else Color.rgb(185, 190, 210))
+                        (v as Button).setTextColor(if (hasFocus || selected) accentBright else Color.rgb(185, 190, 210))
                         v.scaleX = if (hasFocus) 1.12f else 1f
                         v.scaleY = if (hasFocus) 1.12f else 1f
                     }
