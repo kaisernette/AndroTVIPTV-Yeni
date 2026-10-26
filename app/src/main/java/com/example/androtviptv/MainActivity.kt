@@ -59,6 +59,8 @@ class MainActivity : Activity() {
     private lateinit var password: EditText
     private lateinit var sourceMode: RadioGroup
     private var selectedType = "Canlı TV"
+    private var welcomeStatus: TextView? = null
+    private var welcomeScreenActive = false
     private var xtreamUser = ""
     private var xtreamPass = ""
     private var xtreamBase = ""
@@ -101,7 +103,8 @@ class MainActivity : Activity() {
     private lateinit var heroArt: FrameLayout
     private lateinit var navBar: LinearLayout
 
-    private fun showWelcomeScreen() {
+    private fun showWelcomeScreen(message: String = "Eğlence dünyana hoş geldin") {
+        welcomeScreenActive = true
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -134,8 +137,16 @@ class MainActivity : Activity() {
             textSize = 18f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
-            setPadding(0, dp(22), 0, dp(18))
+            setPadding(0, dp(22), 0, dp(8))
         })
+        welcomeStatus = TextView(this).apply {
+            text = if (message == "Eğlence dünyana hoş geldin") "" else message
+            textSize = 15f
+            gravity = Gravity.CENTER
+            setTextColor(accentBright)
+            setPadding(0, dp(4), 0, dp(16))
+        }
+        root.addView(welcomeStatus, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(makeButton("＋  KAYNAK EKLE", true) { showConnectionDialog() }.apply {
             textSize = 16f
             gravity = Gravity.CENTER
@@ -146,6 +157,8 @@ class MainActivity : Activity() {
     }
 
     private fun buildUi() {
+        welcomeScreenActive = false
+        welcomeStatus = null
         window.statusBarColor = bg
         window.navigationBarColor = bg
         val root = LinearLayout(this).apply {
@@ -264,9 +277,9 @@ class MainActivity : Activity() {
         categoryScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false; clipToPadding = false
             addView(categoryBar)
-            visibility = View.VISIBLE
+            visibility = View.GONE
         }
-        main.addView(categoryScroll, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 0, 0, 8) })
+        main.addView(categoryScroll, LinearLayout.LayoutParams(-1, 0))
         val scroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
         content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 2, 0, 12) }
         scroll.addView(content)
@@ -345,7 +358,7 @@ class MainActivity : Activity() {
                     }
                     val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
                     val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "xtream", server.text.toString().trim().trimEnd('/'), username.text.toString().trim(), password.text.toString())
-                    saveSource(src); hideKeyboard(); dialog.dismiss(); if (!::status.isInitialized) buildUi(); loadXtream(src, false)
+                    saveSource(src); hideKeyboard(); dialog.dismiss(); showWelcomeScreen("TV yükleniyor…"); loadXtream(src, false)
                 } else {
                     val address = playlistUrl.text.toString().trim()
                     if (!address.startsWith("http://") && !address.startsWith("https://")) {
@@ -354,7 +367,7 @@ class MainActivity : Activity() {
                     }
                     val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
                     val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "m3u", address)
-                    saveSource(src); hideKeyboard(); dialog.dismiss(); if (!::status.isInitialized) buildUi(); loadM3u(src, false)
+                    saveSource(src); hideKeyboard(); dialog.dismiss(); showWelcomeScreen("TV yükleniyor…"); loadM3u(src, false)
                 }
             }
         }
@@ -438,21 +451,30 @@ class MainActivity : Activity() {
         }.setPositiveButton("Kaynak ekle") { _, _ -> showConnectionDialog() }.setNegativeButton("Kapat", null).show()
     }
 
+    private fun updateLoadingMessage(message: String) {
+        if (welcomeScreenActive) welcomeStatus?.text = message
+        else if (::status.isInitialized) status.text = message
+    }
+
     private fun loadM3u(source: SavedSource, append: Boolean) {
         prefs.edit().putString("last_source_id", source.id).apply()
-        status.text = "${source.name}: oynatma listesi yükleniyor…"
+        updateLoadingMessage("TV yükleniyor…")
         thread {
             try {
-                val parsed = parseM3u(request(source.address)).take(1200).map { it.copy(sourceId = source.id) }
+                val response = request(source.address)
+                runOnUiThread { updateLoadingMessage("Filmler yükleniyor…") }
+                val parsed = parseM3u(response).take(1200).map { it.copy(sourceId = source.id) }
+                runOnUiThread { updateLoadingMessage("Diziler yükleniyor…") }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
                     saveCachedItems()
                     selectedGroup = "Tüm kategoriler"
-                    status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."
-                    render()
+                    selectedType = "Canlı TV"
+                    selectedGroup = "Tüm kategoriler"
+                    if (welcomeScreenActive) buildUi() else { status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."; render() }
                 }
-            } catch (e: Exception) { runOnUiThread { status.text = "${source.name} yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
+            } catch (e: Exception) { runOnUiThread { updateLoadingMessage("Yükleme başarısız: ${e.message ?: "bağlantı hatası"}") } }
         }
     }
 
@@ -463,7 +485,7 @@ class MainActivity : Activity() {
             status.text = "Sunucu, kullanıcı adı ve şifre alanlarını doldur."; return
         }
         prefs.edit().putString("last_source_id", source.id).apply()
-        status.text = "${source.name}: Xtream içerikleri yükleniyor…"
+        updateLoadingMessage("TV yükleniyor…")
         thread {
             try {
                 val u = URLEncoder.encode(user, "UTF-8"); val p = URLEncoder.encode(pass, "UTF-8")
@@ -492,6 +514,8 @@ class MainActivity : Activity() {
                 val seriesCategories = categoryMap("get_series_categories")
 
                 listOf("get_live_streams", "get_vod_streams", "get_series").forEach { action ->
+                    val stage = when (action) { "get_live_streams" -> "TV yükleniyor…"; "get_vod_streams" -> "Filmler yükleniyor…"; else -> "Diziler yükleniyor…" }
+                    runOnUiThread { updateLoadingMessage(stage) }
                     val arr = JSONArray(request("$api&action=$action"))
                     val categories = when (action) {
                         "get_live_streams" -> liveCategories
@@ -531,9 +555,10 @@ class MainActivity : Activity() {
                     items.removeAll { it.sourceId == source.id }; items.addAll(loaded)
                     saveCachedItems()
                     selectedGroup = "Tüm kategoriler"; xtreamBase = base; xtreamUser = user; xtreamPass = pass
-                    status.text = "${source.name}: ${loaded.size} içerik yüklendi. ${items.size} toplam içerik."; render()
+                    selectedType = "Canlı TV"
+                    if (welcomeScreenActive) buildUi() else { status.text = "${source.name}: ${loaded.size} içerik yüklendi. ${items.size} toplam içerik."; render() }
                 }
-            } catch (e: Exception) { runOnUiThread { status.text = "Xtream yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
+            } catch (e: Exception) { runOnUiThread { updateLoadingMessage("Yükleme başarısız: ${e.message ?: "bağlantı hatası"}") } }
         }
     }
 
@@ -725,10 +750,7 @@ class MainActivity : Activity() {
         val fullContentMode = detailMode || selectedType == "Filmler" || selectedType == "Diziler"
         if (::mainHeader.isInitialized) mainHeader.visibility = if (fullContentMode) View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = if (fullContentMode) View.GONE else View.VISIBLE
-        if (::categoryScroll.isInitialized) {
-            val showCategories = detailMode || selectedType == "Canlı TV" || selectedType == "Filmler" || selectedType == "Diziler"
-            categoryScroll.visibility = if (showCategories && !detailMode) View.VISIBLE else View.GONE
-        }
+        if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (detailSeries != null) {
             renderSeriesDetail(detailSeries!!)
             return
@@ -743,20 +765,10 @@ class MainActivity : Activity() {
             "Son İzlenenler" -> recent.toList()
             else -> items.filter { it.type == selectedType }
         }
-        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().filter { it !in hiddenCategories }.sorted()
         categoryBar.removeAllViews()
-        groupsAvailable.take(100).forEach { group ->
-            categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
-                selectedGroup = group
-                render()
-            }.apply {
-                textSize = 11f; minWidth = 0; minimumWidth = 0
-                setPadding(12, 0, 12, 0)
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
-        }
-        val visible = if (selectedGroup == "Tüm kategoriler") baseVisible.filter { (it.group.ifBlank { "Diğer" }) !in hiddenCategories }
-            else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup && it.group !in hiddenCategories }
+        val visible = baseVisible.filter { (it.group.ifBlank { "Diğer" }) !in hiddenCategories }
         if (visible.isEmpty()) {
+            if (items.isEmpty()) return
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
                 setPadding(24, 24, 24, 24); background = roundedDrawable(panel, 18, Color.rgb(42, 49, 64))
@@ -778,8 +790,6 @@ class MainActivity : Activity() {
                 }
                 textSize = 14f; setTextColor(muted); setPadding(0, 7, 0, 14)
             })
-            if (items.isEmpty()) empty.addView(makeButton("KAYNAK EKLE  →", true) { showConnectionDialog() },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
             content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
             return
         }
@@ -837,9 +847,11 @@ class MainActivity : Activity() {
             return ranked
         }
         val groups: List<Pair<String, List<MediaItem>>> = when (selectedType) {
-            "Filmler" -> listOf("Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(visible, trendingMovies).take(60))
-            "Diziler" -> listOf("Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(visible, trendingSeries).take(60))
-            else -> visible.take(60).groupBy {
+            "Filmler" -> listOf("Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(visible, trendingMovies).take(24)) +
+                visible.groupBy { it.group.ifBlank { "Diğer" } }.map { it.key to it.value }
+            "Diziler" -> listOf("Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(visible, trendingSeries).take(24)) +
+                visible.groupBy { it.group.ifBlank { "Diğer" } }.map { it.key to it.value }
+            else -> visible.take(1200).groupBy {
                 if (selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
                 else it.group.ifBlank { "Diğer" }
             }.map { it.key to it.value }
