@@ -686,6 +686,15 @@ class MainActivity : Activity() {
             render()
             return
         }
+        if (sidebarMode != "main") {
+            sidebarMode = "main"
+            searchQuery = ""
+            selectedType = "Tümü"
+            selectedGroup = "Tüm kategoriler"
+            rebuildNavigation()
+            render()
+            return
+        }
         if (selectedGroup != "Tüm kategoriler") {
             selectedGroup = "Tüm kategoriler"
             render()
@@ -1268,33 +1277,6 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         posterExecutor.shutdownNow()
         super.onDestroy()
-    }
-
-    @Deprecated("Deprecated in Android API; retained for Android TV Back-key handling")
-    override fun onBackPressed() {
-        if (detailSeries != null) {
-            detailSeries = null
-            seriesEpisodeRows = emptyList()
-            seriesEpisodesLoading = false
-            seriesEpisodesError = ""
-            render()
-            return
-        }
-        if (detailMovie != null) {
-            detailMovie = null
-            render()
-            return
-        }
-        if (sidebarMode != "main") {
-            selectedType = "Tümü"
-            selectedGroup = "Tüm kategoriler"
-            sidebarMode = "main"
-            searchQuery = ""
-            rebuildNavigation()
-            render()
-            return
-        }
-        super.onBackPressed()
     }
 
     private fun saveRecent(item: MediaItem) {
