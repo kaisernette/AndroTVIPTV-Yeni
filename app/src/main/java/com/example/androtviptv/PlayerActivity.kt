@@ -72,6 +72,94 @@ class PlayerActivity : Activity() {
         }
         if (channelUrls.size > 1) view.requestFocus()
     }
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && channelUrls.size > 1) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (channelOverlay == null) { highlightedChannelIndex = selectedChannelIndex; showChannelOverlay() }
+                    val delta = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) -1 else 1
+                    highlightedChannelIndex = (highlightedChannelIndex + delta + channelUrls.size) % channelUrls.size
+                    refreshChannelHighlight()
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
+                }
+                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                    if (channelOverlay != null) { hideChannelOverlay(); return true }
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun showChannelOverlay() {
+        if (channelOverlay != null || channelUrls.isEmpty()) return
+        val root = findViewById<FrameLayout>(android.R.id.content).getChildAt(0) as? FrameLayout ?: return
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            background = GradientDrawable().apply { setColor(0xD91A2030.toInt()); cornerRadius = dp(16).toFloat(); setStroke(dp(1), 0xAADEB55B.toInt()) }
+            elevation = dp(12).toFloat()
+        }
+        panel.addView(TextView(this).apply { text = "CANLI KANALLAR"; textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); setPadding(dp(4), dp(2), dp(4), dp(10)) })
+        val scroll = ScrollView(this).apply { isFillViewport = false; overScrollMode = View.OVER_SCROLL_NEVER }
+        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        channelRows.forEachIndexed { index, name ->
+            list.addView(TextView(this).apply {
+                text = (if (index == selectedChannelIndex) "▶  " else "") + name
+                textSize = 14f; setTextColor(Color.WHITE); gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(10), dp(9), dp(10), dp(9)); background = channelRowBackground(index == highlightedChannelIndex)
+                minHeight = dp(40); tag = index
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(4)) })
+        }
+        scroll.addView(list)
+        panel.addView(scroll, LinearLayout.LayoutParams(-1, dp(400)))
+        val lp = FrameLayout.LayoutParams(dp(310), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(24); topMargin = dp(12); bottomMargin = dp(12) }
+        root.addView(panel, lp)
+        channelOverlay = panel
+        refreshChannelHighlight()
+    }
+
+    private fun refreshChannelHighlight() {
+        val panel = channelOverlay ?: return
+        val scroll = panel.getChildAt(1) as? ScrollView ?: return
+        val list = scroll.getChildAt(0) as? LinearLayout ?: return
+        for (i in 0 until list.childCount) {
+            val row = list.getChildAt(i) as? TextView ?: continue
+            val index = row.tag as? Int ?: continue
+            row.text = (if (index == selectedChannelIndex) "▶  " else "") + channelRows[index]
+            row.background = channelRowBackground(index == highlightedChannelIndex)
+        }
+        val target = list.getChildAt(highlightedChannelIndex)
+        if (target != null) { val y = target.top; scroll.post { scroll.smoothScrollTo(0, (y - scroll.height / 2 + target.height / 2).coerceAtLeast(0)) } }
+    }
+
+    private fun channelRowBackground(highlighted: Boolean) = GradientDrawable().apply {
+        setColor(if (highlighted) 0xAADEB55B.toInt() else 0x33000000)
+        cornerRadius = dp(8).toFloat()
+        if (highlighted) setStroke(dp(1), 0xFFDEB55B.toInt())
+    }
+
+    private fun tuneChannel(index: Int) {
+        if (index !in channelUrls.indices) return
+        val url = channelUrls[index]
+        selectedChannelIndex = index
+        resumeKey = "position_" + url.hashCode().toString()
+        player?.let { exo -> exo.setMediaItem(MediaItem.fromUri(url)); exo.prepare(); exo.playWhenReady = true }
+        refreshChannelHighlight()
+        hideChannelOverlay()
+    }
+
+    private fun hideChannelOverlay() {
+        val panel = channelOverlay ?: return
+        (panel.parent as? ViewGroup)?.removeView(panel)
+        channelOverlay = null
+        playerView?.requestFocus()
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
     override fun onPause() { savePlaybackPosition(); super.onPause() }
     override fun onStop() { savePlaybackPosition(); player?.pause(); super.onStop() }
     override fun onDestroy() { savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
