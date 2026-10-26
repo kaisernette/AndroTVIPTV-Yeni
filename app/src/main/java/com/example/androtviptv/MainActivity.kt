@@ -896,7 +896,7 @@ class MainActivity : Activity() {
                 }
             }
         }
-        rebuildNavigation()
+        if (sidebarMode != "search") rebuildNavigation()
         val groups: List<Pair<String, List<MediaItem>>> = if (selectedType == "Tümü") {
             // Weekly Turkey streaming chart, 19–26 Oct 2026. Existing playlist items are
             // prioritized by title; titles missing from the user's source are not fabricated.
