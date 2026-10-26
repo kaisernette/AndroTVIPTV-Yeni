@@ -916,18 +916,28 @@ class MainActivity : Activity() {
             val progressWrap = FrameLayout(this).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(124), dp(124)).apply { setMargins(0, dp(24), 0, 0) }
             }
-            val ring = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-                max = 100
-                progress = loadProgress
-                progressTintList = android.content.res.ColorStateList.valueOf(accent)
-                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(43, 49, 62))
-                rotation = -90f
-            }
-            progressWrap.addView(ring, FrameLayout.LayoutParams(dp(124), dp(124)))
-            progressWrap.addView(TextView(this).apply {
-                text = "$loadProgress%"
-                textSize = 23f; setTextColor(accentBright)
-                setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+            progressWrap.addView(object : View(this) {
+                private val ringPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    style = android.graphics.Paint.Style.STROKE
+                    strokeWidth = dp(9).toFloat()
+                    strokeCap = android.graphics.Paint.Cap.ROUND
+                }
+                private val textPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    color = accentBright
+                    textSize = sp(22).toFloat()
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                override fun onDraw(canvas: android.graphics.Canvas) {
+                    super.onDraw(canvas)
+                    val inset = dp(14).toFloat()
+                    val rect = android.graphics.RectF(inset, inset, width - inset, height - inset)
+                    ringPaint.color = Color.rgb(43, 49, 62)
+                    canvas.drawArc(rect, 0f, 360f, false, ringPaint)
+                    ringPaint.color = accent
+                    canvas.drawArc(rect, -90f, 360f * loadProgress / 100f, false, ringPaint)
+                    canvas.drawText("$loadProgress%", width / 2f, height / 2f - (textPaint.ascent() + textPaint.descent()) / 2f, textPaint)
+                }
             }, FrameLayout.LayoutParams(-1, -1))
             loadingPanel.addView(progressWrap)
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
@@ -1262,6 +1272,41 @@ class MainActivity : Activity() {
         detailSeries = null
         detailMovie = movie
         render()
+        if (movie.sourceId.isBlank() || (movie.plot.isNotBlank() && movie.rating.isNotBlank())) return
+        val source = savedSources.firstOrNull { it.id == movie.sourceId && it.mode == "xtream" } ?: return
+        thread {
+            try {
+                val u = URLEncoder.encode(source.username, "UTF-8")
+                val p = URLEncoder.encode(source.password, "UTF-8")
+                val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p&action=get_vod_info&vod_id=${URLEncoder.encode(movie.id, "UTF-8")}"
+                val root = JSONObject(request(api))
+                val info = root.optJSONObject("info") ?: root.optJSONObject("movie_data") ?: root
+                fun pick(vararg keys: String): String {
+                    for (key in keys) {
+                        val value = info.opt(key)
+                        if (value != null && value != JSONObject.NULL) {
+                            val valueText = if (value is String) value else value.toString()
+                            if (valueText.isNotBlank() && valueText != "0" && valueText != "null") return valueText
+                        }
+                    }
+                    return ""
+                }
+                val updated = movie.copy(
+                    plot = pick("plot", "description", "overview").ifBlank { movie.plot },
+                    rating = pick("rating", "vote_average", "rating_5based").ifBlank { movie.rating },
+                    releaseDate = pick("releasedate", "release_date", "releaseDate", "year").ifBlank { movie.releaseDate },
+                    genre = pick("genre", "genres").ifBlank { movie.genre },
+                    actors = pick("cast", "actors").ifBlank { movie.actors }
+                )
+                runOnUiThread {
+                    val index = items.indexOfFirst { it.id == movie.id && it.type == movie.type && it.sourceId == movie.sourceId }
+                    if (index >= 0) items[index] = updated
+                    detailMovie = updated
+                    saveCachedItems()
+                    render()
+                }
+            } catch (_: Exception) { }
+        }
     }
 
     private fun renderMovieDetail(movie: MediaItem) {
