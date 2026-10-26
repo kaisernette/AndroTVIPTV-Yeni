@@ -76,11 +76,11 @@ class PlayerActivity : Activity() {
         if (event.action == KeyEvent.ACTION_DOWN && channelUrls.size > 1) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (channelOverlay == null) { highlightedChannelIndex = selectedChannelIndex; showChannelOverlay() }
-                    val delta = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) -1 else 1
-                    highlightedChannelIndex = (highlightedChannelIndex + delta + channelUrls.size) % channelUrls.size
-                    refreshChannelHighlight()
-                    return true
+                    // Channel selection is now opened from the main menu's TV button.
+                    // Do not open the channel overlay while watching a stream.
+                    if (channelOverlay != null) {
+                        return true
+                    }
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                     if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
