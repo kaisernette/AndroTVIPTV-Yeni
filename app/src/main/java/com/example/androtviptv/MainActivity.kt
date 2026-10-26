@@ -145,10 +145,10 @@ class MainActivity : Activity() {
         rootLayout = root
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(7, 12, 7, 10)
+            setPadding(8, 12, 8, 10)
             background = roundedDrawable(Color.rgb(19, 18, 32), 18, Color.rgb(43, 40, 65))
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(88, -1).apply { setMargins(0, 0, 14, 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(104, -1).apply { setMargins(0, 0, 14, 0) })
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -278,7 +278,7 @@ class MainActivity : Activity() {
                 minimumWidth = 0
                 setPadding(0, 0, 0, 0)
                 minHeight = 42
-            }, LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 3, 0, 3) })
+            }, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 7, 0, 7) })
         }
 
         fun returnToMainMenu() {
