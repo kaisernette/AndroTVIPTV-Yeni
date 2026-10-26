@@ -756,14 +756,16 @@ class MainActivity : Activity() {
         }
         rebuildNavigation()
         val groups: List<Pair<String, List<MediaItem>>> = if (selectedType == "Tümü") {
+            // Weekly Turkey streaming chart, 19–26 Oct 2026. Existing playlist items are
+            // prioritized by title; titles missing from the user's source are not fabricated.
             val trendingMovies = listOf(
-                "gençlik", "organize işler: sazan sarmalı", "harry potter ve ateş kadehi",
-                "sevimli hayalet casper", "harry potter ve ölüm yadigârları", "hizmetçi",
-                "aşk hipotezi", "aquaman ve kayıp krallık", "arıcı: ölüm kovanı"
+                "gençlik", "nasıl seks yapacağız", "organize işler: sazan sarmalı",
+                "harry potter ve ateş kadehi", "iyi ki aldatılmışım", "sevimli hayalet casper",
+                "harry potter ve ölüm yadigârları", "hizmetçi", "365 gün", "aşk hipotezi"
             )
             val trendingSeries = listOf(
-                "organize işler: karun hazinesi", "mezarlık", "prens", "from",
-                "çekiç ve gül", "tulsa king", "sex education", "konuşanlar"
+                "organize işler: karun hazinesi", "off campus", "game of thrones", "from",
+                "mezarlık", "çekiç ve gül", "tulsa king", "prens", "sex education", "konuşanlar"
             )
             fun rankedByTrend(source: List<MediaItem>, terms: List<String>): List<MediaItem> {
                 val remaining = source.toMutableList()
