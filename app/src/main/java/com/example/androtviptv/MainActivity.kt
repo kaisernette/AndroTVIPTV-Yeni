@@ -75,15 +75,15 @@ class MainActivity : Activity() {
 
     private data class ThemeOption(val id: String, val title: String, val bg: Int, val panel: Int, val accent: Int, val bright: Int, val muted: Int)
     private val themeOptions by lazy { listOf(
-        ThemeOption("gold", "Siyah & Altın (Varsayılan)", Color.rgb(7,10,17), Color.rgb(20,26,39), Color.rgb(222,181,91), Color.rgb(246,218,151), Color.rgb(157,169,188)),
+        ThemeOption("purple", "Mor Gece (Varsayılan)", Color.rgb(10, 9, 20), Color.rgb(27, 25, 43), Color.rgb(111, 91, 255), Color.rgb(190, 181, 255), Color.rgb(158, 163, 184)),
         ThemeOption("blue", "Gece Mavisi", Color.rgb(5,12,27), Color.rgb(18,32,54), Color.rgb(76,166,255), Color.rgb(166,218,255), Color.rgb(160,181,207)),
-        ThemeOption("purple", "Mor Gece", Color.rgb(15,7,24), Color.rgb(34,22,48), Color.rgb(183,111,255), Color.rgb(220,184,255), Color.rgb(181,165,197)),
+        ThemeOption("gold", "Siyah & Altın", Color.rgb(7,10,17), Color.rgb(20,26,39), Color.rgb(222,181,91), Color.rgb(246,218,151), Color.rgb(157,169,188)),
         ThemeOption("green", "Zümrüt", Color.rgb(4,17,15), Color.rgb(17,37,33), Color.rgb(52,211,153), Color.rgb(167,243,208), Color.rgb(153,184,174)),
         ThemeOption("red", "Bordo & Kırmızı", Color.rgb(20,7,12), Color.rgb(43,20,28), Color.rgb(244,92,118), Color.rgb(255,183,193), Color.rgb(194,164,171))
     ) }
 
     private fun applySavedTheme() {
-        val selected = themeOptions.firstOrNull { it.id == prefs.getString("color_theme", "gold") } ?: themeOptions.first()
+        val selected = themeOptions.firstOrNull { it.id == prefs.getString("color_theme", "purple") } ?: themeOptions.first()
         bg = selected.bg; panel = selected.panel; accent = selected.accent; accentBright = selected.bright; muted = selected.muted
     }
 
@@ -146,9 +146,9 @@ class MainActivity : Activity() {
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(14, 16, 14, 14)
-            background = roundedDrawable(Color.rgb(14, 19, 29), 20, Color.rgb(35, 42, 56))
+            background = roundedDrawable(Color.rgb(19, 18, 32), 18, Color.rgb(43, 40, 65))
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(360, -1).apply { setMargins(0, 0, 20, 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(250, -1).apply { setMargins(0, 0, 16, 0) })
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
