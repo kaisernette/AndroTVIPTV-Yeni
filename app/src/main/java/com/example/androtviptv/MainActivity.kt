@@ -112,6 +112,7 @@ class MainActivity : Activity() {
     private var sidebarMode = "main"
     private var searchQuery = ""
     private var isLoadingSource = false
+    private var loadProgress = 0
     private var hasLoadedSource = false
 
     private fun buildUi() {
@@ -136,7 +137,11 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 0)
         }
-        brandView.addView(kaiserLogoView(), LinearLayout.LayoutParams(-1, dp(72)))
+        brandView.addView(TextView(this).apply {
+            text = "KAISERTV+"
+            textSize = 21f; setTextColor(accentBright)
+            setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(-1, dp(54)))
         sidebar.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebarMenuScroll = ScrollView(this).apply {
@@ -535,11 +540,12 @@ class MainActivity : Activity() {
     private fun loadM3u(source: SavedSource, append: Boolean) {
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
+        loadProgress = 0
         status.text = "${source.name}: TV, filmler ve diziler yükleniyor…"
         render()
         thread {
             try {
-                val parsed = parseM3u(request(source.address)).take(1200).map { it.copy(sourceId = source.id) }
+                val parsed = parseM3u(request(source.address)).map { it.copy(sourceId = source.id) }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
@@ -552,6 +558,7 @@ class MainActivity : Activity() {
                     render()
                 }
             } catch (e: Exception) { runOnUiThread {
+                loadProgress = 0
                 isLoadingSource = false
                 status.text = "${source.name} yüklenemedi: ${e.message ?: "bağlantı hatası"}"
                 render()
@@ -567,6 +574,7 @@ class MainActivity : Activity() {
         }
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
+        loadProgress = 0
         status.text = "${source.name}: TV, filmler ve diziler yükleniyor…"
         render()
         thread {
@@ -592,19 +600,22 @@ class MainActivity : Activity() {
                     return result
                 }
 
+                runOnUiThread { loadProgress = 10; render() }
                 val liveCategories = categoryMap("get_live_categories")
+                runOnUiThread { loadProgress = 20; render() }
                 val vodCategories = categoryMap("get_vod_categories")
+                runOnUiThread { loadProgress = 30; render() }
                 val seriesCategories = categoryMap("get_series_categories")
+                runOnUiThread { loadProgress = 40; render() }
 
-                listOf("get_live_streams", "get_vod_streams", "get_series").forEach { action ->
+                listOf("get_live_streams", "get_vod_streams", "get_series").forEachIndexed { actionIndex, action ->
                     val arr = JSONArray(request("$api&action=$action"))
                     val categories = when (action) {
                         "get_live_streams" -> liveCategories
                         "get_vod_streams" -> vodCategories
                         else -> seriesCategories
                     }
-                    // Limit memory usage on low-RAM TV devices.
-                    val count = minOf(arr.length(), 400)
+                    val count = arr.length()
                     for (i in 0 until count) {
                         val o = arr.optJSONObject(i) ?: continue
                         val id = o.optString(if (action == "get_series") "series_id" else "stream_id", "")
@@ -628,8 +639,16 @@ class MainActivity : Activity() {
                         loaded.add(MediaItem(
                             id, name, streamUrl, group, type,
                             o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("stream_icon", "")),
-                            ext, if (type == "Diziler") id else "", source.id, plot, actors
+                            ext, if (type == "Diziler") id else "", source.id, plot, actors,
+                            o.optString("rating", o.optString("vote_average", "")),
+                            o.optString("releaseDate", o.optString("year", "")),
+                            o.optString("genre", "")
                         ))
+                        if (i % 100 == 0) {
+                            val baseProgress = 40 + actionIndex * 20
+                            val within = if (arr.length() == 0) 20 else (i * 20 / arr.length())
+                            runOnUiThread { loadProgress = (baseProgress + within).coerceIn(0, 99); render() }
+                        }
                     }
                 }
                 runOnUiThread {
@@ -643,6 +662,7 @@ class MainActivity : Activity() {
                     render()
                 }
             } catch (e: Exception) { runOnUiThread {
+                loadProgress = 0
                 isLoadingSource = false
                 status.text = "Xtream yüklenemedi: ${e.message ?: "bağlantı hatası"}"
                 render()
@@ -858,7 +878,12 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
-            welcome.addView(kaiserLogoView(), LinearLayout.LayoutParams(dp(430), dp(220)))
+            welcome.addView(TextView(this).apply {
+                text = "KAISERTV+"
+                textSize = 42f; setTextColor(accentBright)
+                setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+                setPadding(0, dp(16), 0, dp(20))
+            }, LinearLayout.LayoutParams(-1, dp(110)))
             welcome.addView(TextView(this).apply {
                 text = "İzleme kaynağını ekleyerek başla"
                 textSize = 16f; setTextColor(muted); gravity = Gravity.CENTER
@@ -879,8 +904,8 @@ class MainActivity : Activity() {
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
             loadingPanel.addView(TextView(this).apply {
-                text = "♛  KAISERTV"
-                textSize = 30f; setTextColor(accentBright)
+                text = "KAISERTV+"
+                textSize = 34f; setTextColor(accentBright)
                 setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
             })
             loadingPanel.addView(TextView(this).apply {
@@ -888,6 +913,23 @@ class MainActivity : Activity() {
                 textSize = 18f; setTextColor(muted); gravity = Gravity.CENTER
                 setPadding(0, dp(18), 0, 0)
             })
+            val progressWrap = FrameLayout(this).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(124), dp(124)).apply { setMargins(0, dp(24), 0, 0) }
+            }
+            val ring = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                max = 100
+                progress = loadProgress
+                progressTintList = android.content.res.ColorStateList.valueOf(accent)
+                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(43, 49, 62))
+                rotation = -90f
+            }
+            progressWrap.addView(ring, FrameLayout.LayoutParams(dp(124), dp(124)))
+            progressWrap.addView(TextView(this).apply {
+                text = "$loadProgress%"
+                textSize = 23f; setTextColor(accentBright)
+                setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+            }, FrameLayout.LayoutParams(-1, -1))
+            loadingPanel.addView(progressWrap)
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
             return
         }
@@ -1045,7 +1087,7 @@ class MainActivity : Activity() {
             })
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            entries.take(80).forEach { item ->
+            entries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL; setPadding(7, 7, 7, 9)
                     background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
