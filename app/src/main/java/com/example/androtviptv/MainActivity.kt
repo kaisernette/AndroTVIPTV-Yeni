@@ -666,7 +666,10 @@ class MainActivity : Activity() {
         val fullContentMode = detailMode || selectedType == "Filmler" || selectedType == "Diziler"
         if (::mainHeader.isInitialized) mainHeader.visibility = if (fullContentMode) View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = if (fullContentMode) View.GONE else View.VISIBLE
-        if (::categoryScroll.isInitialized) categoryScroll.visibility = if (fullContentMode) View.GONE else View.VISIBLE
+        if (::categoryScroll.isInitialized) {
+            val showCategories = detailMode || selectedType == "Canlı TV" || selectedType == "Filmler" || selectedType == "Diziler"
+            categoryScroll.visibility = if (showCategories && !detailMode) View.VISIBLE else View.GONE
+        }
         if (detailSeries != null) {
             renderSeriesDetail(detailSeries!!)
             return
@@ -683,7 +686,7 @@ class MainActivity : Activity() {
         }
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().filter { it !in hiddenCategories }.sorted()
         categoryBar.removeAllViews()
-        (listOf("Tüm kategoriler") + groupsAvailable.take(100)).forEach { group ->
+        groupsAvailable.take(100).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
                 render()
