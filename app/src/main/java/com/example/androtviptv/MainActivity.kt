@@ -1325,7 +1325,7 @@ class MainActivity : Activity() {
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            setPadding(26, 22, 26, dp(42))
+            setPadding(26, 22, 26, 22)
         }
         copy.addView(TextView(this).apply {
             text = "FİLM  •  ${movie.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -1347,7 +1347,7 @@ class MainActivity : Activity() {
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 10, 0) })
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 10, 0) })
         actions.addView(makeButton(if (favorites.contains(movie.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
             if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
             prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
@@ -1356,10 +1356,10 @@ class MainActivity : Activity() {
         actions.addView(makeButton("← Geri", false) {
             detailMovie = null
             render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 0, 0) })
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 0, 0) })
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val infoTitle = TextView(this).apply {
             text = "FİLM HAKKINDA"; textSize = 20f
