@@ -758,9 +758,9 @@ class MainActivity : Activity() {
             // Weekly Turkey streaming chart, 19–26 Oct 2026. Existing playlist items are
             // prioritized by title; titles missing from the user's source are not fabricated.
             val trendingMovies = listOf(
-                "gençlik", "nasıl seks yapacağız", "organize işler: sazan sarmalı",
-                "harry potter ve ateş kadehi", "iyi ki aldatılmışım", "sevimli hayalet casper",
-                "harry potter ve ölüm yadigârları", "hizmetçi", "365 gün", "aşk hipotezi"
+                "gençlik", "organize işler: sazan sarmalı", "harry potter ve ateş kadehi",
+                "iyi ki aldatılmışım", "sevimli hayalet casper",
+                "harry potter ve ölüm yadigârları", "hizmetçi", "addams ailesi", "aşk hipotezi"
             )
             val trendingSeries = listOf(
                 "organize işler: karun hazinesi", "off campus", "game of thrones", "from",
