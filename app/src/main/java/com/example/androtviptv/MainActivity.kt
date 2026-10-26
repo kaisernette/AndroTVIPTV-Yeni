@@ -172,11 +172,11 @@ class MainActivity : Activity() {
 
         sidebar.addView(View(this).apply { setBackgroundColor(Color.rgb(39, 46, 60)) },
             LinearLayout.LayoutParams(-1, 1).apply { setMargins(0, 12, 0, 10) })
-        sidebar.addView(makeButton("＋ Kaynak ekle", true) { showConnectionDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER },
+        sidebar.addView(makeButton("＋", true) { showConnectionDialog() }.apply { textSize = 22f; gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
-        sidebar.addView(makeButton("Kaynaklar", false) { showSourcesDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER },
+        sidebar.addView(makeButton("▤", false) { showSourcesDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
-        sidebar.addView(makeButton("⚙ Ayarlar", false) { showSettingsDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER }, LinearLayout.LayoutParams(-1, 42))
+        sidebar.addView(makeButton("⚙", false) { showSettingsDialog() }.apply { textSize = 11f; gravity = Gravity.CENTER }, LinearLayout.LayoutParams(-1, 42))
 
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -268,14 +268,14 @@ class MainActivity : Activity() {
         navBar.removeAllViews()
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
-            navBar.addView(makeButton(if (selected) "●  $label" else label, selected, action).apply {
-                textSize = 14f
-                gravity = Gravity.CENTER_VERTICAL
+            navBar.addView(makeButton(if (selected) "●" else label, selected, action).apply {
+                textSize = 22f
+                gravity = Gravity.CENTER
                 isSingleLine = true
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                setPadding(10, 0, 6, 0)
+                contentDescription = label
+                setPadding(0, 0, 0, 0)
                 minHeight = 42
-            }, LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 2, 0, 2) })
+            }, LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 3, 0, 3) })
         }
 
         fun returnToMainMenu() {
@@ -294,7 +294,8 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "main") {
-            listOf("⌕  Ara", "Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler").forEach { tab ->
+            listOf("⌕", "⌂", "▣", "🎬", "▤", "★", "◷").forEachIndexed { index, iconLabel ->
+                val tab = listOf("⌕  Ara", "Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler")[index]
                 val normalizedTab = if (tab.startsWith("⌕")) "Ara" else tab
                 val key = when (normalizedTab) {
                     "Ana sayfa" -> "Tümü"
@@ -302,7 +303,7 @@ class MainActivity : Activity() {
                     "İzlenenler" -> "Son İzlenenler"
                     else -> normalizedTab
                 }
-                addSidebarButton(if (normalizedTab == "Ara") "⌕  Ara" else normalizedTab,
+                addSidebarButton(iconLabel,
                     selectedType == key && normalizedTab != "Ara") {
                     if (normalizedTab == "Ara") {
                         detailSeries = null
@@ -331,7 +332,7 @@ class MainActivity : Activity() {
             return
         }
 
-        addSidebarButton("← Ana menü") { returnToMainMenu() }
+        addSidebarButton("⌂") { returnToMainMenu() }
 
         if (sidebarMode == "search") {
             navBar.addView(TextView(this).apply {
