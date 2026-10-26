@@ -227,6 +227,10 @@ class MainActivity : Activity() {
         listOf("Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler").forEach { tab ->
             val key = when (tab) { "Ana sayfa" -> "Tümü"; "TV" -> "Canlı TV"; "İzlenenler" -> "Son İzlenenler"; else -> tab }
             navBar.addView(makeButton(if (selectedType == key) "●  $tab" else tab, selectedType == key) {
+                if (tab == "TV") {
+                    showLiveChannelDialog()
+                    return@makeButton
+                }
                 detailSeries = null
                 detailMovie = null
                 seriesEpisodeRows = emptyList()
@@ -1133,6 +1137,25 @@ class MainActivity : Activity() {
         val arr = JSONArray()
         recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId).put("sourceId", r.sourceId)) }
         getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
+    }
+
+    private fun showLiveChannelDialog() {
+        val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+        if (channels.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("Canlı kanallar")
+                .setMessage(if (items.isEmpty()) "Önce bir yayın kaynağı ekleyip yükle." else "Kaynakta canlı TV kanalı bulunamadı.")
+                .setPositiveButton("Tamam", null)
+                .show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("CANLI KANALLAR")
+            .setItems(channels.map { it.name }.toTypedArray()) { _, which ->
+                if (which in channels.indices) play(channels[which])
+            }
+            .setNegativeButton("Kapat", null)
+            .show()
     }
 
     private fun play(item: MediaItem) {
