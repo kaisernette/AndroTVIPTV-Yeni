@@ -1138,7 +1138,16 @@ class MainActivity : Activity() {
     private fun play(item: MediaItem) {
         if (item.type == "Diziler" && item.url.isBlank()) { loadSeriesEpisodes(item); return }
         saveRecent(item)
-        startActivity(Intent(this, PlayerActivity::class.java).putExtra("name", item.name).putExtra("url", item.url))
+        val intent = Intent(this, PlayerActivity::class.java)
+            .putExtra("name", item.name)
+            .putExtra("url", item.url)
+        if (item.type == "Canlı TV") {
+            val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+            intent.putStringArrayListExtra("channel_names", ArrayList(channels.map { it.name }))
+            intent.putStringArrayListExtra("channel_urls", ArrayList(channels.map { it.url }))
+            intent.putExtra("channel_index", channels.indexOfFirst { it.url == item.url }.coerceAtLeast(0))
+        }
+        startActivity(intent)
     }
 
     private fun loadSeriesEpisodes(series: MediaItem) {
