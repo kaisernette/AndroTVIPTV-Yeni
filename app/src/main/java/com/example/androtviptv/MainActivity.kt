@@ -270,6 +270,7 @@ class MainActivity : Activity() {
             selectedGroup = "Tüm kategoriler"
             sidebarMode = "main"
             searchQuery = ""
+            prefs.edit().putString("last_section", "Tümü").apply()
             rebuildNavigation()
             render()
         }
@@ -513,7 +514,10 @@ class MainActivity : Activity() {
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
             status.text = if (items.isNotEmpty()) "${items.size} kayıtlı içerik hazır. Yenilemek için Kaynaklar bölümünü aç." else "Kayıtlı kaynak bulundu. İçerikleri ilk kez yüklemek için Kaynaklar bölümünden yenile."
-            if (last != null && prefs.getBoolean("resume_home", true)) selectedType = prefs.getString("last_section", "Tümü") ?: "Tümü"
+            selectedType = "Tümü"
+        selectedGroup = "Tüm kategoriler"
+        sidebarMode = "main"
+        prefs.edit().putString("last_section", "Tümü").apply()
             render()
         }
     }
@@ -742,6 +746,7 @@ class MainActivity : Activity() {
             searchQuery = ""
             selectedType = "Tümü"
             selectedGroup = "Tüm kategoriler"
+            prefs.edit().putString("last_section", "Tümü").apply()
             rebuildNavigation()
             render()
             return
