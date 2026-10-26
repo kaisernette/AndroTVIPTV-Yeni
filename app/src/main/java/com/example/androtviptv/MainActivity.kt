@@ -627,7 +627,17 @@ class MainActivity : Activity() {
                 runOnUiThread { loadProgress = 40; render() }
 
                 listOf("get_live_streams", "get_vod_streams", "get_series").forEachIndexed { actionIndex, action ->
-                    val arr = JSONArray(request("$api&action=$action"))
+                    runOnUiThread {
+                        status.text = "${source.name}: " + when (action) {
+                            "get_live_streams" -> "Canlı TV kanalları alınıyor…"
+                            "get_vod_streams" -> "Filmler alınıyor…"
+                            else -> "Diziler alınıyor…"
+                        }
+                    }
+                    val response = request("$api&action=$action")
+                    val arr = try { JSONArray(response) } catch (e: Exception) {
+                        throw Exception("Sunucudan geçersiz liste geldi ($action)")
+                    }
                     val categories = when (action) {
                         "get_live_streams" -> liveCategories
                         "get_vod_streams" -> vodCategories
@@ -692,16 +702,41 @@ class MainActivity : Activity() {
     }
 
     private fun request(address: String): String {
-        val conn = (URL(address).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 15000; readTimeout = 25000; setRequestProperty("User-Agent", "AndroTVIPTV/2.0")
+        var lastError: Exception? = null
+        // IPTV providers often respond slowly to large VOD/series lists. Retry transient
+        // network/server failures instead of silently leaving a partially loaded library.
+        for (attempt in 0..2) {
+            var conn: HttpURLConnection? = null
+            try {
+                conn = (URL(address).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 25000
+                    readTimeout = 60000
+                    setRequestProperty("User-Agent", "KaiserTV+/2.1")
+                    setRequestProperty("Accept", "application/json, text/plain, */*")
+                    useCaches = false
+                }
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
+                if (code !in 200..299) {
+                    if (code == 429 || code >= 500) throw Exception("HTTP $code (yeniden denenecek)")
+                    throw Exception("HTTP $code")
+                }
+                if (body.isBlank()) throw Exception("Sunucu boş yanıt döndürdü")
+                return body
+            } catch (e: Exception) {
+                lastError = e
+                if (attempt < 2) {
+                    try { Thread.sleep(700L * (attempt + 1)) } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        throw Exception("Yükleme iptal edildi")
+                    }
+                }
+            } finally {
+                conn?.disconnect()
+            }
         }
-        try {
-            val code = conn.responseCode
-            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-            val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
-            if (code !in 200..299) throw Exception("HTTP $code")
-            return body
-        } finally { conn.disconnect() }
+        throw Exception("Sunucuya ulaşılamadı: ${lastError?.message ?: "bağlantı hatası"}")
     }
 
     private fun parseM3u(text: String): List<MediaItem> {
