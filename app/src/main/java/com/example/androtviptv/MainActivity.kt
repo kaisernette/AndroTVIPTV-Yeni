@@ -732,38 +732,52 @@ class MainActivity : Activity() {
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        if (detailSeries != null || detailMovie != null) {
-            detailSeries = null
-            detailMovie = null
-            seriesEpisodeRows = emptyList()
-            seriesEpisodesLoading = false
-            seriesEpisodesError = ""
-            render()
+        // Back should navigate out of a section, never unexpectedly finish the app.
+        try {
+            if (detailSeries != null || detailMovie != null) {
+                detailSeries = null
+                detailMovie = null
+                seriesEpisodeRows = emptyList()
+                seriesEpisodesLoading = false
+                seriesEpisodesError = ""
+                render()
+                return
+            }
+
+            if (sidebarMode != "main" || selectedGroup != "Tüm kategoriler" || selectedType != "Tümü") {
+                detailSeries = null
+                detailMovie = null
+                seriesEpisodeRows = emptyList()
+                seriesEpisodesLoading = false
+                seriesEpisodesError = ""
+                sidebarMode = "main"
+                searchQuery = ""
+                selectedType = "Tümü"
+                selectedGroup = "Tüm kategoriler"
+                prefs.edit().putString("last_section", "Tümü").apply()
+                rebuildNavigation()
+                render()
+                return
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("KaiserTV", "Back navigation failed", e)
+            // Keep the current activity alive even if rebuilding a section fails.
+            try {
+                detailSeries = null
+                detailMovie = null
+                sidebarMode = "main"
+                searchQuery = ""
+                selectedType = "Tümü"
+                selectedGroup = "Tüm kategoriler"
+                prefs.edit().putString("last_section", "Tümü").apply()
+                rebuildNavigation()
+                render()
+            } catch (ignored: Exception) {
+                android.util.Log.e("KaiserTV", "Fallback navigation failed", ignored)
+            }
             return
         }
-        if (sidebarMode != "main") {
-            sidebarMode = "main"
-            searchQuery = ""
-            selectedType = "Tümü"
-            selectedGroup = "Tüm kategoriler"
-            prefs.edit().putString("last_section", "Tümü").apply()
-            rebuildNavigation()
-            render()
-            return
-        }
-        if (selectedGroup != "Tüm kategoriler") {
-            selectedGroup = "Tüm kategoriler"
-            render()
-            rebuildNavigation()
-            return
-        }
-        if (selectedType != "Tümü") {
-            selectedType = "Tümü"
-            selectedGroup = "Tüm kategoriler"
-            render()
-            rebuildNavigation()
-            return
-        }
+
         AlertDialog.Builder(this)
             .setTitle("Kaisertv'den çıkılsın mı?")
             .setMessage("Uygulamadan çıkmak istediğine emin misin?")
