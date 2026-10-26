@@ -14,6 +14,10 @@ import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
 import android.widget.*
+import androidx.media3.common.MediaItem as PlayerMediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -95,6 +99,9 @@ class MainActivity : Activity() {
     private lateinit var sidebar: LinearLayout
     private lateinit var rootLayout: LinearLayout
     private lateinit var mainContentScroll: ScrollView
+    private var previewPlayer: ExoPlayer? = null
+    private var previewView: PlayerView? = null
+    private var previewUrl: String = ""
     private var sidebarMode = "main"
     private var searchQuery = ""
     private var isLoadingSource = false
@@ -164,13 +171,23 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setPadding(4, 0, 4, 12)
         }
-        mainHeader.addView(TextView(this).apply {
-            text = "EĞLENCE DÜNYAN"; textSize = 11f; setTextColor(muted)
-            letterSpacing = 0.16f
-        }, LinearLayout.LayoutParams(0, -2, 1f))
-        mainHeader.addView(TextView(this).apply {
-            text = "KAISERTV  /  PREMIUM"; textSize = 10f; setTextColor(accentBright)
-            letterSpacing = 0.08f
+        mainHeader.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        mainHeader.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(TextView(this@MainActivity).apply {
+                text = "♛"
+                textSize = 22f
+                setTextColor(accentBright)
+                setPadding(0, 0, dp(6), 0)
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "KAISERTV+"
+                textSize = 13f
+                setTextColor(accentBright)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                letterSpacing = 0.05f
+            })
         })
         main.addView(mainHeader)
 
@@ -368,6 +385,9 @@ class MainActivity : Activity() {
                 })
             } else channels.take(300).forEach { channel ->
                 addSidebarButton(channel.name) { play(channel) }
+                navBar.getChildAt(navBar.childCount - 1).setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) startChannelPreview(channel)
+                }
             }
         } else {
             addSidebarButton("Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
@@ -890,7 +910,12 @@ class MainActivity : Activity() {
             return
         }
         if (detailMovie != null) {
+            stopChannelPreview()
             renderMovieDetail(detailMovie!!)
+            return
+        }
+        if (selectedType == "Canlı TV" && sidebarMode == "context") {
+            renderChannelPreviewScreen()
             return
         }
         val unfilteredBase = when {
@@ -981,7 +1006,9 @@ class MainActivity : Activity() {
             }
         }
         if (sidebarMode != "search") rebuildNavigation()
-        val groups: List<Pair<String, List<MediaItem>>> = if (sidebarMode == "search") {
+        val groups: List<Pair<String, List<MediaItem>>> = if (selectedType == "Canlı TV") {
+            emptyList()
+        } else if (sidebarMode == "search") {
             if (query.isBlank()) emptyList()
             else visible.take(240).groupBy { it.type }.map { (type, entries) -> "$type • Arama sonuçları" to entries }
         } else if (selectedType == "Tümü") {
@@ -1144,6 +1171,63 @@ class MainActivity : Activity() {
                 }
             }
         }
+    }
+
+    private fun renderChannelPreviewScreen() {
+        val title = TextView(this).apply {
+            text = "CANLI TV ÖNİZLEME"
+            textSize = 20f
+            setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(dp(8), dp(10), dp(8), dp(10))
+        }
+        content.addView(title)
+        val frame = FrameLayout(this).apply {
+            background = roundedDrawable(Color.BLACK, 16, Color.rgb(48, 58, 76))
+            clipToOutline = true
+        }
+        previewView = PlayerView(this).apply {
+            useController = false
+            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+            setShutterBackgroundColor(Color.BLACK)
+        }
+        frame.addView(previewView, FrameLayout.LayoutParams(-1, -1))
+        content.addView(frame, LinearLayout.LayoutParams(-1, 0, 1f).apply {
+            setMargins(dp(8), 0, dp(8), dp(12))
+        })
+        content.addView(TextView(this).apply {
+            text = "Soldaki kanalın üzerine gelerek önizlemesini aç. İzlemek için kanala bas."
+            textSize = 14f
+            setTextColor(muted)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+        })
+        if (previewPlayer != null) previewView?.player = previewPlayer
+    }
+
+    private fun startChannelPreview(channel: MediaItem) {
+        if (channel.url.isBlank() || previewUrl == channel.url) return
+        previewUrl = channel.url
+        try {
+            if (previewPlayer == null) {
+                previewPlayer = ExoPlayer.Builder(this).build().apply {
+                    volume = 0f
+                    repeatMode = Player.REPEAT_MODE_OFF
+                    playWhenReady = true
+                }
+            }
+            previewView?.player = previewPlayer
+            previewPlayer?.setMediaItem(PlayerMediaItem.fromUri(channel.url))
+            previewPlayer?.prepare()
+            previewPlayer?.playWhenReady = true
+        } catch (_: Exception) {
+            previewUrl = ""
+        }
+    }
+
+    private fun stopChannelPreview() {
+        previewPlayer?.pause()
+        previewView?.player = null
+        previewView = null
     }
 
     private fun showMovieDetail(movie: MediaItem) {
@@ -1352,6 +1436,8 @@ class MainActivity : Activity() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     override fun onDestroy() {
+        previewPlayer?.release()
+        previewPlayer = null
         posterExecutor.shutdownNow()
         super.onDestroy()
     }
