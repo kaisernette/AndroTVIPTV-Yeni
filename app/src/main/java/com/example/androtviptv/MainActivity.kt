@@ -349,7 +349,7 @@ class MainActivity : Activity() {
         status.text = "${source.name}: oynatma listesi yükleniyor…"
         thread {
             try {
-                val parsed = parseM3u(request(source.address)).take(1200).map { it.copy(sourceId = source.id) }
+                val parsed = requestM3u(source.address).map { it.copy(sourceId = source.id) }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
@@ -454,6 +454,48 @@ class MainActivity : Activity() {
             if (code !in 200..299) throw Exception("HTTP $code")
             return body
         } finally { conn.disconnect() }
+    }
+
+    // Parse playlists as a stream instead of loading the full response and building an
+    // unbounded list in memory. Large playlists can otherwise crash lower-memory Android TVs.
+    private fun requestM3u(address: String, limit: Int = 1200): List<MediaItem> {
+        val conn = (URL(address).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 15000
+            readTimeout = 25000
+            setRequestProperty("User-Agent", "AndroTVIPTV/2.0")
+        }
+        try {
+            val code = conn.responseCode
+            if (code !in 200..299) throw Exception("HTTP $code")
+            val out = mutableListOf<MediaItem>()
+            var name = "İçerik"
+            var group = "Diğer"
+            var icon = ""
+            conn.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
+                while (out.size < limit) {
+                    val raw = reader.readLine() ?: break
+                    val line = raw.trim()
+                    when {
+                        line.startsWith("#EXTINF", true) -> {
+                            name = line.substringAfterLast(',', "İçerik").trim().ifBlank { "İçerik" }
+                            group = Regex("group-title=\\\"([^\\\"]*)\\\"", RegexOption.IGNORE_CASE)
+                                .find(line)?.groupValues?.getOrNull(1) ?: "Diğer"
+                            icon = Regex("tvg-logo=\\\"([^\\\"]*)\\\"", RegexOption.IGNORE_CASE)
+                                .find(line)?.groupValues?.getOrNull(1) ?: ""
+                        }
+                        (line.startsWith("http://") || line.startsWith("https://")) && line.isNotBlank() -> {
+                            out.add(MediaItem(line, name, line, group, classify(name, group), icon))
+                            name = "İçerik"
+                            group = "Diğer"
+                            icon = ""
+                        }
+                    }
+                }
+            }
+            return out
+        } finally {
+            conn.disconnect()
+        }
     }
 
     private fun parseM3u(text: String): List<MediaItem> {
