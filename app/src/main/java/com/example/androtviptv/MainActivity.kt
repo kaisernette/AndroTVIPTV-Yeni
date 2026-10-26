@@ -110,7 +110,7 @@ class MainActivity : Activity() {
         val brand = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(0, 2, 0, 24)
+            setPadding(0, 0, 0, 0)
         }
         val brandMark = TextView(this).apply {
             text = "K"; textSize = 20f; setTextColor(Color.rgb(12, 14, 19))
@@ -127,7 +127,7 @@ class MainActivity : Activity() {
             setTypeface(null, android.graphics.Typeface.BOLD); letterSpacing = 0.06f
             gravity = Gravity.CENTER_VERTICAL
         })
-        sidebar.addView(brand, LinearLayout.LayoutParams(-1, 54))
+        sidebar.addView(brand, LinearLayout.LayoutParams(-1, 62))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebar.addView(navBar, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         rebuildNavigation()
@@ -922,7 +922,7 @@ class MainActivity : Activity() {
             textSize = 12f; setTextColor(accentBright); letterSpacing = 0.08f
         })
         copy.addView(TextView(this).apply {
-            text = movie.name; textSize = 30f; maxLines = 2
+            text = movie.name; textSize = 26f; maxLines = 2
             setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             setPadding(0, 8, 0, 6)
         })
@@ -933,7 +933,7 @@ class MainActivity : Activity() {
         })
         copy.addView(TextView(this).apply {
             text = movie.plot.ifBlank { "Film bilgileri kaynakta bulunmuyorsa doğrudan izleyebilirsin." }
-            textSize = 14f; maxLines = 3; setTextColor(Color.rgb(226, 230, 238))
+            textSize = 13f; maxLines = 2; setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) },
@@ -949,7 +949,7 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, 340).apply { setMargins(0, 0, 0, 18) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val infoTitle = TextView(this).apply {
             text = "FİLM HAKKINDA"; textSize = 20f
@@ -990,13 +990,13 @@ class MainActivity : Activity() {
             textSize = 12f; setTextColor(accentBright); letterSpacing = 0.08f
         })
         copy.addView(TextView(this).apply {
-            text = series.name; textSize = 30f; maxLines = 2
+            text = series.name; textSize = 26f; maxLines = 2
             setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             setPadding(0, 8, 0, 6)
         })
         copy.addView(TextView(this).apply {
             text = series.plot.ifBlank { "Sezonları ve bölümleri aşağıdan seç." }
-            textSize = 14f; maxLines = 3; setTextColor(Color.rgb(226, 230, 238))
+            textSize = 13f; maxLines = 2; setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         actions.addView(makeButton(if (favorites.contains(series.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
@@ -1011,33 +1011,41 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, 300).apply { setMargins(0, 0, 0, 18) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
 
-        content.addView(TextView(this).apply {
+        val episodesPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            background = roundedDrawable(Color.rgb(14, 19, 29), 16, Color.rgb(42, 50, 66))
+        }
+        content.addView(episodesPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(0, 0, 0, dp(12))
+        })
+        episodesPanel.addView(TextView(this).apply {
             text = "SEZONLAR VE BÖLÜMLER"
             textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
-            setPadding(4, 0, 0, 10)
+            setPadding(0, 0, 0, dp(10))
         })
         when {
-            seriesEpisodesLoading -> content.addView(TextView(this).apply {
+            seriesEpisodesLoading -> episodesPanel.addView(TextView(this).apply {
                 text = "Bölümler yükleniyor…"; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
             })
-            seriesEpisodesError.isNotBlank() -> content.addView(TextView(this).apply {
+            seriesEpisodesError.isNotBlank() -> episodesPanel.addView(TextView(this).apply {
                 text = seriesEpisodesError; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
             })
-            seriesEpisodeRows.isEmpty() -> content.addView(TextView(this).apply {
+            seriesEpisodeRows.isEmpty() -> episodesPanel.addView(TextView(this).apply {
                 text = "Bu dizi için bölüm bulunamadı."; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
             })
             else -> seriesEpisodeRows.forEach { (season, episodes) ->
-                content.addView(TextView(this).apply {
+                episodesPanel.addView(TextView(this).apply {
                     text = "Sezon $season"; textSize = 18f
                     setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accentBright)
-                    setPadding(4, 12, 4, 8)
+                    setPadding(0, dp(12), 0, dp(8))
                 })
                 episodes.forEachIndexed { index, episode ->
                     val episodeRow = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                        setPadding(14, 10, 12, 10)
+                        setPadding(dp(14), dp(10), dp(12), dp(10))
                         background = roundedDrawable(panel, 12, Color.rgb(42, 50, 66))
                     }
                     episodeRow.addView(TextView(this).apply {
@@ -1048,7 +1056,7 @@ class MainActivity : Activity() {
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                     episodeRow.addView(makeButton("▶ İzle", true) { play(episode) },
                         LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(12, 0, 0, 0) })
-                    content.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, 8) })
+                    episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
         }
@@ -1084,6 +1092,8 @@ class MainActivity : Activity() {
     }
 
 
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     override fun onDestroy() {
         posterExecutor.shutdownNow()
