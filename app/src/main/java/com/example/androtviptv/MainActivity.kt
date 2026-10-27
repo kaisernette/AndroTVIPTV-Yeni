@@ -1422,7 +1422,7 @@ class MainActivity : Activity() {
                 val liveCard = item.type == "Canlı TV"
                 val homeCard = selectedType == "Tümü"
                 val poster = ImageView(this).apply {
-                    scaleType = if (liveCard) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+                    scaleType = if (liveCard || weeklyMovieFeature) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
@@ -1936,7 +1936,7 @@ class MainActivity : Activity() {
                 }
                 if (options.outWidth <= 0 || options.outHeight <= 0) return@execute
                 var sampleSize = 1
-                while (options.outWidth / sampleSize > 320 || options.outHeight / sampleSize > 420) {
+                while (options.outWidth / sampleSize > 800 || options.outHeight / sampleSize > 800) {
                     sampleSize *= 2
                 }
                 val decodeOptions = android.graphics.BitmapFactory.Options().apply {
