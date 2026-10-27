@@ -2196,6 +2196,10 @@ class MainActivity : Activity() {
             intent.putStringArrayListExtra("channel_names", ArrayList(channels.map { it.name }))
             intent.putStringArrayListExtra("channel_urls", ArrayList(channels.map { it.url }))
             intent.putExtra("channel_index", channels.indexOfFirst { it.url == item.url }.coerceAtLeast(0))
+            val recentChannels = recent.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+                .distinctBy { it.url }.take(20)
+            intent.putStringArrayListExtra("recent_channel_names", ArrayList(recentChannels.map { it.name }))
+            intent.putStringArrayListExtra("recent_channel_urls", ArrayList(recentChannels.map { it.url }))
         }
         startActivity(intent)
     }
