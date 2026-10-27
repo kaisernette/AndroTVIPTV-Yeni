@@ -431,7 +431,12 @@ class MainActivity : Activity() {
                     textSize = 12f; setTextColor(muted); setPadding(10, 8, 6, 8)
                 })
             } else channels.take(300).forEach { channel ->
-                addSidebarButton(channel.name) { play(channel) }
+                addSidebarButton(channel.name) {
+                    selectedType = "Canlı TV"
+                    sidebarMode = "context"
+                    render()
+                    startChannelPreview(channel)
+                }
                 navBar.getChildAt(navBar.childCount - 1).setOnFocusChangeListener { _, hasFocus ->
                     if (hasFocus) startChannelPreview(channel)
                 }
@@ -565,7 +570,7 @@ class MainActivity : Activity() {
         if (savedSources.isNotEmpty()) {
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
-            status.text = if (items.isNotEmpty()) "${items.size} kayıtlı içerik hazır. Yenilemek için Kaynaklar bölümünü aç." else "Kayıtlı kaynak bulundu. İçerikleri ilk kez yüklemek için Kaynaklar bölümünden yenile."
+            status.text = ""
             if (items.isNotEmpty() && items.none { it.type == selectedType }) {
                 selectedType = if (items.any { it.type == "Filmler" }) "Filmler" else "Tümü"
             }
