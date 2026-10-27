@@ -1684,7 +1684,8 @@ class MainActivity : Activity() {
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            setPadding(26, 22, 26, 22)
+            // Keep text and buttons clear of the TV's right-edge system overlay.
+            setPadding(dp(18), dp(18), dp(64), dp(18))
         }
         copy.addView(TextView(this).apply {
             text = "FİLM  •  ${movie.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -1703,6 +1704,7 @@ class MainActivity : Activity() {
         copy.addView(TextView(this).apply {
             text = movie.plot.ifBlank { "Film bilgileri kaynakta bulunmuyorsa doğrudan izleyebilirsin." }
             textSize = 13f; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
+            maxWidth = dp(760)
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -1715,9 +1717,15 @@ class MainActivity : Activity() {
             render()
         }.apply {
             gravity = Gravity.CENTER
+            val yellow = Color.rgb(255, 205, 55)
             if (isFavorite) {
-                setTextColor(Color.rgb(255, 205, 55))
-                background = roundedDrawable(Color.rgb(58, 48, 20), 10, Color.rgb(255, 205, 55))
+                // Active favorite: the whole button turns yellow.
+                setTextColor(Color.rgb(25, 25, 25))
+                background = roundedDrawable(yellow, 10, yellow)
+            } else {
+                // Inactive: transparent background, subtle neutral outline.
+                setTextColor(Color.WHITE)
+                background = roundedDrawable(Color.TRANSPARENT, 10, Color.rgb(88, 96, 110))
             }
         }
         actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(160), 44).apply { setMargins(0, 8, 0, 0) })
@@ -1733,7 +1741,8 @@ class MainActivity : Activity() {
         content.addView(infoTitle)
         if (movie.actors.isNotBlank()) content.addView(TextView(this).apply {
             text = "Oyuncular: ${movie.actors}"; textSize = 14f; setTextColor(muted)
-            setPadding(4, 0, 4, 12)
+            maxWidth = dp(760)
+            setPadding(4, 0, dp(64), 12)
         })
     }
 
