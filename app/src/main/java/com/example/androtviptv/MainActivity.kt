@@ -1940,6 +1940,50 @@ class MainActivity : Activity() {
                 content.addView(categoryTabs, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
                 val sectionType = selectedCategorySection
+                val sectionGroups = items.filter { it.type == sectionType }
+                    .map { it.group.ifBlank { "Diğer" } }
+                    .distinct()
+                val categoryActions = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(2), 0, dp(8))
+                }
+                val actionItems = listOf("Hepsini gizle", "Hepsini göster", "TR olanları göster")
+                actionItems.forEach { actionLabel ->
+                    val actionButton = TextView(this).apply {
+                        text = actionLabel
+                        textSize = 12f
+                        gravity = Gravity.CENTER
+                        setTextColor(Color.WHITE)
+                        setPadding(dp(5), dp(11), dp(5), dp(11))
+                        background = roundedDrawable(panel, 10, Color.rgb(48, 57, 73))
+                        isFocusable = true
+                        isClickable = true
+                        setOnClickListener {
+                            when (actionLabel) {
+                                "Hepsini gizle" -> sectionGroups.forEach { group ->
+                                    hiddenCategories.add(sectionType + "|" + group)
+                                }
+                                "Hepsini göster" -> sectionGroups.forEach { group ->
+                                    hiddenCategories.remove(sectionType + "|" + group)
+                                }
+                                "TR olanları göster" -> sectionGroups.forEach { group ->
+                                    if (group.contains("TR", ignoreCase = true)) {
+                                        hiddenCategories.remove(sectionType + "|" + group)
+                                    } else {
+                                        hiddenCategories.add(sectionType + "|" + group)
+                                    }
+                                }
+                            }
+                            prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply()
+                            render()
+                        }
+                    }
+                    categoryActions.addView(actionButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                        setMargins(dp(3), 0, dp(3), 0)
+                    })
+                }
+                content.addView(categoryActions, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                 val rows = items.filter { it.type == sectionType }
                     .map { Pair(Pair(it.type, it.group.ifBlank { "Diğer" }), it) }
                     .groupBy({ it.first }, { it.second })
