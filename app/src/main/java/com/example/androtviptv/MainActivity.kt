@@ -415,7 +415,7 @@ class MainActivity : Activity() {
                     text = if (items.isEmpty()) "Önce kaynak ekle." else "Kanal bulunamadı."
                     textSize = 12f; setTextColor(muted); setPadding(10, 8, 6, 8)
                 })
-            } else channels.take(300).forEach { channel ->
+            } else channels.take(40).forEach { channel ->
                 addSidebarButton(channel.name) {
                     selectedType = "Canlı TV"
                     sidebarMode = "context"
@@ -434,7 +434,7 @@ class MainActivity : Activity() {
             }
             items.filter { it.type == selectedType }
                 .map { it.group.ifBlank { "Diğer" } }
-                .distinct().sorted().filter { !hiddenCategories.contains(selectedType + "|" + it) }.take(200)
+                .distinct().sorted().filter { !hiddenCategories.contains(selectedType + "|" + it) }.take(60)
                 .forEach { category ->
                     addSidebarButton(category, selectedGroup == category) {
                         selectedGroup = category
@@ -1318,7 +1318,7 @@ class MainActivity : Activity() {
         // category at once can exhaust memory on older Android TV boxes. Keep the first
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
-        val groupsToRender = if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(12) else groups
+        val groupsToRender = if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(6) else groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val sectionHeader = LinearLayout(this).apply {
