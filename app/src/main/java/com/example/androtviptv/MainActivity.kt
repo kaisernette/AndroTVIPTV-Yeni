@@ -792,7 +792,8 @@ class MainActivity : Activity() {
     private fun saveCachedItems() {
         // Xtream libraries can contain tens of thousands of entries. Do not build
         // a giant JSONArray/String in memory after loading; stream each item to disk.
-        val snapshot = try { items.toList() } catch (_: Exception) { return }
+        // Keep the startup cache bounded for low-memory Android TV sticks.
+        val snapshot = try { items.take(1000).toList() } catch (_: Exception) { return }
         thread(name = "kaisertv-cache-writer") {
             val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
             try {
@@ -826,11 +827,15 @@ class MainActivity : Activity() {
     private fun loadCachedItems() {
         try {
             val file = cachedItemsFile()
-            val raw = if (file.exists() && file.length() > 0L) {
-                file.readText(Charsets.UTF_8)
-            } else {
-                prefs.getString("cached_items", "[]") ?: "[]"
+            // Parsing a large JSON string plus JSONArray duplicates memory usage and
+            // can crash low-memory Mi TV Stick devices on the next launch.
+            if (file.exists() && file.length() > 2L * 1024L * 1024L) {
+                file.delete()
+                items.clear()
+                prefs.edit().remove("cached_items").apply()
+                return
             }
+            val raw = if (file.exists() && file.length() > 0L) file.readText(Charsets.UTF_8) else "[]"
             val arr = JSONArray(raw)
             val restored = ArrayList<MediaItem>(arr.length())
             for (i in 0 until arr.length()) {
