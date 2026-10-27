@@ -323,7 +323,8 @@ class MainActivity : Activity() {
             render()
         }
 
-        if (sidebarMode == "main") {
+        // Ana gezinme menüsü her ekranda sabit kalır; bağlama özel öğeler altına eklenir.
+        if (sidebarMode in listOf("main", "context", "settings", "search")) {
             listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♡  Favoriler", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
@@ -382,10 +383,8 @@ class MainActivity : Activity() {
                     // Visually separate the primary navigation from the utility items.
                 }
             }
-            return
+            if (sidebarMode == "main") return
         }
-
-        addSidebarButton("⌂") { returnToMainMenu() }
 
         if (sidebarMode == "search") {
             navBar.addView(TextView(this).apply {
