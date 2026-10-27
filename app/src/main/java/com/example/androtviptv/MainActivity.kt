@@ -46,6 +46,7 @@ class MainActivity : Activity() {
     private val favorites = mutableSetOf<String>()
     private val recent = mutableListOf<MediaItem>()
     private var selectedGroup = "Tüm kategoriler"
+    private var selectedCategorySection = "Canlı TV"
     private var expandedCategory: Pair<String, List<MediaItem>>? = null
     private lateinit var categoryBar: LinearLayout
     private lateinit var categoryScroll: HorizontalScrollView
@@ -1086,7 +1087,7 @@ class MainActivity : Activity() {
                 Triple("📺", "TELEVİZYON", Color.rgb(145, 75, 175)),
                 Triple("🎞️", "DİZİLER", Color.rgb(35, 150, 125)),
                 Triple("⚽", "CANLI SPOR", Color.rgb(70, 165, 95)),
-                Triple("✨", "ANİMASYON", Color.rgb(225, 145, 55))
+                Triple("🤖", "ANİMASYON", Color.rgb(225, 145, 55))
             )
             val slide = FrameLayout(this).apply {
                 layoutParams = FrameLayout.LayoutParams(-1, -1)
@@ -1899,70 +1900,107 @@ class MainActivity : Activity() {
             }
             "categories" -> {
                 heading("Kategoriler", "TV, film ve dizi kategorilerini ayrı ayrı yönet")
-                val typeSections = listOf("Canlı TV", "Filmler", "Diziler")
-                val rows = items.filter { it.type in typeSections }
-                    .map { Pair(Pair(it.type, it.group.ifBlank { "Diğer" }), it) }
-                    .groupBy({ it.first }, { it.second })
-                var hasAnyCategory = false
-                typeSections.forEach { sectionType ->
-                    val sectionRows = rows.filterKeys { it.first == sectionType }
-                        .toList().sortedBy { it.first.second }
-                    if (sectionRows.isNotEmpty()) {
-                        hasAnyCategory = true
-                        TextView(this).apply {
-                            text = when (sectionType) {
-                                "Canlı TV" -> "TV KATEGORİLERİ"
-                                "Filmler" -> "FİLM KATEGORİLERİ"
-                                else -> "DİZİ KATEGORİLERİ"
-                            }
-                            textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD)
-                            setTextColor(accentBright); setPadding(dp(8), dp(18), dp(8), dp(5))
-                        }.also { content.addView(it) }
-                        sectionRows.forEach { (key, entries) ->
-                            val hiddenKey = key.first + "|" + key.second
-                            val isHidden = hiddenCategories.contains(hiddenKey)
-                            val row = LinearLayout(this).apply {
-                                orientation = LinearLayout.HORIZONTAL
-                                gravity = android.view.Gravity.CENTER_VERTICAL
-                                setPadding(dp(18), dp(14), dp(18), dp(14))
-                                background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
-                                isFocusable = true; isClickable = true
-                                setOnClickListener {
-                                    if (hiddenCategories.contains(hiddenKey)) hiddenCategories.remove(hiddenKey)
-                                    else hiddenCategories.add(hiddenKey)
-                                    prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply()
-                                    render()
-                                }
-                            }
-                            val indicator = TextView(this).apply {
-                                text = if (isHidden) "◯" else "⦿"
-                                textSize = 25f
-                                setTextColor(if (isHidden) Color.WHITE else accentBright)
-                                gravity = android.view.Gravity.CENTER
-                            }
-                            row.addView(indicator, LinearLayout.LayoutParams(dp(38), ViewGroup.LayoutParams.WRAP_CONTENT))
-                            val labels = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                            labels.addView(TextView(this@MainActivity).apply {
-                                text = "${key.second}  ·  ${entries.size}"
-                                textSize = 17f; setTypeface(null, android.graphics.Typeface.BOLD)
-                                setTextColor(Color.WHITE); maxLines = 2
-                                ellipsize = android.text.TextUtils.TruncateAt.END
-                            })
-                            labels.addView(TextView(this@MainActivity).apply {
-                                text = if (isHidden) "Gizli — seçerek göster" else "Gösteriliyor — seçerek gizle"
-                                textSize = 13f; setTextColor(muted); setPadding(0, dp(5), 0, 0)
-                            })
-                            row.addView(labels, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                            content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                                setMargins(dp(6), dp(5), dp(6), dp(7))
-                            })
+
+                // Üç bölüm düğmesi: yalnızca seçilen türün kategori listesi gösterilir.
+                val categoryTabs = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(8), 0, dp(10))
+                }
+                val tabInfo = listOf(
+                    Triple("Canlı TV", "▣", "TV"),
+                    Triple("Filmler", "▤", "Film"),
+                    Triple("Diziler", "▱", "Dizi")
+                )
+                tabInfo.forEach { tab ->
+                    val selected = selectedCategorySection == tab.first
+                    val tabButton = TextView(this).apply {
+                        text = "${tab.second}  ${tab.third}"
+                        textSize = 15f
+                        gravity = Gravity.CENTER
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(if (selected) Color.WHITE else muted)
+                        setPadding(dp(8), dp(12), dp(8), dp(12))
+                        background = roundedDrawable(
+                            if (selected) accentBright else panel,
+                            12,
+                            if (selected) accentBright else Color.rgb(48, 57, 73)
+                        )
+                        isFocusable = true
+                        isClickable = true
+                        setOnClickListener {
+                            selectedCategorySection = tab.first
+                            render()
                         }
                     }
+                    categoryTabs.addView(tabButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                        setMargins(dp(3), 0, dp(3), 0)
+                    })
                 }
-                if (!hasAnyCategory) content.addView(TextView(this).apply {
-                    text = "Kategorileri görmek için önce bir kaynak ekle."
-                    textSize = 16f; setTextColor(muted); setPadding(dp(8), dp(12), dp(8), dp(12))
-                })
+                content.addView(categoryTabs, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+                val sectionType = selectedCategorySection
+                val rows = items.filter { it.type == sectionType }
+                    .map { Pair(Pair(it.type, it.group.ifBlank { "Diğer" }), it) }
+                    .groupBy({ it.first }, { it.second })
+                val sectionRows = rows.toList().sortedBy { it.first.second }
+                if (sectionRows.isNotEmpty()) {
+                    sectionRows.forEach { (key, entries) ->
+                        val hiddenKey = key.first + "|" + key.second
+                        val isHidden = hiddenCategories.contains(hiddenKey)
+                        val row = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = android.view.Gravity.CENTER_VERTICAL
+                            setPadding(dp(18), dp(14), dp(18), dp(14))
+                            background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
+                            isFocusable = true
+                            isClickable = true
+                            setOnClickListener {
+                                if (hiddenCategories.contains(hiddenKey)) hiddenCategories.remove(hiddenKey)
+                                else hiddenCategories.add(hiddenKey)
+                                prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply()
+                                render()
+                            }
+                        }
+                        val indicator = TextView(this).apply {
+                            text = if (isHidden) "◯" else "⦿"
+                            textSize = 25f
+                            setTextColor(if (isHidden) Color.WHITE else accentBright)
+                            gravity = android.view.Gravity.CENTER
+                        }
+                        row.addView(indicator, LinearLayout.LayoutParams(dp(38), ViewGroup.LayoutParams.WRAP_CONTENT))
+                        val labels = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                        labels.addView(TextView(this@MainActivity).apply {
+                            text = "${key.second}  ·  ${entries.size}"
+                            textSize = 17f
+                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(Color.WHITE)
+                            maxLines = 2
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                        })
+                        labels.addView(TextView(this@MainActivity).apply {
+                            text = if (isHidden) "Gizli — seçerek göster" else "Gösteriliyor — seçerek gizle"
+                            textSize = 13f
+                            setTextColor(muted)
+                            setPadding(0, dp(5), 0, 0)
+                        })
+                        row.addView(labels, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                        content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            setMargins(dp(6), dp(5), dp(6), dp(7))
+                        })
+                    }
+                } else {
+                    content.addView(TextView(this).apply {
+                        text = when (sectionType) {
+                            "Canlı TV" -> "Gösterilecek TV kategorisi yok."
+                            "Filmler" -> "Gösterilecek film kategorisi yok."
+                            else -> "Gösterilecek dizi kategorisi yok."
+                        }
+                        textSize = 16f
+                        setTextColor(muted)
+                        setPadding(dp(8), dp(12), dp(8), dp(12))
+                    })
+                }
             }
             "themes" -> {
                 heading("Temalar", "Renk seçimi anında uygulanır.")
