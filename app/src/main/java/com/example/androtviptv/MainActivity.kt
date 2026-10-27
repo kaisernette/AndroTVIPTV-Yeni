@@ -862,7 +862,19 @@ class MainActivity : Activity() {
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        // Back should navigate out of a section, never unexpectedly finish the app.
+        handleSafeBack()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
+            handleSafeBack()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    private fun handleSafeBack() {
+        // Handle Android system/remote back in one place and keep the activity alive.
         try {
             if (detailSeries != null || detailMovie != null) {
                 detailSeries = null
@@ -1595,6 +1607,8 @@ class MainActivity : Activity() {
                     actors = pick("cast", "actors").ifBlank { movie.actors }
                 )
                 runOnUiThread {
+                    // Ignore late metadata responses if the user has already returned to the movie list.
+                    if (detailMovie?.favoriteKey != movie.favoriteKey) return@runOnUiThread
                     val index = items.indexOfFirst { it.id == movie.id && it.type == movie.type && it.sourceId == movie.sourceId }
                     if (index >= 0) items[index] = updated
                     detailMovie = updated
@@ -1654,6 +1668,9 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 10, 0) })
         actions.addView(makeButton("← Geri", false) {
             detailMovie = null
+            seriesEpisodeRows = emptyList()
+            seriesEpisodesLoading = false
+            seriesEpisodesError = ""
             render()
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 0, 0) })
         copy.addView(actions)
