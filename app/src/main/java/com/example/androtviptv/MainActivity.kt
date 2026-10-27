@@ -1372,7 +1372,7 @@ class MainActivity : Activity() {
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
-            val featureCardWidth = dp(464) // Haftanın afişleri yaklaşık iki standart kart genişliğinde
+            val featureCardWidth = dp(156) // Kart genişliği afişin dikey oranına göre ayarlanır
             val displayedEntries = if (showingExpandedCategory) entries else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
@@ -1421,12 +1421,17 @@ class MainActivity : Activity() {
                 }
                 val liveCard = item.type == "Canlı TV"
                 val homeCard = selectedType == "Tümü"
+                val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
                 val poster = ImageView(this).apply {
-                    scaleType = if (liveCard || weeklyMovieFeature) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+                    scaleType = if (liveCard || weeklyPoster) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
-                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (weeklyMovieFeature && !showingExpandedCategory) dp(210) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210)
+                    // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
+                    layoutParams = LinearLayout.LayoutParams(
+                        if (weeklyPoster) dp(140) else -1,
+                        if (liveCard) 112 else if (weeklyPoster) dp(210) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210
+                    )
                 }
                 card.addView(poster)
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
