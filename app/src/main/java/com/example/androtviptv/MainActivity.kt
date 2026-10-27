@@ -36,8 +36,8 @@ private data class MediaItem(
 }
 
 class MainActivity : Activity() {
-    private val posterExecutor = Executors.newFixedThreadPool(3)
-    private val posterCache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
+    private val posterExecutor = Executors.newFixedThreadPool(8)
+    private val posterCache = object : LruCache<String, Bitmap>(48 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
@@ -113,6 +113,7 @@ class MainActivity : Activity() {
     private var previewView: PlayerView? = null
     private var previewUrl: String = ""
     private var sidebarMode = "main"
+    private var settingsPage = "main"
     private var searchQuery = ""
     private var isLoadingSource = false
     private var loadProgress = 0
@@ -317,31 +318,31 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "main") {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♡  Favoriler", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
                     tab.contains("Canlı TV") -> "TV"
                     tab.contains("Favoriler") -> "Favoriler"
-                    tab.contains("Geçmiş") -> "Geçmiş"
                     tab.contains("Ayarlar") -> "Ayarlar"
                     tab.contains("Filmler") -> "Filmler"
                     else -> "Diziler"
                 }
                 val key = when (normalizedTab) {
                     "TV" -> "Canlı TV"
-                    "Geçmiş" -> "Son İzlenenler"
                     "Ana Sayfa" -> "Tümü"
                     else -> normalizedTab
                 }
                 if (normalizedTab == "Ayarlar") {
-                    addSidebarButton(tab, false) {
-                        AlertDialog.Builder(this@MainActivity)
-                            .setTitle("Ayarlar")
-                            .setMessage("Görünüm: koyu antrasit zemin ve açık mavi seçim rengi.\\n\\nKaynaklarını yönetmek için Kaynaklar bölümünü, yeni bağlantı eklemek için + düğmesini kullanabilirsin.")
-                            .setPositiveButton("Kaynaklarım") { _, _ -> showSourcesDialog() }
-                            .setNegativeButton("Kapat", null)
-                            .show()
+                    addSidebarButton(tab, selectedType == "Ayarlar") {
+                        detailSeries = null
+                        detailMovie = null
+                        settingsPage = "main"
+                        selectedType = "Ayarlar"
+                        selectedGroup = "Tüm kategoriler"
+                        sidebarMode = "settings"
+                        rebuildNavigation()
+                        render()
                     }
                 } else {
                     addSidebarButton(tab, selectedType == key && normalizedTab != "Ara") {
@@ -1149,6 +1150,7 @@ class MainActivity : Activity() {
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
             return
         }
+        if (selectedType == "Ayarlar") { renderSettingsScreen(); return }
         if (detailSeries != null) {
             renderSeriesDetail(detailSeries!!)
             return
@@ -1285,7 +1287,6 @@ class MainActivity : Activity() {
             listOf(
                 "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(items.filter { it.type == "Filmler" }, trendingMovies).take(24),
                 "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(items.filter { it.type == "Diziler" }, trendingSeries).take(24),
-                "Son İzlenenler" to recent.take(24)
             ).filter { it.second.isNotEmpty() }
         } else if (selectedType == "Filmler" || selectedType == "Diziler") {
             // Trend rows are shown on the home screen only; category screens list categories directly.
@@ -1776,6 +1777,103 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun renderSettingsScreen() {
+        mainHeader.visibility = View.GONE
+        status.visibility = View.GONE
+        categoryScroll.visibility = View.GONE
+        mainContentScroll.visibility = View.VISIBLE
+        content.removeAllViews()
+        fun heading(title: String, subtitle: String) {
+            content.addView(TextView(this).apply {
+                text = title; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE); setPadding(dp(8), dp(16), dp(8), dp(4))
+            })
+            content.addView(TextView(this).apply {
+                text = subtitle; textSize = 14f; setTextColor(muted); setPadding(dp(8), 0, dp(8), dp(16))
+            })
+        }
+        fun option(title: String, detail: String, action: () -> Unit) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL; setPadding(dp(18), dp(14), dp(18), dp(14))
+                background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
+                isFocusable = true; isClickable = true; setOnClickListener { action() }
+            }
+            row.addView(TextView(this).apply {
+                text = title; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            })
+            row.addView(TextView(this).apply { text = detail; textSize = 13f; setTextColor(muted); setPadding(0, dp(5), 0, 0) })
+            content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(dp(6), dp(5), dp(6), dp(7))
+            })
+        }
+        if (settingsPage != "main") content.addView(makeButton("← Ayarlara dön", false) {
+            settingsPage = "main"; rebuildNavigation(); render()
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(6), dp(6), 0, dp(8)) })
+        when (settingsPage) {
+            "main" -> {
+                heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
+                option("▤  Kategoriler", "Film ve dizi kategorilerini görüntüle") { settingsPage = "categories"; render() }
+                option("◐  Temalar", "Uygulamanın renk görünümünü değiştir") { settingsPage = "themes"; render() }
+                option("◷  Geçmiş", "İzlediğin dizileri ve filmleri görüntüle") { settingsPage = "history"; render() }
+            }
+            "categories" -> {
+                heading("Kategoriler", "Kaynaklarında bulunan film ve dizi kategorileri")
+                val rows = items.filter { it.type == "Filmler" || it.type == "Diziler" }
+                    .groupBy { Pair(it.type, it.group.ifBlank { "Diğer" }) }
+                    .toList().sortedWith(compareBy({ it.first.first }, { it.first.second }))
+                if (rows.isEmpty()) content.addView(TextView(this).apply {
+                    text = "Kategorileri görmek için önce bir kaynak ekle."; textSize = 16f; setTextColor(muted); setPadding(dp(8), dp(12), dp(8), dp(12))
+                })
+                rows.forEach { (key, entries) ->
+                    option("${key.second}  ·  ${entries.size}", key.first) {
+                        selectedType = key.first; selectedGroup = key.second; expandedCategory = null
+                        settingsPage = "main"; sidebarMode = "context"; rebuildNavigation(); render()
+                    }
+                }
+            }
+            "themes" -> {
+                heading("Temalar", "Renk seçimi anında uygulanır.")
+                val themes = listOf(
+                    Triple("Antrasit • Mavi", Color.rgb(17, 20, 25), Color.rgb(0, 166, 255)),
+                    Triple("Gece • Altın", Color.rgb(15, 16, 20), Color.rgb(224, 184, 95)),
+                    Triple("Lacivert • Turkuaz", Color.rgb(10, 22, 38), Color.rgb(35, 205, 190)),
+                    Triple("Koyu • Mor", Color.rgb(20, 16, 29), Color.rgb(174, 115, 255))
+                )
+                themes.forEach { theme ->
+                    option(theme.first, "Zemin ve vurgu rengi") {
+                        bg = theme.second
+                        panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
+                        accent = theme.third; accentBright = theme.third
+                        prefs.edit().putString("theme_name", theme.first).apply()
+                        rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(bg); mainContentScroll.setBackgroundColor(bg)
+                        window.statusBarColor = bg; window.navigationBarColor = bg
+                        settingsPage = "themes"; render()
+                    }
+                }
+            }
+            "history" -> {
+                heading("Geçmiş", "İzlenen diziler üstte, filmler altta.")
+                fun historySection(title: String, entries: List<MediaItem>) {
+                    content.addView(TextView(this).apply {
+                        text = "$title  ·  ${entries.size}"; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(accentBright); setPadding(dp(8), dp(12), dp(8), dp(6))
+                    })
+                    if (entries.isEmpty()) content.addView(TextView(this).apply {
+                        text = "Henüz izlenen içerik yok."; textSize = 14f; setTextColor(muted); setPadding(dp(8), dp(5), dp(8), dp(12))
+                    })
+                    entries.forEach { item ->
+                        option(item.name, item.group.ifBlank { item.type }) {
+                            settingsPage = "main"
+                            if (item.type == "Diziler") showSeriesDetail(item) else showMovieDetail(item)
+                        }
+                    }
+                }
+                historySection("İzlenen Diziler", recent.filter { it.type == "Diziler" })
+                historySection("İzlenen Filmler", recent.filter { it.type == "Filmler" })
+            }
+        }
+    }
+
     private fun loadPoster(address: String, target: ImageView) {
         target.tag = address
         val cached = posterCache.get(address)
@@ -1786,8 +1884,8 @@ class MainActivity : Activity() {
         posterExecutor.execute {
             try {
                 val conn = (URL(address).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 6000
-                    readTimeout = 6000
+                    connectTimeout = 3500
+                    readTimeout = 3500
                     instanceFollowRedirects = true
                 }
                 val bitmap = try {
