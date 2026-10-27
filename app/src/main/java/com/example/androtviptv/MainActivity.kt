@@ -790,27 +790,29 @@ class MainActivity : Activity() {
     private fun cachedItemsFile() = java.io.File(filesDir, "kaisertv_media_cache.json")
 
     private fun saveCachedItems() {
-        // Persist the complete library to an app-private file. SharedPreferences
-        // and the old 1,200-items-per-type cap caused categories to disappear
-        // after restart when a provider returned tens of thousands of entries.
-        val arr = JSONArray()
-        items.forEach { x ->
-            arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group)
-                .put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId)
-                .put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors).put("rating",x.rating)
-                .put("releaseDate",x.releaseDate).put("genre",x.genre))
-        }
-        try {
-            val target = cachedItemsFile()
-            val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
-            temp.writeText(arr.toString(), Charsets.UTF_8)
-            if (!temp.renameTo(target)) {
-                target.writeText(temp.readText(Charsets.UTF_8), Charsets.UTF_8)
-                temp.delete()
+        // Snapshot on the UI thread, but serialize/write off-thread. Providers can
+        // return tens of thousands of entries; JSON creation on the UI thread can
+        // exhaust memory or make Android TV kill the activity just after loading.
+        val snapshot = try { items.toList() } catch (_: Exception) { return }
+        thread(name = "kaisertv-cache-writer") {
+            try {
+                val arr = JSONArray()
+                snapshot.forEach { x ->
+                    arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group)
+                        .put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId)
+                        .put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors).put("rating",x.rating)
+                        .put("releaseDate",x.releaseDate).put("genre",x.genre))
+                }
+                val target = cachedItemsFile()
+                val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
+                temp.writeText(arr.toString(), Charsets.UTF_8)
+                if (!temp.renameTo(target)) {
+                    target.writeText(temp.readText(Charsets.UTF_8), Charsets.UTF_8)
+                    temp.delete()
+                }
+            } catch (_: Exception) {
+                // Do not copy a potentially huge media library into SharedPreferences.
             }
-        } catch (_: Exception) {
-            // Keep the previous SharedPreferences cache as a fallback if storage fails.
-            prefs.edit().putString("cached_items", arr.toString()).apply()
         }
     }
 
