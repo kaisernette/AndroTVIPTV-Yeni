@@ -10,8 +10,8 @@ android {
     defaultConfig {
         applicationId = "com.example.androtviptv"
         minSdk = 23
-        targetSdk = 28
-        versionCode = 3
+        targetSdk = 35
+        versionCode = 4
         versionName = "3.0"
     }
 
