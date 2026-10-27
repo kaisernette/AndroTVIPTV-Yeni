@@ -67,11 +67,11 @@ class MainActivity : Activity() {
     private var xtreamPass = ""
     private var xtreamBase = ""
     private val prefs by lazy { getSharedPreferences("androtv", MODE_PRIVATE) }
-    private var bg = Color.rgb(7, 10, 17)
-    private var panel = Color.rgb(20, 26, 39)
-    private var accent = Color.rgb(222, 181, 91)
-    private var accentBright = Color.rgb(246, 218, 151)
-    private var muted = Color.rgb(157, 169, 188)
+    private var bg = Color.rgb(17, 20, 25)
+    private var panel = Color.rgb(25, 30, 38)
+    private var accent = Color.rgb(0, 166, 255)
+    private var accentBright = Color.rgb(72, 190, 255)
+    private var muted = Color.rgb(190, 198, 210)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -277,9 +277,9 @@ class MainActivity : Activity() {
             navBar.addView(makeButton(label, selected, action).apply {
                 // Çerçevesiz yazılı menü; yalnızca odak/seçim mavi vurgulanır.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                setTextColor(if (selected) accentBright else Color.rgb(185, 190, 210))
+                setTextColor(if (selected) accentBright else Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
-                    (v as Button).setTextColor(if (hasFocus || selected) accentBright else Color.rgb(185, 190, 210))
+                    (v as Button).setTextColor(if (hasFocus || selected) accentBright else Color.WHITE)
                     v.scaleX = if (hasFocus) 1.025f else 1f
                     v.scaleY = if (hasFocus) 1.025f else 1f
                 }
@@ -312,44 +312,61 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "main") {
-            listOf("⌕  Ara", "▣  Canlı TV", "▰  Filmler", "▤  Diziler").forEach { tab ->
+            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♥  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
+                    tab.contains("Ana Sayfa") -> "Ana Sayfa"
                     tab.contains("Canlı TV") -> "TV"
                     tab.contains("Favoriler") -> "Favoriler"
-                    tab.contains("İzlenenler") -> "İzlenenler"
+                    tab.contains("Geçmiş") -> "Geçmiş"
+                    tab.contains("Ayarlar") -> "Ayarlar"
                     tab.contains("Filmler") -> "Filmler"
                     else -> "Diziler"
                 }
                 val key = when (normalizedTab) {
                     "TV" -> "Canlı TV"
-                    "İzlenenler" -> "Son İzlenenler"
+                    "Geçmiş" -> "Son İzlenenler"
+                    "Ana Sayfa" -> "Tümü"
                     else -> normalizedTab
                 }
-                addSidebarButton(tab,
-                    selectedType == key && normalizedTab != "Ara") {
-                    if (normalizedTab == "Ara") {
+                if (normalizedTab == "Ayarlar") {
+                    addSidebarButton(tab, false) {
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Ayarlar")
+                            .setMessage("Görünüm: koyu antrasit zemin ve açık mavi seçim rengi.\\n\\nKaynaklarını yönetmek için Kaynaklar bölümünü, yeni bağlantı eklemek için + düğmesini kullanabilirsin.")
+                            .setPositiveButton("Kaynaklarım") { _, _ -> showSourcesDialog() }
+                            .setNegativeButton("Kapat", null)
+                            .show()
+                    }
+                } else {
+                    addSidebarButton(tab, selectedType == key && normalizedTab != "Ara") {
+                        if (normalizedTab == "Ara") {
+                            detailSeries = null
+                            detailMovie = null
+                            sidebarMode = "search"
+                            searchQuery = ""
+                            selectedType = "Tümü"
+                            selectedGroup = "Tüm kategoriler"
+                            rebuildNavigation()
+                            render()
+                            return@addSidebarButton
+                        }
                         detailSeries = null
                         detailMovie = null
-                        sidebarMode = "search"
-                        searchQuery = ""
-                        selectedType = "Tümü"
+                        seriesEpisodeRows = emptyList()
+                        seriesEpisodesLoading = false
+                        seriesEpisodesError = ""
                         selectedGroup = "Tüm kategoriler"
+                        expandedCategory = null
+                        selectedType = key
+                        sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
+                        prefs.edit().putString("last_section", key).apply()
                         rebuildNavigation()
                         render()
-                        return@addSidebarButton
                     }
-                    detailSeries = null
-                    detailMovie = null
-                    seriesEpisodeRows = emptyList()
-                    seriesEpisodesLoading = false
-                    seriesEpisodesError = ""
-                    selectedGroup = "Tüm kategoriler"
-                    selectedType = key
-                    sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
-                    prefs.edit().putString("last_section", key).apply()
-                    rebuildNavigation()
-                    render()
+                }
+                if (normalizedTab == "Ana Sayfa") {
+                    // Visually separate the primary navigation from the utility items.
                 }
             }
             return
@@ -1270,9 +1287,14 @@ class MainActivity : Activity() {
             val categoryGroups = source.groupBy { it.group.ifBlank { "Diğer" } }.map { it.key to it.value }
             (listOf("Haftanın ${if (type == "Filmler") "Filmleri" else "Dizileri"}" to (featured + ranked).take(24)) + categoryGroups)
                 .filter { it.second.isNotEmpty() }
+        } else if (selectedType == "Son İzlenenler") {
+            listOf("Diziler" to visible.filter { it.type == "Diziler" },
+                "Filmler" to visible.filter { it.type == "Filmler" },
+                "Canlı TV" to visible.filter { it.type == "Canlı TV" })
+                .filter { it.second.isNotEmpty() }
         } else {
             visible.groupBy {
-                if (selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
+                if (selectedType == "Favoriler") it.type
                 else it.group.ifBlank { "Diğer" }
             }.map { it.key to it.value }
         }
@@ -1313,7 +1335,7 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)).apply { setMargins(dp(10), 0, 0, 0) })
             }
             content.addView(sectionHeader)
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            val row = LinearLayout(this).apply { orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
             val weeklyMovieFeature = (selectedType == "Tümü" && groupName.contains("Haftanın Filmleri")) || (selectedType == "Filmler" && groupName.contains("Haftanın Filmleri")) || (selectedType == "Diziler" && groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
@@ -1369,7 +1391,7 @@ class MainActivity : Activity() {
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
-                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (weeklyMovieFeature) dp(390) else if (homeCard) 230 else 210)
+                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (weeklyMovieFeature && !showingExpandedCategory) dp(390) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210)
                 }
                 card.addView(poster)
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
@@ -1392,11 +1414,15 @@ class MainActivity : Activity() {
                     render()
                 }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                 card.addView(actions)
-                row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) dp(featureCardWidth) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, if (weeklyMovieFeature) dp(18) else 16, 10) })
+                row.addView(card, LinearLayout.LayoutParams(if (showingExpandedCategory) -1 else if (liveCard) 190 else if (weeklyMovieFeature) dp(featureCardWidth) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, if (showingExpandedCategory) 0 else if (weeklyMovieFeature) dp(18) else 16, 10) })
             }
-            content.addView(HorizontalScrollView(this).apply {
-                isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
-            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            if (showingExpandedCategory) {
+                content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            } else {
+                content.addView(HorizontalScrollView(this).apply {
+                    isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }
         }
     }
 
