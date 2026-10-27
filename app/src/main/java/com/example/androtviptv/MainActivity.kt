@@ -120,6 +120,7 @@ class MainActivity : Activity() {
     private var historyType = "Canlı TV"
     private val hiddenCategories = mutableSetOf<String>()
     private var searchQuery = ""
+    private var searchInputFocusPending = false
     private var isLoadingSource = false
     private var loadProgress = 0
     private var hasLoadedSource = false
@@ -355,6 +356,7 @@ class MainActivity : Activity() {
                             detailSeries = null
                             detailMovie = null
                             sidebarMode = "search"
+                            searchInputFocusPending = true
                             searchQuery = ""
                             selectedType = "Tümü"
                             selectedGroup = "Tüm kategoriler"
@@ -1207,6 +1209,17 @@ class MainActivity : Activity() {
             }
             searchPanel.addView(searchInput, LinearLayout.LayoutParams(-1, dp(52)))
             content.addView(searchPanel)
+            if (searchInputFocusPending) {
+                searchInputFocusPending = false
+                searchInput.post {
+                    if (sidebarMode == "search" && searchInput.isAttachedToWindow) {
+                        searchInput.requestFocus()
+                        searchInput.setSelection(searchInput.text.length)
+                        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                        imm.showSoftInput(searchInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                    }
+                }
+            }
         }
         val unfilteredBase = when {
             sidebarMode == "search" -> items.toList()
