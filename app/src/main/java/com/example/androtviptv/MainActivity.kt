@@ -1011,7 +1011,7 @@ class MainActivity : Activity() {
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::brandView.isInitialized) brandView.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
-        if (::mainHeader.isInitialized) mainHeader.visibility = if (firstEntry || isLoadingSource || detailMode || sidebarMode == "search" || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
+        if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
@@ -1599,6 +1599,15 @@ class MainActivity : Activity() {
         val frame = FrameLayout(this).apply {
             background = roundedDrawable(Color.BLACK, 16, Color.rgb(48, 58, 76))
             clipToOutline = true
+            isFocusable = true
+            isFocusableInTouchMode = true
+            contentDescription = "Canlı TV önizlemesi"
+            setOnFocusChangeListener { v, hasFocus ->
+                v.background = roundedDrawable(
+                    Color.BLACK, 16,
+                    if (hasFocus) accentBright else Color.rgb(48, 58, 76)
+                )
+            }
         }
         previewView = PlayerView(this).apply {
             useController = false
@@ -1918,6 +1927,7 @@ class MainActivity : Activity() {
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
+                option("＋  Kaynaklar", "Kaynak ekle, kayıtlı kaynakları yenile veya sil") { showSourcesDialog() }
                 option("▤  Kategoriler", "Film ve dizi kategorilerini görüntüle") { settingsPage = "categories"; render() }
                 option("◐  Temalar", "Uygulamanın renk görünümünü değiştir") { settingsPage = "themes"; render() }
                 option("◷  Geçmiş", "İzlediğin dizileri ve filmleri görüntüle") { settingsPage = "history"; render() }
