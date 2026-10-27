@@ -424,7 +424,10 @@ class MainActivity : Activity() {
                     render()
                     startChannelPreview(channel)
                 }
-                navBar.getChildAt(navBar.childCount - 1).setOnFocusChangeListener { _, hasFocus ->
+                navBar.getChildAt(navBar.childCount - 1).setOnFocusChangeListener { v, hasFocus ->
+                    (v as? Button)?.setTextColor(if (hasFocus) accentBright else Color.WHITE)
+                    v.scaleX = if (hasFocus) 1.025f else 1f
+                    v.scaleY = if (hasFocus) 1.025f else 1f
                     if (hasFocus) startChannelPreview(channel)
                 }
             }
