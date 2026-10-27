@@ -790,28 +790,35 @@ class MainActivity : Activity() {
     private fun cachedItemsFile() = java.io.File(filesDir, "kaisertv_media_cache.json")
 
     private fun saveCachedItems() {
-        // Snapshot on the UI thread, but serialize/write off-thread. Providers can
-        // return tens of thousands of entries; JSON creation on the UI thread can
-        // exhaust memory or make Android TV kill the activity just after loading.
+        // Xtream libraries can contain tens of thousands of entries. Do not build
+        // a giant JSONArray/String in memory after loading; stream each item to disk.
         val snapshot = try { items.toList() } catch (_: Exception) { return }
         thread(name = "kaisertv-cache-writer") {
+            val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
             try {
-                val arr = JSONArray()
-                snapshot.forEach { x ->
-                    arr.put(JSONObject().put("id",x.id).put("name",x.name).put("url",x.url).put("group",x.group)
-                        .put("type",x.type).put("icon",x.icon).put("extension",x.extension).put("seriesId",x.seriesId)
-                        .put("sourceId",x.sourceId).put("plot",x.plot).put("actors",x.actors).put("rating",x.rating)
-                        .put("releaseDate",x.releaseDate).put("genre",x.genre))
+                temp.bufferedWriter(Charsets.UTF_8).use { writer ->
+                    writer.write("[")
+                    snapshot.forEachIndexed { index, x ->
+                        if (index > 0) writer.write(",")
+                        val obj = JSONObject()
+                            .put("id", x.id).put("name", x.name).put("url", x.url).put("group", x.group)
+                            .put("type", x.type).put("icon", x.icon).put("extension", x.extension)
+                            .put("seriesId", x.seriesId).put("sourceId", x.sourceId).put("plot", x.plot)
+                            .put("actors", x.actors).put("rating", x.rating).put("releaseDate", x.releaseDate)
+                            .put("genre", x.genre)
+                        writer.write(obj.toString())
+                        if (index % 250 == 0) writer.flush()
+                    }
+                    writer.write("]")
                 }
                 val target = cachedItemsFile()
-                val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
-                temp.writeText(arr.toString(), Charsets.UTF_8)
                 if (!temp.renameTo(target)) {
-                    target.writeText(temp.readText(Charsets.UTF_8), Charsets.UTF_8)
+                    temp.copyTo(target, overwrite = true)
                     temp.delete()
                 }
-            } catch (_: Exception) {
-                // Do not copy a potentially huge media library into SharedPreferences.
+            } catch (e: Exception) {
+                android.util.Log.e("KaiserTV", "Media cache write failed", e)
+                try { temp.delete() } catch (_: Exception) { }
             }
         }
     }
