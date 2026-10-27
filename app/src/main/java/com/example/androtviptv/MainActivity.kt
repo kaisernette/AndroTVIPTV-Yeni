@@ -152,7 +152,7 @@ class MainActivity : Activity() {
             setPadding(8, 12, 8, 10)
             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(104, -1).apply { setMargins(0, 0, 14, 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(184), -1).apply { setMargins(0, 0, dp(14), 0) })
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -275,7 +275,7 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = if (showReadableCategories) 260 else 104
+            val desiredWidth = dp(if (showReadableCategories) 252 else 184)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -324,9 +324,16 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "main") {
-            listOf("⌕", "⌂", "▣", "▰", "▤", "☆", "◷").forEachIndexed { index, iconLabel ->
-                val tab = listOf("⌕  Ara", "Ana sayfa", "TV", "Filmler", "Diziler", "Favoriler", "İzlenenler")[index]
-                val normalizedTab = if (tab.startsWith("⌕")) "Ara" else tab
+            listOf("⌕  Ara", "⌂  Ana sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "☆  Favoriler", "◷  İzlenenler").forEach { tab ->
+                val normalizedTab = when {
+                    tab.endsWith("Ara") -> "Ara"
+                    tab.contains("Ana sayfa") -> "Ana sayfa"
+                    tab.contains("Canlı TV") -> "TV"
+                    tab.contains("Favoriler") -> "Favoriler"
+                    tab.contains("İzlenenler") -> "İzlenenler"
+                    tab.contains("Filmler") -> "Filmler"
+                    else -> "Diziler"
+                }
                 val key = when (normalizedTab) {
                     "Ana sayfa" -> "Tümü"
                     "TV" -> "Canlı TV"
