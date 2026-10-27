@@ -2253,7 +2253,16 @@ class MainActivity : Activity() {
                 intent.putStringArrayListExtra("recent_channel_names", ArrayList(recentChannels.map { it.name }))
                 intent.putStringArrayListExtra("recent_channel_urls", ArrayList(recentChannels.map { it.url }))
             }
-            startActivity(intent)
+            // Android TV cihazlarında video decoder'ı bırakmak zaman alabilir.
+            // Önizleme çözücüsünün serbest kalması için PlayerActivity'yi kısa bir gecikmeyle aç.
+            window.decorView.postDelayed({
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    openingPlayer = false
+                    android.widget.Toast.makeText(this, "Tam ekran oynatıcı açılamadı. Tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }, 500L)
         } catch (e: Exception) {
             openingPlayer = false
             android.widget.Toast.makeText(this, "Tam ekran oynatıcı açılamadı. Tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
