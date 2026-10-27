@@ -161,13 +161,6 @@ class MainActivity : Activity() {
         sidebar.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         rebuildNavigation()
 
-        sidebar.addView(View(this).apply { setBackgroundColor(Color.rgb(39, 46, 60)) },
-            LinearLayout.LayoutParams(-1, 1).apply { setMargins(0, 12, 0, 10) })
-        sidebar.addView(makeButton("＋  Kaynak ekle", true) { showConnectionDialog() }.apply { textSize = 13f; gravity = Gravity.CENTER_VERTICAL; background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(accentBright) },
-            LinearLayout.LayoutParams(-1, dp(42)).apply { setMargins(0, 0, 0, dp(5)) })
-        sidebar.addView(makeButton("▤  Kaynaklarım", false) { showSourcesDialog() }.apply { textSize = 13f; gravity = Gravity.CENTER_VERTICAL; background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(Color.rgb(185, 190, 210)) },
-            LinearLayout.LayoutParams(-1, dp(42)).apply { setMargins(0, 0, 0, dp(5)) })
-
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, 0)
@@ -176,10 +169,31 @@ class MainActivity : Activity() {
 
         mainHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(4, 0, 4, 12)
+            setPadding(4, 0, 4, 8)
         }
-        // Üst sağdaki eski KAISERTV+ yazısı kaldırıldı; yalnızca sol menüde KIP+ logosu kullanılır.
-        mainHeader.addView(View(this), LinearLayout.LayoutParams(-1, dp(8)))
+        mainHeader.addView(View(this), LinearLayout.LayoutParams(0, dp(40), 1f))
+        mainHeader.addView(TextView(this).apply {
+            text = "Kaynaklar"; textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE); gravity = Gravity.CENTER
+            isFocusable = true
+            setPadding(dp(10), 0, dp(10), 0)
+            setOnClickListener { showSourcesDialog() }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)))
+        mainHeader.addView(TextView(this).apply {
+            text = "+"; textSize = 25f; gravity = Gravity.CENTER
+            setTextColor(Color.rgb(15, 18, 27))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL; setColor(accent); setStroke(dp(1), accentBright)
+            }
+            isFocusable = true
+            setOnFocusChangeListener { v, hasFocus ->
+                v.scaleX = if (hasFocus) 1.08f else 1f
+                v.scaleY = if (hasFocus) 1.08f else 1f
+            }
+            contentDescription = "Kaynak ekle"
+            setOnClickListener { showConnectionDialog() }
+        }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { setMargins(dp(8), 0, dp(4), 0) })
         main.addView(mainHeader)
 
         val hero = LinearLayout(this).apply {
@@ -1271,10 +1285,33 @@ class MainActivity : Activity() {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             }, LinearLayout.LayoutParams(0, -2, 1f))
             sectionHeader.addView(TextView(this).apply {
-                text = if (showingExpandedCategory) "← Geri dön" else "${entries.size} içerik   ›"
+                text = if (showingExpandedCategory) "← Geri dön" else "${entries.size} içerik"
                 textSize = 12f; setTextColor(accent)
+                gravity = Gravity.CENTER
+                setPadding(dp(8), 0, dp(8), 0)
                 if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
             })
+            if (!showingExpandedCategory && entries.size > 5 && (selectedType == "Filmler" || selectedType == "Diziler")) {
+                sectionHeader.addView(TextView(this).apply {
+                    text = "Tümü"; textSize = 12f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE); gravity = Gravity.CENTER
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(10).toFloat()
+                        setColor(Color.TRANSPARENT); setStroke(dp(1), accent)
+                    }
+                    isFocusable = true
+                    setPadding(dp(16), dp(7), dp(16), dp(7))
+                    setOnFocusChangeListener { v, hasFocus ->
+                        v.background = GradientDrawable().apply {
+                            cornerRadius = dp(10).toFloat()
+                            setColor(if (hasFocus) Color.rgb(43, 49, 63) else Color.TRANSPARENT)
+                            setStroke(dp(2), if (hasFocus) accentBright else accent)
+                        }
+                    }
+                    setOnClickListener { expandedCategory = groupName to entries; render() }
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)).apply { setMargins(dp(10), 0, 0, 0) })
+            }
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             val weeklyMovieFeature = (selectedType == "Tümü" && groupName.contains("Haftanın Filmleri")) || (selectedType == "Filmler" && groupName.contains("Haftanın Filmleri")) || (selectedType == "Diziler" && groupName.contains("Haftanın Dizileri"))
@@ -1356,29 +1393,6 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                 card.addView(actions)
                 row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) dp(featureCardWidth) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, if (weeklyMovieFeature) dp(18) else 16, 10) })
-            }
-            if (!showingExpandedCategory && (selectedType == "Filmler" || selectedType == "Diziler") && entries.size > 5) {
-                val moreCard = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    isFocusable = true; isFocusableInTouchMode = true
-                    background = roundedDrawable(panel, 15, accent)
-                    setPadding(dp(18), dp(18), dp(18), dp(18))
-                    setOnFocusChangeListener { v, hasFocus ->
-                        v.background = roundedDrawable(if (hasFocus) Color.rgb(31, 39, 54) else panel, 15, if (hasFocus) accentBright else accent)
-                    }
-                    setOnClickListener { expandedCategory = groupName to entries; render() }
-                    addView(TextView(this@MainActivity).apply {
-                        text = "TÜMÜNÜ\\nGÖSTER  ›"; textSize = 17f
-                        setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
-                        gravity = Gravity.CENTER
-                    })
-                    addView(TextView(this@MainActivity).apply {
-                        text = "${entries.size} içerik"; textSize = 12f; setTextColor(muted)
-                        setPadding(0, dp(10), 0, 0)
-                    })
-                }
-                row.addView(moreCard, LinearLayout.LayoutParams(232, if (weeklyMovieFeature) dp(390) else ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 16, 10) })
             }
             content.addView(HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
