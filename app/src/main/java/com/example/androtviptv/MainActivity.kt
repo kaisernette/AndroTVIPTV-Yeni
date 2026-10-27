@@ -1138,7 +1138,7 @@ class MainActivity : Activity() {
                         visualSymbol.text = visualItems[visualIndex].first
                         visualSymbol.setShadowLayer(dp(14).toFloat(), 0f, 0f, visualItems[visualIndex].third)
                         visualText.text = visualItems[visualIndex].second
-                        visual.translationX(width)
+                        visual.translationX = width
                         visual.alpha = 0f
                         visual.animate().translationX(0f).alpha(1f).setDuration(420L).start()
                     }.start()
