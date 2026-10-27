@@ -285,27 +285,25 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Flat icon-only rail: no pill/box around each navigation icon.
-                if (label.length <= 2) {
-                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                    setTextColor(if (selected) accentBright else Color.rgb(185, 190, 210))
-                    setOnFocusChangeListener { v, hasFocus ->
-                        (v as Button).setTextColor(if (hasFocus || selected) accentBright else Color.rgb(185, 190, 210))
-                        v.scaleX = if (hasFocus) 1.12f else 1f
-                        v.scaleY = if (hasFocus) 1.12f else 1f
-                    }
+                // Çerçevesiz yazılı menü; yalnızca odak/seçim mavi vurgulanır.
+                background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                setTextColor(if (selected) accentBright else Color.rgb(185, 190, 210))
+                setOnFocusChangeListener { v, hasFocus ->
+                    (v as Button).setTextColor(if (hasFocus || selected) accentBright else Color.rgb(185, 190, 210))
+                    v.scaleX = if (hasFocus) 1.025f else 1f
+                    v.scaleY = if (hasFocus) 1.025f else 1f
                 }
-                textSize = if (label.length > 2) 14f else 26f
-                gravity = if (label.length > 2) Gravity.CENTER_VERTICAL else Gravity.CENTER
-                isSingleLine = label.length <= 2
+                textSize = 14f
+                gravity = Gravity.CENTER_VERTICAL
+                isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 contentDescription = label
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(if (label.length > 2) 12 else 0, 0, if (label.length > 2) 8 else 0, 0)
-                minHeight = 42
-            }, LinearLayout.LayoutParams(-1, if (label.length <= 2) 52 else 46).apply { setMargins(0, if (label.length <= 2) 4 else 7, 0, if (label.length <= 2) 4 else 7) })
+                setPadding(dp(10), 0, dp(8), 0)
+                minHeight = dp(42)
+            }, LinearLayout.LayoutParams(-1, dp(46)).apply { setMargins(0, dp(3), 0, dp(3)) })
         }
 
         fun returnToMainMenu() {
