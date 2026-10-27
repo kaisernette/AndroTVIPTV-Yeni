@@ -137,7 +137,7 @@ class MainActivity : Activity() {
             setPadding(8, 12, 8, 10)
             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(156), -1).apply { setMargins(0, 0, dp(10), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(140), -1).apply { setMargins(0, 0, dp(8), 0) })
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -269,7 +269,7 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = dp(if (showReadableCategories) 224 else 156)
+            val desiredWidth = dp(if (showReadableCategories) 200 else 140)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -1705,20 +1705,13 @@ class MainActivity : Activity() {
             textSize = 13f; maxLines = 2; setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 10, 0) })
+        actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER },
+            LinearLayout.LayoutParams(dp(150), 44).apply { setMargins(0, 8, 10, 0) })
         actions.addView(makeButton(if (favorites.contains(movie.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
             if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
             prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
             render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 14, 10, 0) })
-        actions.addView(makeButton("← Geri", false) {
-            detailMovie = null
-            seriesEpisodeRows = emptyList()
-            seriesEpisodesLoading = false
-            seriesEpisodesError = ""
-            render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 0, 0) })
+        }.apply { gravity = Gravity.CENTER }, LinearLayout.LayoutParams(dp(180), 44).apply { setMargins(0, 8, 10, 0) })
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
