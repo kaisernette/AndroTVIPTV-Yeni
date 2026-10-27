@@ -1694,12 +1694,15 @@ class MainActivity : Activity() {
         copy.addView(TextView(this).apply {
             text = movie.name; textSize = 26f; maxLines = 2
             setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            maxWidth = dp(760)
             setPadding(0, 8, 0, 6)
         })
         val metadata = listOf(movie.releaseDate, movie.genre, movie.rating.takeIf { it.isNotBlank() }?.let { "Puan $it" })
             .filterNotNull().filter { it.isNotBlank() }.joinToString("   •   ")
         if (metadata.isNotBlank()) copy.addView(TextView(this).apply {
-            text = metadata; textSize = 13f; setTextColor(accentBright); setPadding(0, 0, 0, 8)
+            text = metadata; textSize = 13f; setTextColor(accentBright)
+            maxWidth = dp(760); maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(0, 0, 0, 8)
         })
         copy.addView(TextView(this).apply {
             text = movie.plot.ifBlank { "Film bilgileri kaynakta bulunmuyorsa doğrudan izleyebilirsin." }
@@ -1718,14 +1721,23 @@ class MainActivity : Activity() {
         }.apply {
             gravity = Gravity.CENTER
             val yellow = Color.rgb(255, 205, 55)
-            if (isFavorite) {
-                // Active favorite: the whole button turns yellow.
-                setTextColor(Color.rgb(25, 25, 25))
-                background = roundedDrawable(yellow, 10, yellow)
-            } else {
-                // Inactive: transparent background, subtle neutral outline.
-                setTextColor(Color.WHITE)
-                background = roundedDrawable(Color.TRANSPARENT, 10, Color.rgb(88, 96, 110))
+            fun updateFavoriteAppearance(hasFocus: Boolean) {
+                if (isFavorite) {
+                    // Keep the entire active button yellow even while focused.
+                    setTextColor(Color.rgb(25, 25, 25))
+                    background = roundedDrawable(yellow, 10, if (hasFocus) accentBright else yellow)
+                } else {
+                    // Transparent when inactive; focus only adds a blue outline.
+                    setTextColor(Color.WHITE)
+                    background = roundedDrawable(Color.TRANSPARENT, 10,
+                        if (hasFocus) accentBright else Color.rgb(88, 96, 110))
+                }
+            }
+            updateFavoriteAppearance(hasFocus = false)
+            setOnFocusChangeListener { v, hasFocus ->
+                updateFavoriteAppearance(hasFocus)
+                v.scaleX = if (hasFocus) 1.035f else 1f
+                v.scaleY = if (hasFocus) 1.035f else 1f
             }
         }
         actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(160), 44).apply { setMargins(0, 8, 0, 0) })
@@ -1742,7 +1754,8 @@ class MainActivity : Activity() {
         if (movie.actors.isNotBlank()) content.addView(TextView(this).apply {
             text = "Oyuncular: ${movie.actors}"; textSize = 14f; setTextColor(muted)
             maxWidth = dp(760)
-            setPadding(4, 0, dp(64), 12)
+            maxLines = 3; ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(4, 0, 0, 12)
         })
     }
 
