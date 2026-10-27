@@ -2229,19 +2229,11 @@ class MainActivity : Activity() {
         }
         openingPlayer = true
         try {
-            // Canlı TV'de çalışan önizleme ExoPlayer'ını tam ekran etkinliğine devret.
-            // Aynı anda ikinci bir decoder açmak bazı Android TV cihazlarında çökmeye neden olabilir.
-            val handoff = item.type == "Canlı TV" && previewPlayer != null
-            if (handoff) {
-                previewView?.player = null
-                PlayerActivity.handedOffPlayer = previewPlayer
-                previewPlayer = null
-            } else {
-                previewView?.player = null
-                previewPlayer?.runCatching { stop() }
-                previewPlayer?.release()
-                previewPlayer = null
-            }
+            // Önizleme oynatıcısını kapat; tam ekran için yeni ExoPlayer açılacak.
+            previewView?.player = null
+            previewPlayer?.runCatching { stop() }
+            previewPlayer?.release()
+            previewPlayer = null
             previewView = null
             previewChannel = null
             previewUrl = ""
@@ -2263,8 +2255,6 @@ class MainActivity : Activity() {
             try {
                 startActivity(intent)
             } catch (e: Exception) {
-                PlayerActivity.handedOffPlayer?.release()
-                PlayerActivity.handedOffPlayer = null
                 openingPlayer = false
                 android.widget.Toast.makeText(this, "Tam ekran oynatıcı açılamadı. Tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
             }
