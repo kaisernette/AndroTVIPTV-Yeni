@@ -22,6 +22,11 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 
 class PlayerActivity : Activity() {
+    companion object {
+        // Önizlemeden tam ekrana aktarılır; böylece ikinci bir video decoder'ı açılmaz.
+        @Volatile var handedOffPlayer: ExoPlayer? = null
+    }
+
     private var player: ExoPlayer? = null
     private var resumeKey: String = ""
     private var playerView: PlayerView? = null
@@ -71,19 +76,24 @@ class PlayerActivity : Activity() {
         }
         try {
             val mediaItem = MediaItem.fromUri(url.trim())
-            player = ExoPlayer.Builder(this).build().also { exo ->
-                view.player = exo
-                exo.addListener(object : Player.Listener {
-                    override fun onPlayerError(error: PlaybackException) {
-                        android.widget.Toast.makeText(this@PlayerActivity, "Akış oynatılamadı: ${error.errorCodeName}", android.widget.Toast.LENGTH_LONG).show()
-                    }
-                })
+            val exo = handedOffPlayer?.also { handedOffPlayer = null }
+                ?: ExoPlayer.Builder(this).build()
+            player = exo
+            view.player = exo
+            exo.volume = 1f
+            exo.addListener(object : Player.Listener {
+                override fun onPlayerError(error: PlaybackException) {
+                    android.widget.Toast.makeText(this@PlayerActivity, "Akış oynatılamadı: ${error.errorCodeName}", android.widget.Toast.LENGTH_LONG).show()
+                }
+            })
+            val currentUri = exo.currentMediaItem?.localConfiguration?.uri?.toString()
+            if (currentUri != url.trim()) {
                 exo.setMediaItem(mediaItem)
                 val resumePosition = playbackPrefs.getLong(resumeKey, 0L)
                 exo.prepare()
                 if (resumePosition > 5000L) exo.seekTo(resumePosition)
-                exo.playWhenReady = true
             }
+            exo.playWhenReady = true
             if (channelUrls.size > 1) view.requestFocus()
         } catch (e: Exception) {
             player?.release()
