@@ -30,6 +30,11 @@ class PlayerActivity : Activity() {
     private var channelUrls: List<String> = emptyList()
     private var selectedChannelIndex = 0
     private var highlightedChannelIndex = 0
+    private var recentChannelRows: List<String> = emptyList()
+    private var recentChannelUrls: List<String> = emptyList()
+    private var overlayIsRecent = false
+    private var savedChannelRows: List<String> = emptyList()
+    private var savedChannelUrls: List<String> = emptyList()
     private val playbackPrefs by lazy { getSharedPreferences("androtv_playback", Context.MODE_PRIVATE) }
 
     private fun savePlaybackPosition() {
@@ -49,6 +54,8 @@ class PlayerActivity : Activity() {
         channelUrls = intent.getStringArrayListExtra("channel_urls")?.toList() ?: emptyList()
         selectedChannelIndex = intent.getIntExtra("channel_index", 0).coerceIn(0, (channelUrls.size - 1).coerceAtLeast(0))
         highlightedChannelIndex = selectedChannelIndex
+        recentChannelRows = intent.getStringArrayListExtra("recent_channel_names")?.toList() ?: emptyList()
+        recentChannelUrls = intent.getStringArrayListExtra("recent_channel_urls")?.toList() ?: emptyList()
         resumeKey = "position_" + url.hashCode().toString()
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
@@ -86,14 +93,29 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && channelUrls.size > 1) {
+        if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isNotEmpty()) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    // Channel selection is now opened from the main menu's TV button.
-                    // Do not open the channel overlay while watching a stream.
                     if (channelOverlay != null) {
-                        return true
+                        highlightedChannelIndex = (highlightedChannelIndex +
+                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
+                            .coerceIn(0, channelUrls.lastIndex)
+                        refreshChannelHighlight()
+                    } else {
+                        val next = (selectedChannelIndex +
+                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
+                            .let { if (it < 0) channelUrls.lastIndex else if (it > channelUrls.lastIndex) 0 else it }
+                        tuneChannel(next)
                     }
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (channelOverlay == null) showChannelOverlay()
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (channelOverlay == null) showRecentOverlay()
+                    return true
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                     if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
@@ -104,6 +126,24 @@ class PlayerActivity : Activity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun showRecentOverlay() {
+        if (recentChannelUrls.isEmpty()) {
+            android.widget.Toast.makeText(this, "Henüz son izlenen kanal yok.", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        savedChannelRows = channelRows
+        savedChannelUrls = channelUrls
+        val currentUrl = channelUrls.getOrNull(selectedChannelIndex)
+        channelRows = recentChannelRows
+        channelUrls = recentChannelUrls
+        selectedChannelIndex = channelUrls.indexOf(currentUrl).coerceAtLeast(0)
+        highlightedChannelIndex = selectedChannelIndex
+        overlayIsRecent = true
+        showChannelOverlay()
+        val title = (channelOverlay?.getChildAt(0) as? TextView)
+        title?.text = "SON İZLENEN KANALLAR"
     }
 
     private fun showChannelOverlay() {
@@ -168,6 +208,14 @@ class PlayerActivity : Activity() {
         val panel = channelOverlay ?: return
         (panel.parent as? ViewGroup)?.removeView(panel)
         channelOverlay = null
+        if (overlayIsRecent) {
+            val currentUrl = channelUrls.getOrNull(selectedChannelIndex)
+            channelRows = savedChannelRows
+            channelUrls = savedChannelUrls
+            selectedChannelIndex = channelUrls.indexOf(currentUrl).coerceAtLeast(0)
+            highlightedChannelIndex = selectedChannelIndex
+            overlayIsRecent = false
+        }
         playerView?.requestFocus()
     }
 
