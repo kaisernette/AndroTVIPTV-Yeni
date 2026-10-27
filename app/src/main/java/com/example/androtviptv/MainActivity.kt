@@ -137,7 +137,7 @@ class MainActivity : Activity() {
             setPadding(8, 12, 8, 10)
             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(184), -1).apply { setMargins(0, 0, dp(14), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(156), -1).apply { setMargins(0, 0, dp(10), 0) })
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -269,7 +269,7 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = dp(if (showReadableCategories) 252 else 184)
+            val desiredWidth = dp(if (showReadableCategories) 224 else 156)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -1492,7 +1492,7 @@ class MainActivity : Activity() {
                     })
                     expandedPosterCount++
                 } else {
-                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) dp(featureCardWidth) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) featureCardWidth else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(0, 0, if (weeklyMovieFeature) dp(18) else 16, 10)
                     })
                 }
