@@ -1288,21 +1288,9 @@ class MainActivity : Activity() {
                 "Son İzlenenler" to recent.take(24)
             ).filter { it.second.isNotEmpty() }
         } else if (selectedType == "Filmler" || selectedType == "Diziler") {
-            val type = selectedType
-            val trends = if (type == "Filmler") listOf(
-                "gençlik", "harry potter", "hizmetçi", "addams ailesi", "aşk hipotezi", "organize işler"
-            ) else listOf(
-                "off campus", "game of thrones", "from", "mezarlık", "çekiç ve gül", "tulsa king", "prens"
-            )
-            val source = visible.filter { it.type == type }
-            val ranked = source.toMutableList()
-            val featured = mutableListOf<MediaItem>()
-            trends.forEach { term ->
-                val found = ranked.firstOrNull { it.name.lowercase().contains(term) }
-                if (found != null) { featured.add(found); ranked.remove(found) }
-            }
-            val categoryGroups = source.groupBy { it.group.ifBlank { "Diğer" } }.map { it.key to it.value }
-            (listOf("Haftanın ${if (type == "Filmler") "Filmleri" else "Dizileri"}" to (featured + ranked).take(24)) + categoryGroups)
+            // Trend rows are shown on the home screen only; category screens list categories directly.
+            val source = visible.filter { it.type == selectedType }
+            source.groupBy { it.group.ifBlank { "Diğer" } }.map { it.key to it.value }
                 .filter { it.second.isNotEmpty() }
         } else if (selectedType == "Son İzlenenler") {
             listOf("Diziler" to visible.filter { it.type == "Diziler" },
@@ -1353,10 +1341,10 @@ class MainActivity : Activity() {
             }
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
-            val weeklyMovieFeature = (selectedType == "Tümü" && groupName.contains("Haftanın Filmleri")) || (selectedType == "Filmler" && groupName.contains("Haftanın Filmleri")) || (selectedType == "Diziler" && groupName.contains("Haftanın Dizileri"))
+            val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
-            val featureCardWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt() - 250).coerceAtLeast(280)
+            val featureCardWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt() - 330).coerceAtLeast(260)
             val displayedEntries = if (showingExpandedCategory) entries else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
@@ -1410,7 +1398,7 @@ class MainActivity : Activity() {
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
-                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (weeklyMovieFeature && !showingExpandedCategory) dp(390) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210)
+                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (weeklyMovieFeature && !showingExpandedCategory) dp(330) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210)
                 }
                 card.addView(poster)
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
