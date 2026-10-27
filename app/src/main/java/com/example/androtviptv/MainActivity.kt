@@ -2229,12 +2229,19 @@ class MainActivity : Activity() {
         }
         openingPlayer = true
         try {
-            // Önizleme görünümünü ayır, oynatıcıyı durdur ve çözücüyü tam ekran
-            // etkinliği açılmadan önce serbest bırak.
-            previewView?.player = null
-            previewPlayer?.runCatching { stop() }
-            previewPlayer?.release()
-            previewPlayer = null
+            // Canlı TV'de çalışan önizleme ExoPlayer'ını tam ekran etkinliğine devret.
+            // Aynı anda ikinci bir decoder açmak bazı Android TV cihazlarında çökmeye neden olabilir.
+            val handoff = item.type == "Canlı TV" && previewPlayer != null
+            if (handoff) {
+                previewView?.player = null
+                PlayerActivity.handedOffPlayer = previewPlayer
+                previewPlayer = null
+            } else {
+                previewView?.player = null
+                previewPlayer?.runCatching { stop() }
+                previewPlayer?.release()
+                previewPlayer = null
+            }
             previewView = null
             previewChannel = null
             previewUrl = ""
@@ -2253,16 +2260,14 @@ class MainActivity : Activity() {
                 intent.putStringArrayListExtra("recent_channel_names", ArrayList(recentChannels.map { it.name }))
                 intent.putStringArrayListExtra("recent_channel_urls", ArrayList(recentChannels.map { it.url }))
             }
-            // Android TV cihazlarında video decoder'ı bırakmak zaman alabilir.
-            // Önizleme çözücüsünün serbest kalması için PlayerActivity'yi kısa bir gecikmeyle aç.
-            window.decorView.postDelayed({
-                try {
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    openingPlayer = false
-                    android.widget.Toast.makeText(this, "Tam ekran oynatıcı açılamadı. Tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
-                }
-            }, 500L)
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                PlayerActivity.handedOffPlayer?.release()
+                PlayerActivity.handedOffPlayer = null
+                openingPlayer = false
+                android.widget.Toast.makeText(this, "Tam ekran oynatıcı açılamadı. Tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
+            }
         } catch (e: Exception) {
             openingPlayer = false
             android.widget.Toast.makeText(this, "Tam ekran oynatıcı açılamadı. Tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
