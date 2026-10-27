@@ -1246,9 +1246,14 @@ class MainActivity : Activity() {
             })
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            val weeklyMovieFeature = selectedType == "Tümü" && groupName.contains("Haftanın Filmleri")
+            // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
+            // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
+            val featureCardWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt() - 250).coerceAtLeast(280)
             entries.take(80).forEach { item ->
                 val card = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL; setPadding(7, 7, 7, 9)
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 9)
                     background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
@@ -1295,7 +1300,7 @@ class MainActivity : Activity() {
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
-                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (homeCard) 230 else 210)
+                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (weeklyMovieFeature) dp(390) else if (homeCard) 230 else 210)
                 }
                 card.addView(poster)
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
@@ -1318,7 +1323,7 @@ class MainActivity : Activity() {
                     render()
                 }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                 card.addView(actions)
-                row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 16, 10) })
+                row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) dp(featureCardWidth) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, if (weeklyMovieFeature) dp(18) else 16, 10) })
             }
             content.addView(HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
