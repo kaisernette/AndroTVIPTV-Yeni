@@ -1325,7 +1325,7 @@ class MainActivity : Activity() {
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt() - 250).coerceAtLeast(280)
-            entries.take(80).forEach { item ->
+            entries.take(5).forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 9)
