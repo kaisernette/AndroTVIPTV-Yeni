@@ -84,6 +84,7 @@ class MainActivity : Activity() {
                 recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors"), o.optString("rating"), o.optString("releaseDate"), o.optString("genre")))
             }
         } catch (_: Exception) { }
+        hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         loadCachedItems()
         // Always start in the lightweight Live TV section. Restoring a huge
         // movie/series section on launch can make some devices run out of memory.
@@ -114,6 +115,8 @@ class MainActivity : Activity() {
     private var previewUrl: String = ""
     private var sidebarMode = "main"
     private var settingsPage = "main"
+    private var historyType = "Canlı TV"
+    private val hiddenCategories = mutableSetOf<String>()
     private var searchQuery = ""
     private var isLoadingSource = false
     private var loadProgress = 0
@@ -382,42 +385,11 @@ class MainActivity : Activity() {
 
         if (sidebarMode == "search") {
             navBar.addView(TextView(this).apply {
-                text = "TÜM KAYNAKLARDA ARA"
-                textSize = 10f
-                setTextColor(accentBright)
+                text = "⌕  ARA"
+                textSize = 15f; setTextColor(accentBright)
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setPadding(10, dp(10), 6, dp(6))
+                setPadding(dp(10), dp(14), dp(6), dp(8))
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-            val searchInput = EditText(this).apply {
-                id = View.generateViewId()
-                hint = "Film, dizi veya kanal"
-                setSingleLine(true)
-                textSize = 13f
-                setTextColor(Color.WHITE)
-                setHintTextColor(muted)
-                setPadding(dp(10), 0, dp(8), 0)
-                background = roundedDrawable(Color.rgb(28, 35, 49), 12, Color.rgb(58, 68, 86))
-                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
-                setText(searchQuery)
-                setSelection(text.length)
-                addTextChangedListener(object : android.text.TextWatcher {
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                        searchQuery = s?.toString().orEmpty()
-                        selectedGroup = "Tüm kategoriler"
-                        render()
-                    }
-                    override fun afterTextChanged(s: android.text.Editable?) {}
-                })
-            }
-            navBar.addView(searchInput, LinearLayout.LayoutParams(-1, dp(44)).apply {
-                setMargins(dp(3), dp(2), dp(3), dp(6))
-            })
-            addSidebarButton("Temizle") {
-                searchQuery = ""
-                rebuildNavigation()
-                render()
-            }
             return
         }
 
@@ -462,7 +434,7 @@ class MainActivity : Activity() {
             }
             items.filter { it.type == selectedType }
                 .map { it.group.ifBlank { "Diğer" } }
-                .distinct().sorted().take(200)
+                .distinct().sorted().filter { !hiddenCategories.contains(selectedType + "|" + it) }.take(200)
                 .forEach { category ->
                     addSidebarButton(category, selectedGroup == category) {
                         selectedGroup = category
@@ -1018,7 +990,7 @@ class MainActivity : Activity() {
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::brandView.isInitialized) brandView.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
-        if (::mainHeader.isInitialized) mainHeader.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
+        if (::mainHeader.isInitialized) mainHeader.visibility = if (firstEntry || isLoadingSource || detailMode || sidebarMode == "search" || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
@@ -1164,6 +1136,41 @@ class MainActivity : Activity() {
             renderChannelPreviewScreen()
             return
         }
+        if (sidebarMode == "search") {
+            val searchPanel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(8), dp(8), dp(8), dp(12))
+            }
+            searchPanel.addView(TextView(this).apply {
+                text = "Ara"; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE); setPadding(0, 0, 0, dp(10))
+            })
+            val searchInput = EditText(this).apply {
+                hint = "Film, dizi veya kanal adı yaz…"
+                setSingleLine(true); textSize = 17f; setTextColor(Color.WHITE); setHintTextColor(muted)
+                setPadding(dp(16), 0, dp(12), 0)
+                background = roundedDrawable(Color.rgb(28, 35, 49), 14, accent)
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+                setText(searchQuery); setSelection(text.length)
+                addTextChangedListener(object : android.text.TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                        searchQuery = s?.toString().orEmpty()
+                        selectedGroup = "Tüm kategoriler"
+                        content.post { render() }
+                    }
+                    override fun afterTextChanged(s: android.text.Editable?) {}
+                })
+                setOnEditorActionListener { _, actionId, _ ->
+                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                        imm.hideSoftInputFromWindow(windowToken, 0); true
+                    } else false
+                }
+            }
+            searchPanel.addView(searchInput, LinearLayout.LayoutParams(-1, dp(52)))
+            content.addView(searchPanel)
+        }
         val unfilteredBase = when {
             sidebarMode == "search" -> items.toList()
             selectedType == "Tümü" -> items.toList()
@@ -1172,7 +1179,8 @@ class MainActivity : Activity() {
             else -> items.filter { it.type == selectedType }
         }
         val query = if (sidebarMode == "search") searchQuery.trim() else ""
-        val baseVisible = if (query.isBlank()) unfilteredBase else unfilteredBase.filter {
+        val categoryVisibleBase = if (sidebarMode == "search") unfilteredBase else unfilteredBase.filter { item -> !hiddenCategories.contains(item.type + "|" + item.group.ifBlank { "Diğer" }) }
+        val baseVisible = if (query.isBlank()) categoryVisibleBase else categoryVisibleBase.filter {
             it.name.contains(query, ignoreCase = true) ||
             it.group.contains(query, ignoreCase = true) ||
             it.type.contains(query, ignoreCase = true)
@@ -1819,15 +1827,19 @@ class MainActivity : Activity() {
             "categories" -> {
                 heading("Kategoriler", "Kaynaklarında bulunan film ve dizi kategorileri")
                 val rows = items.filter { it.type == "Filmler" || it.type == "Diziler" }
-                    .groupBy { Pair(it.type, it.group.ifBlank { "Diğer" }) }
+                    .map { Pair(Pair(it.type, it.group.ifBlank { "Diğer" }), it) }
+                    .groupBy({ it.first }, { it.second })
                     .toList().sortedWith(compareBy({ it.first.first }, { it.first.second }))
                 if (rows.isEmpty()) content.addView(TextView(this).apply {
                     text = "Kategorileri görmek için önce bir kaynak ekle."; textSize = 16f; setTextColor(muted); setPadding(dp(8), dp(12), dp(8), dp(12))
                 })
                 rows.forEach { (key, entries) ->
-                    option("${key.second}  ·  ${entries.size}", key.first) {
-                        selectedType = key.first; selectedGroup = key.second; expandedCategory = null
-                        settingsPage = "main"; sidebarMode = "context"; rebuildNavigation(); render()
+                    val hiddenKey = key.first + "|" + key.second
+                    val isHidden = hiddenCategories.contains(hiddenKey)
+                    option("${if (isHidden) "◯" else "✓"}  ${key.second}  ·  ${entries.size}", "${key.first}  •  ${if (isHidden) "Gizli" else "Gösteriliyor"} — dokunarak değiştir") {
+                        if (hiddenCategories.contains(hiddenKey)) hiddenCategories.remove(hiddenKey) else hiddenCategories.add(hiddenKey)
+                        prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply()
+                        render()
                     }
                 }
             }
@@ -1852,24 +1864,31 @@ class MainActivity : Activity() {
                 }
             }
             "history" -> {
-                heading("Geçmiş", "İzlenen diziler üstte, filmler altta.")
-                fun historySection(title: String, entries: List<MediaItem>) {
-                    content.addView(TextView(this).apply {
-                        text = "$title  ·  ${entries.size}"; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(accentBright); setPadding(dp(8), dp(12), dp(8), dp(6))
-                    })
-                    if (entries.isEmpty()) content.addView(TextView(this).apply {
-                        text = "Henüz izlenen içerik yok."; textSize = 14f; setTextColor(muted); setPadding(dp(8), dp(5), dp(8), dp(12))
-                    })
-                    entries.forEach { item ->
-                        option(item.name, item.group.ifBlank { item.type }) {
-                            settingsPage = "main"
-                            if (item.type == "Diziler") showSeriesDetail(item) else showMovieDetail(item)
-                        }
+                heading("Geçmiş", "Türü seçerek izleme geçmişini görüntüle.")
+                val historyOptions = listOf("Canlı TV", "Filmler", "Diziler")
+                val picker = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                historyOptions.forEach { type ->
+                    picker.addView(makeButton(when (type) { "Canlı TV" -> "▣  TV"; "Filmler" -> "▰  Filmler"; else -> "▤  Diziler" }, historyType == type) {
+                        historyType = type; render()
+                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(8)) })
+                }
+                content.addView(picker)
+                val entries = recent.filter { it.type == historyType }
+                content.addView(TextView(this).apply {
+                    text = (when (historyType) { "Canlı TV" -> "İzlenen TV kanalları"; "Filmler" -> "İzlenen filmler"; else -> "İzlenen diziler" }) + "  ·  " + entries.size
+                    textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(accentBright); setPadding(dp(8), dp(12), dp(8), dp(6))
+                })
+                if (entries.isEmpty()) content.addView(TextView(this).apply {
+                    text = "Bu türde henüz izleme geçmişi yok."; textSize = 14f; setTextColor(muted)
+                    setPadding(dp(8), dp(5), dp(8), dp(12))
+                })
+                entries.forEach { item ->
+                    option(item.name, item.group.ifBlank { item.type }) {
+                        if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item)
+                        else play(item)
                     }
                 }
-                historySection("İzlenen Diziler", recent.filter { it.type == "Diziler" })
-                historySection("İzlenen Filmler", recent.filter { it.type == "Filmler" })
             }
         }
     }
