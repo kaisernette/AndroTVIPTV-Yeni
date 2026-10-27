@@ -1372,7 +1372,7 @@ class MainActivity : Activity() {
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
-            val featureCardWidth = dp(156) // Kart genişliği afişin dikey oranına göre ayarlanır
+            val featureCardWidth = dp(140) // Kart genişliği afişle aynı
             val displayedEntries = if (showingExpandedCategory) entries else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
@@ -1437,23 +1437,48 @@ class MainActivity : Activity() {
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
                 else poster.setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
-                card.addView(TextView(this).apply {
-                    text = if (item.type == "Canlı TV") "●  CANLI YAYIN" else item.type.uppercase()
-                    textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
-                })
+                if (weeklyPoster) {
+                    val metaRow = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+                    metaRow.addView(TextView(this).apply {
+                        text = item.type.uppercase()
+                        textSize = 10f; setTextColor(accent); letterSpacing = 0.03f
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    metaRow.addView(TextView(this).apply {
+                        text = if (favorites.contains(item.favoriteKey)) "♥" else "♡"
+                        textSize = 22f; setTextColor(if (favorites.contains(item.favoriteKey)) accent else Color.WHITE)
+                        gravity = Gravity.CENTER
+                        isFocusable = true
+                        setOnClickListener {
+                            if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
+                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            render()
+                        }
+                    }, LinearLayout.LayoutParams(dp(30), dp(30)))
+                    card.addView(metaRow)
+                } else {
+                    card.addView(TextView(this).apply {
+                        text = if (item.type == "Canlı TV") "●  CANLI YAYIN" else item.type.uppercase()
+                        textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
+                    })
+                }
                 card.addView(TextView(this).apply {
                     text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
-                    minHeight = 40; setPadding(3, 0, 3, 0)
+                    minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
                 })
-                val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
-                    LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
-                actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
-                    if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                    prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-                    render()
-                }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
-                card.addView(actions)
+                if (!weeklyPoster) {
+                    val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                    if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
+                        LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
+                    actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
+                        if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
+                        prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                        render()
+                    }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
+                    card.addView(actions)
+                }
                 if (showingExpandedCategory) {
                     if (expandedPosterCount % 4 == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
