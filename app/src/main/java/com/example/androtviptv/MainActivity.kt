@@ -114,6 +114,7 @@ class MainActivity : Activity() {
     private var previewPlayer: ExoPlayer? = null
     private var previewView: PlayerView? = null
     private var previewUrl: String = ""
+    private var previewChannel: MediaItem? = null
     private var sidebarMode = "main"
     private var settingsPage = "main"
     private var historyType = "Canlı TV"
@@ -854,6 +855,11 @@ class MainActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (selectedType == "Canlı TV" && sidebarMode == "context" &&
+            (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
+             keyCode == android.view.KeyEvent.KEYCODE_ENTER)) {
+            previewChannel?.let { play(it); return true }
+        }
         if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
             handleSafeBack()
             return true
@@ -1166,13 +1172,22 @@ class MainActivity : Activity() {
                 setPadding(dp(16), 0, dp(12), 0)
                 background = roundedDrawable(Color.rgb(28, 35, 49), 14, accent)
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+                tag = "global_search_input"
                 setText(searchQuery); setSelection(text.length)
                 addTextChangedListener(object : android.text.TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                         searchQuery = s?.toString().orEmpty()
                         selectedGroup = "Tüm kategoriler"
-                        content.post { render() }
+                        // Restore focus after updating results so typing can continue uninterrupted.
+                        content.post {
+                            render()
+                            content.post {
+                                val input = content.findViewWithTag<EditText>("global_search_input")
+                                input?.requestFocus()
+                                input?.setSelection(input.text.length)
+                            }
+                        }
                     }
                     override fun afterTextChanged(s: android.text.Editable?) {}
                 })
@@ -1568,7 +1583,7 @@ class MainActivity : Activity() {
 
     private fun renderChannelPreviewScreen() {
         val title = TextView(this).apply {
-            text = "CANLI TV ÖNİZLEME"
+            text = "CANLI TV ÖNİZLEME  •  OK: TAM EKRAN"
             textSize = 20f
             setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -1585,11 +1600,11 @@ class MainActivity : Activity() {
             setShutterBackgroundColor(Color.BLACK)
         }
         frame.addView(previewView, FrameLayout.LayoutParams(-1, -1))
-        content.addView(frame, LinearLayout.LayoutParams(-1, 0, 1f).apply {
-            setMargins(dp(8), 0, dp(8), dp(12))
+        content.addView(frame, LinearLayout.LayoutParams(-1, dp(330)).apply {
+            setMargins(dp(8), dp(8), dp(8), dp(8))
         })
         content.addView(TextView(this).apply {
-            text = "Soldaki kanalın üzerine gelerek önizlemesini aç. İzlemek için kanala bas."
+            text = "OK: Tam ekran izle  •  Tam ekranda ↑/↓ kanal değiştir, ← kanal listesi, → son izlenenler"
             textSize = 14f
             setTextColor(muted)
             setPadding(dp(8), dp(8), dp(8), dp(8))
@@ -1598,6 +1613,7 @@ class MainActivity : Activity() {
     }
 
     private fun startChannelPreview(channel: MediaItem) {
+        previewChannel = channel
         if (channel.url.isBlank() || previewUrl == channel.url) return
         previewUrl = channel.url
         try {
@@ -1621,6 +1637,8 @@ class MainActivity : Activity() {
         previewPlayer?.pause()
         previewView?.player = null
         previewView = null
+        previewChannel = null
+        previewUrl = ""
     }
 
     private fun showMovieDetail(movie: MediaItem) {
