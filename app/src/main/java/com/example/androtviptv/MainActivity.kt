@@ -47,6 +47,7 @@ class MainActivity : Activity() {
     private val recent = mutableListOf<MediaItem>()
     private val hiddenCategories = mutableSetOf<String>()
     private var selectedGroup = "Tüm kategoriler"
+    private var expandedCategory: Pair<String, List<MediaItem>>? = null
     private lateinit var categoryBar: LinearLayout
     private lateinit var categoryScroll: HorizontalScrollView
     private lateinit var mainHeader: LinearLayout
@@ -859,6 +860,12 @@ class MainActivity : Activity() {
                 return
             }
 
+            if (expandedCategory != null) {
+                expandedCategory = null
+                render()
+                return
+            }
+
             if (sidebarMode != "main" || selectedGroup != "Tüm kategoriler" || selectedType != "Tümü") {
                 detailSeries = null
                 detailMovie = null
@@ -1251,7 +1258,9 @@ class MainActivity : Activity() {
             }
         }
         if (sidebarMode != "search") rebuildNavigation()
-        val groups: List<Pair<String, List<MediaItem>>> = if (selectedType == "Canlı TV") {
+        val groups: List<Pair<String, List<MediaItem>>> = if (expandedCategory != null) {
+            listOf(expandedCategory!!)
+        } else if (selectedType == "Canlı TV") {
             emptyList()
         } else if (sidebarMode == "search") {
             if (query.isBlank()) emptyList()
@@ -1310,6 +1319,7 @@ class MainActivity : Activity() {
             }.map { it.key to it.value }
         }
         groups.forEach { (groupName, entries) ->
+            val showingExpandedCategory = expandedCategory?.first == groupName
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, 16, 2, 8)
             }
@@ -1317,7 +1327,9 @@ class MainActivity : Activity() {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             }, LinearLayout.LayoutParams(0, -2, 1f))
             sectionHeader.addView(TextView(this).apply {
-                text = "${entries.size} içerik   ›"; textSize = 12f; setTextColor(accent)
+                text = if (showingExpandedCategory) "← Geri dön" else "${entries.size} içerik   ›"
+                textSize = 12f; setTextColor(accent)
+                if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
             })
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -1325,7 +1337,8 @@ class MainActivity : Activity() {
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt() - 250).coerceAtLeast(280)
-            entries.take(5).forEach { item ->
+            val displayedEntries = if (showingExpandedCategory) entries else entries.take(5)
+            displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 9)
@@ -1399,6 +1412,29 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                 card.addView(actions)
                 row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) dp(featureCardWidth) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, if (weeklyMovieFeature) dp(18) else 16, 10) })
+            }
+            if (!showingExpandedCategory && (selectedType == "Filmler" || selectedType == "Diziler") && entries.size > 5) {
+                val moreCard = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    isFocusable = true; isFocusableInTouchMode = true
+                    background = roundedDrawable(panel, 15, accent)
+                    setPadding(dp(18), dp(18), dp(18), dp(18))
+                    setOnFocusChangeListener { v, hasFocus ->
+                        v.background = roundedDrawable(if (hasFocus) Color.rgb(31, 39, 54) else panel, 15, if (hasFocus) accentBright else accent)
+                    }
+                    setOnClickListener { expandedCategory = groupName to entries; render() }
+                    addView(TextView(this@MainActivity).apply {
+                        text = "TÜMÜNÜ\\nGÖSTER  ›"; textSize = 17f
+                        setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                    })
+                    addView(TextView(this@MainActivity).apply {
+                        text = "${entries.size} içerik"; textSize = 12f; setTextColor(muted)
+                        setPadding(0, dp(10), 0, 0)
+                    })
+                }
+                row.addView(moreCard, LinearLayout.LayoutParams(232, if (weeklyMovieFeature) dp(390) else ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 16, 10) })
             }
             content.addView(HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
