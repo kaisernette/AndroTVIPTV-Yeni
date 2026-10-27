@@ -1062,33 +1062,38 @@ class MainActivity : Activity() {
                 textSize = 18f; setTextColor(muted); gravity = Gravity.CENTER
                 setPadding(0, dp(18), 0, 0)
             })
-            val progressWrap = FrameLayout(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(124), dp(124)).apply { setMargins(0, dp(24), 0, 0) }
+            val entertainmentStrip = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                setPadding(0, dp(22), 0, dp(8))
             }
-            progressWrap.addView(object : View(this) {
-                private val ringPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    style = android.graphics.Paint.Style.STROKE
-                    strokeWidth = dp(9).toFloat()
-                    strokeCap = android.graphics.Paint.Cap.ROUND
+            val waitingCards = listOf(
+                Triple("🎬", "FİLMLER", intArrayOf(Color.rgb(34, 64, 104), Color.rgb(15, 27, 48))),
+                Triple("📺", "DİZİLER", intArrayOf(Color.rgb(85, 38, 72), Color.rgb(35, 18, 48))),
+                Triple("⚽", "SPOR", intArrayOf(Color.rgb(27, 91, 62), Color.rgb(13, 39, 33))),
+                Triple("🎨", "ANİMASYON", intArrayOf(Color.rgb(113, 65, 28), Color.rgb(49, 28, 21)))
+            )
+            waitingCards.forEach { (symbol, label, colors) ->
+                val tile = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    background = GradientDrawable(GradientDrawable.Orientation.TL_BR, colors).apply {
+                        cornerRadius = dp(14).toFloat()
+                        setStroke(dp(1), Color.rgb(63, 72, 91))
+                    }
+                    addView(TextView(this@MainActivity).apply {
+                        text = symbol; textSize = 31f; gravity = Gravity.CENTER
+                    }, LinearLayout.LayoutParams(-1, dp(64)))
+                    addView(TextView(this@MainActivity).apply {
+                        text = label; textSize = 9f; gravity = Gravity.CENTER
+                        setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD)
+                    }, LinearLayout.LayoutParams(-1, dp(24)))
                 }
-                private val textPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = accentBright
-                    textSize = 22f * resources.displayMetrics.scaledDensity
-                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
-                override fun onDraw(canvas: android.graphics.Canvas) {
-                    super.onDraw(canvas)
-                    val inset = dp(14).toFloat()
-                    val rect = android.graphics.RectF(inset, inset, width - inset, height - inset)
-                    ringPaint.color = Color.rgb(43, 49, 62)
-                    canvas.drawArc(rect, 0f, 360f, false, ringPaint)
-                    ringPaint.color = accent
-                    canvas.drawArc(rect, -90f, 360f * loadProgress / 100f, false, ringPaint)
-                    canvas.drawText("$loadProgress%", width / 2f, height / 2f - (textPaint.ascent() + textPaint.descent()) / 2f, textPaint)
-                }
-            }, FrameLayout.LayoutParams(-1, -1))
-            loadingPanel.addView(progressWrap)
+                entertainmentStrip.addView(tile, LinearLayout.LayoutParams(dp(112), dp(104)).apply {
+                    setMargins(dp(5), 0, dp(5), 0)
+                })
+            }
+            loadingPanel.addView(entertainmentStrip)
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
             return
         }
@@ -1228,6 +1233,23 @@ class MainActivity : Activity() {
                 "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(items.filter { it.type == "Diziler" }, trendingSeries).take(24),
                 "Son İzlenenler" to recent.take(24)
             ).filter { it.second.isNotEmpty() }
+        } else if (selectedType == "Filmler" || selectedType == "Diziler") {
+            val type = selectedType
+            val trends = if (type == "Filmler") listOf(
+                "gençlik", "harry potter", "hizmetçi", "addams ailesi", "aşk hipotezi", "organize işler"
+            ) else listOf(
+                "off campus", "game of thrones", "from", "mezarlık", "çekiç ve gül", "tulsa king", "prens"
+            )
+            val source = visible.filter { it.type == type }
+            val ranked = source.toMutableList()
+            val featured = mutableListOf<MediaItem>()
+            trends.forEach { term ->
+                val found = ranked.firstOrNull { it.name.lowercase().contains(term) }
+                if (found != null) { featured.add(found); ranked.remove(found) }
+            }
+            val categoryGroups = source.groupBy { it.group.ifBlank { "Diğer" } }.map { it.key to it.value }
+            (listOf("Haftanın ${if (type == "Filmler") "Filmleri" else "Dizileri"}" to (featured + ranked).take(24)) + categoryGroups)
+                .filter { it.second.isNotEmpty() }
         } else {
             visible.groupBy {
                 if (selectedType == "Favoriler" || selectedType == "Son İzlenenler") it.type
@@ -1246,7 +1268,7 @@ class MainActivity : Activity() {
             })
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            val weeklyMovieFeature = selectedType == "Tümü" && groupName.contains("Haftanın Filmleri")
+            val weeklyMovieFeature = (selectedType == "Tümü" && groupName.contains("Haftanın Filmleri")) || (selectedType == "Filmler" && groupName.contains("Haftanın Filmleri")) || (selectedType == "Diziler" && groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt() - 250).coerceAtLeast(280)
