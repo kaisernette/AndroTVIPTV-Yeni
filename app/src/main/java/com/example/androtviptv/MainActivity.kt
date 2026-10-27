@@ -105,9 +105,10 @@ class MainActivity : Activity() {
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         loadCachedItems()
-        // Restore the last library section when the app is launched again.
-        selectedType = prefs.getString("last_section", "Filmler") ?: "Filmler"
-        if (selectedType !in setOf("Tümü", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler")) selectedType = "Filmler"
+        // Always start in the lightweight Live TV section. Restoring a huge
+        // movie/series section on launch can make some devices run out of memory.
+        selectedType = "Canlı TV"
+        prefs.edit().putString("last_section", selectedType).apply()
         buildUi()
         loadSavedSources()
     }
