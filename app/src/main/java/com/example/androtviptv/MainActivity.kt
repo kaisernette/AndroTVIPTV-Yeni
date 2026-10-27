@@ -397,21 +397,8 @@ class MainActivity : Activity() {
             return
         }
 
-        val heading = when (selectedType) {
-            "Canlı TV" -> "KANALLAR"
-            "Filmler" -> "FİLM KATEGORİLERİ"
-            "Diziler" -> "DİZİ KATEGORİLERİ"
-            else -> "KATEGORİLER"
-        }
-        navBar.addView(TextView(this).apply {
-            text = heading
-            textSize = 12f
-            setTextColor(accentBright)
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.02f
-            setPadding(10, dp(10), 6, dp(6))
-        }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-
+        // Kategori başlığını ve sol kategori listesini göstermiyoruz.
+        // Ana menü seçenekleri ana menü modunda kalır; TV ekranındaki kanal listesi korunur.
         if (selectedType == "Canlı TV") {
             val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
             if (channels.isEmpty()) {
@@ -433,22 +420,6 @@ class MainActivity : Activity() {
                     if (hasFocus) startChannelPreview(channel)
                 }
             }
-        } else {
-            addSidebarButton("Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
-                selectedGroup = "Tüm kategoriler"
-                rebuildNavigation()
-                render()
-            }
-            items.filter { it.type == selectedType }
-                .map { it.group.ifBlank { "Diğer" } }
-                .distinct().sorted().filter { !hiddenCategories.contains(selectedType + "|" + it) }.take(60)
-                .forEach { category ->
-                    addSidebarButton(category, selectedGroup == category) {
-                        selectedGroup = category
-                        rebuildNavigation()
-                        render()
-                    }
-                }
         }
     }
 
