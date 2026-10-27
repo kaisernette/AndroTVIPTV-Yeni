@@ -298,7 +298,7 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "main") {
-            listOf("▣  Canlı TV", "▰  Filmler", "▤  Diziler").forEach { tab ->
+            listOf("⌕  Ara", "▣  Canlı TV", "▰  Filmler", "▤  Diziler").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Canlı TV") -> "TV"
