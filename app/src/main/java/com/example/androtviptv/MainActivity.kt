@@ -75,11 +75,11 @@ class MainActivity : Activity() {
 
     private data class ThemeOption(val id: String, val title: String, val bg: Int, val panel: Int, val accent: Int, val bright: Int, val muted: Int)
     private val themeOptions by lazy { listOf(
-        ThemeOption("purple", "Mor Gece (Varsayılan)", Color.rgb(10, 9, 20), Color.rgb(27, 25, 43), Color.rgb(111, 91, 255), Color.rgb(190, 181, 255), Color.rgb(158, 163, 184)),
-        ThemeOption("blue", "Antrasit & Mavi (Varsayılan)", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(55, 145, 255), Color.rgb(145, 198, 255), Color.rgb(164, 171, 185)),
-        ThemeOption("gold", "Siyah & Altın", Color.rgb(7,10,17), Color.rgb(20,26,39), Color.rgb(222,181,91), Color.rgb(246,218,151), Color.rgb(157,169,188)),
-        ThemeOption("green", "Zümrüt", Color.rgb(4,17,15), Color.rgb(17,37,33), Color.rgb(52,211,153), Color.rgb(167,243,208), Color.rgb(153,184,174)),
-        ThemeOption("red", "Bordo & Kırmızı", Color.rgb(20,7,12), Color.rgb(43,20,28), Color.rgb(244,92,118), Color.rgb(255,183,193), Color.rgb(194,164,171))
+        ThemeOption("blue", "Antrasit & Mavi", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(55, 145, 255), Color.rgb(145, 198, 255), Color.rgb(164, 171, 185)),
+        ThemeOption("purple", "Antrasit & Mor", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(145, 95, 255), Color.rgb(190, 165, 255), Color.rgb(164, 171, 185)),
+        ThemeOption("gold", "Antrasit & Altın", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(222, 181, 91), Color.rgb(246, 218, 151), Color.rgb(164, 171, 185)),
+        ThemeOption("green", "Antrasit & Yeşil", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(52, 211, 153), Color.rgb(167, 243, 208), Color.rgb(164, 171, 185)),
+        ThemeOption("red", "Antrasit & Kırmızı", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(244, 92, 118), Color.rgb(255, 183, 193), Color.rgb(164, 171, 185))
     ) }
 
     private fun applySavedTheme() {
@@ -1086,53 +1086,66 @@ class MainActivity : Activity() {
                 textSize = 18f; setTextColor(muted); gravity = Gravity.CENTER
                 setPadding(0, dp(18), 0, 0)
             })
-            val entertainmentStrip = LinearLayout(this).apply {
+            // Tek bir geniş, çerçevesiz görsel alanı; görseller sağdan sola otomatik akar.
+            val visualViewport = FrameLayout(this).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(440), dp(145)).apply {
+                    setMargins(0, dp(26), 0, 0)
+                }
+                clipChildren = true
+                clipToPadding = true
+            }
+            val visualItems = listOf(
+                Triple("🎬", "SİNEMA", Color.rgb(35, 105, 190)),
+                Triple("📺", "TELEVİZYON", Color.rgb(145, 75, 175)),
+                Triple("🎞️", "DİZİLER", Color.rgb(35, 150, 125)),
+                Triple("⚽", "CANLI SPOR", Color.rgb(70, 165, 95)),
+                Triple("✨", "ANİMASYON", Color.rgb(225, 145, 55))
+            )
+            val slide = FrameLayout(this).apply {
+                layoutParams = FrameLayout.LayoutParams(-1, -1)
+            }
+            val visual = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
-                setPadding(0, dp(22), 0, dp(8))
             }
-            val waitingCards = listOf(
-                Triple("🎬", "FİLMLER", intArrayOf(Color.rgb(34, 64, 104), Color.rgb(15, 27, 48))),
-                Triple("📺", "DİZİLER", intArrayOf(Color.rgb(85, 38, 72), Color.rgb(35, 18, 48))),
-                Triple("⚽", "SPOR", intArrayOf(Color.rgb(27, 91, 62), Color.rgb(13, 39, 33))),
-                Triple("🎨", "ANİMASYON", intArrayOf(Color.rgb(113, 65, 28), Color.rgb(49, 28, 21)))
-            )
-            waitingCards.forEach { (symbol, label, colors) ->
-                val tile = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    background = GradientDrawable(GradientDrawable.Orientation.TL_BR, colors).apply {
-                        cornerRadius = dp(14).toFloat()
-                        setStroke(dp(1), Color.rgb(63, 72, 91))
-                    }
-                    addView(TextView(this@MainActivity).apply {
-                        text = symbol; textSize = 31f; gravity = Gravity.CENTER
-                    }, LinearLayout.LayoutParams(-1, dp(64)))
-                    addView(TextView(this@MainActivity).apply {
-                        text = label; textSize = 9f; gravity = Gravity.CENTER
-                        setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD)
-                    }, LinearLayout.LayoutParams(-1, dp(24)))
-                }
-                entertainmentStrip.addView(tile, LinearLayout.LayoutParams(dp(112), dp(104)).apply {
-                    setMargins(dp(5), 0, dp(5), 0)
-                })
-                // Gerçek hareketli kart efekti: sırayla yukarı-aşağı süzülüp hafifçe büyür.
-                tile.alpha = 0.82f
-                tile.translationY = dp(8).toFloat()
-                tile.scaleX = 0.96f
-                tile.scaleY = 0.96f
-                tile.animate().translationY(0f).alpha(1f).scaleX(1f).scaleY(1f)
-                    .setStartDelay((entertainmentStrip.childCount - 1) * 140L)
-                    .setDuration(520L).withEndAction {
-                        tile.animate().translationY(dp(-7).toFloat()).setDuration(720L)
-                            .withEndAction {
-                                tile.animate().translationY(dp(7).toFloat()).setDuration(720L).withEndAction {
-                                    tile.animate().translationY(0f).setDuration(720L).start()
-                                }.start()
-                            }.start()
+            val visualSymbol = TextView(this).apply {
+                text = visualItems[0].first
+                textSize = 66f
+                gravity = Gravity.CENTER
+                setShadowLayer(dp(14).toFloat(), 0f, 0f, visualItems[0].third)
+            }
+            visual.addView(visualSymbol, LinearLayout.LayoutParams(dp(125), -1))
+            val visualText = TextView(this).apply {
+                text = visualItems[0].second
+                textSize = 18f
+                setTextColor(accentBright)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER_VERTICAL
+                letterSpacing = 0.12f
+            }
+            visual.addView(visualText, LinearLayout.LayoutParams(-2, -1))
+            slide.addView(visual, FrameLayout.LayoutParams(-1, -1))
+            visualViewport.addView(slide)
+            loadingPanel.addView(visualViewport)
+            var visualIndex = 0
+            val slideRunnable = object : Runnable {
+                override fun run() {
+                    if (!visualViewport.isAttachedToWindow) return
+                    val nextIndex = (visualIndex + 1) % visualItems.size
+                    val width = visualViewport.width.toFloat().coerceAtLeast(dp(440).toFloat())
+                    visual.animate().translationX(-width).alpha(0f).setDuration(420L).withEndAction {
+                        visualIndex = nextIndex
+                        visualSymbol.text = visualItems[visualIndex].first
+                        visualSymbol.setShadowLayer(dp(14).toFloat(), 0f, 0f, visualItems[visualIndex].third)
+                        visualText.text = visualItems[visualIndex].second
+                        visual.translationX(width)
+                        visual.alpha = 0f
+                        visual.animate().translationX(0f).alpha(1f).setDuration(420L).start()
                     }.start()
+                    visualViewport.postDelayed(this, 1900L)
+                }
             }
-            loadingPanel.addView(entertainmentStrip)
+            visualViewport.postDelayed(slideRunnable, 1300L)
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
             return
         }
