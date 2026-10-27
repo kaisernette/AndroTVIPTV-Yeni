@@ -1702,16 +1702,25 @@ class MainActivity : Activity() {
         })
         copy.addView(TextView(this).apply {
             text = movie.plot.ifBlank { "Film bilgileri kaynakta bulunmuyorsa doğrudan izleyebilirsin." }
-            textSize = 13f; maxLines = 2; setTextColor(Color.rgb(226, 230, 238))
+            textSize = 13f; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
+            setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER },
-            LinearLayout.LayoutParams(dp(150), 44).apply { setMargins(0, 8, 10, 0) })
-        actions.addView(makeButton(if (favorites.contains(movie.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
+            LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
+        val isFavorite = favorites.contains(movie.favoriteKey)
+        val favoriteButton = makeButton(if (isFavorite) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
             if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
             prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
             render()
-        }.apply { gravity = Gravity.CENTER }, LinearLayout.LayoutParams(dp(180), 44).apply { setMargins(0, 8, 10, 0) })
+        }.apply {
+            gravity = Gravity.CENTER
+            if (isFavorite) {
+                setTextColor(Color.rgb(255, 205, 55))
+                background = roundedDrawable(Color.rgb(58, 48, 20), 10, Color.rgb(255, 205, 55))
+            }
+        }
+        actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(160), 44).apply { setMargins(0, 8, 0, 0) })
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
