@@ -1052,11 +1052,35 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
-            loadingPanel.addView(TextView(this).apply {
-                text = "KAISERTV+"
-                textSize = 34f; setTextColor(accentBright)
-                setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+            val logoLine = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+            logoLine.addView(TextView(this).apply {
+                text = "▶"
+                textSize = 30f
+                setTextColor(Color.rgb(0, 190, 255))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setShadowLayer(dp(12).toFloat(), 0f, 0f, Color.rgb(0, 120, 255))
             })
+            logoLine.addView(TextView(this).apply {
+                text = "Kaiser"
+                textSize = 34f
+                setTextColor(Color.WHITE)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setShadowLayer(dp(5).toFloat(), 0f, dp(1).toFloat(), Color.rgb(35, 80, 145))
+            })
+            logoLine.addView(TextView(this).apply {
+                text = "IPTV+"
+                textSize = 34f
+                setTextColor(Color.rgb(0, 170, 255))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setShadowLayer(dp(7).toFloat(), 0f, 0f, Color.rgb(0, 100, 255))
+            })
+            loadingPanel.addView(logoLine)
             loadingPanel.addView(TextView(this).apply {
                 text = status.text.toString().ifBlank { "Kaynak yükleniyor…" }
                 textSize = 18f; setTextColor(muted); gravity = Gravity.CENTER
@@ -1092,6 +1116,21 @@ class MainActivity : Activity() {
                 entertainmentStrip.addView(tile, LinearLayout.LayoutParams(dp(112), dp(104)).apply {
                     setMargins(dp(5), 0, dp(5), 0)
                 })
+                // Gerçek hareketli kart efekti: sırayla yukarı-aşağı süzülüp hafifçe büyür.
+                tile.alpha = 0.82f
+                tile.translationY = dp(8).toFloat()
+                tile.scaleX = 0.96f
+                tile.scaleY = 0.96f
+                tile.animate().translationY(0f).alpha(1f).scaleX(1f).scaleY(1f)
+                    .setStartDelay((entertainmentStrip.childCount - 1) * 140L)
+                    .setDuration(520L).withEndAction {
+                        tile.animate().translationY(dp(-7).toFloat()).setDuration(720L)
+                            .withEndAction {
+                                tile.animate().translationY(dp(7).toFloat()).setDuration(720L).withEndAction {
+                                    tile.animate().translationY(0f).setDuration(720L).start()
+                                }.start()
+                            }.start()
+                    }.start()
             }
             loadingPanel.addView(entertainmentStrip)
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
