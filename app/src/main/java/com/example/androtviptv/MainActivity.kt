@@ -2218,31 +2218,51 @@ class MainActivity : Activity() {
         getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
     }
 
+    private var openingPlayer = false
+
     private fun play(item: MediaItem) {
+        if (openingPlayer) return
         if (item.type == "Diziler" && item.url.isBlank()) { loadSeriesEpisodes(item); return }
-        // Release the muted preview decoder before opening the full-screen player.
-        // Keeping two ExoPlayer instances active can crash low-memory Android TV sticks.
-        previewView?.player = null
-        previewPlayer?.release()
-        previewPlayer = null
-        previewView = null
-        previewChannel = null
-        previewUrl = ""
-        saveRecent(item)
-        val intent = Intent(this, PlayerActivity::class.java)
-            .putExtra("name", item.name)
-            .putExtra("url", item.url)
-        if (item.type == "Canlı TV") {
-            val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
-            intent.putStringArrayListExtra("channel_names", ArrayList(channels.map { it.name }))
-            intent.putStringArrayListExtra("channel_urls", ArrayList(channels.map { it.url }))
-            intent.putExtra("channel_index", channels.indexOfFirst { it.url == item.url }.coerceAtLeast(0))
-            val recentChannels = recent.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
-                .distinctBy { it.url }.take(20)
-            intent.putStringArrayListExtra("recent_channel_names", ArrayList(recentChannels.map { it.name }))
-            intent.putStringArrayListExtra("recent_channel_urls", ArrayList(recentChannels.map { it.url }))
+        if (item.url.isBlank()) {
+            android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
+            return
         }
-        startActivity(intent)
+        openingPlayer = true
+        try {
+            // Önizleme görünümünü ayır, oynatıcıyı durdur ve çözücüyü tam ekran
+            // etkinliği açılmadan önce serbest bırak.
+            previewView?.player = null
+            previewPlayer?.runCatching { stop() }
+            previewPlayer?.release()
+            previewPlayer = null
+            previewView = null
+            previewChannel = null
+            previewUrl = ""
+
+            saveRecent(item)
+            val intent = Intent(this, PlayerActivity::class.java)
+                .putExtra("name", item.name)
+                .putExtra("url", item.url)
+            if (item.type == "Canlı TV") {
+                val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+                intent.putStringArrayListExtra("channel_names", ArrayList(channels.map { it.name }))
+                intent.putStringArrayListExtra("channel_urls", ArrayList(channels.map { it.url }))
+                intent.putExtra("channel_index", channels.indexOfFirst { it.url == item.url }.coerceAtLeast(0))
+                val recentChannels = recent.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+                    .distinctBy { it.url }.take(20)
+                intent.putStringArrayListExtra("recent_channel_names", ArrayList(recentChannels.map { it.name }))
+                intent.putStringArrayListExtra("recent_channel_urls", ArrayList(recentChannels.map { it.url }))
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            openingPlayer = false
+            android.widget.Toast.makeText(this, "Tam ekran oynatıcı açılamadı. Tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        openingPlayer = false
     }
 
     private fun loadSeriesEpisodes(series: MediaItem) {
