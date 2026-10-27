@@ -338,7 +338,7 @@ class MainActivity : Activity() {
                     "İzlenenler" -> "Son İzlenenler"
                     else -> normalizedTab
                 }
-                addSidebarButton(iconLabel,
+                addSidebarButton(tab,
                     selectedType == key && normalizedTab != "Ara") {
                     if (normalizedTab == "Ara") {
                         detailSeries = null
