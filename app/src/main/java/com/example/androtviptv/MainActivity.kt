@@ -322,10 +322,9 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "main") {
-            listOf("⌕  Ara", "⌂  Ana sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "☆  Favoriler", "◷  İzlenenler").forEach { tab ->
+            listOf("⌕  Ara", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "☆  Favoriler", "◷  İzlenenler").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
-                    tab.contains("Ana sayfa") -> "Ana sayfa"
                     tab.contains("Canlı TV") -> "TV"
                     tab.contains("Favoriler") -> "Favoriler"
                     tab.contains("İzlenenler") -> "İzlenenler"
@@ -333,7 +332,6 @@ class MainActivity : Activity() {
                     else -> "Diziler"
                 }
                 val key = when (normalizedTab) {
-                    "Ana sayfa" -> "Tümü"
                     "TV" -> "Canlı TV"
                     "İzlenenler" -> "Son İzlenenler"
                     else -> normalizedTab
