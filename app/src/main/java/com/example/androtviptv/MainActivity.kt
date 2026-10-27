@@ -176,11 +176,11 @@ class MainActivity : Activity() {
 
         sidebar.addView(View(this).apply { setBackgroundColor(Color.rgb(39, 46, 60)) },
             LinearLayout.LayoutParams(-1, 1).apply { setMargins(0, 12, 0, 10) })
-        sidebar.addView(makeButton("＋", true) { showConnectionDialog() }.apply { textSize = 24f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0); background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(accentBright) },
-            LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
-        sidebar.addView(makeButton("▤", false) { showSourcesDialog() }.apply { textSize = 24f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0); background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(Color.rgb(185, 190, 210)) },
-            LinearLayout.LayoutParams(-1, 42).apply { setMargins(0, 0, 0, 5) })
-        sidebar.addView(makeButton("⚙︎", false) { showSettingsDialog() }.apply { textSize = 24f; gravity = Gravity.CENTER; setPadding(0, 0, 0, 0); background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(Color.rgb(185, 190, 210)) }, LinearLayout.LayoutParams(-1, 42))
+        sidebar.addView(makeButton("＋  Kaynak ekle", true) { showConnectionDialog() }.apply { textSize = 13f; gravity = Gravity.CENTER_VERTICAL; background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(accentBright) },
+            LinearLayout.LayoutParams(-1, dp(42)).apply { setMargins(0, 0, 0, dp(5)) })
+        sidebar.addView(makeButton("▤  Kaynaklarım", false) { showSourcesDialog() }.apply { textSize = 13f; gravity = Gravity.CENTER_VERTICAL; background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(Color.rgb(185, 190, 210)) },
+            LinearLayout.LayoutParams(-1, dp(42)).apply { setMargins(0, 0, 0, dp(5)) })
+        sidebar.addView(makeButton("⚙  Ayarlar", false) { showSettingsDialog() }.apply { textSize = 13f; gravity = Gravity.CENTER_VERTICAL; background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(Color.rgb(185, 190, 210)) }, LinearLayout.LayoutParams(-1, dp(42)))
 
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
