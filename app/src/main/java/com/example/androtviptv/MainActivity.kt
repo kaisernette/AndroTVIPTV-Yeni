@@ -1182,28 +1182,20 @@ class MainActivity : Activity() {
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                         searchQuery = s?.toString().orEmpty()
                         selectedGroup = "Tüm kategoriler"
-                        // Restore focus after updating results so typing can continue uninterrupted.
-                        content.post {
-                            render()
-                            content.post {
-                                val input = content.findViewWithTag<EditText>("global_search_input")
-                                input?.requestFocus()
-                                input?.setSelection(input.text.length)
-                                // render() replaces the input view; explicitly reopen the IME
-                                // so consecutive characters can be entered without another click.
-                                input?.post {
-                                    val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                                    imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                                }
-                            }
-                        }
+                        // Keep this EditText attached while the user types. Re-rendering the
+                        // whole screen here detaches it and Android closes the keyboard per character.
+                        // Results refresh when the user presses the keyboard Search action.
+
                     }
                     override fun afterTextChanged(s: android.text.Editable?) {}
                 })
                 setOnEditorActionListener { _, actionId, _ ->
-                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
+                        actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
                         val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                        imm.hideSoftInputFromWindow(windowToken, 0); true
+                        imm.hideSoftInputFromWindow(windowToken, 0)
+                        render()
+                        true
                     } else false
                 }
             }
@@ -1916,10 +1908,11 @@ class MainActivity : Activity() {
                 background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
                 setOnFocusChangeListener { v, hasFocus ->
+                    // Focus uses a gold outline; blue is reserved for the selected section.
                     v.background = roundedDrawable(
-                        if (hasFocus) accentBright else panel,
+                        panel,
                         14,
-                        if (hasFocus) accentBright else Color.rgb(48, 57, 73)
+                        if (hasFocus) Color.rgb(255, 190, 55) else Color.rgb(48, 57, 73)
                     )
                 }
                 setOnClickListener { action() }
@@ -1938,10 +1931,33 @@ class MainActivity : Activity() {
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
-                option("＋  Kaynaklar", "Kaynak ekle, kayıtlı kaynakları yenile veya sil") { showSourcesDialog() }
+                option("＋  Kaynaklar", "Kaynak ekle, kayıtlı kaynakları yenile veya sil") { settingsPage = "sources"; render() }
                 option("▤  Kategoriler", "Film ve dizi kategorilerini görüntüle") { settingsPage = "categories"; render() }
                 option("◐  Temalar", "Uygulamanın renk görünümünü değiştir") { settingsPage = "themes"; render() }
                 option("◷  Geçmiş", "İzlediğin dizileri ve filmleri görüntüle") { settingsPage = "history"; render() }
+            }
+            "sources" -> {
+                heading("Kaynaklar", "Kaynak ekle ve kayıtlı bağlantılarını buradan yönet.")
+                option("＋  Yeni kaynak ekle", "M3U/M3U8 veya Xtream Codes") { showConnectionDialog() }
+                if (savedSources.isEmpty()) {
+                    option("Henüz kaynak eklenmedi", "Yeni kaynak ekle düğmesini kullan.") { showConnectionDialog() }
+                } else {
+                    savedSources.toList().forEach { source ->
+                        option("▣  ${source.name}", if (source.mode == "xtream") "Xtream Codes • ${source.address}" else "M3U/M3U8 • ${source.address}") {
+                            AlertDialog.Builder(this).setTitle(source.name)
+                                .setItems(arrayOf("Yenile", "Sil")) { _, action ->
+                                    if (action == 0) {
+                                        if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
+                                    } else {
+                                        savedSources.removeAll { it.id == source.id }
+                                        persistSources()
+                                        items.removeAll { it.sourceId == source.id }
+                                        render()
+                                    }
+                                }.setNegativeButton("İptal", null).show()
+                        }
+                    }
+                }
             }
             "categories" -> {
                 heading("Kategoriler", "TV, film ve dizi kategorilerini ayrı ayrı yönet")
@@ -2214,6 +2230,14 @@ class MainActivity : Activity() {
 
     private fun play(item: MediaItem) {
         if (item.type == "Diziler" && item.url.isBlank()) { loadSeriesEpisodes(item); return }
+        // Release the muted preview decoder before opening the full-screen player.
+        // Keeping two ExoPlayer instances active can crash low-memory Android TV sticks.
+        previewView?.player = null
+        previewPlayer?.release()
+        previewPlayer = null
+        previewView = null
+        previewChannel = null
+        previewUrl = ""
         saveRecent(item)
         val intent = Intent(this, PlayerActivity::class.java)
             .putExtra("name", item.name)
