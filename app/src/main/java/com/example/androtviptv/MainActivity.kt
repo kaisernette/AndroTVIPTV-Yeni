@@ -1013,8 +1013,103 @@ class MainActivity : Activity() {
                 textSize = 16f; setTextColor(muted); gravity = Gravity.CENTER
                 setPadding(0, dp(8), 0, dp(18))
             })
-            welcome.addView(makeButton("＋ KAYNAK EKLE", true) { showConnectionDialog() },
-                LinearLayout.LayoutParams(dp(240), dp(48)))
+            val inlineForm = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(8), dp(4), dp(8), dp(4))
+            }
+            sourceName = edit("Kaynak adı girin", false)
+            sourceName.hint = "Kaynak adı girin"
+            inlineForm.addView(TextView(this).apply {
+                text = "Kaynak adı (ör. Ev Xtream)"
+                textSize = 13f; setTextColor(muted)
+                setPadding(0, dp(4), 0, dp(3))
+            })
+            inlineForm.addView(sourceName, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                setMargins(0, 0, 0, dp(6))
+            })
+            sourceMode = RadioGroup(this).apply {
+                orientation = RadioGroup.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val inlineM3u = RadioButton(this).apply {
+                id = View.generateViewId(); text = "M3U / M3U8"
+                setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent)
+                isChecked = true
+            }
+            val inlineXtream = RadioButton(this).apply {
+                id = View.generateViewId(); text = "Xtream Codes"
+                setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent)
+            }
+            sourceMode.addView(inlineM3u)
+            sourceMode.addView(inlineXtream)
+            inlineForm.addView(sourceMode, LinearLayout.LayoutParams(-1, dp(42)))
+            playlistUrl = edit("URL adresini girin", false)
+            server = edit("Sunucu adresi (https://...)", false)
+            username = edit("Kullanıcı adı", false)
+            password = edit("Şifre", true)
+            inlineForm.addView(TextView(this).apply {
+                text = "M3U / M3U8 oynatma listesi URL'si"
+                textSize = 13f; setTextColor(muted)
+                setPadding(0, dp(4), 0, dp(3))
+            })
+            inlineForm.addView(playlistUrl, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                setMargins(0, 0, 0, dp(6))
+            })
+            inlineForm.addView(server, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                setMargins(0, 0, 0, dp(6))
+            })
+            val inlineCredentials = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
+            inlineCredentials.addView(username, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                setMargins(0, 0, dp(4), 0)
+            })
+            inlineCredentials.addView(password, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                setMargins(dp(4), 0, 0, 0)
+            })
+            inlineForm.addView(inlineCredentials)
+            fun updateInlineFields() {
+                val useXtream = sourceMode.checkedRadioButtonId == inlineXtream.id
+                playlistUrl.visibility = if (useXtream) View.GONE else View.VISIBLE
+                server.visibility = if (useXtream) View.VISIBLE else View.GONE
+                inlineCredentials.visibility = if (useXtream) View.VISIBLE else View.GONE
+            }
+            sourceMode.setOnCheckedChangeListener { _, _ -> updateInlineFields() }
+            updateInlineFields()
+            inlineForm.addView(makeButton("＋ KAYNAK EKLE", true) {
+                val useXtream = sourceMode.checkedRadioButtonId == inlineXtream.id
+                if (useXtream) {
+                    val serverAddress = server.text.toString().trim()
+                    if (!(serverAddress.startsWith("http://") || serverAddress.startsWith("https://")) ||
+                        username.text.isNullOrBlank() || password.text.isNullOrBlank()) {
+                        Toast.makeText(this, "Sunucu, kullanıcı adı ve şifreyi doldur.", Toast.LENGTH_LONG).show()
+                        return@makeButton
+                    }
+                    val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
+                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "xtream",
+                        serverAddress.trimEnd('/'), username.text.toString().trim(), password.text.toString())
+                    saveSource(src)
+                    hideKeyboard()
+                    loadXtream(src, false)
+                } else {
+                    val address = playlistUrl.text.toString().trim()
+                    if (!address.startsWith("http://") && !address.startsWith("https://")) {
+                        Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
+                        return@makeButton
+                    }
+                    val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
+                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "m3u", address)
+                    saveSource(src)
+                    hideKeyboard()
+                    loadM3u(src, false)
+                }
+            }, LinearLayout.LayoutParams(dp(280), dp(52)).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                setMargins(0, dp(18), 0, 0)
+            })
+            welcome.addView(inlineForm, LinearLayout.LayoutParams(dp(520), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(0, dp(10), 0, 0)
+            })
             content.addView(welcome, LinearLayout.LayoutParams(-1, -1))
             sidebarMenuScroll.visibility = View.GONE
             return
