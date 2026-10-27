@@ -57,20 +57,33 @@ class PlayerActivity : Activity() {
         playerView = view
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         setContentView(root)
-        player = ExoPlayer.Builder(this).build().also { exo ->
-            view.player = exo
-            exo.addListener(object : Player.Listener {
-                override fun onPlayerError(error: PlaybackException) {
-                    android.widget.Toast.makeText(this@PlayerActivity, "Akış oynatılamadı: ${error.errorCodeName}", android.widget.Toast.LENGTH_LONG).show()
-                }
-            })
-            exo.setMediaItem(MediaItem.fromUri(url))
-            val resumePosition = playbackPrefs.getLong(resumeKey, 0L)
-            exo.prepare()
-            if (resumePosition > 5000L) exo.seekTo(resumePosition)
-            exo.playWhenReady = true
+        if (url.isBlank()) {
+            android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
+            finish()
+            return
         }
-        if (channelUrls.size > 1) view.requestFocus()
+        try {
+            val mediaItem = MediaItem.fromUri(url.trim())
+            player = ExoPlayer.Builder(this).build().also { exo ->
+                view.player = exo
+                exo.addListener(object : Player.Listener {
+                    override fun onPlayerError(error: PlaybackException) {
+                        android.widget.Toast.makeText(this@PlayerActivity, "Akış oynatılamadı: ${error.errorCodeName}", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                })
+                exo.setMediaItem(mediaItem)
+                val resumePosition = playbackPrefs.getLong(resumeKey, 0L)
+                exo.prepare()
+                if (resumePosition > 5000L) exo.seekTo(resumePosition)
+                exo.playWhenReady = true
+            }
+            if (channelUrls.size > 1) view.requestFocus()
+        } catch (e: Exception) {
+            player?.release()
+            player = null
+            android.widget.Toast.makeText(this, "Video başlatılamadı. Yayın adresini kontrol et.", android.widget.Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN && channelUrls.size > 1) {
