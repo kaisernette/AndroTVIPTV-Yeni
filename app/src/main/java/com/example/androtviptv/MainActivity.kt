@@ -1314,7 +1314,12 @@ class MainActivity : Activity() {
                 else it.group.ifBlank { "Diğer" }
             }.map { it.key to it.value }
         }
-        groups.forEach { (groupName, entries) ->
+        // Xtream sources can contain hundreds of categories. Building poster cards for every
+        // category at once can exhaust memory on older Android TV boxes. Keep the first
+        // 12 category rows on screen; every category remains accessible from the sidebar
+        // and selecting one shows that category's items.
+        val groupsToRender = if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(12) else groups
+        groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, 16, 2, 8)
