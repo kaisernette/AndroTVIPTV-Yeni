@@ -1914,7 +1914,15 @@ class MainActivity : Activity() {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; setPadding(dp(18), dp(14), dp(18), dp(14))
                 background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
-                isFocusable = true; isClickable = true; setOnClickListener { action() }
+                isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+                setOnFocusChangeListener { v, hasFocus ->
+                    v.background = roundedDrawable(
+                        if (hasFocus) accentBright else panel,
+                        14,
+                        if (hasFocus) accentBright else Color.rgb(48, 57, 73)
+                    )
+                }
+                setOnClickListener { action() }
             }
             row.addView(TextView(this).apply {
                 text = title; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
