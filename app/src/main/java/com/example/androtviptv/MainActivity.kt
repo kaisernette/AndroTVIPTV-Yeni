@@ -1024,12 +1024,18 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
-            welcome.addView(TextView(this).apply {
-                text = "KAISERTV+"
-                textSize = 42f; setTextColor(accentBright)
-                setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+            val welcomeLogo = TextView(this).apply {
+                val logo = android.text.SpannableString("▶ KaiserIPTV+")
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 8, 13, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                text = logo
+                textSize = 38f; gravity = Gravity.CENTER
+                setTypeface(null, android.graphics.Typeface.BOLD)
                 setPadding(0, dp(16), 0, dp(20))
-            }, LinearLayout.LayoutParams(-1, dp(110)))
+                setShadowLayer(dp(8).toFloat(), 0f, 0f, Color.rgb(0, 80, 190))
+            }
+            welcome.addView(welcomeLogo, LinearLayout.LayoutParams(-1, dp(110)))
             welcome.addView(TextView(this).apply {
                 text = "İzleme kaynağını ekleyerek başla"
                 textSize = 16f; setTextColor(muted); gravity = Gravity.CENTER
