@@ -284,6 +284,11 @@ class MainActivity : Activity() {
                     v.scaleY = if (hasFocus) 1.025f else 1f
                 }
                 textSize = 14f
+                val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
+                text = android.text.SpannableString(label).apply {
+                    setSpan(android.text.style.RelativeSizeSpan(1.28f), 0, iconEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, iconEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
                 gravity = Gravity.CENTER_VERTICAL
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
@@ -312,7 +317,7 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "main") {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♥  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -1001,7 +1006,7 @@ class MainActivity : Activity() {
         if (::brandView.isInitialized) brandView.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
-        if (::status.isInitialized) status.visibility = if (firstEntry || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
+        if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
             mainContentScroll.visibility = View.VISIBLE
@@ -1341,6 +1346,8 @@ class MainActivity : Activity() {
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt() - 250).coerceAtLeast(280)
             val displayedEntries = if (showingExpandedCategory) entries else entries.take(5)
+            var expandedPosterRow: LinearLayout? = null
+            var expandedPosterCount = 0
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
@@ -1414,7 +1421,23 @@ class MainActivity : Activity() {
                     render()
                 }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                 card.addView(actions)
-                row.addView(card, LinearLayout.LayoutParams(if (showingExpandedCategory) -1 else if (liveCard) 190 else if (weeklyMovieFeature) dp(featureCardWidth) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, if (showingExpandedCategory) 0 else if (weeklyMovieFeature) dp(18) else 16, 10) })
+                if (showingExpandedCategory) {
+                    if (expandedPosterCount % 4 == 0) {
+                        expandedPosterRow = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.TOP
+                        }
+                        row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    }
+                    expandedPosterRow?.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        setMargins(dp(4), dp(3), dp(4), dp(9))
+                    })
+                    expandedPosterCount++
+                } else {
+                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) dp(featureCardWidth) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(0, 0, if (weeklyMovieFeature) dp(18) else 16, 10)
+                    })
+                }
             }
             if (showingExpandedCategory) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
