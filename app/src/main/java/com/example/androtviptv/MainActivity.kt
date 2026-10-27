@@ -45,7 +45,6 @@ class MainActivity : Activity() {
     private lateinit var sourceName: EditText
     private val favorites = mutableSetOf<String>()
     private val recent = mutableListOf<MediaItem>()
-    private val hiddenCategories = mutableSetOf<String>()
     private var selectedGroup = "Tüm kategoriler"
     private var expandedCategory: Pair<String, List<MediaItem>>? = null
     private lateinit var categoryBar: LinearLayout
@@ -74,27 +73,8 @@ class MainActivity : Activity() {
     private var accentBright = Color.rgb(246, 218, 151)
     private var muted = Color.rgb(157, 169, 188)
 
-    private data class ThemeOption(val id: String, val title: String, val bg: Int, val panel: Int, val accent: Int, val bright: Int, val muted: Int)
-    private val themeOptions by lazy { listOf(
-        ThemeOption("blue", "Antrasit & Mavi", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(55, 145, 255), Color.rgb(145, 198, 255), Color.rgb(164, 171, 185)),
-        ThemeOption("purple", "Antrasit & Mor", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(145, 95, 255), Color.rgb(190, 165, 255), Color.rgb(164, 171, 185)),
-        ThemeOption("gold", "Antrasit & Altın", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(222, 181, 91), Color.rgb(246, 218, 151), Color.rgb(164, 171, 185)),
-        ThemeOption("green", "Antrasit & Yeşil", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(52, 211, 153), Color.rgb(167, 243, 208), Color.rgb(164, 171, 185)),
-        ThemeOption("red", "Antrasit & Kırmızı", Color.rgb(12, 13, 16), Color.rgb(28, 30, 36), Color.rgb(244, 92, 118), Color.rgb(255, 183, 193), Color.rgb(164, 171, 185))
-    ) }
-
-    private fun applySavedTheme() {
-        val savedTheme = prefs.getString("color_theme", "blue") ?: "blue"
-        // Switch users from the former purple default to the requested anthracite/blue theme.
-        val themeId = if (savedTheme == "purple") "blue" else savedTheme
-        val selected = themeOptions.firstOrNull { it.id == themeId } ?: themeOptions.first { it.id == "blue" }
-        if (savedTheme != themeId) prefs.edit().putString("color_theme", themeId).apply()
-        bg = selected.bg; panel = selected.panel; accent = selected.accent; accentBright = selected.bright; muted = selected.muted
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applySavedTheme()
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
         try {
@@ -104,7 +84,6 @@ class MainActivity : Activity() {
                 recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors"), o.optString("rating"), o.optString("releaseDate"), o.optString("genre")))
             }
         } catch (_: Exception) { }
-        hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         loadCachedItems()
         // Always start in the lightweight Live TV section. Restoring a huge
         // movie/series section on launch can make some devices run out of memory.
@@ -188,7 +167,6 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(-1, dp(42)).apply { setMargins(0, 0, 0, dp(5)) })
         sidebar.addView(makeButton("▤  Kaynaklarım", false) { showSourcesDialog() }.apply { textSize = 13f; gravity = Gravity.CENTER_VERTICAL; background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(Color.rgb(185, 190, 210)) },
             LinearLayout.LayoutParams(-1, dp(42)).apply { setMargins(0, 0, 0, dp(5)) })
-        sidebar.addView(makeButton("⚙  Ayarlar", false) { showSettingsDialog() }.apply { textSize = 13f; gravity = Gravity.CENTER_VERTICAL; background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT); setTextColor(Color.rgb(185, 190, 210)) }, LinearLayout.LayoutParams(-1, dp(42)))
 
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -320,7 +298,7 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "main") {
-            listOf("⌕  Ara", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "☆  Favoriler", "◷  İzlenenler").forEach { tab ->
+            listOf("▣  Canlı TV", "▰  Filmler", "▤  Diziler").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Canlı TV") -> "TV"
@@ -447,7 +425,7 @@ class MainActivity : Activity() {
             }
             items.filter { it.type == selectedType }
                 .map { it.group.ifBlank { "Diğer" } }
-                .distinct().filter { it !in hiddenCategories }.sorted().take(200)
+                .distinct().sorted().take(200)
                 .forEach { category ->
                     addSidebarButton(category, selectedGroup == category) {
                         selectedGroup = category
@@ -908,40 +886,6 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun showSettingsDialog() {
-        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(20, 8, 20, 8); setBackgroundColor(bg) }
-        box.addView(TextView(this).apply { text = "Renk teması"; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(0, 8, 0, 4) })
-        box.addView(TextView(this).apply { text = "Uygulamanın arka planını ve vurgu rengini seç."; textSize = 13f; setTextColor(muted); setPadding(0, 0, 0, 8) })
-        val themeGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        val currentTheme = prefs.getString("color_theme", "gold") ?: "gold"
-        themeOptions.forEach { theme ->
-            val radio = RadioButton(this).apply {
-                text = theme.title; tag = theme.id; textSize = 15f; setTextColor(Color.WHITE)
-                buttonTintList = android.content.res.ColorStateList.valueOf(theme.accent)
-                setPadding(4, 5, 4, 5)
-            }
-            themeGroup.addView(radio)
-            if (theme.id == currentTheme) radio.isChecked = true
-        }
-        box.addView(themeGroup)
-        box.addView(TextView(this).apply { text = "Genel ayarlar"; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(0, 14, 0, 8) })
-        val compact = CheckBox(this).apply { text = "Afiş kartlarını daha kompakt göster"; setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent); isChecked = prefs.getBoolean("compact_cards", false) }
-        val resume = CheckBox(this).apply { text = "Uygulama açıldığında son bölümü seç"; setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent); isChecked = prefs.getBoolean("resume_home", true) }
-        box.addView(compact); box.addView(resume)
-        box.addView(TextView(this).apply { text = "Gizlenecek kategoriler"; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(0, 14, 0, 8) })
-        val available = items.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
-        if (available.isEmpty()) box.addView(TextView(this).apply { text = "Kategoriler kaynak yüklendikten sonra burada görünür."; setTextColor(muted); textSize = 14f })
-        available.forEach { category ->
-            box.addView(CheckBox(this).apply { text = category; setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent); isChecked = category in hiddenCategories; setOnCheckedChangeListener { _, checked -> if (checked) hiddenCategories.add(category) else hiddenCategories.remove(category); prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply(); if (selectedGroup == category && checked) selectedGroup = "Tüm kategoriler"; render() } })
-        }
-        val scroll = ScrollView(this).apply { addView(box) }
-        AlertDialog.Builder(this).setTitle("Ayarlar").setView(scroll).setPositiveButton("Kaydet") { _, _ ->
-            val pickedTheme = themeOptions.firstOrNull { it.id == themeGroup.findViewById<RadioButton>(themeGroup.checkedRadioButtonId)?.tag as? String }?.id ?: currentTheme
-            prefs.edit().putBoolean("compact_cards", compact.isChecked).putBoolean("resume_home", resume.isChecked).putString("color_theme", pickedTheme).apply()
-            if (pickedTheme != currentTheme) recreate() else render()
-        }.setNegativeButton("Kapat", null).show()
-    }
-
     private fun showItemDetails(item: MediaItem) {
         val body = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(18, 18, 18, 18); background = roundedDrawable(panel, 18, Color.rgb(45, 54, 71)) }
         val poster = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; background = roundedDrawable(Color.rgb(31, 37, 50), 12) }
@@ -1183,7 +1127,7 @@ class MainActivity : Activity() {
             it.group.contains(query, ignoreCase = true) ||
             it.type.contains(query, ignoreCase = true)
         }
-        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().filter { it !in hiddenCategories }.sorted()
+        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
         categoryBar.removeAllViews()
         groupsAvailable.take(100).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
@@ -1194,8 +1138,8 @@ class MainActivity : Activity() {
                 setPadding(12, 0, 12, 0)
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
         }
-        val visible = if (selectedGroup == "Tüm kategoriler" || sidebarMode == "search") baseVisible.filter { (it.group.ifBlank { "Diğer" }) !in hiddenCategories }
-            else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup && it.group !in hiddenCategories }
+        val visible = if (selectedGroup == "Tüm kategoriler" || sidebarMode == "search") baseVisible
+            else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
         if (visible.isEmpty()) {
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
