@@ -160,9 +160,15 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, 0)
         }
         brandView.addView(TextView(this).apply {
-            text = "KAISERTV+"
-            textSize = 21f; setTextColor(accentBright)
-            setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+            val logo = android.text.SpannableString("▶ KIP+")
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 5, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 170, 0)), 5, 6, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            text = logo
+            textSize = 23f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            gravity = Gravity.CENTER
+            contentDescription = "KIP+"
         }, LinearLayout.LayoutParams(-1, dp(54)))
         sidebar.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -192,18 +198,8 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setPadding(4, 0, 4, 12)
         }
-        mainHeader.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
-        mainHeader.addView(LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(TextView(this@MainActivity).apply {
-                text = "KAISERTV+"
-                textSize = 13f
-                setTextColor(accentBright)
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                letterSpacing = 0.05f
-            })
-        })
+        // Üst sağdaki eski KAISERTV+ yazısı kaldırıldı; yalnızca sol menüde KIP+ logosu kullanılır.
+        mainHeader.addView(View(this), LinearLayout.LayoutParams(-1, dp(8)))
         main.addView(mainHeader)
 
         val hero = LinearLayout(this).apply {
@@ -725,7 +721,8 @@ class MainActivity : Activity() {
                     selectedGroup = "Tüm kategoriler"
                     sidebarMode = "main"
                     xtreamBase = base; xtreamUser = user; xtreamPass = pass
-                    status.text = "${source.name}: ${loaded.size} içerik yüklendi. ${items.size} toplam içerik."
+                    status.text = ""
+                    status.visibility = View.GONE
                     isLoadingSource = false
                     hasLoadedSource = true
                     sidebarMode = "main"
