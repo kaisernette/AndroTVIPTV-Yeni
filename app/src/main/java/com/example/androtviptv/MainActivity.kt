@@ -1186,6 +1186,12 @@ class MainActivity : Activity() {
                                 val input = content.findViewWithTag<EditText>("global_search_input")
                                 input?.requestFocus()
                                 input?.setSelection(input.text.length)
+                                // render() replaces the input view; explicitly reopen the IME
+                                // so consecutive characters can be entered without another click.
+                                input?.post {
+                                    val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                                    imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                                }
                             }
                         }
                     }
