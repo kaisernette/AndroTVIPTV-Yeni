@@ -36,8 +36,8 @@ private data class MediaItem(
 }
 
 class MainActivity : Activity() {
-    private val posterExecutor = Executors.newFixedThreadPool(3)
-    private val posterCache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
+    private val posterExecutor = Executors.newFixedThreadPool(2)
+    private val posterCache = object : LruCache<String, Bitmap>(8 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
@@ -1909,13 +1909,35 @@ class MainActivity : Activity() {
         }
         posterExecutor.execute {
             try {
+                // Decode poster thumbnails at a reduced resolution. Some Mi TV Stick
+                // devices run out of memory when provider artwork is decoded at full size.
+                val boundsConn = (URL(address).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 3500
+                    readTimeout = 3500
+                    instanceFollowRedirects = true
+                }
+                val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                try {
+                    boundsConn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it, null, options) }
+                } finally {
+                    boundsConn.disconnect()
+                }
+                if (options.outWidth <= 0 || options.outHeight <= 0) return@execute
+                var sampleSize = 1
+                while (options.outWidth / sampleSize > 480 || options.outHeight / sampleSize > 640) {
+                    sampleSize *= 2
+                }
+                val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                    inPreferredConfig = Bitmap.Config.RGB_565
+                }
                 val conn = (URL(address).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 3500
                     readTimeout = 3500
                     instanceFollowRedirects = true
                 }
                 val bitmap = try {
-                    conn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+                    conn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it, null, decodeOptions) }
                 } finally {
                     conn.disconnect()
                 }
