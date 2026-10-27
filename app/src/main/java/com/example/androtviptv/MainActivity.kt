@@ -1093,7 +1093,7 @@ class MainActivity : Activity() {
                 clipToPadding = true
             }
             val visualItems = listOf(
-                Triple("🎬", "SİNEMA", Color.rgb(35, 105, 190)),
+                Triple("🎬", "FİLMLER", Color.rgb(35, 105, 190)),
                 Triple("📺", "TELEVİZYON", Color.rgb(145, 75, 175)),
                 Triple("🎞️", "DİZİLER", Color.rgb(35, 150, 125)),
                 Triple("⚽", "CANLI SPOR", Color.rgb(70, 165, 95)),
