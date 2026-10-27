@@ -1367,7 +1367,7 @@ class MainActivity : Activity() {
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
-            val featureCardWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt() - 330).coerceAtLeast(260)
+            val featureCardWidth = dp(464) // Haftanın afişleri yaklaşık iki standart kart genişliğinde
             val displayedEntries = if (showingExpandedCategory) entries else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
@@ -1421,7 +1421,7 @@ class MainActivity : Activity() {
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
-                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (weeklyMovieFeature && !showingExpandedCategory) dp(330) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210)
+                    layoutParams = LinearLayout.LayoutParams(-1, if (liveCard) 112 else if (weeklyMovieFeature && !showingExpandedCategory) dp(210) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210)
                 }
                 card.addView(poster)
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
@@ -1931,7 +1931,7 @@ class MainActivity : Activity() {
                 }
                 if (options.outWidth <= 0 || options.outHeight <= 0) return@execute
                 var sampleSize = 1
-                while (options.outWidth / sampleSize > 480 || options.outHeight / sampleSize > 640) {
+                while (options.outWidth / sampleSize > 320 || options.outHeight / sampleSize > 420) {
                     sampleSize *= 2
                 }
                 val decodeOptions = android.graphics.BitmapFactory.Options().apply {
