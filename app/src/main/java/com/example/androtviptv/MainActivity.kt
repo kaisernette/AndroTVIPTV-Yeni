@@ -36,8 +36,8 @@ private data class MediaItem(
 }
 
 class MainActivity : Activity() {
-    private val posterExecutor = Executors.newFixedThreadPool(8)
-    private val posterCache = object : LruCache<String, Bitmap>(48 * 1024 * 1024) {
+    private val posterExecutor = Executors.newFixedThreadPool(3)
+    private val posterCache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
