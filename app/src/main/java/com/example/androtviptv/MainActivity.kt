@@ -2850,6 +2850,7 @@ class MainActivity : Activity() {
             val intent = Intent(this, PlayerActivity::class.java)
                 .putExtra("name", item.name)
                 .putExtra("url", item.url)
+                .putExtra("isLive", item.type == "Canlı TV")
             if (item.type == "Canlı TV") {
                 val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
                 val recentChannels = recent.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
