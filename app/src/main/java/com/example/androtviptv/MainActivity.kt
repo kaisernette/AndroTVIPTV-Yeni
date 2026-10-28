@@ -299,7 +299,7 @@ class MainActivity : Activity() {
         }
         main.addView(categoryScroll, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 0, 0, 8) })
         mainContentScroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
-        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 2, 0, 12) }
+        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(18), dp(2), dp(30), dp(12)); clipToPadding = false }
         mainContentScroll.addView(content)
         main.addView(mainContentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
@@ -1657,7 +1657,7 @@ class MainActivity : Activity() {
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(140) // Kart genişliği afişle aynı
-            val displayedEntries = if (showingExpandedCategory) entries else entries.take(5)
+            val displayedEntries = if (showingExpandedCategory || weeklyMovieFeature) entries else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
             displayedEntries.forEach { item ->
