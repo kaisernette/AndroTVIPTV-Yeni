@@ -1837,7 +1837,7 @@ class MainActivity : Activity() {
                 content.addView(HorizontalScrollView(this).apply {
                     isHorizontalScrollBarEnabled = false
                     clipToPadding = false
-                    fillViewport = true
+                    isFillViewport = true
                     setPadding(dp(18), 0, dp(30), 0)
                     row.gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
                     addView(row)
