@@ -1826,7 +1826,8 @@ class MainActivity : Activity() {
                     expandedPosterCount++
                 } else {
                     row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) featureCardWidth else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                        setMargins(0, 0, if (weeklyMovieFeature) dp(18) else 16, 10)
+                        // Consistent TV-friendly breathing room between poster cards.
+                        setMargins(dp(5), 0, if (weeklyMovieFeature) dp(20) else dp(14), dp(10))
                     })
                 }
             }
