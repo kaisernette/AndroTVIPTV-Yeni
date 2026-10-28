@@ -617,15 +617,17 @@ class MainActivity : Activity() {
             sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
             render()
 
-            // If the on-device media cache is missing or invalid, automatically
-            // restore the last saved source instead of requiring a manual refresh.
-            // Re-fetch the last source on every launch. The disk cache is deliberately
-            // bounded for low-memory TV devices, so a non-empty cache may still be partial
-            // or stale; relying on items.isEmpty() made users press "Yenile" after restart.
-            if (last != null && !isLoadingSource) {
+            // Reuse the on-device cache on normal launches. Only fetch the saved
+            // source automatically when no cached items are available, avoiding a
+            // full playlist reload every time the app is opened.
+            if (last != null && items.isEmpty() && !isLoadingSource) {
                 status.visibility = View.VISIBLE
-                status.text = "${last.name}: kayıtlı kaynak otomatik yükleniyor…"
+                status.text = "${last.name}: kayıtlı içerik bulunamadı, kaynak yükleniyor…"
                 if (last.mode == "xtream") loadXtream(last, true) else loadM3u(last, true)
+            } else if (items.isNotEmpty()) {
+                status.visibility = View.VISIBLE
+                status.text = "${items.size} kayıtlı içerik hazır."
+                render()
             }
         }
     }
