@@ -921,22 +921,10 @@ class MainActivity : Activity() {
     private fun cachedItemsFile() = java.io.File(filesDir, "kaisertv_media_cache.json")
 
     private fun saveCachedItems() {
-        // Xtream libraries can contain tens of thousands of entries. Do not build
-        // a giant JSONArray/String in memory after loading; stream each item to disk.
-        // Keep the startup cache bounded for low-memory Android TV sticks.
+        // Keep every loaded item in the disk cache; write entries incrementally
+        // so large IPTV libraries do not require one giant JSON string in memory.
         val snapshot = try {
-            // Preserve all sections in the bounded cache. Xtream often returns
-            // live channels first, so items.take(1000) can discard every movie/series.
-            val live = items.filter { it.type == "Canlı TV" }
-            val movies = items.filter { it.type == "Filmler" }
-            val series = items.filter { it.type == "Diziler" }
-            val balanced = (live.take(350) + movies.take(350) + series.take(300)).toMutableList()
-            if (balanced.size < 1000) {
-                val seen = balanced.mapTo(mutableSetOf()) { "${it.type}|${it.sourceId}|${it.id}|${it.url}" }
-                items.asSequence().filter { seen.add("${it.type}|${it.sourceId}|${it.id}|${it.url}") }
-                    .take(1000 - balanced.size).forEach { balanced.add(it) }
-            }
-            balanced.take(1000)
+            items.toList()
         } catch (_: Exception) { return }
         thread(name = "kaisertv-cache-writer") {
             val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
