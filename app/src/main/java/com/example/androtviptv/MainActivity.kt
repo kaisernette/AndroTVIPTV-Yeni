@@ -1111,7 +1111,8 @@ class MainActivity : Activity() {
                 val logo = android.text.SpannableString("▶ KaiserIPTV+")
                 logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 8, 13, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 8, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 12, 13, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 text = logo
                 textSize = 38f; gravity = Gravity.CENTER
                 setTypeface(null, android.graphics.Typeface.BOLD)
@@ -1254,9 +1255,11 @@ class MainActivity : Activity() {
                 setShadowLayer(dp(5).toFloat(), 0f, dp(1).toFloat(), Color.rgb(35, 80, 145))
             })
             logoLine.addView(TextView(this).apply {
-                text = "IPTV+"
+                val brand = android.text.SpannableString("IPTV+")
+                brand.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 170, 255)), 0, 4, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                brand.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 4, 5, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                text = brand
                 textSize = 34f
-                setTextColor(Color.rgb(0, 170, 255))
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 gravity = Gravity.CENTER
                 setShadowLayer(dp(7).toFloat(), 0f, 0f, Color.rgb(0, 100, 255))
@@ -1275,12 +1278,18 @@ class MainActivity : Activity() {
                 clipChildren = true
                 clipToPadding = true
             }
+            // Sadece görseller/karakterler geçiş yapar; metin etiketi gösterilmez.
             val visualItems = listOf(
-                Triple("🎬", "FİLMLER", Color.rgb(35, 105, 190)),
-                Triple("📺", "TELEVİZYON", Color.rgb(145, 75, 175)),
-                Triple("🎞️", "DİZİLER", Color.rgb(35, 150, 125)),
-                Triple("⚽", "CANLI SPOR", Color.rgb(70, 165, 95)),
-                Triple("🤖", "ANİMASYON", Color.rgb(225, 145, 55))
+                "🎬" to Color.rgb(35, 105, 190),
+                "📺" to Color.rgb(145, 75, 175),
+                "🎞️" to Color.rgb(35, 150, 125),
+                "⚽" to Color.rgb(70, 165, 95),
+                "🏆" to Color.rgb(215, 155, 35),
+                "🦸" to Color.rgb(70, 130, 240),
+                "🥷" to Color.rgb(135, 90, 210),
+                "🐼" to Color.rgb(65, 175, 135),
+                "🐉" to Color.rgb(225, 95, 70),
+                "🎮" to Color.rgb(70, 180, 220)
             )
             val slide = FrameLayout(this).apply {
                 layoutParams = FrameLayout.LayoutParams(-1, -1)
@@ -1291,20 +1300,11 @@ class MainActivity : Activity() {
             }
             val visualSymbol = TextView(this).apply {
                 text = visualItems[0].first
-                textSize = 66f
+                textSize = 82f
                 gravity = Gravity.CENTER
-                setShadowLayer(dp(14).toFloat(), 0f, 0f, visualItems[0].third)
+                setShadowLayer(dp(18).toFloat(), 0f, 0f, visualItems[0].second)
             }
-            visual.addView(visualSymbol, LinearLayout.LayoutParams(dp(125), -1))
-            val visualText = TextView(this).apply {
-                text = visualItems[0].second
-                textSize = 18f
-                setTextColor(accentBright)
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                gravity = Gravity.CENTER_VERTICAL
-                letterSpacing = 0.12f
-            }
-            visual.addView(visualText, LinearLayout.LayoutParams(-2, -1))
+            visual.addView(visualSymbol, LinearLayout.LayoutParams(-1, -1))
             slide.addView(visual, FrameLayout.LayoutParams(-1, -1))
             visualViewport.addView(slide)
             loadingPanel.addView(visualViewport)
@@ -1317,8 +1317,7 @@ class MainActivity : Activity() {
                     visual.animate().translationX(-width).alpha(0f).setDuration(420L).withEndAction {
                         visualIndex = nextIndex
                         visualSymbol.text = visualItems[visualIndex].first
-                        visualSymbol.setShadowLayer(dp(14).toFloat(), 0f, 0f, visualItems[visualIndex].third)
-                        visualText.text = visualItems[visualIndex].second
+                        visualSymbol.setShadowLayer(dp(18).toFloat(), 0f, 0f, visualItems[visualIndex].second)
                         visual.translationX = width
                         visual.alpha = 0f
                         visual.animate().translationX(0f).alpha(1f).setDuration(420L).start()
