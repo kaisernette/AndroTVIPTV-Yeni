@@ -96,10 +96,11 @@ class MainActivity : Activity() {
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         loadCachedItems()
-        // Always start in the lightweight Live TV section. Restoring a huge
-        // movie/series section on launch can make some devices run out of memory.
-        selectedType = "Canlı TV"
-        prefs.edit().putString("last_section", selectedType).apply()
+        // Restore the last section instead of overwriting it with Live TV on every launch.
+        val allowedSections = setOf("Tümü", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler", "Ayarlar")
+        selectedType = prefs.getString("last_section", "Canlı TV")
+            ?.takeIf { it in allowedSections } ?: "Canlı TV"
+        selectedGroup = prefs.getString("last_group", "Tüm kategoriler") ?: "Tüm kategoriler"
         buildUi()
         showPreviousCrashIfAny()
         loadSavedSources()
@@ -391,8 +392,9 @@ class MainActivity : Activity() {
                     addSidebarButton(tab, selectedType == "Ayarlar") {
                         detailSeries = null
                         detailMovie = null
-                        settingsPage = "main"
+                        settingsPage = prefs.getString("last_settings_page", "main") ?: "main"
                         selectedType = "Ayarlar"
+                        prefs.edit().putString("last_section", "Ayarlar").apply()
                         selectedGroup = "Tüm kategoriler"
                         sidebarMode = "settings"
                         rebuildNavigation()
@@ -421,7 +423,7 @@ class MainActivity : Activity() {
                         expandedCategory = null
                         selectedType = key
                         sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
-                        prefs.edit().putString("last_section", key).apply()
+                        prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
                         rebuildNavigation()
                         render()
                     }
@@ -611,11 +613,8 @@ class MainActivity : Activity() {
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
             status.text = ""
-            if (items.isNotEmpty() && items.none { it.type == selectedType }) {
-                selectedType = if (items.any { it.type == "Filmler" }) "Filmler" else "Tümü"
-            }
-            selectedGroup = "Tüm kategoriler"
-            sidebarMode = "main"
+            // Preserve the user's last selected section when cached content is available.
+            sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
             render()
 
             // If the on-device media cache is missing or invalid, automatically
@@ -895,10 +894,10 @@ class MainActivity : Activity() {
             val file = cachedItemsFile()
             // Parsing a large JSON string plus JSONArray duplicates memory usage and
             // can crash low-memory Mi TV Stick devices on the next launch.
-            if (file.exists() && file.length() > 2L * 1024L * 1024L) {
-                file.delete()
-                items.clear()
-                prefs.edit().remove("cached_items").apply()
+            // A valid 1000-item cache can exceed 2 MB due to URLs and metadata.
+            // Do not delete it on startup just because it crosses the old tiny limit.
+            if (file.exists() && file.length() > 20L * 1024L * 1024L) {
+                android.util.Log.w("KaiserTV", "Media cache exceeds safe size; skipping disk cache.")
                 return
             }
             val raw = if (file.exists() && file.length() > 0L) file.readText(Charsets.UTF_8) else "[]"
@@ -2149,11 +2148,11 @@ class MainActivity : Activity() {
                 background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
                 setOnFocusChangeListener { v, hasFocus ->
-                    // Focus uses a gold outline; blue is reserved for the selected section.
+                    // Focus outline follows the currently selected theme accent.
                     v.background = roundedDrawable(
-                        panel,
+                        if (hasFocus) Color.argb(28, Color.red(accent), Color.green(accent), Color.blue(accent)) else panel,
                         14,
-                        if (hasFocus) Color.rgb(255, 190, 55) else Color.rgb(48, 57, 73)
+                        if (hasFocus) accent else Color.rgb(48, 57, 73)
                     )
                 }
                 setOnClickListener { action() }
@@ -2167,15 +2166,15 @@ class MainActivity : Activity() {
             })
         }
         if (settingsPage != "main") content.addView(makeButton("← Ayarlara dön", false) {
-            settingsPage = "main"; rebuildNavigation(); render()
+            settingsPage = "main"; prefs.edit().putString("last_settings_page", "main").apply(); rebuildNavigation(); render()
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(6), dp(6), 0, dp(8)) })
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
-                option("＋  Kaynaklar", "Kaynak ekle, kayıtlı kaynakları yenile veya sil") { settingsPage = "sources"; render() }
-                option("▤  Kategoriler", "Film ve dizi kategorilerini görüntüle") { settingsPage = "categories"; render() }
-                option("◐  Temalar", "Uygulamanın renk görünümünü değiştir") { settingsPage = "themes"; render() }
-                option("◷  Geçmiş", "İzlediğin dizileri ve filmleri görüntüle") { settingsPage = "history"; render() }
+                option("＋  Kaynaklar", "Kaynak ekle, kayıtlı kaynakları yenile veya sil") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("▤  Kategoriler", "Film ve dizi kategorilerini görüntüle") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("◐  Temalar", "Uygulamanın renk görünümünü değiştir") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("◷  Geçmiş", "İzlediğin dizileri ve filmleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "sources" -> {
                 heading("Kaynaklar", "Kaynak ekle ve kayıtlı bağlantılarını buradan yönet.")
