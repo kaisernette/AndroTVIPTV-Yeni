@@ -38,6 +38,8 @@ class PlayerActivity : Activity() {
     private var retryCount = 0
     private var bufferingSinceMs = 0L
     private var lastStablePlaybackMs = 0L
+    private var lastObservedPositionMs = -1L
+    private var positionStalledSinceMs = 0L
     private val playbackHandler = Handler(Looper.getMainLooper())
     private val playbackWatchdog = object : Runnable {
         override fun run() {
@@ -51,6 +53,16 @@ class PlayerActivity : Activity() {
                     }
                 } else if (exo.playbackState == Player.STATE_READY) {
                     bufferingSinceMs = 0L
+                    val position = exo.currentPosition
+                    if (lastObservedPositionMs >= 0L && position <= lastObservedPositionMs) {
+                        if (positionStalledSinceMs == 0L) positionStalledSinceMs = now
+                        if (now - positionStalledSinceMs >= 12000L) {
+                            restartCurrentStream("Oynatma konumu 12 saniyedir ilerlemiyor.")
+                        }
+                    } else {
+                        positionStalledSinceMs = 0L
+                    }
+                    lastObservedPositionMs = position
                     if (lastStablePlaybackMs == 0L) lastStablePlaybackMs = now
                     if (now - lastStablePlaybackMs >= 60000L) {
                         retryCount = 0
@@ -58,7 +70,12 @@ class PlayerActivity : Activity() {
                     }
                 } else {
                     bufferingSinceMs = 0L
+                    positionStalledSinceMs = 0L
+                    lastObservedPositionMs = -1L
                 }
+            } else {
+                positionStalledSinceMs = 0L
+                lastObservedPositionMs = -1L
             }
             playbackHandler.postDelayed(this, 5000L)
         }
@@ -267,6 +284,8 @@ class PlayerActivity : Activity() {
         }
         retryCount++
         bufferingSinceMs = android.os.SystemClock.elapsedRealtime()
+        positionStalledSinceMs = 0L
+        lastObservedPositionMs = -1L
         android.util.Log.w("KaiserTVPlayer", "$reason Yeniden bağlanma denemesi $retryCount/3")
         android.widget.Toast.makeText(this, "Yayın yeniden bağlanıyor… ($retryCount/3)", android.widget.Toast.LENGTH_SHORT).show()
         playbackHandler.postDelayed({
