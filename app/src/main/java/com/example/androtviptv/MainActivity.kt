@@ -187,23 +187,82 @@ class MainActivity : Activity() {
         window.statusBarColor = bg
         window.navigationBarColor = bg
         val root = object : LinearLayout(this) {
+            private fun centerOnScreen(view: View): Pair<Float, Float> {
+                val location = IntArray(2)
+                view.getLocationOnScreen(location)
+                return Pair(location[0] + view.width / 2f, location[1] + view.height / 2f)
+            }
+
+            private fun isAhead(from: View, to: View, direction: Int): Boolean {
+                val (fx, fy) = centerOnScreen(from)
+                val (tx, ty) = centerOnScreen(to)
+                return when (direction) {
+                    View.FOCUS_LEFT -> tx < fx - 1f
+                    View.FOCUS_RIGHT -> tx > fx + 1f
+                    View.FOCUS_UP -> ty < fy - 1f
+                    View.FOCUS_DOWN -> ty > fy + 1f
+                    else -> false
+                }
+            }
+
+            private fun directionalFallback(focused: View, direction: Int, sidebarOnly: Boolean?): View? {
+                val (fx, fy) = centerOnScreen(focused)
+                val candidates = ArrayList<View>()
+                fun collect(parent: ViewGroup) {
+                    for (i in 0 until parent.childCount) {
+                        val child = parent.getChildAt(i)
+                        if (child.isShown && child.isEnabled && child.isFocusable &&
+                            child.width > 0 && child.height > 0 && child !== focused) {
+                            val inSidebar = ::sidebar.isInitialized && isDescendantView(sidebar, child)
+                            if (sidebarOnly == null || inSidebar == sidebarOnly) candidates.add(child)
+                        }
+                        if (child is ViewGroup) collect(child)
+                    }
+                }
+                collect(this)
+                return candidates.mapNotNull { candidate ->
+                    val (x, y) = centerOnScreen(candidate)
+                    val primary = when (direction) {
+                        View.FOCUS_LEFT -> fx - x
+                        View.FOCUS_RIGHT -> x - fx
+                        View.FOCUS_UP -> fy - y
+                        View.FOCUS_DOWN -> y - fy
+                        else -> -1f
+                    }
+                    if (primary <= 1f) null else {
+                        val secondary = if (direction == View.FOCUS_LEFT || direction == View.FOCUS_RIGHT) {
+                            kotlin.math.abs(y - fy)
+                        } else kotlin.math.abs(x - fx)
+                        candidate to (primary + secondary * 2.2f)
+                    }
+                }.minByOrNull { it.second }?.first
+            }
+
             override fun focusSearch(focused: View, direction: Int): View? {
+                val focusIsInSidebar = ::sidebar.isInitialized && isDescendantView(sidebar, focused)
+                val focusIsInContent = ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)
                 val candidate = super.focusSearch(focused, direction)
-                if (candidate == null || !::sidebar.isInitialized || !::mainContentScroll.isInitialized) {
-                    return candidate
+                val crossingAllowed = (focusIsInSidebar && direction == View.FOCUS_RIGHT) ||
+                    (focusIsInContent && direction == View.FOCUS_LEFT)
+                val candidateIsInSidebar = candidate != null && ::sidebar.isInitialized &&
+                    isDescendantView(sidebar, candidate)
+                val crossesBoundary = (focusIsInSidebar && candidate != null && !candidateIsInSidebar) ||
+                    (focusIsInContent && candidateIsInSidebar)
+                if (crossesBoundary && !crossingAllowed) {
+                    // Keep navigation in its current area unless the user presses the
+                    // direction that explicitly crosses between sidebar and content.
+                    return directionalFallback(focused, direction, focusIsInSidebar) ?: focused
                 }
-                val focusIsInSidebar = isDescendantView(sidebar, focused)
-                val candidateIsInSidebar = isDescendantView(sidebar, candidate)
-                val focusIsInContent = isDescendantView(mainContentScroll, focused)
-                // Leave the sidebar only with DPAD_RIGHT.
-                if (focusIsInSidebar && !candidateIsInSidebar && direction != View.FOCUS_RIGHT) {
-                    return focused
+                if (candidate != null && candidate.isShown && candidate.isFocusable &&
+                    isAhead(focused, candidate, direction) &&
+                    (!crossesBoundary || crossingAllowed)) return candidate
+
+                val sidebarOnly = when {
+                    focusIsInSidebar && direction != View.FOCUS_RIGHT -> true
+                    focusIsInContent && direction != View.FOCUS_LEFT -> false
+                    else -> null
                 }
-                // Enter the sidebar from content only with DPAD_LEFT.
-                if (focusIsInContent && candidateIsInSidebar && direction != View.FOCUS_LEFT) {
-                    return focused
-                }
-                return candidate
+                return directionalFallback(focused, direction, sidebarOnly) ?: candidate ?: focused
             }
         }.apply {
             orientation = LinearLayout.HORIZONTAL
