@@ -1185,10 +1185,13 @@ class MainActivity : Activity() {
                 textSize = 13f; setTextColor(muted)
                 setPadding(0, dp(4), 0, dp(3))
             })
+            sourceName.id = View.generateViewId()
+            sourceName.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
             inlineForm.addView(sourceName, LinearLayout.LayoutParams(-1, dp(48)).apply {
                 setMargins(0, 0, 0, dp(6))
             })
             sourceMode = RadioGroup(this).apply {
+                id = View.generateViewId()
                 orientation = RadioGroup.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
@@ -1201,13 +1204,27 @@ class MainActivity : Activity() {
                 id = View.generateViewId(); text = "Xtream Codes"
                 setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent)
             }
+            inlineM3u.id = View.generateViewId()
+            inlineXtream.id = View.generateViewId()
             sourceMode.addView(inlineM3u)
             sourceMode.addView(inlineXtream)
             inlineForm.addView(sourceMode, LinearLayout.LayoutParams(-1, dp(42)))
-            playlistUrl = edit("URL adresini girin", false)
-            server = edit("Sunucu adresi (https://...)", false)
-            username = edit("Kullanıcı adı", false)
-            password = edit("Şifre", true)
+            playlistUrl = edit("URL adresini girin", false).apply {
+                id = View.generateViewId()
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
+            }
+            server = edit("Sunucu adresi (https://...)", false).apply {
+                id = View.generateViewId()
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
+            }
+            username = edit("Kullanıcı adı", false).apply {
+                id = View.generateViewId()
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
+            }
+            password = edit("Şifre", true).apply {
+                id = View.generateViewId()
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+            }
             inlineForm.addView(TextView(this).apply {
                 text = "M3U / M3U8 oynatma listesi URL'si"
                 textSize = 13f; setTextColor(muted)
@@ -1237,6 +1254,39 @@ class MainActivity : Activity() {
             }
             sourceMode.setOnCheckedChangeListener { _, _ -> updateInlineFields() }
             updateInlineFields()
+
+            // Keep keyboard Enter and TV-remote Down navigation in the same visual order.
+            fun focusNextOnDown(view: View, next: () -> View) {
+                view.setOnKeyListener { _, keyCode, event ->
+                    if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN &&
+                        event.action == android.view.KeyEvent.ACTION_DOWN) {
+                        next().requestFocus()
+                        true
+                    } else false
+                }
+            }
+            sourceName.setOnEditorActionListener { _, actionId, event ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT ||
+                    (event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER &&
+                     event.action == android.view.KeyEvent.ACTION_DOWN)) {
+                    (if (sourceMode.checkedRadioButtonId == inlineXtream.id) inlineXtream else inlineM3u).requestFocus()
+                    true
+                } else false
+            }
+            focusNextOnDown(sourceName) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) inlineXtream else inlineM3u }
+            focusNextOnDown(inlineM3u) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) server else playlistUrl }
+            focusNextOnDown(inlineXtream) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) server else playlistUrl }
+            playlistUrl.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) { playlistUrl.clearFocus(); playlistUrl.requestFocus(); true } else false
+            }
+            server.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) { username.requestFocus(); true } else false
+            }
+            username.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) { password.requestFocus(); true } else false
+            }
+            focusNextOnDown(server) { username }
+            focusNextOnDown(username) { password }
             inlineForm.addView(makeButton("＋ KAYNAK EKLE", true) {
                 val useXtream = sourceMode.checkedRadioButtonId == inlineXtream.id
                 if (useXtream) {
