@@ -155,9 +155,47 @@ class PlayerActivity : Activity() {
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
-        val view = PlayerView(this).apply { useController = true; setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING); isFocusable = true; isFocusableInTouchMode = true }
+        val view = PlayerView(this).apply {
+            useController = true
+            setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+            setFastForwardIncrementMs(120_000)
+            setRewindIncrementMs(120_000)
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }
         playerView = view
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        // Make the focused playback control clearly visible when using an Android TV remote.
+        view.setControllerOnClickListener { clicked ->
+            clicked.requestFocus()
+        }
+        view.post {
+            val controlIds = intArrayOf(
+                androidx.media3.ui.R.id.exo_play,
+                androidx.media3.ui.R.id.exo_pause,
+                androidx.media3.ui.R.id.exo_ffwd,
+                androidx.media3.ui.R.id.exo_rew,
+                androidx.media3.ui.R.id.exo_prev,
+                androidx.media3.ui.R.id.exo_next,
+                androidx.media3.ui.R.id.exo_repeat_toggle,
+                androidx.media3.ui.R.id.exo_settings,
+                androidx.media3.ui.R.id.exo_subtitle
+            )
+            controlIds.forEach { controlId ->
+                val control = view.findViewById<View>(controlId) ?: return@forEach
+                control.isFocusable = true
+                control.isFocusableInTouchMode = true
+                control.setOnFocusChangeListener { focusedView, hasFocus ->
+                    focusedView.background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dp(8).toFloat()
+                        setColor(if (hasFocus) 0x3329B6F6 else Color.TRANSPARENT)
+                        if (hasFocus) setStroke(dp(2), 0xFF29B6F6.toInt())
+                    }
+                    focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
+                }
+            }
+        }
         setContentView(root)
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
