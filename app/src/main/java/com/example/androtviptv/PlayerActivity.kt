@@ -158,8 +158,6 @@ class PlayerActivity : Activity() {
         val view = PlayerView(this).apply {
             useController = true
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-            setFastForwardIncrementMs(120_000)
-            setRewindIncrementMs(120_000)
             isFocusable = true
             isFocusableInTouchMode = true
         }
@@ -217,6 +215,8 @@ class PlayerActivity : Activity() {
                 .setLoadControl(loadControl)
                 .build().also { exo ->
                     view.player = exo
+                    exo.setSeekForwardIncrementMs(120_000L)
+                    exo.setSeekBackIncrementMs(120_000L)
                     exo.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
