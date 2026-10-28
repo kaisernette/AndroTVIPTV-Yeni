@@ -100,7 +100,8 @@ class PlayerActivity : Activity() {
         pendingRecentChannelNames = emptyList()
         pendingRecentChannelUrls = emptyList()
         pendingChannelIndex = 0
-        currentStreamUrl = url.trim()\n        resumeKey = "position_" + url.hashCode().toString()
+        currentStreamUrl = url.trim()
+        resumeKey = "position_" + url.hashCode().toString()
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
