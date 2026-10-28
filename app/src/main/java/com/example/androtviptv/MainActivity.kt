@@ -323,8 +323,8 @@ class MainActivity : Activity() {
             render()
         }
 
-        // Ana gezinme menüsü her ekranda sabit kalır; bağlama özel öğeler altına eklenir.
-        if (sidebarMode in listOf("main", "context", "settings", "search")) {
+        // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
+        if (sidebarMode in listOf("main", "settings", "search")) {
             listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♡  Favoriler", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
@@ -384,6 +384,27 @@ class MainActivity : Activity() {
                 }
             }
             if (sidebarMode == "main") return
+        }
+
+        if (sidebarMode == "context") {
+            addSidebarButton("⌂  Ana Sayfa") { returnToMainMenu() }
+            val sectionGroups = items.filter { it.type == selectedType }
+                .map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+            addSidebarButton("Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
+                selectedGroup = "Tüm kategoriler"
+                expandedCategory = null
+                rebuildNavigation()
+                render()
+            }
+            sectionGroups.forEach { group ->
+                addSidebarButton(group, selectedGroup == group) {
+                    selectedGroup = group
+                    expandedCategory = null
+                    rebuildNavigation()
+                    render()
+                }
+            }
+            return
         }
 
         if (sidebarMode == "search") {
