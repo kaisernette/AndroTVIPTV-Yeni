@@ -38,6 +38,9 @@ class PlayerActivity : Activity() {
     private var player: ExoPlayer? = null
     private var resumeKey: String = ""
     private var currentStreamUrl: String = ""
+    private var originalStreamUrl: String = ""
+    private var triedHlsFallback: Boolean = false
+    private var usingHlsFallback: Boolean = false
     private var isLiveStream: Boolean = false
     private var retryCount = 0
     private var bufferingSinceMs = 0L
@@ -132,6 +135,9 @@ class PlayerActivity : Activity() {
         pendingRecentChannelUrls = emptyList()
         pendingChannelIndex = 0
         currentStreamUrl = url.trim()
+        originalStreamUrl = currentStreamUrl
+        triedHlsFallback = false
+        usingHlsFallback = false
         isLiveStream = intent.getBooleanExtra("isLive", false)
         resumeKey = "position_" + url.hashCode().toString()
         if (isLiveStream) playbackPrefs.edit().remove(resumeKey).apply()
@@ -169,8 +175,18 @@ class PlayerActivity : Activity() {
                     exo.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
-                                android.util.Log.w("KaiserTVPlayer", "Live stream ended unexpectedly; reconnecting")
-                                restartCurrentStream("Canlı yayın sona erdi gibi görünüyor.")
+                                val cleanUrl = currentStreamUrl.substringBefore("?").lowercase()
+                                if (!triedHlsFallback && cleanUrl.endsWith(".ts")) {
+                                    triedHlsFallback = true
+                                    usingHlsFallback = true
+                                    currentStreamUrl = currentStreamUrl.dropLast(3) + "m3u8"
+                                    retryCount = 0
+                                    android.util.Log.w("KaiserTVPlayer", "Live TS stream ended; trying HLS URL")
+                                    restartCurrentStream("Canlı yayın için alternatif akış deneniyor.")
+                                } else {
+                                    android.util.Log.w("KaiserTVPlayer", "Live stream ended unexpectedly; reconnecting")
+                                    restartCurrentStream("Canlı yayın sona erdi gibi görünüyor.")
+                                }
                                 return
                             }
                             if (playbackState == Player.STATE_BUFFERING) {
@@ -182,6 +198,12 @@ class PlayerActivity : Activity() {
                         }
                         override fun onPlayerError(error: PlaybackException) {
                             android.util.Log.e("KaiserTVPlayer", "Playback error: ${error.errorCodeName}", error)
+                            if (isLiveStream && usingHlsFallback) {
+                                usingHlsFallback = false
+                                currentStreamUrl = originalStreamUrl
+                                retryCount = 0
+                                android.util.Log.w("KaiserTVPlayer", "HLS fallback failed; returning to original stream")
+                            }
                             restartCurrentStream("Akış hatası: ${error.errorCodeName}")
                         }
                     })
@@ -335,6 +357,9 @@ class PlayerActivity : Activity() {
         val url = channelUrls[index]
         selectedChannelIndex = index
         currentStreamUrl = url
+        originalStreamUrl = url
+        triedHlsFallback = false
+        usingHlsFallback = false
         retryCount = 0
         bufferingSinceMs = 0L
         lastStablePlaybackMs = 0L
