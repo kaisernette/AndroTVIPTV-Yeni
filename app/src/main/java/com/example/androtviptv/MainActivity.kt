@@ -47,6 +47,8 @@ class MainActivity : Activity() {
     private val recent = mutableListOf<MediaItem>()
     private var selectedGroup = "Tüm kategoriler"
     private var selectedCategorySection = "Canlı TV"
+    // Render live channels in small batches to avoid first-open freezes on Android TV.
+    private var liveChannelsLimit = 72
     private var expandedCategory: Pair<String, List<MediaItem>>? = null
     private lateinit var categoryBar: LinearLayout
     private lateinit var categoryScroll: HorizontalScrollView
@@ -1507,7 +1509,7 @@ class MainActivity : Activity() {
         }
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
         categoryBar.removeAllViews()
-        groupsAvailable.take(100).forEach { group ->
+        groupsAvailable.take(40).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
                 render()
@@ -1530,6 +1532,7 @@ class MainActivity : Activity() {
                 setPadding(dp(8), dp(10), dp(8), dp(12))
             })
             val tvChannels = visible.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+            val displayedTvChannels = tvChannels.take(liveChannelsLimit)
             if (tvChannels.isEmpty()) {
                 content.addView(TextView(this).apply {
                     text = "Bu kategoride kanal bulunamadı."
@@ -1537,7 +1540,7 @@ class MainActivity : Activity() {
                 })
             } else {
                 var channelRow: LinearLayout? = null
-                tvChannels.forEachIndexed { index, channel ->
+                displayedTvChannels.forEachIndexed { index, channel ->
                     if (index % 6 == 0) {
                         channelRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
@@ -1591,6 +1594,14 @@ class MainActivity : Activity() {
                     }, LinearLayout.LayoutParams(-1, dp(36)))
                     channelRow?.addView(tile, LinearLayout.LayoutParams(0, dp(126), 1f).apply {
                         setMargins(dp(4), dp(4), dp(4), dp(6))
+                    })
+                }
+                if (displayedTvChannels.size < tvChannels.size) {
+                    content.addView(makeButton("Daha fazla kanal göster  (${displayedTvChannels.size}/${tvChannels.size})", false) {
+                        liveChannelsLimit = (liveChannelsLimit + 72).coerceAtMost(tvChannels.size)
+                        render()
+                    }, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                        setMargins(dp(8), dp(10), dp(8), dp(18))
                     })
                 }
             }
