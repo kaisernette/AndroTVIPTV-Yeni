@@ -851,11 +851,6 @@ class MainActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
-        if (selectedType == "Canlı TV" && sidebarMode == "context" &&
-            (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
-             keyCode == android.view.KeyEvent.KEYCODE_ENTER)) {
-            previewChannel?.let { play(it); return true }
-        }
         if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
             handleSafeBack()
             return true
@@ -1248,10 +1243,6 @@ class MainActivity : Activity() {
         if (detailMovie != null) {
             stopChannelPreview()
             renderMovieDetail(detailMovie!!)
-            return
-        }
-        if (selectedType == "Canlı TV" && sidebarMode == "context") {
-            renderChannelPreviewScreen()
             return
         }
         if (sidebarMode == "search") {
