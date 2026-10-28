@@ -1334,6 +1334,83 @@ class MainActivity : Activity() {
         }
         val visible = if (selectedGroup == "Tüm kategoriler" || sidebarMode == "search") baseVisible
             else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
+
+        // Live TV category content: compact logo/name grid; OK opens the channel fullscreen.
+        if (selectedType == "Canlı TV" && sidebarMode == "context") {
+            content.removeAllViews()
+            content.addView(TextView(this).apply {
+                text = if (selectedGroup == "Tüm kategoriler") "Tüm Kanallar" else selectedGroup
+                textSize = 21f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                setPadding(dp(8), dp(10), dp(8), dp(12))
+            })
+            val tvChannels = visible.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+            if (tvChannels.isEmpty()) {
+                content.addView(TextView(this).apply {
+                    text = "Bu kategoride kanal bulunamadı."
+                    textSize = 15f; setTextColor(muted); setPadding(dp(8), dp(12), dp(8), dp(12))
+                })
+            } else {
+                var channelRow: LinearLayout? = null
+                tvChannels.forEachIndexed { index, channel ->
+                    if (index % 4 == 0) {
+                        channelRow = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.TOP
+                        }
+                        content.addView(channelRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    }
+                    val tile = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                        setPadding(dp(8), dp(8), dp(8), dp(8))
+                        background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
+                        setOnFocusChangeListener { v, hasFocus ->
+                            v.background = roundedDrawable(
+                                if (hasFocus) Color.rgb(27, 43, 62) else panel,
+                                12,
+                                if (hasFocus) Color.rgb(0, 174, 255) else Color.rgb(43, 51, 68)
+                            )
+                            v.scaleX = if (hasFocus) 1.035f else 1f
+                            v.scaleY = if (hasFocus) 1.035f else 1f
+                        }
+                        setOnClickListener { play(channel) }
+                        contentDescription = channel.name
+                    }
+                    val logo = ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        contentDescription = channel.name
+                        setPadding(dp(6), dp(6), dp(6), dp(6))
+                    }
+                    tile.addView(logo, LinearLayout.LayoutParams(-1, dp(72)))
+                    if (channel.icon.startsWith("http://") || channel.icon.startsWith("https://")) {
+                        loadPoster(channel.icon, logo)
+                    } else {
+                        logo.setImageDrawable(GradientDrawable().apply {
+                            cornerRadius = dp(8).toFloat()
+                            setColor(Color.rgb(31, 39, 54))
+                        })
+                    }
+                    tile.addView(TextView(this).apply {
+                        text = channel.name
+                        textSize = 12f
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                        maxLines = 2
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        setPadding(0, dp(5), 0, 0)
+                    }, LinearLayout.LayoutParams(-1, dp(38)))
+                    channelRow?.addView(tile, LinearLayout.LayoutParams(0, dp(132), 1f).apply {
+                        setMargins(dp(4), dp(4), dp(4), dp(6))
+                    })
+                }
+            }
+            return
+        }
         if (visible.isEmpty()) {
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
@@ -1505,8 +1582,8 @@ class MainActivity : Activity() {
                     background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = roundedDrawable(if (hasFocus) Color.rgb(31, 39, 54) else panel, 15,
-                            if (hasFocus) accent else Color.rgb(38, 45, 60))
+                        v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 43, 62) else panel, 15,
+                            if (hasFocus) Color.rgb(0, 174, 255) else Color.rgb(38, 45, 60))
                         v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
                     }
                     setOnClickListener {
