@@ -2541,6 +2541,25 @@ class MainActivity : Activity() {
                         setPadding(dp(12), dp(6), dp(8), dp(6))
                         background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
                     }
+                    // Show the actual poster/logo on the right-side history screen.
+                    val historyPoster = ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        contentDescription = item.name
+                        background = roundedDrawable(Color.rgb(28, 34, 45), 8, Color.rgb(48, 57, 73))
+                    }
+                    val posterUrl = item.icon
+                    if (posterUrl.startsWith("http://") || posterUrl.startsWith("https://")) {
+                        loadPoster(posterUrl, historyPoster)
+                    } else {
+                        historyPoster.setImageDrawable(GradientDrawable().apply {
+                            cornerRadius = dp(8).toFloat()
+                            setColor(Color.rgb(28, 34, 45))
+                        })
+                    }
+                    historyRow.addView(historyPoster, LinearLayout.LayoutParams(
+                        dp(if (historyType == "Canlı TV") 64 else 76),
+                        dp(if (historyType == "Canlı TV") 58 else 104)
+                    ).apply { setMargins(0, 0, dp(10), 0) })
                     val itemInfo = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER_VERTICAL
