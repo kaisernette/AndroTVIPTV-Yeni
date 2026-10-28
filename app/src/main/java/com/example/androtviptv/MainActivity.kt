@@ -2493,7 +2493,7 @@ class MainActivity : Activity() {
                         settingsPage = "themes"; render()
                     }
                 }
-                option("◧  Menü transparanlığı: ${if (transparentMenu) "Açık" else "Kapalı"}",
+                option("◧  Şeffaf menü: ${if (transparentMenu) "Açık" else "Kapalı"}",
                     if (transparentMenu) "Sol menü arka planı saydam; kapatmak için seç." else "Sol menü ayrı bir panel olarak görünür; saydam yapmak için seç.") {
                     transparentMenu = !transparentMenu
                     prefs.edit().putBoolean("transparent_menu", transparentMenu).apply()
