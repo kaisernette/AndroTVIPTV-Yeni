@@ -1842,7 +1842,8 @@ class MainActivity : Activity() {
                     clipToPadding = false
                     isFillViewport = true
                     setPadding(dp(18), 0, dp(30), 0)
-                    row.gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
+                    // Keep poster rows anchored to the left, even when there is only one item.
+                    row.gravity = Gravity.START or Gravity.CENTER_VERTICAL
                     addView(row)
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
