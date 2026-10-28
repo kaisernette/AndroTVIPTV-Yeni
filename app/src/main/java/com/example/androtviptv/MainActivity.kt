@@ -424,15 +424,17 @@ class MainActivity : Activity() {
                     else -> normalizedTab
                 }
                 if (normalizedTab == "Geçmiş") {
-                    addSidebarButton(tab, selectedType == "Ayarlar" && settingsPage == "history") {
+                    addSidebarButton(tab, selectedType == "Son İzlenenler") {
                         detailSeries = null
                         detailMovie = null
-                        settingsPage = "history"
-                        prefs.edit().putString("last_settings_page", settingsPage).apply()
-                        selectedType = "Ayarlar"
-                        prefs.edit().putString("last_section", "Ayarlar").apply()
+                        seriesEpisodeRows = emptyList()
+                        seriesEpisodesLoading = false
+                        seriesEpisodesError = ""
+                        selectedType = "Son İzlenenler"
+                        prefs.edit().putString("last_section", "Son İzlenenler").apply()
                         selectedGroup = "Tüm kategoriler"
-                        sidebarMode = "settings"
+                        expandedCategory = null
+                        sidebarMode = "main"
                         rebuildNavigation()
                         render()
                     }
@@ -498,12 +500,6 @@ class MainActivity : Activity() {
             addSidebarButton("⌂  Ana Sayfa") { returnToMainMenu() }
             val sectionGroups = items.filter { it.type == selectedType }
                 .map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
-            addSidebarButton("Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
-                selectedGroup = "Tüm kategoriler"
-                expandedCategory = null
-                rebuildNavigation()
-                render()
-            }
             sectionGroups.forEach { group ->
                 addSidebarButton(group, selectedGroup == group) {
                     selectedGroup = group
