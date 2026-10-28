@@ -609,6 +609,13 @@ class MainActivity : Activity() {
             selectedGroup = "Tüm kategoriler"
             sidebarMode = "main"
             render()
+
+            // If the on-device media cache is missing or invalid, automatically
+            // restore the last saved source instead of requiring a manual refresh.
+            if (items.isEmpty() && last != null && !isLoadingSource) {
+                status.text = "${last.name}: kayıtlı kaynak otomatik yükleniyor…"
+                if (last.mode == "xtream") loadXtream(last, true) else loadM3u(last, true)
+            }
         }
     }
     private fun showSourcesDialog() {
