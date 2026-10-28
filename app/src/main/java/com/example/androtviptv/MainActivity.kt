@@ -1276,9 +1276,7 @@ class MainActivity : Activity() {
             focusNextOnDown(sourceName) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) inlineXtream else inlineM3u }
             focusNextOnDown(inlineM3u) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) server else playlistUrl }
             focusNextOnDown(inlineXtream) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) server else playlistUrl }
-            playlistUrl.setOnEditorActionListener { _, actionId, _ ->
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) { playlistUrl.clearFocus(); playlistUrl.requestFocus(); true } else false
-            }
+            focusNextOnDown(playlistUrl) { playlistUrl.focusSearch(View.FOCUS_DOWN) ?: playlistUrl }
             server.setOnEditorActionListener { _, actionId, _ ->
                 if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) { username.requestFocus(); true } else false
             }
