@@ -18,9 +18,12 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 
 class PlayerActivity : Activity() {
@@ -93,6 +96,15 @@ class PlayerActivity : Activity() {
     private var savedChannelUrls: List<String> = emptyList()
     private val playbackPrefs by lazy { getSharedPreferences("androtv_playback", Context.MODE_PRIVATE) }
 
+    private fun createStreamMediaItem(url: String): MediaItem {
+        val cleanUrl = url.substringBefore("?").lowercase()
+        val builder = MediaItem.Builder().setUri(url)
+        if (cleanUrl.endsWith(".m3u8") || cleanUrl.endsWith(".m3u8/")) {
+            builder.setMimeType(MimeTypes.APPLICATION_M3U8)
+        }
+        return builder.build()
+    }
+
     private fun savePlaybackPosition() {
         val exo = player ?: return
         val pos = exo.currentPosition.coerceAtLeast(0L)
@@ -132,13 +144,21 @@ class PlayerActivity : Activity() {
             return
         }
         try {
-            val mediaItem = MediaItem.fromUri(currentStreamUrl)
+            val httpFactory = DefaultHttpDataSource.Factory()
+                .setUserAgent("KaiserTv+/3.0 (Android TV)")
+                .setConnectTimeoutMs(15000)
+                .setReadTimeoutMs(30000)
+                .setAllowCrossProtocolRedirects(true)
+            val mediaSourceFactory = DefaultMediaSourceFactory(this)
+                .setDataSourceFactory(httpFactory)
+            val mediaItem = createStreamMediaItem(currentStreamUrl)
             val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
                 .setEnableDecoderFallback(true)
             val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
                 .setBufferDurationsMs(30000, 90000, 2500, 7000)
                 .build()
             player = ExoPlayer.Builder(this, renderersFactory)
+                .setMediaSourceFactory(mediaSourceFactory)
                 .setLoadControl(loadControl)
                 .build().also { exo ->
                     view.player = exo
@@ -291,7 +311,7 @@ class PlayerActivity : Activity() {
         playbackHandler.postDelayed({
             if (!isFinishing && player === exo) {
                 try {
-                    exo.setMediaItem(MediaItem.fromUri(currentStreamUrl))
+                    exo.setMediaItem(createStreamMediaItem(currentStreamUrl))
                     exo.prepare()
                     exo.playWhenReady = true
                 } catch (e: Exception) {
@@ -310,7 +330,7 @@ class PlayerActivity : Activity() {
         bufferingSinceMs = 0L
         lastStablePlaybackMs = 0L
         resumeKey = "position_" + url.hashCode().toString()
-        player?.let { exo -> exo.setMediaItem(MediaItem.fromUri(url)); exo.prepare(); exo.playWhenReady = true }
+        player?.let { exo -> exo.setMediaItem(createStreamMediaItem(url)); exo.prepare(); exo.playWhenReady = true }
         refreshChannelHighlight()
         hideChannelOverlay()
     }
