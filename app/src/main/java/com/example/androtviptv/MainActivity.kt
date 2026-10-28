@@ -2451,12 +2451,72 @@ class MainActivity : Activity() {
                     textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(accentBright); setPadding(dp(8), dp(12), dp(8), dp(6))
                 })
+                // Bu türün tüm izleme geçmişini tek seferde temizle.
+                content.addView(makeButton("Hepsini sil", false) {
+                    if (entries.isNotEmpty()) {
+                        android.app.AlertDialog.Builder(this)
+                            .setTitle("İzleme geçmişini temizle")
+                            .setMessage(when (historyType) {
+                                "Canlı TV" -> "İzlenen tüm TV kanalları geçmişten silinsin mi?"
+                                "Filmler" -> "İzlenen tüm filmler geçmişten silinsin mi?"
+                                else -> "İzlenen tüm diziler geçmişten silinsin mi?"
+                            })
+                            .setNegativeButton("İptal", null)
+                            .setPositiveButton("Sil") { _, _ ->
+                                recent.removeAll { it.type == historyType }
+                                persistRecentHistory()
+                                render()
+                            }.show()
+                    }
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply {
+                    setMargins(dp(8), 0, 0, dp(8))
+                })
                 if (entries.isEmpty()) content.addView(TextView(this).apply {
                     text = "Bu türde henüz izleme geçmişi yok."; textSize = 14f; setTextColor(muted)
                     setPadding(dp(8), dp(5), dp(8), dp(12))
                 })
                 entries.forEach { item ->
-                    option(item.name, item.group.ifBlank { item.type }) {
+                    val historyRow = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(12), dp(6), dp(8), dp(6))
+                        background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
+                    }
+                    val itemInfo = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(6), dp(4), dp(8), dp(4))
+                    }
+                    itemInfo.addView(TextView(this).apply {
+                        text = item.name
+                        textSize = 16f
+                        maxLines = 2
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE)
+                    })
+                    itemInfo.addView(TextView(this).apply {
+                        text = item.group.ifBlank { item.type }
+                        textSize = 13f
+                        maxLines = 1
+                        setTextColor(muted)
+                    })
+                    historyRow.addView(itemInfo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    historyRow.addView(makeButton("Sil", false) {
+                        android.app.AlertDialog.Builder(this)
+                            .setTitle("Geçmiş kaydını sil")
+                            .setMessage("${item.name} izleme geçmişinden silinsin mi?")
+                            .setNegativeButton("İptal", null)
+                            .setPositiveButton("Sil") { _, _ ->
+                                recent.removeAll { it.favoriteKey == item.favoriteKey }
+                                persistRecentHistory()
+                                render()
+                            }.show()
+                    }, LinearLayout.LayoutParams(dp(76), dp(40)))
+                    historyRow.isFocusable = true
+                    content.addView(historyRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(0, 0, 0, dp(8))
+                    })
+                    historyRow.setOnClickListener {
                         if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item)
                         else play(item)
                     }
@@ -2527,13 +2587,17 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
+    private fun persistRecentHistory() {
+        val arr = JSONArray()
+        recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId).put("sourceId", r.sourceId)) }
+        getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
+    }
+
     private fun saveRecent(item: MediaItem) {
         recent.removeAll { it.favoriteKey == item.favoriteKey }
         recent.add(0, item)
         while (recent.size > 20) recent.removeAt(recent.lastIndex)
-        val arr = JSONArray()
-        recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId).put("sourceId", r.sourceId)) }
-        getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
+        persistRecentHistory()
     }
 
     private var openingPlayer = false
