@@ -617,17 +617,12 @@ class MainActivity : Activity() {
             sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
             render()
 
-            // Reuse the on-device cache on normal launches. Only fetch the saved
-            // source automatically when no cached items are available, avoiding a
-            // full playlist reload every time the app is opened.
-            if (last != null && items.isEmpty() && !isLoadingSource) {
+            // Re-fetch the last saved source on each launch. A non-empty local
+            // cache can be partial or stale, and the UI may otherwise open blank.
+            if (last != null && !isLoadingSource) {
                 status.visibility = View.VISIBLE
-                status.text = "${last.name}: kayıtlı içerik bulunamadı, kaynak yükleniyor…"
+                status.text = "${last.name}: kayıtlı kaynak otomatik yükleniyor…"
                 if (last.mode == "xtream") loadXtream(last, true) else loadM3u(last, true)
-            } else if (items.isNotEmpty()) {
-                status.visibility = View.VISIBLE
-                status.text = "${items.size} kayıtlı içerik hazır."
-                render()
             }
         }
     }
