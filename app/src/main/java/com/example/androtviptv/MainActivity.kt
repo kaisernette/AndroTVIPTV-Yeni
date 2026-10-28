@@ -2230,7 +2230,7 @@ class MainActivity : Activity() {
                             setTextColor(Color.WHITE)
                         })
                         sourceInfo.addView(TextView(this).apply {
-                            text = "\${if (source.mode == "xtream") "Xtream Codes" else "M3U/M3U8"} • \${source.address}"
+                            text = "${if (source.mode == "xtream") "Xtream Codes" else "M3U/M3U8"} • ${source.address}"
                             textSize = 11f
                             maxLines = 1
                             ellipsize = android.text.TextUtils.TruncateAt.END
@@ -2251,7 +2251,7 @@ class MainActivity : Activity() {
                         sourceRow.addView(makeButton("Sil", false) {
                             AlertDialog.Builder(this)
                                 .setTitle("Kaynağı sil")
-                                .setMessage("\${source.name} kaynağı ve bu kaynağın içerikleri silinsin mi?")
+                                .setMessage("${source.name} kaynağı ve bu kaynağın içerikleri silinsin mi?")
                                 .setNegativeButton("İptal", null)
                                 .setPositiveButton("Sil") { _, _ ->
                                     savedSources.removeAll { it.id == source.id }
