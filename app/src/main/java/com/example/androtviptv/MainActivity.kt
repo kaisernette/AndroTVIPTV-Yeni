@@ -612,17 +612,30 @@ class MainActivity : Activity() {
         if (savedSources.isNotEmpty()) {
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
-            status.text = ""
-            // Preserve the user's last selected section when cached content is available.
-            sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
-            render()
 
-            // Re-fetch the last saved source on each launch. A non-empty local
-            // cache can be partial or stale, and the UI may otherwise open blank.
-            if (last != null && !isLoadingSource) {
+            // If cached items are present, show them immediately and do not cover
+            // the library with a loading screen on every launch. Refresh remains
+            // available from Sources > Refresh. Fetch automatically only if cache
+            // is empty, so first launch/recovery still works.
+            if (items.isNotEmpty()) {
+                val availableGroups = items.map { it.group.ifBlank { "Diğer" } }.toSet()
+                if (selectedGroup != "Tüm kategoriler" && selectedGroup !in availableGroups) {
+                    selectedGroup = "Tüm kategoriler"
+                    prefs.edit().putString("last_group", selectedGroup).apply()
+                }
+                isLoadingSource = false
                 status.visibility = View.VISIBLE
-                status.text = "${last.name}: kayıtlı kaynak otomatik yükleniyor…"
+                status.text = "${items.size} kayıtlı içerik hazır."
+                sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
+                render()
+            } else if (last != null && !isLoadingSource) {
+                sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
+                status.visibility = View.VISIBLE
+                status.text = "${last.name}: kayıtlı içerik bulunamadı, kaynak yükleniyor…"
+                render()
                 if (last.mode == "xtream") loadXtream(last, true) else loadM3u(last, true)
+            } else {
+                render()
             }
         }
     }
