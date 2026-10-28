@@ -365,9 +365,12 @@ class MainActivity : Activity() {
                         if (hasFocus) focusColor else if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT
                     )
                     (v as Button).setTextColor(Color.WHITE)
-                    v.elevation = if (hasFocus) dp(4).toFloat() else 0f
-                    v.scaleX = if (hasFocus) 1.015f else 1f
-                    v.scaleY = if (hasFocus) 1.015f else 1f
+                    // Disable focus scaling/shadow only on Home: some TV renderers leave
+                    // thin vertical trails when moving up/down through the sidebar.
+                    val homeNavigation = selectedType == "Tümü" && sidebarMode == "main"
+                    v.elevation = if (hasFocus && !homeNavigation) dp(4).toFloat() else 0f
+                    v.scaleX = if (hasFocus && !homeNavigation) 1.015f else 1f
+                    v.scaleY = if (hasFocus && !homeNavigation) 1.015f else 1f
                 }
                 textSize = 14f
                 val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
