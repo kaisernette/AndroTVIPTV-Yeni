@@ -109,6 +109,17 @@ class PlayerActivity : Activity() {
         return builder.build()
     }
 
+    private fun toHlsFallbackUrl(url: String): String? {
+        // Replace the stream extension in the URL path only; keep any auth/query token intact.
+        val suffixStart = listOf(url.indexOf('?'), url.indexOf('#'))
+            .filter { it >= 0 }
+            .minOrNull() ?: url.length
+        val path = url.substring(0, suffixStart)
+        val suffix = url.substring(suffixStart)
+        if (!path.endsWith(".ts", ignoreCase = true)) return null
+        return path.dropLast(3) + ".m3u8" + suffix
+    }
+
     private fun savePlaybackPosition() {
         if (isLiveStream) return
         val exo = player ?: return
@@ -179,7 +190,7 @@ class PlayerActivity : Activity() {
                                 if (!triedHlsFallback && cleanUrl.endsWith(".ts")) {
                                     triedHlsFallback = true
                                     usingHlsFallback = true
-                                    currentStreamUrl = currentStreamUrl.dropLast(3) + "m3u8"
+                                    currentStreamUrl = toHlsFallbackUrl(currentStreamUrl) ?: currentStreamUrl
                                     retryCount = 0
                                     android.util.Log.w("KaiserTVPlayer", "Live TS stream ended; trying HLS URL")
                                     restartCurrentStream("Canlı yayın için alternatif akış deneniyor.")
