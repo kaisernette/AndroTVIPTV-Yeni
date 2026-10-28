@@ -282,11 +282,17 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Çerçevesiz yazılı menü; yalnızca odak/seçim mavi vurgulanır.
-                background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                setTextColor(if (selected) accentBright else Color.WHITE)
+                // Seçili öğe mavi dolgu; odaklanan öğe mavi çerçeve.
+                background = roundedDrawable(if (selected) accentBright else Color.TRANSPARENT, 10,
+                    if (selected) accentBright else Color.TRANSPARENT)
+                setTextColor(if (selected) Color.rgb(8, 20, 32) else Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
-                    (v as Button).setTextColor(if (hasFocus || selected) accentBright else Color.WHITE)
+                    v.background = roundedDrawable(
+                        if (selected) accentBright else if (hasFocus) Color.rgb(24, 39, 56) else Color.TRANSPARENT,
+                        10,
+                        if (hasFocus || selected) Color.rgb(0, 174, 255) else Color.TRANSPARENT
+                    )
+                    (v as Button).setTextColor(if (selected) Color.rgb(8, 20, 32) else Color.WHITE)
                     v.scaleX = if (hasFocus) 1.025f else 1f
                     v.scaleY = if (hasFocus) 1.025f else 1f
                 }
@@ -387,6 +393,17 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "context") {
+            addSidebarButton("⌕  Ara") {
+                detailSeries = null
+                detailMovie = null
+                sidebarMode = "search"
+                searchInputFocusPending = true
+                searchQuery = ""
+                selectedType = "Tümü"
+                selectedGroup = "Tüm kategoriler"
+                rebuildNavigation()
+                render()
+            }
             addSidebarButton("⌂  Ana Sayfa") { returnToMainMenu() }
             val sectionGroups = items.filter { it.type == selectedType }
                 .map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
@@ -408,12 +425,11 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "search") {
-            navBar.addView(TextView(this).apply {
-                text = "⌕  ARA"
-                textSize = 15f; setTextColor(accentBright)
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setPadding(dp(10), dp(14), dp(6), dp(8))
-            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addSidebarButton("⌕  Ara", true) {
+                searchInputFocusPending = true
+                render()
+            }
+            addSidebarButton("⌂  Ana Sayfa") { returnToMainMenu() }
             return
         }
 
@@ -523,8 +539,8 @@ class MainActivity : Activity() {
             if (primary) accentBright else Color.rgb(44, 52, 68))
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
-            v.background = roundedDrawable(if (primary) accent else if (hasFocus) Color.rgb(39, 47, 63) else panel,
-                12, if (hasFocus) accentBright else if (primary) accentBright else Color.rgb(44, 52, 68))
+            v.background = roundedDrawable(if (primary) accent else if (hasFocus) Color.rgb(24, 39, 56) else panel,
+                12, if (hasFocus) Color.rgb(0, 174, 255) else if (primary) accentBright else Color.rgb(44, 52, 68))
             v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
         }
         setOnClickListener { action() }
