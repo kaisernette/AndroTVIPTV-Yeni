@@ -502,11 +502,11 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun showConnectionDialog() {
+    private fun showConnectionDialog(editSource: SavedSource? = null) {
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; setPadding(18, 8, 18, 4); setBackgroundColor(bg)
         }
-        sourceName = edit("Kaynak adı (ör. Ev Xtream)", false)
+        sourceName = edit("Kaynak adı (ör. Ev Xtream)", false).apply { setText(editSource?.name.orEmpty()) }
         form.addView(sourceName, fieldParams())
         sourceMode = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
         val m3u = RadioButton(this).apply {
@@ -516,9 +516,9 @@ class MainActivity : Activity() {
             id = View.generateViewId(); text = "Xtream Codes"; setTextColor(Color.WHITE)
         }
         sourceMode.addView(m3u); sourceMode.addView(xtream); form.addView(sourceMode)
-        playlistUrl = edit("M3U / M3U8 oynatma listesi URL'si", false)
-        server = edit("Sunucu adresi (https://...)", false)
-        username = edit("Kullanıcı adı", false); password = edit("Şifre", true)
+        playlistUrl = edit("M3U / M3U8 oynatma listesi URL'si", false).apply { setText(if (editSource?.mode == "m3u") editSource.address else "") }
+        server = edit("Sunucu adresi (https://...)", false).apply { setText(if (editSource?.mode == "xtream") editSource.address else "") }
+        username = edit("Kullanıcı adı", false).apply { setText(editSource?.username.orEmpty()) }; password = edit("Şifre", true).apply { setText(editSource?.password.orEmpty()) }
         form.addView(playlistUrl, fieldParams()); form.addView(server, fieldParams())
         val creds = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         creds.addView(username, LinearLayout.LayoutParams(0, 50, 1f).apply { setMargins(0, 3, 6, 3) })
@@ -531,9 +531,10 @@ class MainActivity : Activity() {
             creds.visibility = if (useXtream) View.VISIBLE else View.GONE
         }
         server.visibility = View.GONE; creds.visibility = View.GONE
-        val dialog = AlertDialog.Builder(this).setTitle("İzleme kaynağı ekle")
+        if (editSource?.mode == "xtream") sourceMode.check(xtream.id)
+        val dialog = AlertDialog.Builder(this).setTitle(if (editSource == null) "İzleme kaynağı ekle" else "Kaynağı düzenle")
             .setMessage("Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle.")
-            .setView(form).setNegativeButton("İptal", null).setPositiveButton("BAĞLAN", null).create()
+            .setView(form).setNegativeButton("İptal", null).setPositiveButton(if (editSource == null) "BAĞLAN" else "KAYDET", null).create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val useXtream = sourceMode.checkedRadioButtonId == xtream.id
@@ -544,8 +545,8 @@ class MainActivity : Activity() {
                         return@setOnClickListener
                     }
                     val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
-                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "xtream", server.text.toString().trim().trimEnd('/'), username.text.toString().trim(), password.text.toString())
-                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadXtream(src, false)
+                    val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "xtream", server.text.toString().trim().trimEnd('/'), username.text.toString().trim(), password.text.toString())
+                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadXtream(src, editSource != null)
                 } else {
                     val address = playlistUrl.text.toString().trim()
                     if (!address.startsWith("http://") && !address.startsWith("https://")) {
@@ -553,8 +554,8 @@ class MainActivity : Activity() {
                         return@setOnClickListener
                     }
                     val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
-                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "m3u", address)
-                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadM3u(src, false)
+                    val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "m3u", address)
+                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadM3u(src, editSource != null)
                 }
             }
         }
