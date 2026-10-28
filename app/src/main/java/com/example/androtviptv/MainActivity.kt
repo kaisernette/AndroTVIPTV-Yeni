@@ -75,10 +75,13 @@ class MainActivity : Activity() {
     // Focus styling is independent from the selectable app theme.
     private val focusColor = Color.rgb(137, 214, 255)
     private var muted = Color.rgb(190, 198, 210)
+    // Sidebar transparency is independent from the selected color theme.
+    private var transparentMenu = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installCrashLogger()
+        transparentMenu = prefs.getBoolean("transparent_menu", true)
         // Restore the selected theme before constructing any views.
         when (prefs.getString("theme_name", "Antrasit • Mavi")) {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
@@ -210,7 +213,7 @@ class MainActivity : Activity() {
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(8, 12, 8, 10)
-            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
         }
         root.addView(sidebar, LinearLayout.LayoutParams(dp(140), -1).apply { setMargins(0, 0, dp(8), 0) })
 
@@ -2485,10 +2488,18 @@ class MainActivity : Activity() {
                         panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
                         accent = theme.third; accentBright = theme.third
                         prefs.edit().putString("theme_name", theme.first).apply()
-                        rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(bg); mainContentScroll.setBackgroundColor(bg)
+                        rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel); mainContentScroll.setBackgroundColor(bg)
                         window.statusBarColor = bg; window.navigationBarColor = bg
                         settingsPage = "themes"; render()
                     }
+                }
+                option("◧  Menü transparanlığı: ${if (transparentMenu) "Açık" else "Kapalı"}",
+                    if (transparentMenu) "Sol menü arka planı saydam; kapatmak için seç." else "Sol menü ayrı bir panel olarak görünür; saydam yapmak için seç.") {
+                    transparentMenu = !transparentMenu
+                    prefs.edit().putBoolean("transparent_menu", transparentMenu).apply()
+                    sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
+                    settingsPage = "themes"
+                    render()
                 }
             }
             "history" -> {
