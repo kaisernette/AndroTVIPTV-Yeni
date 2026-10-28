@@ -165,10 +165,6 @@ class PlayerActivity : Activity() {
         }
         playerView = view
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        // Make the focused playback control clearly visible when using an Android TV remote.
-        view.setControllerOnClickListener { clicked ->
-            clicked.requestFocus()
-        }
         view.post {
             val controlIds = intArrayOf(
                 androidx.media3.ui.R.id.exo_play,
