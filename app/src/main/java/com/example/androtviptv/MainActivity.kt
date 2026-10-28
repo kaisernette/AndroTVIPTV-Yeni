@@ -167,10 +167,31 @@ class MainActivity : Activity() {
     private var loadProgress = 0
     private var hasLoadedSource = false
 
+    private fun isDescendantView(parent: ViewGroup, view: View): Boolean {
+        var current: View? = view
+        while (current != null) {
+            if (current === parent) return true
+            current = current.parent as? View
+        }
+        return false
+    }
+
     private fun buildUi() {
         window.statusBarColor = bg
         window.navigationBarColor = bg
-        val root = LinearLayout(this).apply {
+        val root = object : LinearLayout(this) {
+            override fun focusSearch(focused: View, direction: Int): View? {
+                val candidate = super.focusSearch(focused, direction)
+                // From the content pane, only DPAD_LEFT may transfer focus into the sidebar.
+                if (::mainContentScroll.isInitialized && ::sidebar.isInitialized &&
+                    isDescendantView(mainContentScroll, focused) &&
+                    direction != View.FOCUS_LEFT &&
+                    candidate != null && isDescendantView(sidebar, candidate)) {
+                    return focused
+                }
+                return candidate
+            }
+        }.apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(18, 14, 18, 12)
             setBackgroundColor(bg)
