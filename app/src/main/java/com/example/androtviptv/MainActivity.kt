@@ -733,9 +733,13 @@ class MainActivity : Activity() {
             // saved source (or the most recently saved source as a fallback) to
             // repair the cache, while a complete cache opens instantly.
             val sourceToRestore = last ?: savedSources.lastOrNull()
+            val cacheHasLiveChannels = items.any { it.type == "Canlı TV" && it.url.isNotBlank() }
             val cacheHasMovies = items.any { it.type == "Filmler" }
             val cacheHasSeries = items.any { it.type == "Diziler" }
-            val cacheNeedsRepair = sourceToRestore?.mode == "xtream" && (!cacheHasMovies || !cacheHasSeries)
+            // A cache missing any major Xtream section must not be treated as complete.
+            // In particular, otherwise TV can open into an empty "Tüm Kanallar" screen.
+            val cacheNeedsRepair = sourceToRestore?.mode == "xtream" &&
+                (!cacheHasLiveChannels || !cacheHasMovies || !cacheHasSeries)
             if (items.isNotEmpty() && !cacheNeedsRepair) {
                 val availableGroups = items.map { it.group.ifBlank { "Diğer" } }.toSet()
                 if (selectedGroup != "Tüm kategoriler" && selectedGroup !in availableGroups) {
