@@ -76,6 +76,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        installCrashLogger()
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
         try {
@@ -92,7 +93,39 @@ class MainActivity : Activity() {
         selectedType = "Canlı TV"
         prefs.edit().putString("last_section", selectedType).apply()
         buildUi()
+        showPreviousCrashIfAny()
         loadSavedSources()
+    }
+
+    private fun installCrashLogger() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            try {
+                val writer = java.io.StringWriter()
+                error.printStackTrace(java.io.PrintWriter(writer))
+                getSharedPreferences("androtv_diagnostics", MODE_PRIVATE).edit()
+                    .putString("last_crash", writer.toString().take(12000))
+                    .putLong("last_crash_time", System.currentTimeMillis())
+                    .commit()
+            } catch (_: Exception) { }
+            previous?.uncaughtException(thread, error)
+        }
+    }
+
+    private fun showPreviousCrashIfAny() {
+        val diagnostics = getSharedPreferences("androtv_diagnostics", MODE_PRIVATE)
+        val trace = diagnostics.getString("last_crash", null) ?: return
+        diagnostics.edit().remove("last_crash").apply()
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Önceki kanal açılış hatası")
+            .setMessage(trace.take(3500))
+            .setPositiveButton("Kopyala") { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("KaiserTv hata kaydı", trace))
+                android.widget.Toast.makeText(this, "Hata kaydı kopyalandı; buraya yapıştır.", android.widget.Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Kapat", null)
+            .show()
     }
 
     private lateinit var heroTitle: TextView
