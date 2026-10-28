@@ -2210,19 +2210,60 @@ class MainActivity : Activity() {
                     option("Henüz kaynak eklenmedi", "Yeni kaynak ekle düğmesini kullan.") { showConnectionDialog() }
                 } else {
                     savedSources.toList().forEach { source ->
-                        option("▣  ${source.name}", if (source.mode == "xtream") "Xtream Codes • ${source.address}" else "M3U/M3U8 • ${source.address}") {
-                            AlertDialog.Builder(this).setTitle(source.name)
-                                .setItems(arrayOf("Yenile", "Sil")) { _, action ->
-                                    if (action == 0) {
-                                        if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
-                                    } else {
-                                        savedSources.removeAll { it.id == source.id }
-                                        persistSources()
-                                        items.removeAll { it.sourceId == source.id }
-                                        render()
-                                    }
-                                }.setNegativeButton("İptal", null).show()
+                        val sourceRow = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            setPadding(dp(12), dp(6), dp(8), dp(6))
+                            background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
                         }
+                        val sourceInfo = LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL
+                            gravity = Gravity.CENTER_VERTICAL
+                        }
+                        sourceInfo.addView(TextView(this).apply {
+                            text = source.name
+                            textSize = 16f
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(Color.WHITE)
+                        })
+                        sourceInfo.addView(TextView(this).apply {
+                            text = "\${if (source.mode == "xtream") "Xtream Codes" else "M3U/M3U8"} • \${source.address}"
+                            textSize = 11f
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            setTextColor(muted)
+                            setPadding(0, dp(2), 0, 0)
+                        })
+                        sourceRow.addView(sourceInfo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                        sourceRow.addView(makeButton("Yenile", false) {
+                            if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
+                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply {
+                            setMargins(dp(4), 0, dp(4), 0)
+                        })
+                        sourceRow.addView(makeButton("Düzenle", false) {
+                            showConnectionDialog(source)
+                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply {
+                            setMargins(dp(4), 0, dp(4), 0)
+                        })
+                        sourceRow.addView(makeButton("Sil", false) {
+                            AlertDialog.Builder(this)
+                                .setTitle("Kaynağı sil")
+                                .setMessage("\${source.name} kaynağı ve bu kaynağın içerikleri silinsin mi?")
+                                .setNegativeButton("İptal", null)
+                                .setPositiveButton("Sil") { _, _ ->
+                                    savedSources.removeAll { it.id == source.id }
+                                    persistSources()
+                                    items.removeAll { it.sourceId == source.id }
+                                    render()
+                                }.show()
+                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply {
+                            setMargins(dp(4), 0, 0, 0)
+                        })
+                        content.addView(sourceRow, LinearLayout.LayoutParams(-1, dp(70)).apply {
+                            setMargins(dp(6), dp(3), dp(6), dp(3))
+                        })
                     }
                 }
             }
