@@ -2445,6 +2445,7 @@ class MainActivity : Activity() {
                     }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(8)) })
                 }
                 content.addView(picker)
+                val entries = recent.filter { it.type == historyType }
                 // Bu türün tüm izleme geçmişini tek seferde temizle.
                 content.addView(makeButton("Hepsini sil", false) {
                     if (entries.isNotEmpty()) {
@@ -2465,7 +2466,6 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply {
                     setMargins(dp(8), 0, 0, dp(8))
                 })
-                val entries = recent.filter { it.type == historyType }
                 content.addView(TextView(this).apply {
                     text = (when (historyType) { "Canlı TV" -> "İzlenen TV kanalları"; "Filmler" -> "İzlenen filmler"; else -> "İzlenen diziler" }) + "  ·  " + entries.size
                     textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD)
