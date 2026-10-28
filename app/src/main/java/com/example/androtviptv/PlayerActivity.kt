@@ -25,6 +25,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.PlayerControlView
 
 class PlayerActivity : Activity() {
     companion object {
@@ -164,6 +165,11 @@ class PlayerActivity : Activity() {
         playerView = view
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         view.post {
+            val controls = view.findViewById<PlayerControlView>(androidx.media3.ui.R.id.exo_controller)
+            controls?.setFastForwardIncrementMs(120_000)
+            controls?.setRewindIncrementMs(120_000)
+        }
+        view.post {
             val controlIds = intArrayOf(
                 androidx.media3.ui.R.id.exo_play,
                 androidx.media3.ui.R.id.exo_pause,
@@ -215,8 +221,6 @@ class PlayerActivity : Activity() {
                 .setLoadControl(loadControl)
                 .build().also { exo ->
                     view.player = exo
-                    exo.setSeekForwardIncrementMs(120_000L)
-                    exo.setSeekBackIncrementMs(120_000L)
                     exo.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
