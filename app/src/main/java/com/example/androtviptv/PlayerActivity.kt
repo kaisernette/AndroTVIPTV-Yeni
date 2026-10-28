@@ -38,6 +38,7 @@ class PlayerActivity : Activity() {
     private var player: ExoPlayer? = null
     private var resumeKey: String = ""
     private var currentStreamUrl: String = ""
+    private var isLiveStream: Boolean = false
     private var retryCount = 0
     private var bufferingSinceMs = 0L
     private var lastStablePlaybackMs = 0L
@@ -106,6 +107,7 @@ class PlayerActivity : Activity() {
     }
 
     private fun savePlaybackPosition() {
+        if (isLiveStream) return
         val exo = player ?: return
         val pos = exo.currentPosition.coerceAtLeast(0L)
         if (exo.duration > 0 && pos >= exo.duration - 5000L) {
@@ -130,7 +132,9 @@ class PlayerActivity : Activity() {
         pendingRecentChannelUrls = emptyList()
         pendingChannelIndex = 0
         currentStreamUrl = url.trim()
+        isLiveStream = intent.getBooleanExtra("isLive", false)
         resumeKey = "position_" + url.hashCode().toString()
+        if (isLiveStream) playbackPrefs.edit().remove(resumeKey).apply()
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
@@ -164,6 +168,11 @@ class PlayerActivity : Activity() {
                     view.player = exo
                     exo.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == Player.STATE_ENDED && isLiveStream) {
+                                android.util.Log.w("KaiserTVPlayer", "Live stream ended unexpectedly; reconnecting")
+                                restartCurrentStream("Canlı yayın sona erdi gibi görünüyor.")
+                                return
+                            }
                             if (playbackState == Player.STATE_BUFFERING) {
                                 if (bufferingSinceMs == 0L) bufferingSinceMs = android.os.SystemClock.elapsedRealtime()
                             } else if (playbackState == Player.STATE_READY) {
@@ -177,7 +186,7 @@ class PlayerActivity : Activity() {
                         }
                     })
                     exo.setMediaItem(mediaItem)
-                    val resumePosition = playbackPrefs.getLong(resumeKey, 0L)
+                    val resumePosition = if (isLiveStream) 0L else playbackPrefs.getLong(resumeKey, 0L)
                     exo.prepare()
                     if (resumePosition > 5000L) exo.seekTo(resumePosition)
                     exo.playWhenReady = true
