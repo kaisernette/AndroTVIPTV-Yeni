@@ -25,6 +25,9 @@ import java.net.URLEncoder
 import java.net.URL
 import kotlin.concurrent.thread
 import java.util.concurrent.Executors
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
+import java.lang.ref.WeakReference
 
 private data class SavedSource(val id: String, val name: String, val mode: String, val address: String, val username: String = "", val password: String = "")
 
@@ -36,11 +39,12 @@ private data class MediaItem(
 }
 
 class MainActivity : Activity() {
-    private val posterExecutor = Executors.newFixedThreadPool(2)
-    private val posterCache = object : LruCache<String, Bitmap>(8 * 1024 * 1024) {
+    private val posterExecutor = Executors.newFixedThreadPool(4)
+    private val posterCache = object : LruCache<String, Bitmap>(16 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
+    private val posterRequests = ConcurrentHashMap<String, CopyOnWriteArrayList<WeakReference<ImageView>>>()
     private val savedSources = mutableListOf<SavedSource>()
     private lateinit var sourceName: EditText
     private val favorites = mutableSetOf<String>()
@@ -2727,50 +2731,74 @@ class MainActivity : Activity() {
             target.setImageBitmap(cached)
             return
         }
+
+        val waiting = CopyOnWriteArrayList<WeakReference<ImageView>>()
+        waiting.add(WeakReference(target))
+        val existing = posterRequests.putIfAbsent(address, waiting)
+        if (existing != null) {
+            existing.add(WeakReference(target))
+            return
+        }
+
         posterExecutor.execute {
+            var bitmap: Bitmap? = null
             try {
-                // Decode poster thumbnails at a reduced resolution. Some Mi TV Stick
-                // devices run out of memory when provider artwork is decoded at full size.
-                val boundsConn = (URL(address).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 3500
-                    readTimeout = 3500
-                    instanceFollowRedirects = true
-                }
-                val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                try {
-                    boundsConn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it, null, options) }
-                } finally {
-                    boundsConn.disconnect()
-                }
-                if (options.outWidth <= 0 || options.outHeight <= 0) return@execute
-                var sampleSize = 1
-                while (options.outWidth / sampleSize > 800 || options.outHeight / sampleSize > 800) {
-                    sampleSize *= 2
-                }
-                val decodeOptions = android.graphics.BitmapFactory.Options().apply {
-                    inSampleSize = sampleSize
-                    inPreferredConfig = Bitmap.Config.RGB_565
-                }
+                // Fetch artwork only once, then decode the same byte array at a reduced size.
+                // This avoids two sequential network requests per poster and shares concurrent requests.
                 val conn = (URL(address).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 3500
-                    readTimeout = 3500
+                    connectTimeout = 8000
+                    readTimeout = 8000
                     instanceFollowRedirects = true
+                    setRequestProperty("User-Agent", "KaiserTv+/Android")
+                    useCaches = true
                 }
-                val bitmap = try {
-                    conn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it, null, decodeOptions) }
+                val bytes = try {
+                    conn.inputStream.use { input ->
+                        val output = java.io.ByteArrayOutputStream()
+                        val buffer = ByteArray(16 * 1024)
+                        var total = 0
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            total += count
+                            if (total > 8 * 1024 * 1024) throw java.io.IOException("Poster image too large")
+                            output.write(buffer, 0, count)
+                        }
+                        output.toByteArray()
+                    }
                 } finally {
                     conn.disconnect()
                 }
-                if (bitmap != null) {
-                    posterCache.put(address, bitmap)
-                    runOnUiThread {
-                        if (target.tag == address) target.setImageBitmap(bitmap)
+                val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                if (bounds.outWidth > 0 && bounds.outHeight > 0) {
+                    var sampleSize = 1
+                    while (bounds.outWidth / sampleSize > 800 || bounds.outHeight / sampleSize > 800) {
+                        sampleSize *= 2
+                    }
+                    val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+                        inSampleSize = sampleSize
+                        inPreferredConfig = Bitmap.Config.RGB_565
+                    }
+                    bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
+                    if (bitmap != null) posterCache.put(address, bitmap)
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("KaiserTV", "Poster load failed: $address", e)
+            }
+
+            val targets = posterRequests.remove(address) ?: return@execute
+            val result = bitmap
+            if (result != null) {
+                runOnUiThread {
+                    targets.forEach { ref ->
+                        val image = ref.get()
+                        if (image != null && image.tag == address) image.setImageBitmap(result)
                     }
                 }
-            } catch (_: Exception) { }
+            }
         }
     }
-
 
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
