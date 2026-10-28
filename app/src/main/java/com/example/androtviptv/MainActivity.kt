@@ -182,11 +182,18 @@ class MainActivity : Activity() {
         val root = object : LinearLayout(this) {
             override fun focusSearch(focused: View, direction: Int): View? {
                 val candidate = super.focusSearch(focused, direction)
-                // From the content pane, only DPAD_LEFT may transfer focus into the sidebar.
-                if (::mainContentScroll.isInitialized && ::sidebar.isInitialized &&
-                    isDescendantView(mainContentScroll, focused) &&
-                    direction != View.FOCUS_LEFT &&
-                    candidate != null && isDescendantView(sidebar, candidate)) {
+                if (candidate == null || !::sidebar.isInitialized || !::mainContentScroll.isInitialized) {
+                    return candidate
+                }
+                val focusIsInSidebar = isDescendantView(sidebar, focused)
+                val candidateIsInSidebar = isDescendantView(sidebar, candidate)
+                val focusIsInContent = isDescendantView(mainContentScroll, focused)
+                // Leave the sidebar only with DPAD_RIGHT.
+                if (focusIsInSidebar && !candidateIsInSidebar && direction != View.FOCUS_RIGHT) {
+                    return focused
+                }
+                // Enter the sidebar from content only with DPAD_LEFT.
+                if (focusIsInContent && candidateIsInSidebar && direction != View.FOCUS_LEFT) {
                     return focused
                 }
                 return candidate
@@ -1806,7 +1813,12 @@ class MainActivity : Activity() {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             } else {
                 content.addView(HorizontalScrollView(this).apply {
-                    isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(row)
+                    isHorizontalScrollBarEnabled = false
+                    clipToPadding = false
+                    fillViewport = true
+                    setPadding(dp(18), 0, dp(30), 0)
+                    row.gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
+                    addView(row)
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
         }
