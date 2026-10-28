@@ -72,6 +72,8 @@ class MainActivity : Activity() {
     private var panel = Color.rgb(25, 30, 38)
     private var accent = Color.rgb(0, 166, 255)
     private var accentBright = Color.rgb(72, 190, 255)
+    // Focus styling is independent from the selectable app theme.
+    private val focusColor = Color.rgb(137, 214, 255)
     private var muted = Color.rgb(190, 198, 210)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -352,19 +354,20 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Seçili öğe mavi dolgu; odaklanan öğe mavi çerçeve.
-                background = roundedDrawable(if (selected) accentBright else Color.TRANSPARENT, 10,
-                    if (selected) accentBright else Color.TRANSPARENT)
-                setTextColor(if (selected) Color.rgb(8, 20, 32) else Color.WHITE)
+                // Selected state and remote focus are visually distinct; focus always uses ice blue.
+                background = roundedDrawable(if (selected) Color.rgb(30, 43, 58) else Color.TRANSPARENT, 10,
+                    if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT)
+                setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(
-                        if (selected) accentBright else if (hasFocus) Color.rgb(24, 39, 56) else Color.TRANSPARENT,
+                        if (hasFocus) Color.rgb(27, 39, 53) else if (selected) Color.rgb(30, 43, 58) else Color.TRANSPARENT,
                         10,
-                        if (hasFocus || selected) accent else Color.TRANSPARENT
+                        if (hasFocus) focusColor else if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT
                     )
-                    (v as Button).setTextColor(if (selected) Color.rgb(8, 20, 32) else Color.WHITE)
-                    v.scaleX = if (hasFocus) 1.025f else 1f
-                    v.scaleY = if (hasFocus) 1.025f else 1f
+                    (v as Button).setTextColor(Color.WHITE)
+                    v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+                    v.scaleX = if (hasFocus) 1.015f else 1f
+                    v.scaleY = if (hasFocus) 1.015f else 1f
                 }
                 textSize = 14f
                 val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
@@ -611,9 +614,11 @@ class MainActivity : Activity() {
             if (primary) accentBright else Color.rgb(44, 52, 68))
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
-            v.background = roundedDrawable(if (primary) accent else if (hasFocus) Color.rgb(24, 39, 56) else panel,
-                12, if (hasFocus) accent else if (primary) accentBright else Color.rgb(44, 52, 68))
-            v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
+            v.background = roundedDrawable(
+                if (primary) accent else if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                12, if (hasFocus) focusColor else if (primary) accentBright else Color.rgb(44, 52, 68))
+            v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+            v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
         }
         setOnClickListener { action() }
     }
@@ -1484,11 +1489,12 @@ class MainActivity : Activity() {
                         background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
                         setOnFocusChangeListener { v, hasFocus ->
                             v.background = roundedDrawable(
-                                if (hasFocus) Color.rgb(27, 43, 62) else panel,
+                                if (hasFocus) Color.rgb(27, 39, 53) else panel,
                                 12,
-                                if (hasFocus) Color.rgb(0, 174, 255) else Color.rgb(43, 51, 68)
+                                if (hasFocus) focusColor else Color.rgb(43, 51, 68)
                             )
-                            v.scaleX = if (hasFocus) 1.035f else 1f
+                            v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+                            v.scaleX = if (hasFocus) 1.02f else 1f
                             v.scaleY = if (hasFocus) 1.035f else 1f
                         }
                         setOnClickListener { play(channel) }
@@ -1673,8 +1679,9 @@ class MainActivity : Activity() {
                         v.background = GradientDrawable().apply {
                             cornerRadius = dp(10).toFloat()
                             setColor(if (hasFocus) Color.rgb(43, 49, 63) else Color.TRANSPARENT)
-                            setStroke(dp(2), if (hasFocus) accentBright else accent)
+                            setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) focusColor else Color.rgb(54, 64, 82))
                         }
+                        v.elevation = if (hasFocus) dp(3).toFloat() else 0f
                     }
                     setOnClickListener { expandedCategory = groupName to entries; render() }
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)).apply { setMargins(dp(10), 0, 0, 0) })
@@ -1695,9 +1702,10 @@ class MainActivity : Activity() {
                     background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 43, 62) else panel, 15,
-                            if (hasFocus) Color.rgb(0, 174, 255) else Color.rgb(38, 45, 60))
-                        v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
+                        v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
+                            if (hasFocus) focusColor else Color.rgb(38, 45, 60))
+                        v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+                        v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
@@ -2208,12 +2216,13 @@ class MainActivity : Activity() {
                 background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
                 setOnFocusChangeListener { v, hasFocus ->
-                    // Focus outline follows the currently selected theme accent.
+                    // Ice-blue focus is independent from the selected theme palette.
                     v.background = roundedDrawable(
-                        if (hasFocus) Color.argb(28, Color.red(accent), Color.green(accent), Color.blue(accent)) else panel,
+                        if (hasFocus) Color.rgb(27, 39, 53) else panel,
                         14,
-                        if (hasFocus) accent else Color.rgb(48, 57, 73)
+                        if (hasFocus) focusColor else Color.rgb(48, 57, 73)
                     )
+                    v.elevation = if (hasFocus) dp(4).toFloat() else 0f
                 }
                 setOnClickListener { action() }
             }
