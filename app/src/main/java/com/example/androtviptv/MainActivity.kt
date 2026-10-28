@@ -77,6 +77,14 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installCrashLogger()
+        // Restore the selected theme before constructing any views.
+        when (prefs.getString("theme_name", "Antrasit • Mavi")) {
+            "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
+            "Lacivert • Turkuaz" -> { bg = Color.rgb(10, 22, 38); accent = Color.rgb(35, 205, 190); accentBright = accent }
+            "Koyu • Mor" -> { bg = Color.rgb(20, 16, 29); accent = Color.rgb(174, 115, 255); accentBright = accent }
+            else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
+        }
+        panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
         try {
@@ -323,7 +331,7 @@ class MainActivity : Activity() {
                     v.background = roundedDrawable(
                         if (selected) accentBright else if (hasFocus) Color.rgb(24, 39, 56) else Color.TRANSPARENT,
                         10,
-                        if (hasFocus || selected) Color.rgb(0, 174, 255) else Color.TRANSPARENT
+                        if (hasFocus || selected) accent else Color.TRANSPARENT
                     )
                     (v as Button).setTextColor(if (selected) Color.rgb(8, 20, 32) else Color.WHITE)
                     v.scaleX = if (hasFocus) 1.025f else 1f
@@ -573,7 +581,7 @@ class MainActivity : Activity() {
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
             v.background = roundedDrawable(if (primary) accent else if (hasFocus) Color.rgb(24, 39, 56) else panel,
-                12, if (hasFocus) Color.rgb(0, 174, 255) else if (primary) accentBright else Color.rgb(44, 52, 68))
+                12, if (hasFocus) accent else if (primary) accentBright else Color.rgb(44, 52, 68))
             v.scaleX = if (hasFocus) 1.035f else 1f; v.scaleY = if (hasFocus) 1.035f else 1f
         }
         setOnClickListener { action() }
@@ -612,7 +620,11 @@ class MainActivity : Activity() {
 
             // If the on-device media cache is missing or invalid, automatically
             // restore the last saved source instead of requiring a manual refresh.
-            if (items.isEmpty() && last != null && !isLoadingSource) {
+            // Re-fetch the last source on every launch. The disk cache is deliberately
+            // bounded for low-memory TV devices, so a non-empty cache may still be partial
+            // or stale; relying on items.isEmpty() made users press "Yenile" after restart.
+            if (last != null && !isLoadingSource) {
+                status.visibility = View.VISIBLE
                 status.text = "${last.name}: kayıtlı kaynak otomatik yükleniyor…"
                 if (last.mode == "xtream") loadXtream(last, true) else loadM3u(last, true)
             }
