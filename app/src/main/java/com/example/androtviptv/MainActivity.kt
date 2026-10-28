@@ -613,11 +613,15 @@ class MainActivity : Activity() {
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
 
-            // If cached items are present, show them immediately and do not cover
-            // the library with a loading screen on every launch. Refresh remains
-            // available from Sources > Refresh. Fetch automatically only if cache
-            // is empty, so first launch/recovery still works.
-            if (items.isNotEmpty()) {
+            // A live-only cache is incomplete: the Movies and Series tabs and
+            // the home screen cannot render their rows from it. Reuse the last
+            // saved source (or the most recently saved source as a fallback) to
+            // repair the cache, while a complete cache opens instantly.
+            val sourceToRestore = last ?: savedSources.lastOrNull()
+            val cacheHasMovies = items.any { it.type == "Filmler" }
+            val cacheHasSeries = items.any { it.type == "Diziler" }
+            val cacheNeedsRepair = sourceToRestore?.mode == "xtream" && (!cacheHasMovies || !cacheHasSeries)
+            if (items.isNotEmpty() && !cacheNeedsRepair) {
                 val availableGroups = items.map { it.group.ifBlank { "Diğer" } }.toSet()
                 if (selectedGroup != "Tüm kategoriler" && selectedGroup !in availableGroups) {
                     selectedGroup = "Tüm kategoriler"
@@ -628,12 +632,12 @@ class MainActivity : Activity() {
                 status.text = "${items.size} kayıtlı içerik hazır."
                 sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
                 render()
-            } else if (last != null && !isLoadingSource) {
+            } else if (sourceToRestore != null && !isLoadingSource) {
                 sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
                 status.visibility = View.VISIBLE
-                status.text = "${last.name}: kayıtlı içerik bulunamadı, kaynak yükleniyor…"
+                status.text = if (items.isEmpty()) "${sourceToRestore.name}: kayıtlı kaynak yükleniyor…" else "${sourceToRestore.name}: film ve dizi kayıtları tamamlanıyor…"
                 render()
-                if (last.mode == "xtream") loadXtream(last, true) else loadM3u(last, true)
+                if (sourceToRestore.mode == "xtream") loadXtream(sourceToRestore, true) else loadM3u(sourceToRestore, true)
             } else {
                 render()
             }
@@ -868,7 +872,20 @@ class MainActivity : Activity() {
         // Xtream libraries can contain tens of thousands of entries. Do not build
         // a giant JSONArray/String in memory after loading; stream each item to disk.
         // Keep the startup cache bounded for low-memory Android TV sticks.
-        val snapshot = try { items.take(1000).toList() } catch (_: Exception) { return }
+        val snapshot = try {
+            // Preserve all sections in the bounded cache. Xtream often returns
+            // live channels first, so items.take(1000) can discard every movie/series.
+            val live = items.filter { it.type == "Canlı TV" }
+            val movies = items.filter { it.type == "Filmler" }
+            val series = items.filter { it.type == "Diziler" }
+            val balanced = (live.take(350) + movies.take(350) + series.take(300)).toMutableList()
+            if (balanced.size < 1000) {
+                val seen = balanced.mapTo(mutableSetOf()) { "${it.type}|${it.sourceId}|${it.id}|${it.url}" }
+                items.asSequence().filter { seen.add("${it.type}|${it.sourceId}|${it.id}|${it.url}") }
+                    .take(1000 - balanced.size).forEach { balanced.add(it) }
+            }
+            balanced.take(1000)
+        } catch (_: Exception) { return }
         thread(name = "kaisertv-cache-writer") {
             val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
             try {
