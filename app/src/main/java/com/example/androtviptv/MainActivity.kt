@@ -404,12 +404,13 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♡  Favoriler", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
                     tab.contains("Canlı TV") -> "TV"
                     tab.contains("Favoriler") -> "Favoriler"
+                    tab.contains("Geçmiş") -> "Geçmiş"
                     tab.contains("Ayarlar") -> "Ayarlar"
                     tab.contains("Filmler") -> "Filmler"
                     else -> "Diziler"
@@ -419,8 +420,21 @@ class MainActivity : Activity() {
                     "Ana Sayfa" -> "Tümü"
                     else -> normalizedTab
                 }
-                if (normalizedTab == "Ayarlar") {
-                    addSidebarButton(tab, selectedType == "Ayarlar") {
+                if (normalizedTab == "Geçmiş") {
+                    addSidebarButton(tab, selectedType == "Ayarlar" && settingsPage == "history") {
+                        detailSeries = null
+                        detailMovie = null
+                        settingsPage = "history"
+                        prefs.edit().putString("last_settings_page", settingsPage).apply()
+                        selectedType = "Ayarlar"
+                        prefs.edit().putString("last_section", "Ayarlar").apply()
+                        selectedGroup = "Tüm kategoriler"
+                        sidebarMode = "settings"
+                        rebuildNavigation()
+                        render()
+                    }
+                } else if (normalizedTab == "Ayarlar") {
+                    addSidebarButton(tab, selectedType == "Ayarlar" && settingsPage != "history") {
                         detailSeries = null
                         detailMovie = null
                         settingsPage = prefs.getString("last_settings_page", "main") ?: "main"
