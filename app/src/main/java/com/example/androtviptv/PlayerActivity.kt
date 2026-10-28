@@ -22,6 +22,14 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 
 class PlayerActivity : Activity() {
+    companion object {
+        @Volatile var pendingChannelNames: List<String> = emptyList()
+        @Volatile var pendingChannelUrls: List<String> = emptyList()
+        @Volatile var pendingChannelIndex: Int = 0
+        @Volatile var pendingRecentChannelNames: List<String> = emptyList()
+        @Volatile var pendingRecentChannelUrls: List<String> = emptyList()
+    }
+
     private var player: ExoPlayer? = null
     private var resumeKey: String = ""
     private var playerView: PlayerView? = null
@@ -50,12 +58,17 @@ class PlayerActivity : Activity() {
         super.onCreate(savedInstanceState)
         val title = intent.getStringExtra("name") ?: "Oynatıcı"
         val url = intent.getStringExtra("url") ?: run { finish(); return }
-        channelRows = intent.getStringArrayListExtra("channel_names")?.toList() ?: emptyList()
-        channelUrls = intent.getStringArrayListExtra("channel_urls")?.toList() ?: emptyList()
-        selectedChannelIndex = intent.getIntExtra("channel_index", 0).coerceIn(0, (channelUrls.size - 1).coerceAtLeast(0))
+        channelRows = pendingChannelNames
+        channelUrls = pendingChannelUrls
+        selectedChannelIndex = pendingChannelIndex.coerceIn(0, (channelUrls.size - 1).coerceAtLeast(0))
         highlightedChannelIndex = selectedChannelIndex
-        recentChannelRows = intent.getStringArrayListExtra("recent_channel_names")?.toList() ?: emptyList()
-        recentChannelUrls = intent.getStringArrayListExtra("recent_channel_urls")?.toList() ?: emptyList()
+        recentChannelRows = pendingRecentChannelNames
+        recentChannelUrls = pendingRecentChannelUrls
+        pendingChannelNames = emptyList()
+        pendingChannelUrls = emptyList()
+        pendingRecentChannelNames = emptyList()
+        pendingRecentChannelUrls = emptyList()
+        pendingChannelIndex = 0
         resumeKey = "position_" + url.hashCode().toString()
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK

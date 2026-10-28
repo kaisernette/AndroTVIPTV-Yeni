@@ -2476,13 +2476,14 @@ class MainActivity : Activity() {
                 .putExtra("url", item.url)
             if (item.type == "Canlı TV") {
                 val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
-                intent.putStringArrayListExtra("channel_names", ArrayList(channels.map { it.name }))
-                intent.putStringArrayListExtra("channel_urls", ArrayList(channels.map { it.url }))
-                intent.putExtra("channel_index", channels.indexOfFirst { it.url == item.url }.coerceAtLeast(0))
                 val recentChannels = recent.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
                     .distinctBy { it.url }.take(20)
-                intent.putStringArrayListExtra("recent_channel_names", ArrayList(recentChannels.map { it.name }))
-                intent.putStringArrayListExtra("recent_channel_urls", ArrayList(recentChannels.map { it.url }))
+                // Keep large channel lists out of Intent extras to avoid Binder transaction crashes.
+                PlayerActivity.pendingChannelNames = channels.map { it.name }
+                PlayerActivity.pendingChannelUrls = channels.map { it.url }
+                PlayerActivity.pendingChannelIndex = channels.indexOfFirst { it.url == item.url }.coerceAtLeast(0)
+                PlayerActivity.pendingRecentChannelNames = recentChannels.map { it.name }
+                PlayerActivity.pendingRecentChannelUrls = recentChannels.map { it.url }
             }
             try {
                 startActivity(intent)
