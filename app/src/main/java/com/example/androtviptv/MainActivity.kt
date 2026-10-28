@@ -1225,11 +1225,12 @@ class MainActivity : Activity() {
                 id = View.generateViewId()
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
             }
-            inlineForm.addView(TextView(this).apply {
+            val playlistLabel = TextView(this).apply {
                 text = "M3U / M3U8 oynatma listesi URL'si"
                 textSize = 13f; setTextColor(muted)
                 setPadding(0, dp(4), 0, dp(3))
-            })
+            }
+            inlineForm.addView(playlistLabel)
             inlineForm.addView(playlistUrl, LinearLayout.LayoutParams(-1, dp(48)).apply {
                 setMargins(0, 0, 0, dp(6))
             })
@@ -1248,6 +1249,7 @@ class MainActivity : Activity() {
             inlineForm.addView(inlineCredentials)
             fun updateInlineFields() {
                 val useXtream = sourceMode.checkedRadioButtonId == inlineXtream.id
+                playlistLabel.visibility = if (useXtream) View.GONE else View.VISIBLE
                 playlistUrl.visibility = if (useXtream) View.GONE else View.VISIBLE
                 server.visibility = if (useXtream) View.VISIBLE else View.GONE
                 inlineCredentials.visibility = if (useXtream) View.VISIBLE else View.GONE
