@@ -1361,7 +1361,7 @@ class MainActivity : Activity() {
             } else {
                 var channelRow: LinearLayout? = null
                 tvChannels.forEachIndexed { index, channel ->
-                    if (index % 4 == 0) {
+                    if (index % 6 == 0) {
                         channelRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.TOP
@@ -1393,7 +1393,7 @@ class MainActivity : Activity() {
                         contentDescription = channel.name
                         setPadding(dp(6), dp(6), dp(6), dp(6))
                     }
-                    tile.addView(logo, LinearLayout.LayoutParams(-1, dp(72)))
+                    tile.addView(logo, LinearLayout.LayoutParams(-1, dp(66)))
                     if (channel.icon.startsWith("http://") || channel.icon.startsWith("https://")) {
                         loadPoster(channel.icon, logo)
                     } else {
@@ -1410,8 +1410,8 @@ class MainActivity : Activity() {
                         maxLines = 2
                         ellipsize = android.text.TextUtils.TruncateAt.END
                         setPadding(0, dp(5), 0, 0)
-                    }, LinearLayout.LayoutParams(-1, dp(38)))
-                    channelRow?.addView(tile, LinearLayout.LayoutParams(0, dp(132), 1f).apply {
+                    }, LinearLayout.LayoutParams(-1, dp(36)))
+                    channelRow?.addView(tile, LinearLayout.LayoutParams(0, dp(126), 1f).apply {
                         setMargins(dp(4), dp(4), dp(4), dp(6))
                     })
                 }

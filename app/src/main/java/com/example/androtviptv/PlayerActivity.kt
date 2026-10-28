@@ -71,7 +71,9 @@ class PlayerActivity : Activity() {
         }
         try {
             val mediaItem = MediaItem.fromUri(url.trim())
-            player = ExoPlayer.Builder(this).build().also { exo ->
+            val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
+                .setEnableDecoderFallback(true)
+            player = ExoPlayer.Builder(this, renderersFactory).build().also { exo ->
                 view.player = exo
                 exo.addListener(object : Player.Listener {
                     override fun onPlayerError(error: PlaybackException) {
