@@ -1262,12 +1262,28 @@ class MainActivity : Activity() {
             return
         }
 
-        AlertDialog.Builder(this)
+        // Keep the focused control so cancelling the exit dialog returns focus to the app.
+        val focusBeforeExitDialog = currentFocus
+        val exitDialog = AlertDialog.Builder(this)
             .setTitle("Kaisertv'den çıkılsın mı?")
             .setMessage("Uygulamadan çıkmak istediğine emin misin?")
             .setNegativeButton("Uygulamaya dön", null)
             .setPositiveButton("Çıkış yap") { _, _ -> finish() }
-            .show()
+            .create()
+        exitDialog.setOnShowListener {
+            exitDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                exitDialog.dismiss()
+                val target = focusBeforeExitDialog?.takeIf { it.isShown && it.isFocusable }
+                if (target != null) {
+                    target.requestFocus()
+                } else if (::mainContentScroll.isInitialized) {
+                    mainContentScroll.requestFocus()
+                } else if (::sidebar.isInitialized) {
+                    sidebar.requestFocus()
+                }
+            }
+        }
+        exitDialog.show()
     }
 
     private fun showItemDetails(item: MediaItem) {
