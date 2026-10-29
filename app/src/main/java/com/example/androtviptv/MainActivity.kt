@@ -2378,7 +2378,7 @@ class MainActivity : Activity() {
                     episodeRow.addView(TextView(this).apply {
                         text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("▶ İzle", true) {
+                    episodeRow.addView(makeButton("▶  Bölümü İzle", true) {
                         val allEpisodes = seriesEpisodeRows.flatMap { it.second }
                         val episodeIndex = allEpisodes.indexOfFirst { it.favoriteKey == episode.favoriteKey }
                         if (episodeIndex >= 0) {
@@ -2387,7 +2387,7 @@ class MainActivity : Activity() {
                             PlayerActivity.pendingEpisodeIndex = episodeIndex
                             play(episode)
                         } else play(episode)
-                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(12, 0, 0, 0) })
+                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(12, 0, 0, 0) })
                     episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
