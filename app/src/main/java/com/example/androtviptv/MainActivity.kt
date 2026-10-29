@@ -1341,7 +1341,11 @@ class MainActivity : Activity() {
         if (requestCode == 7251 && resultCode == RESULT_OK) {
             val spoken = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty()
             if (spoken.isNotBlank()) {
-                searchQuery = spoken; sidebarMode = "search"; selectedType = "Tümü"; selectedGroup = "Tüm kategoriler"; render()
+                searchQuery = spoken
+                sidebarMode = "main"
+                val searchField = if (::rootLayout.isInitialized) rootLayout.findViewWithTag<EditText>("global_search_input") else null
+                searchField?.setText(spoken)
+                render()
             }
         }
     }
@@ -1685,12 +1689,13 @@ class MainActivity : Activity() {
                 }
             }
             searchBar.addView(globalSearch, LinearLayout.LayoutParams(0, dp(54), 1f))
-            searchBar.addView(makeButton("🎙", false) {
+            searchBar.addView(makeButton("🎤", false) {
                 try {
                     val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                         putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                         putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
                         putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Aramak istediğin içeriği söyle")
+                        putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                     }
                     startActivityForResult(intent, 7251)
                 } catch (_: Exception) { Toast.makeText(this, "Sesli arama bu cihazda kullanılamıyor.", Toast.LENGTH_SHORT).show() }
