@@ -3,7 +3,7 @@ name: Build Kaisertv APK # Rebuild current UI changes for device testing
 on:
   workflow_dispatch:
   push:
-    branches: [main, kaisertv-redesign, series-fullscreen-detail, tv-channel-menu-home, kaisertv-purple-ui, kaisertv-lite-design, fix/poster-images-fit]
+    branches: [main, kaisertv-redesign, series-fullscreen-detail, tv-channel-menu-home, kaisertv-purple-ui, kaisertv-lite-design, fix/poster-images-fit, design-from-successful-269]
 
 permissions:
   contents: read
