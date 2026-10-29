@@ -2378,7 +2378,7 @@ class MainActivity : Activity() {
                     episodeRow.addView(TextView(this).apply {
                         text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("▶  Bölümü İzle", true) {
+                    episodeRow.addView(makeButton("▶  BÖLÜMÜ İZLE", true) {
                         val allEpisodes = seriesEpisodeRows.flatMap { it.second }
                         val episodeIndex = allEpisodes.indexOfFirst { it.favoriteKey == episode.favoriteKey }
                         if (episodeIndex >= 0) {
@@ -2387,7 +2387,21 @@ class MainActivity : Activity() {
                             PlayerActivity.pendingEpisodeIndex = episodeIndex
                             play(episode)
                         } else play(episode)
-                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(12, 0, 0, 0) })
+                    }.apply {
+                        gravity = Gravity.CENTER
+                        fun updateEpisodeWatchAppearance(hasFocus: Boolean) {
+                            background = roundedDrawable(if (hasFocus) accentBright else accent, 10,
+                                if (hasFocus) accentBright else accent)
+                            setTextColor(Color.rgb(12, 14, 19))
+                        }
+                        updateEpisodeWatchAppearance(false)
+                        setOnFocusChangeListener { v, hasFocus ->
+                            updateEpisodeWatchAppearance(hasFocus)
+                            v.scaleX = if (hasFocus) 1.02f else 1f
+                            v.scaleY = if (hasFocus) 1.02f else 1f
+                            v.elevation = 0f
+                        }
+                    }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(12, 0, 0, 0) })
                     episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
