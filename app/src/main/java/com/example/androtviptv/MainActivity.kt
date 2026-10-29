@@ -1098,15 +1098,28 @@ class MainActivity : Activity() {
     }
 
     private fun parseM3u(text: String): List<MediaItem> {
-        val out = mutableListOf<MediaItem>(); var name = "İçerik"; var group = "Diğer"; var icon = ""
+        val out = mutableListOf<MediaItem>()
+        var name = "İçerik"
+        var group = "Diğer"
+        var icon = ""
+        fun attribute(line: String, key: String): String {
+            // Accept quoted attributes with either quote style and unquoted values.
+            val match = Regex("""(?:^|\\s)${Regex.escape(key)}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s,]*))""", RegexOption.IGNORE_CASE).find(line)
+            return match?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.trim().orEmpty()
+        }
         text.lineSequence().map { it.trim() }.forEach { line ->
             if (line.startsWith("#EXTINF", true)) {
-                name = line.substringAfterLast(',', "İçerik").trim().ifBlank { "İçerik" }
-                group = Regex("group-title=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: "Diğer"
-                icon = Regex("tvg-logo=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: ""
-            } else if ((line.startsWith("http://") || line.startsWith("https://")) && line.isNotBlank()) {
-                val type = classify(name, group)
-                out.add(MediaItem(line, name, line, group, type, icon)); name = "İçerik"; group = "Diğer"; icon = ""
+                val comma = line.indexOf(',')
+                name = if (comma >= 0) line.substring(comma + 1).trim().ifBlank { "İçerik" } else "İçerik"
+                group = attribute(line, "group-title").ifBlank { "Diğer" }
+                icon = attribute(line, "tvg-logo")
+            } else if ((line.startsWith("http://", true) || line.startsWith("https://", true)) && line.isNotBlank()) {
+                val normalizedGroup = group.replace(Regex("""\\s+"""), " ").trim().ifBlank { "Diğer" }
+                val type = classify(name, normalizedGroup)
+                out.add(MediaItem(line, name, line, normalizedGroup, type, icon))
+                name = "İçerik"
+                group = "Diğer"
+                icon = ""
             }
         }
         return out
@@ -1706,7 +1719,7 @@ class MainActivity : Activity() {
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
         categoryBar.removeAllViews()
         val categoriesInSidebar = sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")
-        categoryScroll.visibility = if (categoriesInSidebar) View.GONE else View.VISIBLE
+        categoryScroll.visibility = if (categoriesInSidebar || (selectedType == "Tümü" && sidebarMode == "main")) View.GONE else View.VISIBLE
         groupsAvailable.take(40).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
