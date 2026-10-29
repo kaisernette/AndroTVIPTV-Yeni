@@ -1103,13 +1103,13 @@ class MainActivity : Activity() {
         var group = ""
         var icon = ""
         fun attribute(line: String, key: String): String {
-            val match = Regex("""(?:^|[\\s,])${Regex.escape(key)}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s,]*))""", RegexOption.IGNORE_CASE).find(line)
+            val match = Regex("""(?:^|[\s,])${Regex.escape(key)}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s,]*))""", RegexOption.IGNORE_CASE).find(line)
             return match?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.trim().orEmpty()
         }
         fun firstAttribute(line: String, vararg keys: String): String =
             keys.firstNotNullOfOrNull { key -> attribute(line, key).takeIf { it.isNotBlank() } }.orEmpty()
         fun cleanGroup(value: String): String =
-            value.replace(Regex("""\\s+"""), " ").trim().trim('|', '-', ':').ifBlank { "Diğer" }
+            value.replace(Regex("""\s+"""), " ").trim().trim('|', '-', ':').ifBlank { "Diğer" }
 
         text.lineSequence().map { it.trim().removePrefix("\uFEFF") }.forEach { line ->
             when {
