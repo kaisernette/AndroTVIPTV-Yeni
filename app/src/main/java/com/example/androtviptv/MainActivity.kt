@@ -574,7 +574,6 @@ class MainActivity : Activity() {
             // Keep icons and readable labels visible in the sidebar on every screen.
             // Category filters remain in the main content area on the right.
             val compactTabs = listOf(
-                Triple("⌕", "Ara", "Ara"),
                 Triple("⌂", "Ana Sayfa", "Tümü"),
                 Triple("▣", "Canlı TV", "Canlı TV"),
                 Triple("▶", "Filmler", "Filmler"),
@@ -634,10 +633,6 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "search") {
-            addSidebarButton("⌕  Ara", true) {
-                searchInputFocusPending = true
-                render()
-            }
             addSidebarButton("⌂  Ana Sayfa") { returnToMainMenu() }
             return
         }
@@ -1987,19 +1982,19 @@ class MainActivity : Activity() {
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
                     background = GradientDrawable().apply {
-                        cornerRadius = dp(10).toFloat()
-                        setColor(Color.rgb(27, 32, 42))
-                        setStroke(dp(1), Color.rgb(58, 68, 84))
+                        shape = GradientDrawable.OVAL
+                        setColor(accent)
                     }
                     isFocusable = true
                     isFocusableInTouchMode = true
                     contentDescription = "$groupName tüm içerikleri göster"
                     setOnFocusChangeListener { v, hasFocus ->
                         v.background = GradientDrawable().apply {
-                            cornerRadius = dp(10).toFloat()
-                            setColor(if (hasFocus) Color.rgb(43, 49, 63) else Color.rgb(27, 32, 42))
-                            setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) focusColor else Color.rgb(58, 68, 84))
+                            shape = GradientDrawable.OVAL
+                            setColor(if (hasFocus) focusColor else accent)
                         }
+                        v.scaleX = if (hasFocus) 1.08f else 1f
+                        v.scaleY = if (hasFocus) 1.08f else 1f
                     }
                     setOnClickListener { expandedCategory = groupName to entries; render() }
                 }
@@ -2008,9 +2003,9 @@ class MainActivity : Activity() {
                         expandedPosterRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
                         row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
-                    expandedPosterRow?.addView(moreButton, LinearLayout.LayoutParams(0, dp(64), 1f).apply { setMargins(dp(14), dp(12), dp(14), dp(18)) })
+                    expandedPosterRow?.addView(moreButton, LinearLayout.LayoutParams(dp(56), dp(56)).apply { setMargins(dp(14), dp(12), dp(14), dp(18)) })
                 } else {
-                    row.addView(moreButton, LinearLayout.LayoutParams(dp(52), dp(64)).apply {
+                    row.addView(moreButton, LinearLayout.LayoutParams(dp(56), dp(56)).apply {
                         gravity = Gravity.CENTER_VERTICAL
                         setMargins(dp(5), 0, dp(14), dp(10))
                     })
