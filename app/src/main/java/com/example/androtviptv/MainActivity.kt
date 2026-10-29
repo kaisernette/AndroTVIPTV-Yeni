@@ -1929,7 +1929,8 @@ class MainActivity : Activity() {
                 val homeCard = selectedType == "Tümü"
                 val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
                 val poster = ImageView(this).apply {
-                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    // Fill the poster card width so artwork appears larger on TV.
+                    scaleType = ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
@@ -1967,10 +1968,6 @@ class MainActivity : Activity() {
                         textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
                     })
                 }
-                card.addView(TextView(this).apply {
-                    text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
-                    minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
-                })
                 if (!weeklyPoster) {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
@@ -1982,6 +1979,11 @@ class MainActivity : Activity() {
                     }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                     card.addView(actions)
                 }
+                card.addView(TextView(this).apply {
+                    text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
+                    minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
+                })
+
                 if (showingExpandedCategory) {
                     if (expandedPosterCount % 4 == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
