@@ -329,11 +329,15 @@ class MainActivity : Activity() {
             contentDescription = "KIP+"
         }, LinearLayout.LayoutParams(-1, dp(54)))
         sidebar.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
-        navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        navBar = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.BOTTOM
+        }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
-            addView(navBar)
+            isFillViewport = true
+            addView(navBar, ScrollView.LayoutParams(-1, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         sidebar.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         rebuildNavigation()
