@@ -474,7 +474,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♥  Favoriler", "◴  Geçmiş", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♡  Favoriler", "◴  Geçmiş", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -501,7 +501,7 @@ class MainActivity : Activity() {
                         prefs.edit().putString("last_section", "Son İzlenenler").apply()
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
-                        sidebarMode = "main"
+                        sidebarMode = "context"
                         rebuildNavigation()
                         render()
                     }
@@ -513,7 +513,7 @@ class MainActivity : Activity() {
                         selectedType = "Ayarlar"
                         prefs.edit().putString("last_section", "Ayarlar").apply()
                         selectedGroup = "Tüm kategoriler"
-                        sidebarMode = "settings"
+                        sidebarMode = "context"
                         rebuildNavigation()
                         render()
                     }
@@ -561,7 +561,7 @@ class MainActivity : Activity() {
                 Triple("▣", "Canlı TV", "Canlı TV"),
                 Triple("▰", "Filmler", "Filmler"),
                 Triple("▤", "Diziler", "Diziler"),
-                Triple("♥", "Favoriler", "Favoriler"),
+                Triple("♡", "Favoriler", "Favoriler"),
                 Triple("◴", "Geçmiş", "Son İzlenenler"),
                 Triple("⚙", "Ayarlar", "Ayarlar")
             )
@@ -582,15 +582,22 @@ class MainActivity : Activity() {
                             selectedType = "Tümü"
                         }
                         "Tümü" -> returnToMainMenu()
+                        "Favoriler" -> {
+                            selectedType = key
+                            selectedGroup = "Tüm kategoriler"
+                            sidebarMode = "context"
+                            prefs.edit().putString("last_section", key).apply()
+                        }
                         "Son İzlenenler" -> {
                             selectedType = key
-                            sidebarMode = "main"
+                            selectedGroup = "Tüm kategoriler"
+                            sidebarMode = "context"
                             prefs.edit().putString("last_section", key).apply()
                         }
                         "Ayarlar" -> {
                             selectedType = key
                             settingsPage = prefs.getString("last_settings_page", "main") ?: "main"
-                            sidebarMode = "settings"
+                            sidebarMode = "context"
                             prefs.edit().putString("last_section", key).apply()
                         }
                         else -> {
