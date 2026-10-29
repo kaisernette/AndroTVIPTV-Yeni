@@ -2437,8 +2437,14 @@ class MainActivity : Activity() {
         val favoriteButton = makeButton(if (isFavorite) "★ Favori" else "☆ Favori", false) {
             if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
             prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+            val keepFavoriteFocus = currentFocus
             render()
+            rootLayout.post {
+                val refreshedFavorite = rootLayout.findViewWithTag<View>("movie_favorite_button")
+                if (refreshedFavorite != null) refreshedFavorite.requestFocus()
+            }
         }.apply {
+            tag = "movie_favorite_button"
             gravity = Gravity.CENTER
             val yellow = Color.rgb(255, 205, 55)
             fun updateFavoriteAppearance(hasFocus: Boolean) {
