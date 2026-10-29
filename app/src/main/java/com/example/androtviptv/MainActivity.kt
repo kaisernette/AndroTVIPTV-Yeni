@@ -1276,12 +1276,17 @@ class MainActivity : Activity() {
         val actorsView = field("OYUNCULAR", item.actors, if (item.sourceId.isNotBlank()) "Bilgiler yükleniyor…" else "Oyuncu bilgisi bulunmuyor.")
         metaScroll.addView(meta)
         info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
-        info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }
+        info.addView(watchButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
         info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
         body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog
         dialog.show()
         dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.78f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+        // When a movie is selected, land on the primary action immediately.
+        watchButton.isFocusable = true
+        watchButton.isFocusableInTouchMode = true
+        watchButton.post { watchButton.requestFocus() }
 
         if (item.type == "Filmler" || item.type == "Diziler") {
             val source = savedSources.firstOrNull { it.id == item.sourceId && it.mode == "xtream" }
