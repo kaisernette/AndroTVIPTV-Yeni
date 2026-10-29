@@ -2241,7 +2241,19 @@ class MainActivity : Activity() {
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
             gravity = Gravity.CENTER
-            background = roundedDrawable(accent, 10, if (hasFocus()) accentBright else accent)
+            // Use the currently selected theme color, without the separate blue focus glow.
+            fun updateWatchButton(hasFocus: Boolean) {
+                background = roundedDrawable(if (hasFocus) accentBright else accent, 10,
+                    if (hasFocus) accentBright else accent)
+                setTextColor(Color.rgb(12, 14, 19))
+            }
+            updateWatchButton(hasFocus = false)
+            setOnFocusChangeListener { v, hasFocus ->
+                updateWatchButton(hasFocus)
+                v.scaleX = if (hasFocus) 1.02f else 1f
+                v.scaleY = if (hasFocus) 1.02f else 1f
+                v.elevation = 0f
+            }
         }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 6, dp(10), 0) })
         val isFavorite = favorites.contains(movie.favoriteKey)
         val favoriteButton = makeButton(if (isFavorite) "★ Favori" else "☆ Favori", false) {
