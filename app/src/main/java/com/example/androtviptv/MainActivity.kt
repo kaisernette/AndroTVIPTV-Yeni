@@ -1268,6 +1268,16 @@ class MainActivity : Activity() {
         }
     }
 
+    @Deprecated("Deprecated in Android API")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 7251 && resultCode == RESULT_OK) {
+            val spoken = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty()
+            if (spoken.isNotBlank()) {
+                searchQuery = spoken; sidebarMode = "search"; selectedType = "Tümü"; selectedGroup = "Tüm kategoriler"; render()
+            }
+        }
+    }
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
         content.removeAllViews()
@@ -1568,60 +1578,48 @@ class MainActivity : Activity() {
             renderMovieDetail(detailMovie!!)
             return
         }
-        if (sidebarMode == "search") {
-            val searchPanel = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(8), dp(8), dp(8), dp(12))
-            }
-            searchPanel.addView(TextView(this).apply {
-                text = "Ara"; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.WHITE); setPadding(0, 0, 0, dp(10))
-            })
-            val searchInput = EditText(this).apply {
-                hint = "Film, dizi veya kanal adı yaz…"
-                setSingleLine(true); textSize = 17f; setTextColor(Color.WHITE); setHintTextColor(muted)
-                setPadding(dp(16), 0, dp(12), 0)
+        // Wide search bar is fixed at the top of the right content area.
+        if (!isLoadingSource) {
+            val searchBar = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12), dp(4), dp(8), dp(4))
                 background = roundedDrawable(Color.rgb(28, 35, 49), 14, accent)
+            }
+            val globalSearch = EditText(this).apply {
+                hint = "Film, dizi veya kanal ara…"; setSingleLine(true); textSize = 17f
+                setTextColor(Color.WHITE); setHintTextColor(muted)
+                background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
-                tag = "global_search_input"
+                setPadding(dp(8), 0, dp(8), 0); tag = "global_search_input"
                 setText(searchQuery); setSelection(text.length)
                 addTextChangedListener(object : android.text.TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                        searchQuery = s?.toString().orEmpty()
-                        selectedGroup = "Tüm kategoriler"
-                        // Keep this EditText attached while the user types. Re-rendering the
-                        // whole screen here detaches it and Android closes the keyboard per character.
-                        // Results refresh when the user presses the keyboard Search action.
-
-                    }
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { searchQuery = s?.toString().orEmpty() }
                     override fun afterTextChanged(s: android.text.Editable?) {}
                 })
                 setOnEditorActionListener { _, actionId, _ ->
-                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
-                        actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH || actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                        sidebarMode = "search"; selectedType = "Tümü"; selectedGroup = "Tüm kategoriler"
                         val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                        imm.hideSoftInputFromWindow(windowToken, 0)
-                        render()
-                        true
+                        imm.hideSoftInputFromWindow(windowToken, 0); render(); true
                     } else false
                 }
             }
-            searchPanel.addView(searchInput, LinearLayout.LayoutParams(-1, dp(52)))
-            content.addView(searchPanel)
-            if (searchInputFocusPending) {
-                searchInputFocusPending = false
-                searchInput.post {
-                    if (sidebarMode == "search" && searchInput.isAttachedToWindow) {
-                        searchInput.requestFocus()
-                        searchInput.setSelection(searchInput.text.length)
-                        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                        imm.showSoftInput(searchInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            searchBar.addView(globalSearch, LinearLayout.LayoutParams(0, dp(54), 1f))
+            searchBar.addView(makeButton("🎙", false) {
+                try {
+                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
+                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Aramak istediğin içeriği söyle")
                     }
-                }
-            }
+                    startActivityForResult(intent, 7251)
+                } catch (_: Exception) { Toast.makeText(this, "Sesli arama bu cihazda kullanılamıyor.", Toast.LENGTH_SHORT).show() }
+            }, LinearLayout.LayoutParams(dp(64), dp(48)))
+            content.addView(searchBar, 0, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(14)) })
         }
-        val unfilteredBase = when {
+                val unfilteredBase = when {
             sidebarMode == "search" -> items.toList()
             selectedType == "Tümü" -> {
                 val selectedHomeItems = items.filter { homeSourceIds.contains(it.sourceId) }
