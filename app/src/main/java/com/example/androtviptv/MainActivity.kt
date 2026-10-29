@@ -592,13 +592,6 @@ class MainActivity : Activity() {
                 rebuildNavigation()
                 render()
             }
-            addSidebarButton("⌕  Ara", false) {
-                sidebarMode = "search"
-                searchInputFocusPending = true
-                searchQuery = ""
-                rebuildNavigation()
-                render()
-            }
             val categoryType = when (selectedType) {
                 "TV" -> "Canlı TV"
                 else -> selectedType
