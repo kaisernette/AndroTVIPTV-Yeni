@@ -2160,7 +2160,7 @@ class MainActivity : Activity() {
                         isHorizontalScrollBarEnabled = false
                         clipChildren = false
                         clipToPadding = false
-                        setPadding(dp(18), 0, dp(30), 0)
+                        setPadding(dp(30), 0, dp(30), 0)
                         addView(scrollingRow)
                     }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     content.addView(trendRows, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
