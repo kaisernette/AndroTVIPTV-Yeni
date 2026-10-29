@@ -286,7 +286,7 @@ class MainActivity : Activity() {
                         for (i in 0 until parent.childCount) {
                             val child = parent.getChildAt(i)
                             var inSearchBar = false
-                            var ancestor: android.view.ViewParent? = child
+                            var ancestor: android.view.ViewParent? = child.parent
                             while (ancestor is View) {
                                 if (ancestor.tag == "global_search_bar") { inSearchBar = true; break }
                                 ancestor = ancestor.parent
