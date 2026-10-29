@@ -1993,7 +1993,7 @@ class MainActivity : Activity() {
                     setPadding(if (trendPosterRow) 0 else dp(5), if (trendPosterRow) 0 else dp(5), if (trendPosterRow) 0 else dp(5), if (trendPosterRow) 0 else dp(6))
                     clipChildren = true
                     clipToPadding = true
-                    background = if (trendPosterRow) Color.TRANSPARENT else roundedDrawable(panel, 15, Color.rgb(48, 57, 73))
+                    background = if (trendPosterRow) android.graphics.drawable.ColorDrawable(Color.TRANSPARENT) else roundedDrawable(panel, 15, Color.rgb(48, 57, 73))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
                         v.background = if (trendPosterRow) roundedDrawable(Color.TRANSPARENT, 8, if (hasFocus) accent else Color.TRANSPARENT)
