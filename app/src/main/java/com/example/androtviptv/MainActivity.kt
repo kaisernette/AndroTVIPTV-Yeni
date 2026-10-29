@@ -1113,16 +1113,16 @@ class MainActivity : Activity() {
             val pass = params["password"] ?: params["pass"] ?: return m3uItems
             if (user.isBlank() || pass.isBlank()) return m3uItems
 
-            val base = "\${playlistUrl.protocol}://\${playlistUrl.authority}"
+            val base = "${playlistUrl.protocol}://${playlistUrl.authority}"
             val u = URLEncoder.encode(user, "UTF-8")
             val p = URLEncoder.encode(pass, "UTF-8")
-            val api = "\${base}/player_api.php?username=\${u}&password=\${p}"
+            val api = "${base}/player_api.php?username=${u}&password=${p}"
             val root = JSONObject(request(api))
             val userInfo = root.optJSONObject("user_info")
             if (userInfo != null && userInfo.optString("auth", "1") == "0") return m3uItems
 
             fun categoryMap(action: String): Map<String, String> {
-                val arr = JSONArray(request("\${api}&action=\${action}"))
+                val arr = JSONArray(request("${api}&action=${action}"))
                 val result = mutableMapOf<String, String>()
                 for (i in 0 until arr.length()) {
                     val o = arr.optJSONObject(i) ?: continue
@@ -1144,7 +1144,7 @@ class MainActivity : Activity() {
                 Triple("get_vod_streams", "Filmler", vodCats),
                 Triple("get_series", "Diziler", seriesCats)
             ).forEach { (action, type, categories) ->
-                val arr = JSONArray(request("\${api}&action=\${action}"))
+                val arr = JSONArray(request("${api}&action=${action}"))
                 for (i in 0 until arr.length()) {
                     val o = arr.optJSONObject(i) ?: continue
                     val id = o.optString(if (action == "get_series") "series_id" else "stream_id")
@@ -1164,8 +1164,8 @@ class MainActivity : Activity() {
                         genre = o.optString("genre", "")
                     )
                     val normalizedName = name.lowercase().replace(Regex("""\s+"""), " ").trim()
-                    metadataByName["\${type}|\${normalizedName}"] = meta
-                    if (id.isNotBlank()) metadataById["\${type}|\${id}"] = meta
+                    metadataByName["${type}|${normalizedName}"] = meta
+                    if (id.isNotBlank()) metadataById["${type}|${id}"] = meta
                 }
             }
 
@@ -1173,9 +1173,9 @@ class MainActivity : Activity() {
                 val path = try { URL(item.url).path } catch (_: Exception) { "" }
                 val id = Regex("""/(?:live|movie|series)/[^/]+/[^/]+/(\d+)(?:\.[^/]+)?/?$""", RegexOption.IGNORE_CASE)
                     .find(path)?.groupValues?.getOrNull(1)
-                val idMeta = id?.let { metadataById["\${item.type}|\${it}"] }
+                val idMeta = id?.let { metadataById["${item.type}|${it}"] }
                 val normalizedName = item.name.lowercase().replace(Regex("""\s+"""), " ").trim()
-                val meta = idMeta ?: metadataByName["\${item.type}|\${normalizedName}"]
+                val meta = idMeta ?: metadataByName["${item.type}|${normalizedName}"]
                 if (meta == null) item else item.copy(
                     group = if (item.group.isBlank() || item.group.equals("Diğer", true)) meta.group else item.group,
                     icon = if (item.icon.isBlank()) meta.icon else item.icon,
