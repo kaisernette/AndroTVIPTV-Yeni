@@ -1944,39 +1944,21 @@ class MainActivity : Activity() {
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
                 else poster.setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
-                if (weeklyPoster) {
-                    val metaRow = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                    }
-                    metaRow.addView(View(this), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    metaRow.addView(TextView(this).apply {
-                        text = if (favorites.contains(item.favoriteKey)) "♥" else "♡"
-                        textSize = 22f; setTextColor(if (favorites.contains(item.favoriteKey)) accent else Color.WHITE)
-                        gravity = Gravity.CENTER
-                        isFocusable = true
-                        setOnClickListener {
-                            if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-                            render()
-                        }
-                    }, LinearLayout.LayoutParams(dp(30), dp(30)))
-                    card.addView(metaRow)
-                } else if (item.type == "Canlı TV") {
+                if (item.type == "Canlı TV") {
                     card.addView(TextView(this).apply {
                         text = "●  CANLI YAYIN"
                         textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
                     })
                 }
-                if (!weeklyPoster) {
+                card.addView(TextView(this).apply {
+                        text = "●  CANLI YAYIN"
+                        textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
+                    })
+                }
+                if (!weeklyPoster && !homeCard && selectedType != "Filmler" && selectedType != "Diziler") {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                    if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
+                    actions.addView(makeButton("▶ İzle", true) { play(item) },
                         LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
-                    actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
-                        if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                        prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-                        render()
-                    }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                     card.addView(actions)
                 }
                 card.addView(TextView(this).apply {
