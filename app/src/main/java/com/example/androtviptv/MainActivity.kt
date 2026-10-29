@@ -1950,11 +1950,6 @@ class MainActivity : Activity() {
                         textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
                     })
                 }
-                card.addView(TextView(this).apply {
-                        text = "●  CANLI YAYIN"
-                        textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
-                    })
-                }
                 if (!weeklyPoster && !homeCard && selectedType != "Filmler" && selectedType != "Diziler") {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     actions.addView(makeButton("▶ İzle", true) { play(item) },
