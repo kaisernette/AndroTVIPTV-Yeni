@@ -474,7 +474,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▶  Filmler", "▤  Diziler", "♥  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▶  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -539,7 +539,7 @@ class MainActivity : Activity() {
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
                         selectedType = key
-                        sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
+                        sidebarMode = if (normalizedTab in listOf("TV", "Filmler", "Diziler", "Favoriler")) "context" else "main"
                         prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
                         rebuildNavigation()
                         render()
@@ -561,7 +561,7 @@ class MainActivity : Activity() {
                 Triple("▣", "Canlı TV", "Canlı TV"),
                 Triple("▶", "Filmler", "Filmler"),
                 Triple("▤", "Diziler", "Diziler"),
-                Triple("♥", "Favoriler", "Favoriler"),
+                Triple("♡", "Favoriler", "Favoriler"),
                 Triple("◷", "Geçmiş", "Son İzlenenler"),
                 Triple("⚙", "Ayarlar", "Ayarlar")
             )
