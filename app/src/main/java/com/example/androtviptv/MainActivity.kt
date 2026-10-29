@@ -1277,7 +1277,7 @@ class MainActivity : Activity() {
 
         // Keep the focused control so cancelling the exit dialog returns focus to the app.
         val focusBeforeExitDialog = currentFocus
-        val exitDialog = AlertDialog(this)
+        val exitDialog = AlertDialog.Builder(this).create()
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(26), dp(24), dp(26), dp(22))
@@ -1303,7 +1303,7 @@ class MainActivity : Activity() {
         logoRow.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
         panel.addView(logoRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(22) })
 
-        fun exitOption(label: String, subtitle: String, primary: Boolean, action: () -> Unit): TextView {
+        fun exitOption(label: String, subtitle: String, primary: Boolean, action: () -> Unit): LinearLayout {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
