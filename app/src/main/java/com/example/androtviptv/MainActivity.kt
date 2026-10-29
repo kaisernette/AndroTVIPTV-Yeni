@@ -2414,50 +2414,65 @@ class MainActivity : Activity() {
             seriesEpisodeRows.isEmpty() -> episodesPanel.addView(TextView(this).apply {
                 text = "Bu dizi için bölüm bulunamadı."; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
             })
-            else -> seriesEpisodeRows.forEach { (season, episodes) ->
-                episodesPanel.addView(TextView(this).apply {
-                    text = "Sezon $season"; textSize = 18f
-                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accentBright)
-                    setPadding(0, dp(12), 0, dp(8))
-                })
-                episodes.forEachIndexed { index, episode ->
-                    val episodeRow = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(14), dp(10), dp(12), dp(10))
-                        background = roundedDrawable(panel, 12, Color.rgb(42, 50, 66))
-                    }
-                    episodeRow.addView(TextView(this).apply {
-                        text = "${index + 1}."; textSize = 15f; setTextColor(accentBright)
-                    }, LinearLayout.LayoutParams(38, ViewGroup.LayoutParams.WRAP_CONTENT))
-                    episodeRow.addView(TextView(this).apply {
-                        text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
-                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("▶  BÖLÜMÜ İZLE", true) {
-                        val allEpisodes = seriesEpisodeRows.flatMap { it.second }
-                        val episodeIndex = allEpisodes.indexOfFirst { it.favoriteKey == episode.favoriteKey }
-                        if (episodeIndex >= 0) {
-                            PlayerActivity.pendingEpisodeNames = allEpisodes.map { it.name }
-                            PlayerActivity.pendingEpisodeUrls = allEpisodes.map { it.url }
-                            PlayerActivity.pendingEpisodeIndex = episodeIndex
-                            play(episode)
-                        } else play(episode)
-                    }.apply {
-                        gravity = Gravity.CENTER
-                        fun updateEpisodeWatchAppearance(hasFocus: Boolean) {
-                            background = roundedDrawable(if (hasFocus) accentBright else accent, 10,
-                                if (hasFocus) accentBright else accent)
-                            setTextColor(Color.rgb(12, 14, 19))
-                        }
-                        updateEpisodeWatchAppearance(false)
-                        setOnFocusChangeListener { v, hasFocus ->
-                            updateEpisodeWatchAppearance(hasFocus)
-                            v.scaleX = if (hasFocus) 1.02f else 1f
-                            v.scaleY = if (hasFocus) 1.02f else 1f
-                            v.elevation = 0f
-                        }
-                    }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(12, 0, 0, 0) })
-                    episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
+            else -> {
+                // Side-by-side season columns; episode entries are stacked vertically.
+                val seasonsRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.TOP
                 }
+                seriesEpisodeRows.forEach { (season, episodes) ->
+                    val seasonColumn = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(10), dp(10), dp(10), dp(12))
+                        background = roundedDrawable(Color.rgb(20, 26, 38), 12, Color.rgb(42, 50, 66))
+                    }
+                    seasonColumn.addView(TextView(this).apply {
+                        text = "SEZON $season"
+                        textSize = 17f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(accentBright)
+                        setPadding(dp(4), dp(4), dp(4), dp(12))
+                    })
+                    episodes.forEachIndexed { index, episode ->
+                        val episodeButton = makeButton("${index + 1}.  ${episode.name}", false) {
+                            val allEpisodes = seriesEpisodeRows.flatMap { it.second }
+                            val episodeIndex = allEpisodes.indexOfFirst { it.favoriteKey == episode.favoriteKey }
+                            if (episodeIndex >= 0) {
+                                PlayerActivity.pendingEpisodeNames = allEpisodes.map { it.name }
+                                PlayerActivity.pendingEpisodeUrls = allEpisodes.map { it.url }
+                                PlayerActivity.pendingEpisodeIndex = episodeIndex
+                                play(episode)
+                            } else play(episode)
+                        }.apply {
+                            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                            maxLines = 2
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            setPadding(dp(10), dp(8), dp(8), dp(8))
+                            background = roundedDrawable(panel, 9, Color.rgb(42, 50, 66))
+                            setTextColor(Color.WHITE)
+                            setOnFocusChangeListener { v, hasFocus ->
+                                v.background = roundedDrawable(
+                                    if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                                    9,
+                                    if (hasFocus) accent else Color.rgb(42, 50, 66)
+                                )
+                                v.elevation = 0f
+                            }
+                        }
+                        seasonColumn.addView(episodeButton, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                            setMargins(0, 0, 0, dp(7))
+                        })
+                    }
+                    seasonsRow.addView(seasonColumn, LinearLayout.LayoutParams(dp(260), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(0, 0, dp(12), 0)
+                    })
+                }
+                episodesPanel.addView(HorizontalScrollView(this).apply {
+                    isHorizontalScrollBarEnabled = true
+                    isFillViewport = false
+                    clipToPadding = false
+                    addView(seasonsRow)
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
         }
     }
