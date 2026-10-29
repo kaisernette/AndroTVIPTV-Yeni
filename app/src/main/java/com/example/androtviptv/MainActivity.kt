@@ -412,7 +412,7 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = dp(if (showReadableCategories) 200 else 140)
+            val desiredWidth = dp(if (sidebarMode == "context") 76 else 140)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -553,24 +553,54 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "context") {
-            addSidebarButton("⌕  Ara") {
-                detailSeries = null
-                detailMovie = null
-                sidebarMode = "search"
-                searchInputFocusPending = true
-                searchQuery = ""
-                selectedType = "Tümü"
-                selectedGroup = "Tüm kategoriler"
-                rebuildNavigation()
-                render()
-            }
-            addSidebarButton("⌂  Ana Sayfa") { returnToMainMenu() }
-            val sectionGroups = items.filter { it.type == selectedType }
-                .map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
-            sectionGroups.forEach { group ->
-                addSidebarButton(group, selectedGroup == group) {
-                    selectedGroup = group
-                    expandedCategory = null
+            // In TV/Movies/Series, collapse the left rail to icons only.
+            // Category filters remain in the main content area on the right.
+            val compactTabs = listOf(
+                Triple("⌕", "Ara", "Ara"),
+                Triple("⌂", "Ana Sayfa", "Tümü"),
+                Triple("▣", "Canlı TV", "Canlı TV"),
+                Triple("▰", "Filmler", "Filmler"),
+                Triple("▤", "Diziler", "Diziler"),
+                Triple("♥", "Favoriler", "Favoriler"),
+                Triple("◴", "Geçmiş", "Son İzlenenler"),
+                Triple("⚙", "Ayarlar", "Ayarlar")
+            )
+            compactTabs.forEach { (glyph, label, key) ->
+                val isSelected = when (key) {
+                    "Ara" -> false
+                    "Tümü" -> selectedType == "Tümü"
+                    else -> selectedType == key
+                }
+                addSidebarButton(glyph, isSelected) {
+                    when (key) {
+                        "Ara" -> {
+                            detailSeries = null
+                            detailMovie = null
+                            sidebarMode = "search"
+                            searchInputFocusPending = true
+                            searchQuery = ""
+                            selectedType = "Tümü"
+                        }
+                        "Tümü" -> returnToMainMenu()
+                        "Son İzlenenler" -> {
+                            selectedType = key
+                            sidebarMode = "main"
+                            prefs.edit().putString("last_section", key).apply()
+                        }
+                        "Ayarlar" -> {
+                            selectedType = key
+                            settingsPage = prefs.getString("last_settings_page", "main") ?: "main"
+                            sidebarMode = "settings"
+                            prefs.edit().putString("last_section", key).apply()
+                        }
+                        else -> {
+                            selectedType = key
+                            selectedGroup = "Tüm kategoriler"
+                            expandedCategory = null
+                            sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
+                            prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
+                        }
+                    }
                     rebuildNavigation()
                     render()
                 }
