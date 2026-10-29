@@ -407,13 +407,10 @@ class MainActivity : Activity() {
 
     private fun rebuildNavigation() {
         if (!::navBar.isInitialized) return
-        // Keep the main navigation icon-only, but expand the sidebar when a
-        // category list is open so full category names remain readable.
+        // Keep the full icon-and-label sidebar at its original width on every screen.
         if (::sidebar.isInitialized) {
-            val showReadableCategories = sidebarMode == "context" &&
-                selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = dp(if (sidebarMode == "context") 76 else 140)
+            val desiredWidth = dp(150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -554,7 +551,7 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "context") {
-            // In TV/Movies/Series, collapse the left rail to icons only.
+            // Keep icons and readable labels visible in the sidebar on every screen.
             // Category filters remain in the main content area on the right.
             val compactTabs = listOf(
                 Triple("⌕", "Ara", "Ara"),
@@ -572,7 +569,7 @@ class MainActivity : Activity() {
                     "Tümü" -> selectedType == "Tümü"
                     else -> selectedType == key
                 }
-                addSidebarButton(glyph, isSelected) {
+                addSidebarButton("$glyph  $label", isSelected) {
                     when (key) {
                         "Ara" -> {
                             detailSeries = null
