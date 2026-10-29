@@ -46,6 +46,7 @@ class MainActivity : Activity() {
     private val items = mutableListOf<MediaItem>()
     private val posterRequests = ConcurrentHashMap<String, CopyOnWriteArrayList<WeakReference<ImageView>>>()
     private val savedSources = mutableListOf<SavedSource>()
+    private val homeSourceIds = mutableSetOf<String>()
     private lateinit var sourceName: EditText
     private val favorites = mutableSetOf<String>()
     private val recent = mutableListOf<MediaItem>()
@@ -744,8 +745,14 @@ class MainActivity : Activity() {
 
     private fun saveSource(source: SavedSource) {
         savedSources.removeAll { it.id == source.id }; savedSources.add(source)
+        homeSourceIds.add(source.id)
+        persistHomeSourceIds()
         prefs.edit().putString("last_source_id", source.id).apply()
         persistSources()
+    }
+
+    private fun persistHomeSourceIds() {
+        prefs.edit().putStringSet("home_source_ids", homeSourceIds.toSet()).apply()
     }
     private fun persistSources() {
         val arr = JSONArray()
@@ -761,6 +768,15 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) { }
         if (savedSources.isNotEmpty()) {
+            if (prefs.contains("home_source_ids")) {
+                homeSourceIds.clear()
+                homeSourceIds.addAll(prefs.getStringSet("home_source_ids", emptySet()) ?: emptySet())
+                homeSourceIds.retainAll(savedSources.map { it.id }.toSet())
+            } else {
+                homeSourceIds.clear()
+                homeSourceIds.addAll(savedSources.map { it.id })
+                persistHomeSourceIds()
+            }
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
 
@@ -1586,7 +1602,10 @@ class MainActivity : Activity() {
         }
         val unfilteredBase = when {
             sidebarMode == "search" -> items.toList()
-            selectedType == "Tümü" -> items.toList()
+            selectedType == "Tümü" -> {
+                val selectedHomeItems = items.filter { homeSourceIds.contains(it.sourceId) }
+                if (homeSourceIds.isEmpty()) items.toList() else selectedHomeItems
+            }
             selectedType == "Favoriler" -> items.filter { favorites.contains(it.favoriteKey) }
             selectedType == "Son İzlenenler" -> recent.toList()
             else -> items.filter { it.type == selectedType }
@@ -1792,9 +1811,10 @@ class MainActivity : Activity() {
                 ranked.addAll(remaining)
                 return ranked
             }
+            val homeItems = if (homeSourceIds.isEmpty()) items.toList() else items.filter { homeSourceIds.contains(it.sourceId) }
             listOf(
-                "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(items.filter { it.type == "Filmler" }, trendingMovies).take(24),
-                "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(items.filter { it.type == "Diziler" }, trendingSeries).take(24),
+                "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(homeItems.filter { it.type == "Filmler" }, trendingMovies).take(24),
+                "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(homeItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
             ).filter { it.second.isNotEmpty() }
         } else if (selectedType == "Filmler" || selectedType == "Diziler") {
             // Trend rows are shown on the home screen only; category screens list categories directly.
@@ -2449,6 +2469,14 @@ class MainActivity : Activity() {
                             setPadding(0, dp(2), 0, 0)
                         })
                         sourceRow.addView(sourceInfo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                        val shownOnHome = homeSourceIds.contains(source.id)
+                        sourceRow.addView(makeButton(if (shownOnHome) "Ana sayfada ✓" else "Seç", shownOnHome) {
+                            if (homeSourceIds.contains(source.id)) homeSourceIds.remove(source.id) else homeSourceIds.add(source.id)
+                            persistHomeSourceIds()
+                            render()
+                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply {
+                            setMargins(dp(4), 0, dp(4), 0)
+                        })
                         sourceRow.addView(makeButton("Yenile", false) {
                             if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
                         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply {
