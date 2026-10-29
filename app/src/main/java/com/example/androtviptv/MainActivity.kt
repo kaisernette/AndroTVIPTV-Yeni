@@ -1278,10 +1278,15 @@ class MainActivity : Activity() {
         // Keep the focused control so cancelling the exit dialog returns focus to the app.
         val focusBeforeExitDialog = currentFocus
         val exitDialog = AlertDialog.Builder(this)
-            .setTitle("Kaisertv'den çıkılsın mı?")
-            .setMessage("Uygulamadan çıkmak istediğine emin misin?")
+            .setTitle("KaiserTv+")
+            .setMessage("Ne yapmak istiyorsun?")
             .setNegativeButton("Uygulamaya dön", null)
-            .setPositiveButton("Çıkış yap") { _, _ -> finish() }
+            .setNeutralButton("Arka plana al") { _, _ ->
+                moveTaskToBack(true)
+            }
+            .setPositiveButton("Çıkış yap") { _, _ ->
+                finish()
+            }
             .create()
         exitDialog.setOnShowListener {
             exitDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
