@@ -1982,27 +1982,28 @@ class MainActivity : Activity() {
             }
             if (!showingExpandedCategory && entries.size > 5) {
                 val moreButton = TextView(this).apply {
-                    text = "+"; textSize = 32f
+                    text = "+"; textSize = 28f
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
                     background = GradientDrawable().apply {
-                        cornerRadius = dp(12).toFloat()
+                        cornerRadius = dp(10).toFloat()
                         setColor(Color.rgb(27, 32, 42))
-                        setStroke(dp(2), accent)
+                        setStroke(dp(1), Color.rgb(58, 68, 84))
                     }
                     isFocusable = true
                     isFocusableInTouchMode = true
                     contentDescription = "$groupName tüm içerikleri göster"
                     setOnFocusChangeListener { v, hasFocus ->
                         v.background = GradientDrawable().apply {
-                            cornerRadius = dp(12).toFloat()
+                            cornerRadius = dp(10).toFloat()
                             setColor(if (hasFocus) Color.rgb(43, 49, 63) else Color.rgb(27, 32, 42))
-                            setStroke(dp(if (hasFocus) 3 else 2), if (hasFocus) focusColor else accent)
+                            setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) focusColor else Color.rgb(58, 68, 84))
                         }
                     }
                     setOnClickListener { expandedCategory = groupName to entries; render() }
                 }
-                row.addView(moreButton, LinearLayout.LayoutParams(dp(90), if (weeklyMovieFeature) dp(210) else dp(210)).apply {
+                row.addView(moreButton, LinearLayout.LayoutParams(dp(52), dp(64)).apply {
+                    gravity = Gravity.CENTER_VERTICAL
                     setMargins(dp(5), 0, dp(14), dp(10))
                 })
             }
