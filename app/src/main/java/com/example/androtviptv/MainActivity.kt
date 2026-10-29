@@ -571,63 +571,52 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "context") {
-            // Keep icons and readable labels visible in the sidebar on every screen.
-            // Category filters remain in the main content area on the right.
-            val compactTabs = listOf(
-                Triple("⌂", "Ana Sayfa", "Tümü"),
-                Triple("▣", "Canlı TV", "Canlı TV"),
-                Triple("▶", "Filmler", "Filmler"),
-                Triple("▤", "Diziler", "Diziler"),
-                Triple("♡", "Favoriler", "Favoriler"),
-                Triple("◷", "Geçmiş", "Son İzlenenler"),
-                Triple("⚙", "Ayarlar", "Ayarlar")
-            )
-            compactTabs.forEach { (glyph, label, key) ->
-                val isSelected = when (key) {
-                    "Ara" -> false
-                    "Tümü" -> selectedType == "Tümü"
-                    else -> selectedType == key
-                }
-                addSidebarButton("$glyph  $label", isSelected) {
-                    when (key) {
-                        "Ara" -> {
-                            detailSeries = null
-                            detailMovie = null
-                            sidebarMode = "search"
-                            searchInputFocusPending = true
-                            searchQuery = ""
-                            selectedType = "Tümü"
-                        }
-                        "Tümü" -> returnToMainMenu()
-                        "Favoriler" -> {
-                            selectedType = key
-                            selectedGroup = "Tüm kategoriler"
-                            sidebarMode = "context"
-                            prefs.edit().putString("last_section", key).apply()
-                        }
-                        "Son İzlenenler" -> {
-                            selectedType = key
-                            selectedGroup = "Tüm kategoriler"
-                            sidebarMode = "context"
-                            prefs.edit().putString("last_section", key).apply()
-                        }
-                        "Ayarlar" -> {
-                            selectedType = key
-                            settingsPage = "main"
-                            sidebarMode = "context"
-                            prefs.edit().putString("last_section", key).apply()
-                        }
-                        else -> {
-                            selectedType = key
-                            selectedGroup = "Tüm kategoriler"
-                            expandedCategory = null
-                            sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
-                            prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
-                        }
-                    }
+            addSidebarButton("‹  Menü", false) {
+                sidebarMode = "main"
+                selectedGroup = "Tüm kategoriler"
+                rebuildNavigation()
+                render()
+            }
+            addSidebarButton("⌕  Ara", false) {
+                sidebarMode = "search"
+                searchInputFocusPending = true
+                searchQuery = ""
+                rebuildNavigation()
+                render()
+            }
+            val categoryType = when (selectedType) {
+                "TV" -> "Canlı TV"
+                else -> selectedType
+            }
+            val groups = items.asSequence()
+                .filter { it.type == categoryType }
+                .map { it.group.ifBlank { "Diğer" } }
+                .distinct()
+                .sorted()
+                .toList()
+            addSidebarButton("Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
+                selectedGroup = "Tüm kategoriler"
+                expandedCategory = null
+                prefs.edit().putString("last_group", selectedGroup).apply()
+                rebuildNavigation()
+                render()
+            }
+            groups.forEach { group ->
+                addSidebarButton(group, selectedGroup == group) {
+                    selectedGroup = group
+                    expandedCategory = null
+                    prefs.edit().putString("last_group", group).apply()
                     rebuildNavigation()
                     render()
                 }
+            }
+            if (groups.isEmpty()) {
+                navBar.addView(TextView(this).apply {
+                    text = "Kategori bulunamadı"
+                    textSize = 12f
+                    setTextColor(muted)
+                    setPadding(dp(10), dp(8), dp(6), dp(8))
+                })
             }
             return
         }
