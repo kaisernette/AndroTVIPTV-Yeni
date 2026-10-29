@@ -1938,7 +1938,7 @@ class MainActivity : Activity() {
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
                         if (weeklyPoster) dp(140) else -1,
-                        if (liveCard) 112 else if (weeklyPoster) dp(210) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210
+                        if (liveCard) 112 else if (weeklyPoster) dp(240) else if (showingExpandedCategory) 220 else if (homeCard) 270 else 250
                     )
                 }
                 card.addView(poster)
@@ -1950,10 +1950,7 @@ class MainActivity : Activity() {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
                     }
-                    metaRow.addView(TextView(this).apply {
-                        text = item.type.uppercase()
-                        textSize = 10f; setTextColor(accent); letterSpacing = 0.03f
-                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    metaRow.addView(View(this), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                     metaRow.addView(TextView(this).apply {
                         text = if (favorites.contains(item.favoriteKey)) "♥" else "♡"
                         textSize = 22f; setTextColor(if (favorites.contains(item.favoriteKey)) accent else Color.WHITE)
@@ -1966,9 +1963,9 @@ class MainActivity : Activity() {
                         }
                     }, LinearLayout.LayoutParams(dp(30), dp(30)))
                     card.addView(metaRow)
-                } else {
+                } else if (item.type == "Canlı TV") {
                     card.addView(TextView(this).apply {
-                        text = if (item.type == "Canlı TV") "●  CANLI YAYIN" else item.type.uppercase()
+                        text = "●  CANLI YAYIN"
                         textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
                     })
                 }
