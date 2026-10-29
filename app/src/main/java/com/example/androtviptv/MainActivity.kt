@@ -453,26 +453,20 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Selected sidebar item uses the chosen theme color, with no separate blue outline.
-                background = roundedDrawable(if (selected) accent else Color.TRANSPARENT, 10,
-                    if (selected) accent else Color.TRANSPARENT)
+                // Sidebar stays visually neutral; only the currently focused item uses
+                // the selected theme accent as a subtle outline, never as a filled block.
+                background = roundedDrawable(Color.TRANSPARENT, 10, Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(
-                        when {
-                            selected -> accent
-                            hasFocus -> Color.rgb(27, 39, 53)
-                            else -> Color.TRANSPARENT
-                        },
+                        if (hasFocus) Color.rgb(27, 39, 53) else Color.TRANSPARENT,
                         10,
-                        if (selected) accent else Color.TRANSPARENT
+                        if (hasFocus) accent else Color.TRANSPARENT
                     )
                     (v as Button).setTextColor(Color.WHITE)
                     if (hasFocus) {
                         lastSidebarFocusLabel = v.contentDescription?.toString()
                     }
-                    // Keep sidebar buttons at a fixed size on every screen.
-                    // Scaling/elevation can leave vertical focus trails on some Android TV renderers.
                     v.elevation = 0f
                     v.scaleX = 1f
                     v.scaleY = 1f
@@ -1907,15 +1901,13 @@ class MainActivity : Activity() {
                     if (!gridLayout) background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        if (gridLayout) {
-                            v.background = roundedDrawable(Color.TRANSPARENT, 0,
-                                if (hasFocus) accent else Color.TRANSPARENT)
-                            v.elevation = 0f
-                        } else {
-                            v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
-                                if (hasFocus) accent else Color.rgb(38, 45, 60))
-                            v.elevation = if (hasFocus) dp(4).toFloat() else 0f
-                        }
+                        // Poster/card outline follows the selected theme accent on focus.
+                        v.background = roundedDrawable(
+                            if (gridLayout) Color.TRANSPARENT else if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                            15,
+                            if (hasFocus) accent else if (gridLayout) Color.TRANSPARENT else Color.rgb(38, 45, 60)
+                        )
+                        v.elevation = if (hasFocus && !gridLayout) dp(4).toFloat() else 0f
                         v.scaleX = if (hasFocus) 1.03f else 1f
                         v.scaleY = if (hasFocus) 1.03f else 1f
                     }
