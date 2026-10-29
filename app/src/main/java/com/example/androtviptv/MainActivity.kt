@@ -2055,12 +2055,27 @@ class MainActivity : Activity() {
                 val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p&action=get_series_info&series_id=${URLEncoder.encode(series.seriesId.ifBlank { series.id }, "UTF-8")}"
                 val data = JSONObject(request(api))
                 val episodes = data.optJSONObject("episodes") ?: JSONObject()
-                val rows = mutableListOf<Pair<String, List<MediaItem>>>()
+                val rowsBySeason = linkedMapOf<String, MutableList<MediaItem>>()
+
+                // Xtream providers often return season metadata separately from the episode groups.
+                // Use both sources so every season is selectable, not just seasons with a parsed episode array.
+                val seasons = data.optJSONArray("seasons")
+                if (seasons != null) {
+                    for (i in 0 until seasons.length()) {
+                        val seasonInfo = seasons.optJSONObject(i) ?: continue
+                        val seasonNumber = seasonInfo.optString(
+                            "season_number",
+                            seasonInfo.optString("season", seasonInfo.optString("name", ""))
+                        ).trim()
+                        if (seasonNumber.isNotBlank()) rowsBySeason.putIfAbsent(seasonNumber, mutableListOf())
+                    }
+                }
+
                 val keys = episodes.keys()
                 while (keys.hasNext()) {
                     val key = keys.next()
                     val arr = episodes.optJSONArray(key) ?: continue
-                    val seasonItems = mutableListOf<MediaItem>()
+                    val seasonItems = rowsBySeason.getOrPut(key) { mutableListOf() }
                     for (i in 0 until arr.length()) {
                         val ep = arr.optJSONObject(i) ?: continue
                         val id = ep.optString("id", ep.optString("episode_id", ""))
@@ -2070,9 +2085,10 @@ class MainActivity : Activity() {
                         val stream = "${source.address.trimEnd('/')}/series/$u/$p/$id.$ext"
                         seasonItems.add(MediaItem(id, name, stream, "${series.name} • Sezon $key", "Bölümler", "", ext, series.seriesId, source.id))
                     }
-                    if (seasonItems.isNotEmpty()) rows.add(Pair(key, seasonItems))
                 }
-                val sortedRows = rows.sortedWith(compareBy { it.first.toIntOrNull() ?: Int.MAX_VALUE })
+                val sortedRows = rowsBySeason.entries
+                    .sortedWith(compareBy { it.key.toIntOrNull() ?: Int.MAX_VALUE })
+                    .map { Pair(it.key, it.value.toList()) }
                 runOnUiThread {
                     if (detailSeries?.favoriteKey != series.favoriteKey) return@runOnUiThread
                     seriesEpisodeRows = sortedRows
@@ -2454,6 +2470,14 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
                 val selectedEpisodes = seriesEpisodeRows.firstOrNull { it.first == selectedSeriesSeasonKey }?.second.orEmpty()
+                if (selectedEpisodes.isEmpty()) {
+                    episodesPanel.addView(TextView(this).apply {
+                        text = "Bu sezon için bölüm bilgisi kaynakta bulunamadı."
+                        textSize = 14f
+                        setTextColor(muted)
+                        setPadding(dp(4), dp(10), dp(4), dp(10))
+                    })
+                }
                 selectedEpisodes.forEachIndexed { index, episode ->
                     val episodeButton = makeButton("${index + 1}.  ${episode.name}", false) {
                         val allEpisodes = seriesEpisodeRows.flatMap { it.second }
