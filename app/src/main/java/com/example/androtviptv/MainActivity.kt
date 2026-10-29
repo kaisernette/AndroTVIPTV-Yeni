@@ -1100,53 +1100,54 @@ class MainActivity : Activity() {
     private fun parseM3u(text: String): List<MediaItem> {
         val out = mutableListOf<MediaItem>()
         var name = "İçerik"
-        var group = "Diğer"
+        var group = ""
         var icon = ""
         fun attribute(line: String, key: String): String {
-            // Playlist providers vary in attribute spacing and separators. Accept quoted
-            // values, unquoted values, and attributes preceded by whitespace or commas.
-            val match = Regex("""(?:^|[\s,])${Regex.escape(key)}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s,]*))""", RegexOption.IGNORE_CASE).find(line)
+            val match = Regex("""(?:^|[\\s,])${Regex.escape(key)}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s,]*))""", RegexOption.IGNORE_CASE).find(line)
             return match?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.trim().orEmpty()
         }
-        text.lineSequence().map { it.trim() }.forEach { line ->
+        fun firstAttribute(line: String, vararg keys: String): String =
+            keys.firstNotNullOfOrNull { key -> attribute(line, key).takeIf { it.isNotBlank() } }.orEmpty()
+        fun cleanGroup(value: String): String =
+            value.replace(Regex("""\\s+"""), " ").trim().trim('|', '-', ':').ifBlank { "Diğer" }
+
+        text.lineSequence().map { it.trim().removePrefix("\uFEFF") }.forEach { line ->
             when {
                 line.startsWith("#EXTINF", true) -> {
                     val comma = line.indexOf(',')
                     name = if (comma >= 0) line.substring(comma + 1).trim().ifBlank { "İçerik" } else "İçerik"
-                    // Some M3U playlists use EXTGRP instead of group-title; preserve that
-                    // category when the current entry does not provide its own group.
-                    group = attribute(line, "group-title")
-                        .ifBlank { attribute(line, "group") }
-                        .ifBlank { attribute(line, "category") }
-                        .ifBlank { group }
-                        .ifBlank { "Diğer" }
-                    icon = attribute(line, "tvg-logo")
+                    group = firstAttribute(line, "group-title", "tvg-group", "group", "category", "channel-group")
+                    icon = firstAttribute(line, "tvg-logo", "logo", "poster", "cover")
                 }
                 line.startsWith("#EXTGRP:", true) -> {
                     val extGroup = line.substringAfter(':').trim()
                     if (extGroup.isNotBlank()) group = extGroup
                 }
-                (line.startsWith("http://", true) || line.startsWith("https://", true)) && line.isNotBlank() -> {
-                    val normalizedGroup = group.replace(Regex("""\s+"""), " ").trim().ifBlank { "Diğer" }
-                    val type = classify(name, normalizedGroup)
-                    out.add(MediaItem(line, name, line, normalizedGroup, type, icon))
+                line.startsWith("http://", true) || line.startsWith("https://", true) -> {
+                    val normalizedGroup = cleanGroup(group)
+                    val type = classify(name, normalizedGroup, line)
+                    val normalizedIcon = icon.trim().removeSurrounding("\"").replace("&amp;", "&")
+                    out.add(MediaItem(line, name, line, normalizedGroup, type, normalizedIcon))
                     name = "İçerik"
-                    group = "Diğer"
+                    group = ""
                     icon = ""
                 }
             }
         }
         return out
     }
-    private fun classify(name: String, group: String): String {
-        val s = "$name $group".lowercase()
+
+    private fun classify(name: String, group: String, streamUrl: String = ""): String {
+        val titleAndGroup = "$name $group".lowercase()
+        val path = try { URL(streamUrl).path.lowercase() } catch (_: Exception) { streamUrl.lowercase() }
         return when {
-            listOf("series", "dizi", "tv show", "season", "sezon", "episode", "bölüm").any { it in s } -> "Diziler"
-            listOf("movie", "film", "cinema", "vod", "4k film").any { it in s } -> "Filmler"
+            Regex("""/(series|show|shows)/""").containsMatchIn(path) ||
+                listOf("series", "dizi", "tv show", "season", "sezon", "episode", "bölüm").any { it in titleAndGroup } -> "Diziler"
+            Regex("""/(movie|movies|vod|film|films)/""").containsMatchIn(path) ||
+                listOf("movie", "film", "cinema", "vod", "4k film").any { it in titleAndGroup } -> "Filmler"
             else -> "Canlı TV"
         }
     }
-
     private fun cachedItemsFile() = java.io.File(filesDir, "kaisertv_media_cache.json")
 
     private fun saveCachedItems() {
