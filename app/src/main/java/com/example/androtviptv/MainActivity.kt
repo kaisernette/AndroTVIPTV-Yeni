@@ -433,20 +433,11 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Selected sidebar item uses the chosen theme color, with no separate blue outline.
-                background = roundedDrawable(if (selected) accent else Color.TRANSPARENT, 10,
-                    if (selected) accent else Color.TRANSPARENT)
+                // Sidebar navigation stays neutral; theme accent is reserved for content items.
+                background = ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
-                    v.background = roundedDrawable(
-                        when {
-                            selected -> accent
-                            hasFocus -> Color.rgb(27, 39, 53)
-                            else -> Color.TRANSPARENT
-                        },
-                        10,
-                        if (selected) accent else Color.TRANSPARENT
-                    )
+                    v.background = ColorDrawable(Color.TRANSPARENT)
                     (v as Button).setTextColor(Color.WHITE)
                     if (hasFocus) {
                         lastSidebarFocusLabel = v.contentDescription?.toString()
@@ -655,12 +646,8 @@ class MainActivity : Activity() {
                 }
                 navBar.getChildAt(navBar.childCount - 1).setOnFocusChangeListener { v, hasFocus ->
                     (v as? Button)?.apply {
-                        setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
-                        background = roundedDrawable(
-                            if (hasFocus) accent else Color.TRANSPARENT,
-                            10,
-                            if (hasFocus) accent else Color.TRANSPARENT
-                        )
+                        setTextColor(Color.WHITE)
+                        background = ColorDrawable(Color.TRANSPARENT)
                     }
                     v.scaleX = if (hasFocus) 1.025f else 1f
                     v.scaleY = if (hasFocus) 1.025f else 1f
