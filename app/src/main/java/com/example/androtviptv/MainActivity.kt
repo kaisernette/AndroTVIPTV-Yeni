@@ -2224,7 +2224,7 @@ class MainActivity : Activity() {
             clipToOutline = true
         }
         val poster = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
+            scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = movie.name
             alpha = 0.78f
         }
@@ -2318,7 +2318,7 @@ class MainActivity : Activity() {
             clipToOutline = true
         }
         val poster = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
+            scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = series.name
             alpha = 0.82f
         }
