@@ -295,7 +295,9 @@ class MainActivity : Activity() {
                     ::mainContentScroll.isInitialized &&
                     isDescendantView(mainContentScroll, currentFocus ?: this)) {
                     val search = findViewWithTag<View>("global_search_input")
-                    if (search != null && search.isShown) {
+                    val searchBar = findViewWithTag<View>("global_search_bar")
+                    if (search != null && searchBar != null) {
+                        searchBar.visibility = View.VISIBLE
                         search.isFocusable = true
                         search.isFocusableInTouchMode = true
                         search.requestFocus()
@@ -1702,6 +1704,7 @@ class MainActivity : Activity() {
             oldSearch?.findViewWithTag<View>("global_search_bar")?.let { oldSearch.removeView(it) }
             val searchBar = LinearLayout(this).apply {
                 tag = "global_search_bar"
+                visibility = View.GONE
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(12), dp(4), dp(8), dp(4))
