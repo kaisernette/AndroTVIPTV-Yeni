@@ -2323,16 +2323,50 @@ class MainActivity : Activity() {
             textSize = 13f; maxLines = 2; setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(makeButton(if (favorites.contains(series.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
+        val seriesIsFavorite = favorites.contains(series.favoriteKey)
+        actions.addView(makeButton(if (seriesIsFavorite) "★ Favori" else "☆ Favori", false) {
             if (!favorites.add(series.favoriteKey)) favorites.remove(series.favoriteKey)
             prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
             render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 10, 0) })
-        actions.addView(makeButton("← Geri", false) {
+        }.apply {
+            gravity = Gravity.CENTER
+            fun updateSeriesFavoriteAppearance(hasFocus: Boolean) {
+                if (seriesIsFavorite) {
+                    setTextColor(Color.rgb(25, 25, 25))
+                    background = roundedDrawable(Color.rgb(255, 205, 55), 10,
+                        if (hasFocus) accentBright else Color.rgb(255, 205, 55))
+                } else {
+                    setTextColor(Color.WHITE)
+                    background = roundedDrawable(Color.TRANSPARENT, 10,
+                        if (hasFocus) accentBright else Color.rgb(88, 96, 110))
+                }
+            }
+            updateSeriesFavoriteAppearance(false)
+            setOnFocusChangeListener { v, hasFocus ->
+                updateSeriesFavoriteAppearance(hasFocus)
+                v.scaleX = if (hasFocus) 1.02f else 1f
+                v.scaleY = if (hasFocus) 1.02f else 1f
+            }
+        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 14, 10, 0) })
+        actions.addView(makeButton("←  GERİ", true) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
             render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
+        }.apply {
+            gravity = Gravity.CENTER
+            fun updateSeriesBackAppearance(hasFocus: Boolean) {
+                background = roundedDrawable(if (hasFocus) accentBright else accent, 10,
+                    if (hasFocus) accentBright else accent)
+                setTextColor(Color.rgb(12, 14, 19))
+            }
+            updateSeriesBackAppearance(false)
+            setOnFocusChangeListener { v, hasFocus ->
+                updateSeriesBackAppearance(hasFocus)
+                v.scaleX = if (hasFocus) 1.02f else 1f
+                v.scaleY = if (hasFocus) 1.02f else 1f
+                v.elevation = 0f
+            }
+        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
