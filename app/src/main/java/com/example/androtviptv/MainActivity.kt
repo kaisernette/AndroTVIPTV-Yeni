@@ -1886,10 +1886,17 @@ class MainActivity : Activity() {
                     if (!gridLayout) background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        if (!gridLayout) v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
-                            if (hasFocus) focusColor else Color.rgb(38, 45, 60))
-                        v.elevation = if (hasFocus && !gridLayout) dp(4).toFloat() else 0f
-                        v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
+                        if (gridLayout) {
+                            v.background = roundedDrawable(Color.TRANSPARENT, 0,
+                                if (hasFocus) accent else Color.TRANSPARENT)
+                            v.elevation = 0f
+                        } else {
+                            v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
+                                if (hasFocus) accent else Color.rgb(38, 45, 60))
+                            v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+                        }
+                        v.scaleX = if (hasFocus) 1.03f else 1f
+                        v.scaleY = if (hasFocus) 1.03f else 1f
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
