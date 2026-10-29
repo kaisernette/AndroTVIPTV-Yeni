@@ -1895,10 +1895,10 @@ class MainActivity : Activity() {
             }
             content.addView(sectionHeader)
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
-            val gridLayout = showingExpandedCategory || weeklyMovieFeature || selectedType == "Filmler" || selectedType == "Diziler"
+            val gridLayout = showingExpandedCategory || (weeklyMovieFeature && false) || selectedType == "Filmler" || selectedType == "Diziler"
+            val trendPosterRow = weeklyMovieFeature && !showingExpandedCategory
             val row = LinearLayout(this).apply { orientation = if (gridLayout) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
-            val featureCardWidth = dp(140)
-            val displayedEntries = if (showingExpandedCategory) entries else if (gridLayout) entries.take(4) else entries.take(5)
+            val displayedEntries = if (showingExpandedCategory) entries else if (trendPosterRow) entries.take(24) else if (gridLayout) entries.take(4) else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
             displayedEntries.forEach { item ->
@@ -2003,7 +2003,7 @@ class MainActivity : Activity() {
                     })
                     expandedPosterCount++
                 } else {
-                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (trendPosterRow) dp(150) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(dp(5), 0, dp(14), dp(10))
                     })
                 }
@@ -2030,15 +2030,37 @@ class MainActivity : Activity() {
             if (gridLayout) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             } else {
-                content.addView(HorizontalScrollView(this).apply {
-                    isHorizontalScrollBarEnabled = false
-                    clipToPadding = false
-                    isFillViewport = true
-                    setPadding(dp(18), 0, dp(30), 0)
-                    // Keep poster rows anchored to the left, even when there is only one item.
-                    row.gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                    addView(row)
-                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                if (trendPosterRow) {
+                    val trendRows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                    val trendCards = row
+                    val allTrendCards = (0 until trendCards.childCount).map { trendCards.getChildAt(it) }
+                    trendRows.clipChildren = false
+                    trendRows.clipToPadding = false
+                    for (startIndex in allTrendCards.indices step 5) {
+                        val scrollingRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                        allTrendCards.drop(startIndex).take(5).forEach { cardView ->
+                            (cardView.parent as? ViewGroup)?.removeView(cardView)
+                            scrollingRow.addView(cardView, LinearLayout.LayoutParams(dp(150), ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(5), dp(6), dp(12), dp(10)) })
+                        }
+                        trendRows.addView(HorizontalScrollView(this).apply {
+                            isHorizontalScrollBarEnabled = false
+                            clipChildren = false
+                            clipToPadding = false
+                            setPadding(dp(18), 0, dp(30), 0)
+                            addView(scrollingRow)
+                        }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    }
+                    content.addView(trendRows, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                } else {
+                    content.addView(HorizontalScrollView(this).apply {
+                        isHorizontalScrollBarEnabled = false
+                        clipToPadding = false
+                        isFillViewport = true
+                        setPadding(dp(18), 0, dp(30), 0)
+                        row.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                        addView(row)
+                    }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                }
             }
         }
     }
