@@ -184,7 +184,7 @@ class PlayerActivity : Activity() {
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val view = PlayerView(this).apply {
-            useController = true
+            useController = false
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
             isFocusable = true
             isFocusableInTouchMode = true
@@ -261,6 +261,7 @@ class PlayerActivity : Activity() {
             })
         }
         episodePromptRoot = root
+        buildCinemaControls(root, title)
         setContentView(root)
         playbackHandler.post(episodeTransitionCheck)
         if (url.isBlank()) {
@@ -603,6 +604,38 @@ class PlayerActivity : Activity() {
             overlayIsRecent = false
         }
         playerView?.requestFocus()
+    }
+
+    private fun buildCinemaControls(root: FrameLayout, title: String) {
+        val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(30), dp(16), dp(30), dp(14)); background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x00101010, 0xDD080808.toInt(), 0xF5080808.toInt())) }
+        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        header.addView(TextView(this).apply { text = title; textSize = 23f; setTextColor(Color.WHITE); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, LinearLayout.LayoutParams(0, -2, 1f))
+        val clock = TextView(this).apply { setTextColor(Color.WHITE); textSize = 17f }
+        header.addView(clock); panel.addView(header, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        fun button(label: String, width: Int, action: () -> Unit): TextView {
+            val b = TextView(this).apply { text = label; textSize = 23f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); isFocusable = true; isFocusableInTouchMode = true }
+            b.setOnFocusChangeListener { v, focused -> v.background = GradientDrawable().apply { cornerRadius = dp(10).toFloat(); setColor(if (focused) 0x5533B5FF else Color.TRANSPARENT); if (focused) setStroke(dp(2), 0xFF33B5FF.toInt()) } }
+            b.setOnClickListener { action() }; controls.addView(b, LinearLayout.LayoutParams(dp(width), dp(50))); return b
+        }
+        button("⏮", 56) { player?.seekToPreviousMediaItem() }
+        button("↶ 5", 70) { player?.let { it.seekTo((it.currentPosition - 5000L).coerceAtLeast(0L)) } }
+        val play = button("▶", 64) { player?.let { if (it.isPlaying) it.pause() else it.play() } }
+        button("15 ↷", 78) { player?.let { it.seekTo((it.currentPosition + 15000L).coerceAtMost(it.duration.coerceAtLeast(0L))) } }
+        button("⏭", 56) { player?.seekToNextMediaItem() }
+        panel.addView(controls, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+        val seek = android.widget.SeekBar(this).apply { max = 1000; progressTintList = android.content.res.ColorStateList.valueOf(0xFFFF7A1A.toInt()); thumbTintList = android.content.res.ColorStateList.valueOf(Color.WHITE); progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x99FFFFFF.toInt()) }
+        panel.addView(seek, LinearLayout.LayoutParams(-1, dp(30)))
+        val times = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val position = TextView(this).apply { setTextColor(Color.WHITE); textSize = 15f }; val duration = TextView(this).apply { setTextColor(0xFFDDDDDD.toInt()); textSize = 15f }
+        times.addView(position); times.addView(TextView(this).apply { text = " / "; setTextColor(0xFFBBBBBB.toInt()) }); times.addView(duration); times.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        fun extra(label: String, action: () -> Unit) { val b = TextView(this).apply { text = label; textSize = 20f; setTextColor(Color.WHITE); gravity = Gravity.CENTER; isFocusable = true; setPadding(dp(8), dp(4), dp(8), dp(4)) }; b.setOnClickListener { action() }; times.addView(b, LinearLayout.LayoutParams(dp(48), dp(40))) }
+        extra("CC") { android.widget.Toast.makeText(this, "Altyazı seçenekleri", android.widget.Toast.LENGTH_SHORT).show() }
+        extra("⚙") { android.widget.Toast.makeText(this, "Oynatıcı ayarları", android.widget.Toast.LENGTH_SHORT).show() }
+        panel.addView(times, LinearLayout.LayoutParams(-1, -2)); root.addView(panel, FrameLayout.LayoutParams(-1, dp(220), Gravity.BOTTOM))
+        seek.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(bar: android.widget.SeekBar?, value: Int, fromUser: Boolean) { if (fromUser) player?.let { if (it.duration > 0L) it.seekTo(it.duration * value / 1000L) } }; override fun onStartTrackingTouch(bar: android.widget.SeekBar?) {}; override fun onStopTrackingTouch(bar: android.widget.SeekBar?) {} })
+        fun fmt(ms: Long): String { val s = ms.coerceAtLeast(0L) / 1000L; return if (s >= 3600L) String.format(java.util.Locale.getDefault(), "%d:%02d:%02d", s / 3600L, (s % 3600L) / 60L, s % 60L) else String.format(java.util.Locale.getDefault(), "%d:%02d", s / 60L, s % 60L) }
+        playbackHandler.post(object : Runnable { override fun run() { val p = player; if (p != null && !isFinishing) { position.text = fmt(p.currentPosition); duration.text = fmt(p.duration); if (!seek.isPressed && p.duration > 0L) seek.progress = (p.currentPosition * 1000L / p.duration).toInt().coerceIn(0, 1000); play.text = if (p.isPlaying) "Ⅱ" else "▶"; clock.text = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date()) }; playbackHandler.postDelayed(this, 1000L) } })
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
