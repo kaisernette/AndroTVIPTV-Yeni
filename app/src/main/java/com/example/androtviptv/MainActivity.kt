@@ -200,6 +200,9 @@ class MainActivity : Activity() {
     private fun buildUi() {
         window.statusBarColor = bg
         window.navigationBarColor = bg
+        // Let the landscape IME resize the full app viewport instead of being squeezed
+        // into the content column beside the sidebar.
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         val root = object : LinearLayout(this) {
             private fun centerOnScreen(view: View): Pair<Float, Float> {
                 val location = IntArray(2)
@@ -1634,6 +1637,9 @@ class MainActivity : Activity() {
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                 setPadding(dp(8), 0, dp(8), 0); tag = "global_search_input"
                 setText(searchQuery); setSelection(text.length)
+                setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus && ::sidebar.isInitialized) sidebar.visibility = View.GONE
+                }
                 addTextChangedListener(object : android.text.TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { searchQuery = s?.toString().orEmpty() }
