@@ -175,6 +175,8 @@ class MainActivity : Activity() {
     private val hiddenCategories = mutableSetOf<String>()
     private var searchQuery = ""
     private var searchInputFocusPending = false
+    private var lastSidebarFocusLabel: String? = null
+    private var restoreSidebarFocusPending = false
     private var isLoadingSource = false
     private var loadProgress = 0
     private var hasLoadedSource = false
@@ -416,6 +418,11 @@ class MainActivity : Activity() {
                 sidebar.layoutParams = params
             }
         }
+        val focusedSidebarView = navBar.findFocus()
+        if (focusedSidebarView != null) {
+            lastSidebarFocusLabel = focusedSidebarView.contentDescription?.toString()
+            restoreSidebarFocusPending = true
+        }
         navBar.removeAllViews()
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
@@ -431,6 +438,9 @@ class MainActivity : Activity() {
                         if (hasFocus) focusColor else if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT
                     )
                     (v as Button).setTextColor(Color.WHITE)
+                    if (hasFocus) {
+                        lastSidebarFocusLabel = v.contentDescription?.toString()
+                    }
                     // Keep sidebar buttons at a fixed size on every screen.
                     // Scaling/elevation can leave vertical focus trails on some Android TV renderers.
                     v.elevation = 0f
@@ -645,6 +655,14 @@ class MainActivity : Activity() {
                     if (hasFocus) startChannelPreview(channel)
                 }
             }
+        }
+        if (restoreSidebarFocusPending) {
+            val target = lastSidebarFocusLabel
+            val matching = (0 until navBar.childCount)
+                .map { navBar.getChildAt(it) }
+                .firstOrNull { it.contentDescription?.toString() == target && it.isFocusable && it.isShown }
+            if (matching != null) matching.requestFocus()
+            restoreSidebarFocusPending = false
         }
     }
 
