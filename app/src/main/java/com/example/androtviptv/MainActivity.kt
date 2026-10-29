@@ -271,8 +271,11 @@ class MainActivity : Activity() {
                     event.action == android.view.KeyEvent.ACTION_DOWN &&
                     ::sidebar.isInitialized && sidebarMode == "context" &&
                     isDescendantView(sidebar, currentFocus ?: this)) {
+                    // Go back to the tab that opened the category list, not Home/All.
                     sidebarMode = "main"
                     selectedGroup = "Tüm kategoriler"
+                    prefs.edit().putString("last_section", selectedType)
+                        .putString("last_group", selectedGroup).apply()
                     rebuildNavigation()
                     render()
                     return true
@@ -307,8 +310,8 @@ class MainActivity : Activity() {
                 // A normal UP tap must never enter the search bar. Only the
                 // long-press handler in dispatchKeyEvent above may focus search.
                 if (focusIsInContent && direction == View.FOCUS_UP && candidate != null) {
-                    var ancestor: android.view.ViewParent? = candidate
-                    var candidateIsSearch = false
+                    var ancestor: android.view.ViewParent? = candidate.parent
+                    var candidateIsSearch = candidate.tag == "global_search_input"
                     while (ancestor is View) {
                         if (ancestor.tag == "global_search_bar" ||
                             ancestor.tag == "global_search_input") {
