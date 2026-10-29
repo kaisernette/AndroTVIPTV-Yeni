@@ -304,10 +304,22 @@ class MainActivity : Activity() {
                 }
 
                 var candidate = super.focusSearch(focused, direction)
-                // UP should not jump to search on a normal tap; long-press is handled above.
-                if (focusIsInContent && direction == View.FOCUS_UP &&
-                    candidate?.tag == "global_search_input") {
-                    candidate = directionalFallback(focused, direction, false) ?: focused
+                // A normal UP tap must never enter the search bar. Only the
+                // long-press handler in dispatchKeyEvent above may focus search.
+                if (focusIsInContent && direction == View.FOCUS_UP && candidate != null) {
+                    var ancestor: android.view.ViewParent? = candidate
+                    var candidateIsSearch = false
+                    while (ancestor is View) {
+                        if (ancestor.tag == "global_search_bar" ||
+                            ancestor.tag == "global_search_input") {
+                            candidateIsSearch = true
+                            break
+                        }
+                        ancestor = ancestor.parent
+                    }
+                    if (candidateIsSearch) {
+                        candidate = directionalFallback(focused, direction, false) ?: focused
+                    }
                 }
                 // Entering the content with RIGHT should land on content cards, not the
                 // search field at the top.
