@@ -507,7 +507,7 @@ class MainActivity : Activity() {
                     addSidebarButton(tab, selectedType == "Ayarlar" && settingsPage != "history") {
                         detailSeries = null
                         detailMovie = null
-                        settingsPage = prefs.getString("last_settings_page", "main") ?: "main"
+                        settingsPage = "main"
                         selectedType = "Ayarlar"
                         prefs.edit().putString("last_section", "Ayarlar").apply()
                         selectedGroup = "Tüm kategoriler"
