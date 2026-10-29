@@ -1,0 +1,34 @@
+name: Package KaiserTv+ Tizen source
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'samsung-tizen/**'
+      - '.github/workflows/samsung-tizen-source.yml'
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  package-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Validate required files
+        run: |
+          test -f samsung-tizen/config.xml
+          test -f samsung-tizen/index.html
+          test -f samsung-tizen/style.css
+          test -f samsung-tizen/app.js
+      - name: Package source archive
+        run: zip -r KaiserTvPlus-Tizen-source.zip samsung-tizen
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: KaiserTvPlus-Tizen-source
+          path: KaiserTvPlus-Tizen-source.zip
+          if-no-files-found: error
+          retention-days: 7
