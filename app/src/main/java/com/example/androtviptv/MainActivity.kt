@@ -1277,29 +1277,73 @@ class MainActivity : Activity() {
 
         // Keep the focused control so cancelling the exit dialog returns focus to the app.
         val focusBeforeExitDialog = currentFocus
-        val exitDialog = AlertDialog.Builder(this)
-            .setTitle("KaiserTv+")
-            .setMessage("Ne yapmak istiyorsun?")
-            .setNegativeButton("Uygulamaya dön", null)
-            .setNeutralButton("Arka plana al") { _, _ ->
-                moveTaskToBack(true)
+        val exitDialog = AlertDialog(this)
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(26), dp(24), dp(26), dp(22))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(22).toFloat()
+                setColor(Color.rgb(18, 21, 29))
+                setStroke(dp(1), Color.rgb(53, 68, 91))
             }
-            .setPositiveButton("Çıkış yap") { _, _ ->
-                finish()
+        }
+        val logoRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val logo = TextView(this).apply {
+            text = "K+"
+            textSize = 25f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply { cornerRadius = dp(12).toFloat(); setColor(Color.rgb(45, 116, 235)) }
+        }
+        logoRow.addView(logo, LinearLayout.LayoutParams(dp(52), dp(52)))
+        val heading = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), 0, 0, 0) }
+        heading.addView(TextView(this).apply { text = "KaiserTv+"; textSize = 22f; setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD) })
+        heading.addView(TextView(this).apply { text = "Ne yapmak istiyorsun?"; textSize = 14f; setTextColor(Color.rgb(169, 181, 200)); setPadding(0, dp(4), 0, 0) })
+        logoRow.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
+        panel.addView(logoRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(22) })
+
+        fun exitOption(label: String, subtitle: String, primary: Boolean, action: () -> Unit): TextView {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                background = GradientDrawable().apply { cornerRadius = dp(12).toFloat(); setColor(if (primary) Color.rgb(35, 91, 176) else Color.rgb(29, 34, 44)); if (primary) setStroke(dp(1), Color.rgb(77, 148, 255)) }
+                isFocusable = true
+                isFocusableInTouchMode = true
             }
-            .create()
-        exitDialog.setOnShowListener {
-            exitDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
-                exitDialog.dismiss()
-                val target = focusBeforeExitDialog?.takeIf { it.isShown && it.isFocusable }
-                if (target != null) {
-                    target.requestFocus()
-                } else if (::mainContentScroll.isInitialized) {
-                    mainContentScroll.requestFocus()
-                } else if (::sidebar.isInitialized) {
-                    sidebar.requestFocus()
+            val textColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            textColumn.addView(TextView(this).apply { text = label; textSize = 16f; setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD) })
+            textColumn.addView(TextView(this).apply { text = subtitle; textSize = 12f; setTextColor(Color.rgb(205, 215, 230)); setPadding(0, dp(3), 0, 0) })
+            row.addView(textColumn, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(TextView(this).apply { text = "›"; textSize = 27f; setTextColor(Color.WHITE) })
+            row.setOnFocusChangeListener { v, focused ->
+                v.background = GradientDrawable().apply {
+                    cornerRadius = dp(12).toFloat()
+                    setColor(if (focused) Color.rgb(40, 111, 224) else if (primary) Color.rgb(35, 91, 176) else Color.rgb(29, 34, 44))
+                    setStroke(dp(if (focused) 2 else 1), if (focused) Color.rgb(115, 177, 255) else Color.rgb(53, 68, 91))
                 }
+                v.scaleX = if (focused) 1.02f else 1f
+                v.scaleY = if (focused) 1.02f else 1f
             }
+            row.setOnClickListener { exitDialog.dismiss(); action() }
+            panel.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+            return row
+        }
+        val resumeOption = exitOption("Uygulamaya dön", "İzlemeye ve gezinmeye devam et", true) {
+            val target = focusBeforeExitDialog?.takeIf { it.isShown && it.isFocusable }
+            if (target != null) target.requestFocus()
+            else if (::mainContentScroll.isInitialized) mainContentScroll.requestFocus()
+            else if (::sidebar.isInitialized) sidebar.requestFocus()
+        }
+        exitOption("Arka plana al", "Uygulamayı kapatmadan ana ekrana dön", false) { moveTaskToBack(true) }
+        exitOption("Çıkış yap", "KaiserTv+ uygulamasını kapat", false) { finish() }
+        exitDialog.setView(panel)
+        exitDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        exitDialog.setOnShowListener {
+            exitDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            exitDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.52f).toInt().coerceAtLeast(dp(420)), -2)
+            resumeOption.requestFocus()
         }
         exitDialog.show()
     }
