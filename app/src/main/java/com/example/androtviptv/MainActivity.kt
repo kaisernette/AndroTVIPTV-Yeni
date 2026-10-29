@@ -183,6 +183,31 @@ class MainActivity : Activity() {
     private var searchInputFocusPending = false
     private var lastSidebarFocusLabel: String? = null
     private var restoreSidebarFocusPending = false
+    private var lastContentFocusKey: String? = null
+    private var restoringContentFocus = false
+
+    private fun findViewByFocusKey(parent: ViewGroup, key: String): View? {
+        for (index in 0 until parent.childCount) {
+            val child = parent.getChildAt(index)
+            if (child.isFocusable && child.contentDescription?.toString() == key && child.isShown) return child
+            if (child is ViewGroup) {
+                val nested = findViewByFocusKey(child, key)
+                if (nested != null) return nested
+            }
+        }
+        return null
+    }
+
+    private fun restoreLastContentFocus() {
+        val key = lastContentFocusKey ?: return
+        if (!::rootLayout.isInitialized) return
+        val target = findViewByFocusKey(rootLayout, key)
+        if (target != null && !target.hasFocus()) {
+            restoringContentFocus = true
+            target.requestFocus()
+            restoringContentFocus = false
+        }
+    }
     private var isLoadingSource = false
     private var loadProgress = 0
     private var hasLoadedSource = false
@@ -284,6 +309,14 @@ class MainActivity : Activity() {
         }
 
         rootLayout = root
+        root.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
+            if (!restoringContentFocus && newFocus != null && newFocus.isShown) {
+                val key = newFocus.contentDescription?.toString()
+                if (!key.isNullOrBlank()) {
+                    if (!isDescendantView(sidebar, newFocus)) lastContentFocusKey = key
+                }
+            }
+        }
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(8, 12, 8, 10)
@@ -663,6 +696,7 @@ class MainActivity : Activity() {
             if (matching != null) matching.requestFocus()
             restoreSidebarFocusPending = false
         }
+        rootLayout.post { restoreLastContentFocus() }
     }
 
     private fun showConnectionDialog(editSource: SavedSource? = null) {
@@ -1875,6 +1909,7 @@ class MainActivity : Activity() {
             var expandedPosterCount = 0
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
+                    contentDescription = item.favoriteKey.ifBlank { item.name }
                     orientation = LinearLayout.VERTICAL
                     setPadding(0, 0, 0, 0)
                     if (!gridLayout) background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
