@@ -920,7 +920,8 @@ class MainActivity : Activity() {
         render()
         thread {
             try {
-                val parsed = parseM3u(request(source.address)).map { it.copy(sourceId = source.id) }
+                val m3uItems = parseM3u(request(source.address))
+                val parsed = enrichM3uFromXtream(source.address, m3uItems).map { it.copy(sourceId = source.id) }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
@@ -1097,7 +1098,101 @@ class MainActivity : Activity() {
         throw Exception("Sunucuya ulaşılamadı: ${lastError?.message ?: "bağlantı hatası"}")
     }
 
-    private fun parseM3u(text: String): List<MediaItem> {
+    private fun enrichM3uFromXtream(playlistAddress: String, m3uItems: List<MediaItem>): List<MediaItem> {
+        // Read credentials only from the supplied playlist URL; never log them.
+        return try {
+            val playlistUrl = URL(playlistAddress)
+            val params = mutableMapOf<String, String>()
+            playlistUrl.query.orEmpty().split('&').forEach { part ->
+                if (part.isBlank()) return@forEach
+                val key = java.net.URLDecoder.decode(part.substringBefore('=', ""), "UTF-8").lowercase()
+                val value = java.net.URLDecoder.decode(part.substringAfter('=', ""), "UTF-8")
+                if (key.isNotBlank()) params[key] = value
+            }
+            val user = params["username"] ?: params["user"] ?: return m3uItems
+            val pass = params["password"] ?: params["pass"] ?: return m3uItems
+            if (user.isBlank() || pass.isBlank()) return m3uItems
+
+            val base = "\${playlistUrl.protocol}://\${playlistUrl.authority}"
+            val u = URLEncoder.encode(user, "UTF-8")
+            val p = URLEncoder.encode(pass, "UTF-8")
+            val api = "\${base}/player_api.php?username=\${u}&password=\${p}"
+            val root = JSONObject(request(api))
+            val userInfo = root.optJSONObject("user_info")
+            if (userInfo != null && userInfo.optString("auth", "1") == "0") return m3uItems
+
+            fun categoryMap(action: String): Map<String, String> {
+                val arr = JSONArray(request("\${api}&action=\${action}"))
+                val result = mutableMapOf<String, String>()
+                for (i in 0 until arr.length()) {
+                    val o = arr.optJSONObject(i) ?: continue
+                    val id = o.optString("category_id")
+                    val name = o.optString("category_name")
+                    if (id.isNotBlank() && name.isNotBlank()) result[id] = name
+                }
+                return result
+            }
+
+            val liveCats = categoryMap("get_live_categories")
+            val vodCats = categoryMap("get_vod_categories")
+            val seriesCats = categoryMap("get_series_categories")
+            val metadataByName = mutableMapOf<String, MediaItem>()
+            val metadataById = mutableMapOf<String, MediaItem>()
+
+            listOf(
+                Triple("get_live_streams", "Canlı TV", liveCats),
+                Triple("get_vod_streams", "Filmler", vodCats),
+                Triple("get_series", "Diziler", seriesCats)
+            ).forEach { (action, type, categories) ->
+                val arr = JSONArray(request("\${api}&action=\${action}"))
+                for (i in 0 until arr.length()) {
+                    val o = arr.optJSONObject(i) ?: continue
+                    val id = o.optString(if (action == "get_series") "series_id" else "stream_id")
+                    val name = o.optString("name").trim()
+                    if (name.isBlank()) continue
+                    val categoryId = o.optString("category_id")
+                    val group = o.optString("category_name").takeIf { it.isNotBlank() }
+                        ?: categories[categoryId] ?: "Diğer"
+                    val icon = o.optString(if (type == "Filmler") "stream_icon" else "cover")
+                        .ifBlank { o.optString("stream_icon") }
+                    val meta = MediaItem(
+                        id = id.ifBlank { name }, name = name, url = "", group = group, type = type,
+                        icon = icon, plot = o.optString("plot", o.optString("description", "")),
+                        actors = o.optString("cast", o.optString("actors", "")),
+                        rating = o.optString("rating", o.optString("vote_average", "")),
+                        releaseDate = o.optString("releaseDate", o.optString("year", "")),
+                        genre = o.optString("genre", "")
+                    )
+                    val normalizedName = name.lowercase().replace(Regex("""\s+"""), " ").trim()
+                    metadataByName["\${type}|\${normalizedName}"] = meta
+                    if (id.isNotBlank()) metadataById["\${type}|\${id}"] = meta
+                }
+            }
+
+            m3uItems.map { item ->
+                val path = try { URL(item.url).path } catch (_: Exception) { "" }
+                val id = Regex("""/(?:live|movie|series)/[^/]+/[^/]+/(\d+)(?:\.[^/]+)?/?$""", RegexOption.IGNORE_CASE)
+                    .find(path)?.groupValues?.getOrNull(1)
+                val idMeta = id?.let { metadataById["\${item.type}|\${it}"] }
+                val normalizedName = item.name.lowercase().replace(Regex("""\s+"""), " ").trim()
+                val meta = idMeta ?: metadataByName["\${item.type}|\${normalizedName}"]
+                if (meta == null) item else item.copy(
+                    group = if (item.group.isBlank() || item.group.equals("Diğer", true)) meta.group else item.group,
+                    icon = if (item.icon.isBlank()) meta.icon else item.icon,
+                    plot = if (item.plot.isBlank()) meta.plot else item.plot,
+                    actors = if (item.actors.isBlank()) meta.actors else item.actors,
+                    rating = if (item.rating.isBlank()) meta.rating else item.rating,
+                    releaseDate = if (item.releaseDate.isBlank()) meta.releaseDate else item.releaseDate,
+                    genre = if (item.genre.isBlank()) meta.genre else item.genre
+                )
+            }
+        } catch (_: Exception) {
+            // Keep ordinary M3U playback working if the provider has no Xtream API.
+            m3uItems
+        }
+    }
+
+        private fun parseM3u(text: String): List<MediaItem> {
         val out = mutableListOf<MediaItem>()
         var name = "İçerik"
         var group = ""
