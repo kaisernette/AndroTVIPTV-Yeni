@@ -253,7 +253,7 @@ class MainActivity : Activity() {
 
             override fun requestChildFocus(child: View, focused: View) {
                 super.requestChildFocus(child, focused)
-                if (!::sidebar.isInitialized || firstEntry || isLoadingSource) return
+                if (!::sidebar.isInitialized || (items.isEmpty() && !isLoadingSource) || isLoadingSource) return
                 val focusIsInSidebar = isDescendantView(sidebar, focused)
                 val focusIsInContent = ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)
                 when {
@@ -270,7 +270,7 @@ class MainActivity : Activity() {
                 // for the next focus target. Pressing RIGHT from the sidebar keeps it
                 // visible until focus has actually entered the content.
                 if (focusIsInContent && direction == View.FOCUS_LEFT && ::sidebar.isInitialized &&
-                    !firstEntry && !isLoadingSource) {
+                    !(items.isEmpty() && !isLoadingSource) && !isLoadingSource) {
                     sidebar.visibility = View.VISIBLE
                 }
 
