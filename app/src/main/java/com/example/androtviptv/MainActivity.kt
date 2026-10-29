@@ -2075,8 +2075,12 @@ class MainActivity : Activity() {
                         if (id.isBlank()) continue
                         val ext = ep.optString("container_extension", "mp4")
                         val name = ep.optString("title", ep.optString("name", "Bölüm ${i + 1}"))
+                        val info = ep.optJSONObject("info")
+                        val episodePoster = info?.optString("movie_image").orEmpty()
+                            .ifBlank { info?.optString("cover_big").orEmpty() }
+                            .ifBlank { ep.optString("movie_image") }
                         val stream = "${source.address.trimEnd('/')}/series/$u/$p/$id.$ext"
-                        seasonItems.add(MediaItem(id, name, stream, "${series.name} • Sezon $key", "Bölümler", "", ext, series.seriesId, source.id))
+                        seasonItems.add(MediaItem(id, name, stream, "${series.name} • Sezon $key", "Bölümler", episodePoster, ext, series.seriesId, source.id))
                     }
                 }
                 val sortedRows = rowsBySeason.entries
@@ -2427,79 +2431,57 @@ class MainActivity : Activity() {
                 text = "Bu dizi için bölüm bulunamadı."; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
             })
             else -> {
-                // Choose a season first, then show only that season's episodes below.
-                val seasonSelector = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                }
-                seriesEpisodeRows.forEach { (season, _) ->
-                    val seasonButton = makeButton("Sezon $season", selectedSeriesSeasonKey == season) {
-                        selectedSeriesSeasonKey = season
-                        render()
-                    }.apply {
-                        background = roundedDrawable(
-                            if (selectedSeriesSeasonKey == season) accent else panel,
-                            10,
-                            if (selectedSeriesSeasonKey == season) accent else Color.rgb(42, 50, 66)
-                        )
-                        setTextColor(if (selectedSeriesSeasonKey == season) Color.BLACK else Color.WHITE)
-                        setOnFocusChangeListener { v, hasFocus ->
-                            v.background = roundedDrawable(
-                                if (selectedSeriesSeasonKey == season) accent else if (hasFocus) Color.rgb(27, 39, 53) else panel,
-                                10,
-                                if (hasFocus) accent else Color.rgb(42, 50, 66)
-                            )
-                            (v as TextView).setTextColor(if (selectedSeriesSeasonKey == season) Color.BLACK else Color.WHITE)
+                // Compact dropdown for season selection; episode cards run horizontally underneath.
+                val seasonNames = seriesEpisodeRows.map { "Sezon ${it.first}" }
+                val seasonSpinner = android.widget.Spinner(this).apply {
+                    adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, seasonNames).also {
+                        it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    }
+                    background = roundedDrawable(panel, 10, accent)
+                    setPadding(dp(10), dp(4), dp(10), dp(4))
+                    val initialIndex = seriesEpisodeRows.indexOfFirst { it.first == selectedSeriesSeasonKey }.coerceAtLeast(0)
+                    setSelection(initialIndex, false)
+                    onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                        override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+                        override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                            val season = seriesEpisodeRows.getOrNull(position)?.first ?: return
+                            if (selectedSeriesSeasonKey != season) { selectedSeriesSeasonKey = season; render() }
                         }
                     }
-                    seasonSelector.addView(seasonButton, LinearLayout.LayoutParams(dp(150), dp(48)).apply {
-                        setMargins(0, 0, dp(10), dp(8))
-                    })
                 }
-                episodesPanel.addView(HorizontalScrollView(this).apply {
-                    isHorizontalScrollBarEnabled = true
-                    isFillViewport = false
-                    addView(seasonSelector)
-                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                episodesPanel.addView(seasonSpinner, LinearLayout.LayoutParams(dp(240), dp(48)).apply { setMargins(0, 0, 0, dp(12)) })
 
                 val selectedEpisodes = seriesEpisodeRows.firstOrNull { it.first == selectedSeriesSeasonKey }?.second.orEmpty()
                 if (selectedEpisodes.isEmpty()) {
-                    episodesPanel.addView(TextView(this).apply {
-                        text = "Bu sezon için bölüm bilgisi kaynakta bulunamadı."
-                        textSize = 14f
-                        setTextColor(muted)
-                        setPadding(dp(4), dp(10), dp(4), dp(10))
-                    })
-                }
-                selectedEpisodes.forEachIndexed { index, episode ->
-                    val episodeButton = makeButton("${index + 1}.  ${episode.name}", false) {
-                        val allEpisodes = seriesEpisodeRows.flatMap { it.second }
-                        val episodeIndex = allEpisodes.indexOfFirst { it.favoriteKey == episode.favoriteKey }
-                        if (episodeIndex >= 0) {
-                            PlayerActivity.pendingEpisodeNames = allEpisodes.map { it.name }
-                            PlayerActivity.pendingEpisodeUrls = allEpisodes.map { it.url }
-                            PlayerActivity.pendingEpisodeIndex = episodeIndex
-                            play(episode)
-                        } else play(episode)
-                    }.apply {
-                        gravity = Gravity.CENTER_VERTICAL or Gravity.START
-                        maxLines = 2
-                        ellipsize = android.text.TextUtils.TruncateAt.END
-                        setPadding(dp(12), dp(8), dp(8), dp(8))
-                        setTextColor(Color.WHITE)
-                        background = roundedDrawable(panel, 10, Color.rgb(42, 50, 66))
-                        setOnFocusChangeListener { v, hasFocus ->
-                            v.background = roundedDrawable(
-                                if (hasFocus) Color.rgb(27, 39, 53) else panel,
-                                10,
-                                if (hasFocus) accent else Color.rgb(42, 50, 66)
-                            )
-                            v.elevation = 0f
+                    episodesPanel.addView(TextView(this).apply { text = "Bu sezon için bölüm bulunamadı."; textSize = 14f; setTextColor(muted); setPadding(dp(4), dp(10), dp(4), dp(10)) })
+                } else {
+                    val episodeCards = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
+                    selectedEpisodes.forEachIndexed { index, episode ->
+                        val card = LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL; isFocusable = true; isFocusableInTouchMode = true
+                            background = roundedDrawable(panel, 10, Color.rgb(42, 50, 66)); setPadding(dp(6), dp(6), dp(6), dp(8))
+                            setOnClickListener {
+                                val allEpisodes = seriesEpisodeRows.flatMap { it.second }
+                                val episodeIndex = allEpisodes.indexOfFirst { it.favoriteKey == episode.favoriteKey }
+                                if (episodeIndex >= 0) { PlayerActivity.pendingEpisodeNames = allEpisodes.map { it.name }; PlayerActivity.pendingEpisodeUrls = allEpisodes.map { it.url }; PlayerActivity.pendingEpisodeIndex = episodeIndex }
+                                play(episode)
+                            }
+                            setOnFocusChangeListener { v, hasFocus ->
+                                v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 10, if (hasFocus) accent else Color.rgb(42, 50, 66))
+                                v.scaleX = if (hasFocus) 1.03f else 1f; v.scaleY = if (hasFocus) 1.03f else 1f
+                            }
                         }
+                        val poster = ImageView(this).apply {
+                            scaleType = ImageView.ScaleType.CENTER_CROP; contentDescription = episode.name
+                            background = roundedDrawable(Color.rgb(28, 35, 49), 7, Color.TRANSPARENT); clipToOutline = true
+                            val imageUrl = episode.icon.ifBlank { series.icon }
+                            if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) loadPoster(imageUrl, this)
+                        }
+                        card.addView(poster, LinearLayout.LayoutParams(-1, dp(150)))
+                        card.addView(TextView(this).apply { text = "${index + 1}. ${episode.name}"; textSize = 13f; setTextColor(Color.WHITE); maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END; setPadding(dp(3), dp(7), dp(3), 0) }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                        episodeCards.addView(card, LinearLayout.LayoutParams(dp(150), dp(218)).apply { setMargins(0, 0, dp(12), dp(6)) })
                     }
-                    episodesPanel.addView(episodeButton, LinearLayout.LayoutParams(-1, dp(50)).apply {
-                        setMargins(0, dp(4), 0, dp(6))
-                    })
+                    episodesPanel.addView(HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; clipToPadding = false; addView(episodeCards) }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                 }
             }
         }
