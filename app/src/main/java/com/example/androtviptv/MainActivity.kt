@@ -595,63 +595,37 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "context") {
-            // Keep icons and readable labels visible in the sidebar on every screen.
-            // Category filters remain in the main content area on the right.
-            val compactTabs = listOf(
-                Triple("⌂", "Ana Sayfa", "Tümü"),
-                Triple("▣", "Canlı TV", "Canlı TV"),
-                Triple("▶", "Filmler", "Filmler"),
-                Triple("▤", "Diziler", "Diziler"),
-                Triple("♡", "Favoriler", "Favoriler"),
-                Triple("◷", "Geçmiş", "Son İzlenenler"),
-                Triple("⚙", "Ayarlar", "Ayarlar")
-            )
-            compactTabs.forEach { (glyph, label, key) ->
-                val isSelected = when (key) {
-                    "Ara" -> false
-                    "Tümü" -> selectedType == "Tümü"
-                    else -> selectedType == key
+            val contextGroups = items.filter { item ->
+                when (selectedType) {
+                    "Canlı TV" -> item.type == "Canlı TV"
+                    "Filmler" -> item.type == "Filmler"
+                    "Diziler" -> item.type == "Diziler"
+                    else -> item.type == selectedType
                 }
-                addSidebarButton("$glyph  $label", isSelected) {
-                    when (key) {
-                        "Ara" -> {
-                            detailSeries = null
-                            detailMovie = null
-                            sidebarMode = "search"
-                            searchInputFocusPending = true
-                            searchQuery = ""
-                            selectedType = "Tümü"
-                        }
-                        "Tümü" -> returnToMainMenu()
-                        "Favoriler" -> {
-                            selectedType = key
-                            selectedGroup = "Tüm kategoriler"
-                            sidebarMode = "context"
-                            prefs.edit().putString("last_section", key).apply()
-                        }
-                        "Son İzlenenler" -> {
-                            selectedType = key
-                            selectedGroup = "Tüm kategoriler"
-                            sidebarMode = "context"
-                            prefs.edit().putString("last_section", key).apply()
-                        }
-                        "Ayarlar" -> {
-                            selectedType = key
-                            settingsPage = "main"
-                            sidebarMode = "context"
-                            prefs.edit().putString("last_section", key).apply()
-                        }
-                        else -> {
-                            selectedType = key
-                            selectedGroup = "Tüm kategoriler"
-                            expandedCategory = null
-                            sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
-                            prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
-                        }
-                    }
-                    rebuildNavigation()
+            }.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+            addSidebarButton("‹  Ana Menü") {
+                sidebarMode = "main"
+                rebuildNavigation()
+                render()
+            }
+            addSidebarButton("▦  Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
+                selectedGroup = "Tüm kategoriler"
+                prefs.edit().putString("last_group", selectedGroup).apply()
+                render()
+            }
+            contextGroups.forEach { group ->
+                addSidebarButton(group, selectedGroup == group) {
+                    selectedGroup = group
+                    prefs.edit().putString("last_group", group).apply()
                     render()
                 }
+            }
+            if (restoreSidebarFocusPending) {
+                val target = lastSidebarFocusLabel
+                val matching = (0 until navBar.childCount).map { navBar.getChildAt(it) }
+                    .firstOrNull { it.contentDescription?.toString() == target && it.isFocusable && it.isShown }
+                if (matching != null) matching.requestFocus()
+                restoreSidebarFocusPending = false
             }
             return
         }
