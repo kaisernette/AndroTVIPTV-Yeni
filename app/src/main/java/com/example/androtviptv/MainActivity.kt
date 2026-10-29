@@ -433,15 +433,19 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Selected state and remote focus are visually distinct; focus always uses ice blue.
-                background = roundedDrawable(if (selected) Color.rgb(30, 43, 58) else Color.TRANSPARENT, 10,
-                    if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT)
+                // Selected sidebar item uses the chosen theme color, with no separate blue outline.
+                background = roundedDrawable(if (selected) accent else Color.TRANSPARENT, 10,
+                    if (selected) accent else Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(
-                        if (hasFocus) Color.rgb(27, 39, 53) else if (selected) Color.rgb(30, 43, 58) else Color.TRANSPARENT,
+                        when {
+                            selected -> accent
+                            hasFocus -> Color.rgb(27, 39, 53)
+                            else -> Color.TRANSPARENT
+                        },
                         10,
-                        if (hasFocus) focusColor else if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT
+                        if (selected) accent else Color.TRANSPARENT
                     )
                     (v as Button).setTextColor(Color.WHITE)
                     if (hasFocus) {
