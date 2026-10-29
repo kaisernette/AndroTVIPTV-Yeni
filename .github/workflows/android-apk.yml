@@ -1,4 +1,4 @@
-name: Build Kaisertv APK
+name: Build Kaisertv APK # Rebuild current UI changes for device testing
 
 on:
   workflow_dispatch:
