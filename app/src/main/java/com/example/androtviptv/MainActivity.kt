@@ -82,15 +82,21 @@ class MainActivity : Activity() {
     // Focus styling is independent from the selectable app theme.
     private val focusColor = Color.rgb(137, 214, 255)
     private var muted = Color.rgb(190, 198, 210)
-    // Sidebar transparency is independent from the selected color theme.
-    private var transparentMenu = true
+    // Menu transparency is adjustable independently from the selected theme: 100% is fully transparent.
+    private var menuTransparency = 100
+    private fun menuBackgroundColor(): Int {
+        val alpha = (255 * (100 - menuTransparency) / 100).coerceIn(0, 255)
+        return Color.argb(alpha, Color.red(panel), Color.green(panel), Color.blue(panel))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installCrashLogger()
-        transparentMenu = prefs.getBoolean("transparent_menu", true)
+        menuTransparency = prefs.getInt("menu_transparency_percent",
+            if (prefs.getBoolean("transparent_menu", true)) 100 else 0).coerceIn(0, 100)
         // Restore the selected theme before constructing any views.
         when (prefs.getString("theme_name", "Antrasit • Mavi")) {
+            "Siyah" -> { bg = Color.BLACK; accent = Color.rgb(0, 166, 255); accentBright = accent }
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
             "Lacivert • Turkuaz" -> { bg = Color.rgb(10, 22, 38); accent = Color.rgb(35, 205, 190); accentBright = accent }
             "Koyu • Mor" -> { bg = Color.rgb(20, 16, 29); accent = Color.rgb(174, 115, 255); accentBright = accent }
@@ -281,7 +287,7 @@ class MainActivity : Activity() {
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(8, 12, 8, 10)
-            background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
+            background = android.graphics.drawable.ColorDrawable(menuBackgroundColor())
         }
         root.addView(sidebar, LinearLayout.LayoutParams(dp(140), -1).apply { setMargins(0, 0, dp(8), 0) })
 
@@ -2673,6 +2679,7 @@ class MainActivity : Activity() {
             "themes" -> {
                 heading("Temalar", "Renk seçimi anında uygulanır.")
                 val themes = listOf(
+                    Triple("Siyah", Color.rgb(0, 0, 0), Color.rgb(0, 166, 255)),
                     Triple("Antrasit • Mavi", Color.rgb(17, 20, 25), Color.rgb(0, 166, 255)),
                     Triple("Gece • Altın", Color.rgb(15, 16, 20), Color.rgb(224, 184, 95)),
                     Triple("Lacivert • Turkuaz", Color.rgb(10, 22, 38), Color.rgb(35, 205, 190)),
@@ -2684,16 +2691,19 @@ class MainActivity : Activity() {
                         panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
                         accent = theme.third; accentBright = theme.third
                         prefs.edit().putString("theme_name", theme.first).apply()
-                        rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel); mainContentScroll.setBackgroundColor(bg)
+                        rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(menuBackgroundColor()); mainContentScroll.setBackgroundColor(bg)
                         window.statusBarColor = bg; window.navigationBarColor = bg
                         settingsPage = "themes"; render()
                     }
                 }
-                option("◧  Şeffaf menü: ${if (transparentMenu) "Açık" else "Kapalı"}",
-                    if (transparentMenu) "Sol menü arka planı saydam; kapatmak için seç." else "Sol menü ayrı bir panel olarak görünür; saydam yapmak için seç.") {
-                    transparentMenu = !transparentMenu
-                    prefs.edit().putBoolean("transparent_menu", transparentMenu).apply()
-                    sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
+                option("◧  Menü şeffaflığı: ${menuTransparency}%",
+                    "Her basışta %25 azalır: 100 → 75 → 50 → 25 → 0 → 100. 100% tamamen şeffaf, 0% opak.") {
+                    menuTransparency = if (menuTransparency <= 0) 100 else menuTransparency - 25
+                    prefs.edit()
+                        .putInt("menu_transparency_percent", menuTransparency)
+                        .putBoolean("transparent_menu", menuTransparency == 100)
+                        .apply()
+                    sidebar.setBackgroundColor(menuBackgroundColor())
                     settingsPage = "themes"
                     render()
                 }
