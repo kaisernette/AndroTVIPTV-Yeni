@@ -154,6 +154,8 @@ class MainActivity : Activity() {
     private lateinit var heroArt: FrameLayout
     private lateinit var navBar: LinearLayout
     private lateinit var sidebarMenuScroll: ScrollView
+    private lateinit var sideCategoryPanel: LinearLayout
+    private lateinit var sideCategoryList: LinearLayout
     private lateinit var brandView: LinearLayout
     private lateinit var sidebar: LinearLayout
     private lateinit var rootLayout: LinearLayout
@@ -309,6 +311,21 @@ class MainActivity : Activity() {
         sidebar.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         rebuildNavigation()
 
+        sideCategoryPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(12), dp(8), dp(8))
+            background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
+            visibility = View.GONE
+        }
+        sideCategoryList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val sideCategoryScroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(sideCategoryList)
+        }
+        sideCategoryPanel.addView(sideCategoryScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(sideCategoryPanel, LinearLayout.LayoutParams(0, -1).apply { setMargins(0, 0, dp(8), 0) })
+
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, 0)
@@ -405,6 +422,34 @@ class MainActivity : Activity() {
         render()
     }
 
+    private fun rebuildSideCategories() {
+        if (!::sideCategoryList.isInitialized) return
+        sideCategoryList.removeAllViews()
+        val type = selectedType
+        val groups = items.filter { it.type == type }
+            .filter { !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" }) }
+            .map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+        fun addCategory(label: String, selected: Boolean, action: () -> Unit) {
+            val button = makeButton(label, selected, action)
+            button.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            button.textSize = 12f
+            button.maxLines = 2
+            button.setPadding(dp(8), dp(4), dp(4), dp(4))
+            sideCategoryList.addView(button, LinearLayout.LayoutParams(-1, dp(44)).apply { setMargins(0, 0, 0, dp(3)) })
+        }
+        addCategory(if (selectedGroup == "Tüm kategoriler") "• Tüm kategoriler" else "Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
+            selectedGroup = "Tüm kategoriler"; expandedCategory = null
+            prefs.edit().putString("last_group", selectedGroup).apply(); render()
+        }
+        groups.forEach { group ->
+            val selected = selectedGroup == group
+            val count = items.count { it.type == type && it.group.ifBlank { "Diğer" } == group }
+            addCategory((if (selected) "• " else "") + group + " (" + count + ")", selected) {
+                selectedGroup = group; expandedCategory = null
+                prefs.edit().putString("last_group", group).apply(); render()
+            }
+        }
+    }
     private fun rebuildNavigation() {
         if (!::navBar.isInitialized) return
         // Keep the main navigation icon-only, but expand the sidebar when a
@@ -413,10 +458,21 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
+            val categorySection = sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val desiredWidth = dp(if (sidebarMode == "context") 76 else 140)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
+            }
+            if (::sideCategoryPanel.isInitialized) {
+                val categoryParams = sideCategoryPanel.layoutParams as? LinearLayout.LayoutParams
+                val categoryWidth = if (categorySection) dp(190) else 0
+                if (categoryParams != null && categoryParams.width != categoryWidth) {
+                    categoryParams.width = categoryWidth
+                    sideCategoryPanel.layoutParams = categoryParams
+                }
+                sideCategoryPanel.visibility = if (categorySection) View.VISIBLE else View.GONE
+                if (categorySection) rebuildSideCategories()
             }
         }
         navBar.removeAllViews()
@@ -1619,6 +1675,8 @@ class MainActivity : Activity() {
         }
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
         categoryBar.removeAllViews()
+        val categoriesInSidebar = sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")
+        categoryScroll.visibility = if (categoriesInSidebar) View.GONE else View.VISIBLE
         groupsAvailable.take(40).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
