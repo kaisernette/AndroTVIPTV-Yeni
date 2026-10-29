@@ -609,22 +609,22 @@ class PlayerActivity : Activity() {
     private fun buildCinemaControls(root: FrameLayout, title: String) {
         val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(30), dp(16), dp(30), dp(14)); background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x00101010, 0xDD080808.toInt(), 0xF5080808.toInt())) }
         val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        header.addView(TextView(this).apply { text = title; textSize = 23f; setTextColor(Color.WHITE); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(TextView(this).apply { text = title; textSize = 25f; setTextColor(Color.WHITE); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, LinearLayout.LayoutParams(0, -2, 1f))
         val clock = TextView(this).apply { setTextColor(Color.WHITE); textSize = 17f }
         header.addView(clock); panel.addView(header, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
-        val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         fun button(label: String, width: Int, action: () -> Unit): TextView {
             val b = TextView(this).apply { text = label; textSize = 23f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); isFocusable = true; isFocusableInTouchMode = true }
             b.setOnFocusChangeListener { v, focused -> v.background = GradientDrawable().apply { cornerRadius = dp(10).toFloat(); setColor(if (focused) 0x5533B5FF else Color.TRANSPARENT); if (focused) setStroke(dp(2), 0xFF33B5FF.toInt()) } }
             b.setOnClickListener { action() }; controls.addView(b, LinearLayout.LayoutParams(dp(width), dp(50))); return b
         }
-        button("⏮", 56) { player?.seekToPreviousMediaItem() }
-        button("↶ 5", 70) { player?.let { it.seekTo((it.currentPosition - 5000L).coerceAtLeast(0L)) } }
-        val play = button("▶", 64) { player?.let { if (it.isPlaying) it.pause() else it.play() } }
-        button("15 ↷", 78) { player?.let { it.seekTo((it.currentPosition + 15000L).coerceAtMost(it.duration.coerceAtLeast(0L))) } }
-        button("⏭", 56) { player?.seekToNextMediaItem() }
+        button("|◀", 62) { player?.seekToPreviousMediaItem() }
+        button("↶ 5", 82) { player?.let { it.seekTo((it.currentPosition - 5000L).coerceAtLeast(0L)) } }
+        val play = button("▶", 84) { player?.let { if (it.isPlaying) it.pause() else it.play() } }.apply { textSize = 30f; background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xFF3984FF.toInt()) } }
+        button("15 ↷", 88) { player?.let { it.seekTo((it.currentPosition + 15000L).coerceAtMost(it.duration.coerceAtLeast(0L))) } }
+        button("▶|", 62) { player?.seekToNextMediaItem() }
         panel.addView(controls, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
-        val seek = android.widget.SeekBar(this).apply { max = 1000; progressTintList = android.content.res.ColorStateList.valueOf(0xFFFF7A1A.toInt()); thumbTintList = android.content.res.ColorStateList.valueOf(Color.WHITE); progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x99FFFFFF.toInt()) }
+        val seek = android.widget.SeekBar(this).apply { max = 1000; progressTintList = android.content.res.ColorStateList.valueOf(0xFF3984FF.toInt()); thumbTintList = android.content.res.ColorStateList.valueOf(Color.WHITE); progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x99FFFFFF.toInt()) }
         panel.addView(seek, LinearLayout.LayoutParams(-1, dp(30)))
         val times = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val position = TextView(this).apply { setTextColor(Color.WHITE); textSize = 15f }; val duration = TextView(this).apply { setTextColor(0xFFDDDDDD.toInt()); textSize = 15f }
