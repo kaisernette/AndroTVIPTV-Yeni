@@ -1866,34 +1866,13 @@ class MainActivity : Activity() {
             sectionHeader.addView(TextView(this).apply {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             }, LinearLayout.LayoutParams(0, -2, 1f))
-            sectionHeader.addView(TextView(this).apply {
-                text = if (showingExpandedCategory) "← Geri dön" else "${entries.size} içerik"
-                textSize = 12f; setTextColor(accent)
-                gravity = Gravity.CENTER
-                setPadding(dp(8), 0, dp(8), 0)
-                if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
-            })
-            if (!showingExpandedCategory && entries.size > 5 && (selectedType == "Filmler" || selectedType == "Diziler")) {
+            if (showingExpandedCategory) {
                 sectionHeader.addView(TextView(this).apply {
-                    text = "Tümü"; textSize = 12f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE); gravity = Gravity.CENTER
-                    background = GradientDrawable().apply {
-                        cornerRadius = dp(10).toFloat()
-                        setColor(Color.TRANSPARENT); setStroke(dp(1), accent)
-                    }
-                    isFocusable = true
-                    setPadding(dp(16), dp(7), dp(16), dp(7))
-                    setOnFocusChangeListener { v, hasFocus ->
-                        v.background = GradientDrawable().apply {
-                            cornerRadius = dp(10).toFloat()
-                            setColor(if (hasFocus) Color.rgb(43, 49, 63) else Color.TRANSPARENT)
-                            setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) focusColor else Color.rgb(54, 64, 82))
-                        }
-                        v.elevation = if (hasFocus) dp(3).toFloat() else 0f
-                    }
-                    setOnClickListener { expandedCategory = groupName to entries; render() }
-                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)).apply { setMargins(dp(10), 0, 0, 0) })
+                    text = "← Geri dön"; textSize = 12f; setTextColor(accent)
+                    gravity = Gravity.CENTER
+                    setPadding(dp(8), 0, dp(8), 0)
+                    setOnClickListener { expandedCategory = null; render() }
+                })
             }
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
@@ -2026,6 +2005,32 @@ class MainActivity : Activity() {
                         setMargins(dp(5), 0, if (weeklyMovieFeature) dp(20) else dp(14), dp(10))
                     })
                 }
+            }
+            if (!showingExpandedCategory && entries.size > 5) {
+                val moreButton = TextView(this).apply {
+                    text = "+"; textSize = 32f
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(12).toFloat()
+                        setColor(Color.rgb(27, 32, 42))
+                        setStroke(dp(2), accent)
+                    }
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    contentDescription = "$groupName tüm içerikleri göster"
+                    setOnFocusChangeListener { v, hasFocus ->
+                        v.background = GradientDrawable().apply {
+                            cornerRadius = dp(12).toFloat()
+                            setColor(if (hasFocus) Color.rgb(43, 49, 63) else Color.rgb(27, 32, 42))
+                            setStroke(dp(if (hasFocus) 3 else 2), if (hasFocus) focusColor else accent)
+                        }
+                    }
+                    setOnClickListener { expandedCategory = groupName to entries; render() }
+                }
+                row.addView(moreButton, LinearLayout.LayoutParams(dp(90), if (weeklyMovieFeature) dp(210) else dp(210)).apply {
+                    setMargins(dp(5), 0, dp(14), dp(10))
+                })
             }
             if (showingExpandedCategory) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
