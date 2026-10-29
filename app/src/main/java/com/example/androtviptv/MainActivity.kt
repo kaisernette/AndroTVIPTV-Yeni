@@ -1978,38 +1978,22 @@ class MainActivity : Activity() {
             }
             if (!showingExpandedCategory && entries.size > (if (gridLayout) 4 else 5)) {
                 val moreButton = TextView(this).apply {
-                    text = "+"; textSize = 28f
-                    setTextColor(Color.WHITE)
+                    text = "Tümü  ›"; textSize = 16f
+                    setTextColor(muted)
                     gravity = Gravity.CENTER
-                    background = GradientDrawable().apply {
-                        shape = GradientDrawable.OVAL
-                        setColor(accent)
-                    }
+                    setPadding(dp(10), dp(4), dp(6), dp(4))
+                    background = GradientDrawable().apply { setColor(Color.TRANSPARENT) }
                     isFocusable = true
                     isFocusableInTouchMode = true
                     contentDescription = "$groupName tüm içerikleri göster"
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = GradientDrawable().apply {
-                            shape = GradientDrawable.OVAL
-                            setColor(if (hasFocus) focusColor else accent)
-                        }
-                        v.scaleX = if (hasFocus) 1.08f else 1f
-                        v.scaleY = if (hasFocus) 1.08f else 1f
+                        (v as TextView).setTextColor(if (hasFocus) focusColor else muted)
+                        v.scaleX = if (hasFocus) 1.04f else 1f
+                        v.scaleY = if (hasFocus) 1.04f else 1f
                     }
                     setOnClickListener { expandedCategory = groupName to entries; render() }
                 }
-                if (gridLayout) {
-                    if (expandedPosterCount % 4 == 0) {
-                        expandedPosterRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
-                        row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                    }
-                    expandedPosterRow?.addView(moreButton, LinearLayout.LayoutParams(dp(56), dp(56)).apply { setMargins(dp(14), dp(12), dp(14), dp(18)) })
-                } else {
-                    row.addView(moreButton, LinearLayout.LayoutParams(dp(56), dp(56)).apply {
-                        gravity = Gravity.CENTER_VERTICAL
-                        setMargins(dp(5), 0, dp(14), dp(10))
-                    })
-                }
+                sectionHeader.addView(moreButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)))
             }
             if (gridLayout) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -2394,8 +2378,16 @@ class MainActivity : Activity() {
                     episodeRow.addView(TextView(this).apply {
                         text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("▶ İzle", true) { play(episode) },
-                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(12, 0, 0, 0) })
+                    episodeRow.addView(makeButton("▶ İzle", true) {
+                        val allEpisodes = seriesEpisodeRows.flatMap { it.second }
+                        val episodeIndex = allEpisodes.indexOfFirst { it.favoriteKey == episode.favoriteKey }
+                        if (episodeIndex >= 0) {
+                            PlayerActivity.pendingEpisodeNames = allEpisodes.map { it.name }
+                            PlayerActivity.pendingEpisodeUrls = allEpisodes.map { it.url }
+                            PlayerActivity.pendingEpisodeIndex = episodeIndex
+                            play(episode)
+                        } else play(episode)
+                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(12, 0, 0, 0) })
                     episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
