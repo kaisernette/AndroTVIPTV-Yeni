@@ -251,9 +251,29 @@ class MainActivity : Activity() {
                 }.minByOrNull { it.second }?.first
             }
 
+            override fun requestChildFocus(child: View, focused: View) {
+                super.requestChildFocus(child, focused)
+                if (!::sidebar.isInitialized || firstEntry || isLoadingSource) return
+                val focusIsInSidebar = isDescendantView(sidebar, focused)
+                val focusIsInContent = ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)
+                when {
+                    focusIsInSidebar -> sidebar.visibility = View.VISIBLE
+                    focusIsInContent -> sidebar.visibility = View.GONE
+                }
+            }
+
             override fun focusSearch(focused: View, direction: Int): View? {
                 val focusIsInSidebar = ::sidebar.isInitialized && isDescendantView(sidebar, focused)
                 val focusIsInContent = ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)
+
+                // Pressing LEFT from content reveals the sidebar before Android searches
+                // for the next focus target. Pressing RIGHT from the sidebar keeps it
+                // visible until focus has actually entered the content.
+                if (focusIsInContent && direction == View.FOCUS_LEFT && ::sidebar.isInitialized &&
+                    !firstEntry && !isLoadingSource) {
+                    sidebar.visibility = View.VISIBLE
+                }
+
                 val candidate = super.focusSearch(focused, direction)
                 val crossingAllowed = (focusIsInSidebar && direction == View.FOCUS_RIGHT) ||
                     (focusIsInContent && direction == View.FOCUS_LEFT)
@@ -1278,7 +1298,12 @@ class MainActivity : Activity() {
         content.removeAllViews()
         val detailMode = detailSeries != null || detailMovie != null
         val firstEntry = items.isEmpty() && !isLoadingSource
-        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::sidebar.isInitialized) {
+            val focusedNow = rootLayout.findFocus()
+            val focusInContent = focusedNow != null && ::mainContentScroll.isInitialized &&
+                isDescendantView(mainContentScroll, focusedNow)
+            sidebar.visibility = if (firstEntry || isLoadingSource || focusInContent) View.GONE else View.VISIBLE
+        }
         if (::brandView.isInitialized) brandView.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
