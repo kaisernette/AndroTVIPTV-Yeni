@@ -610,7 +610,7 @@ class MainActivity : Activity() {
                         }
                         "Ayarlar" -> {
                             selectedType = key
-                            settingsPage = prefs.getString("last_settings_page", "main") ?: "main"
+                            settingsPage = "main"
                             sidebarMode = "context"
                             prefs.edit().putString("last_section", key).apply()
                         }
