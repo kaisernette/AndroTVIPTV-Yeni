@@ -266,6 +266,31 @@ class MainActivity : Activity() {
                 }
             }
 
+            override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+                if (event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT &&
+                    event.action == android.view.KeyEvent.ACTION_DOWN &&
+                    ::sidebar.isInitialized && sidebarMode == "context" &&
+                    isDescendantView(sidebar, currentFocus ?: this)) {
+                    sidebarMode = "main"
+                    selectedGroup = "Tüm kategoriler"
+                    rebuildNavigation()
+                    render()
+                    return true
+                }
+                // A short UP press navigates among content cards. Holding UP moves focus to search.
+                if (event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP &&
+                    event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount >= 2 &&
+                    ::mainContentScroll.isInitialized &&
+                    isDescendantView(mainContentScroll, currentFocus ?: this)) {
+                    val search = findViewWithTag<View>("global_search_input")
+                    if (search != null && search.isShown) {
+                        search.requestFocus()
+                        return true
+                    }
+                }
+                return super.dispatchKeyEvent(event)
+            }
+
             override fun focusSearch(focused: View, direction: Int): View? {
                 val focusIsInSidebar = ::sidebar.isInitialized && isDescendantView(sidebar, focused)
                 val focusIsInContent = ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)
@@ -279,8 +304,13 @@ class MainActivity : Activity() {
                 }
 
                 var candidate = super.focusSearch(focused, direction)
+                // UP should not jump to search on a normal tap; long-press is handled above.
+                if (focusIsInContent && direction == View.FOCUS_UP &&
+                    candidate?.tag == "global_search_input") {
+                    candidate = directionalFallback(focused, direction, false) ?: focused
+                }
                 // Entering the content with RIGHT should land on content cards, not the
-                // search field at the top. The search field remains reachable by pressing UP.
+                // search field at the top.
                 if (focusIsInSidebar && direction == View.FOCUS_RIGHT &&
                     candidate?.tag == "global_search_input") {
                     val (fx, fy) = centerOnScreen(focused)
@@ -621,12 +651,6 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "context") {
-            addSidebarButton("‹  Menü", false) {
-                sidebarMode = "main"
-                selectedGroup = "Tüm kategoriler"
-                rebuildNavigation()
-                render()
-            }
             val categoryType = when (selectedType) {
                 "TV" -> "Canlı TV"
                 else -> selectedType
