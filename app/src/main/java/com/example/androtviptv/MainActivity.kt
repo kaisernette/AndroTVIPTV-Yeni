@@ -310,11 +310,16 @@ class MainActivity : Activity() {
 
         rootLayout = root
         root.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
-            if (!restoringContentFocus && newFocus != null && newFocus.isShown) {
+            if (!::sidebar.isInitialized || newFocus == null) return@addOnGlobalFocusChangeListener
+            if (isDescendantView(sidebar, newFocus)) {
+                sidebar.visibility = View.VISIBLE
+                if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
+                newFocus.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { lastSidebarFocusLabel = it }
+            } else if (newFocus.isShown && isDescendantView(root, newFocus)) {
                 val key = newFocus.contentDescription?.toString()
-                if (!key.isNullOrBlank()) {
-                    if (!isDescendantView(sidebar, newFocus)) lastContentFocusKey = key
-                }
+                if (!key.isNullOrBlank()) lastContentFocusKey = key
+                sidebar.visibility = View.GONE
+                if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
             }
         }
         sidebar = LinearLayout(this).apply {
@@ -1126,6 +1131,17 @@ class MainActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT &&
+            ::sidebar.isInitialized && sidebar.visibility != View.VISIBLE &&
+            sidebarMode == "context") {
+            sidebar.visibility = View.VISIBLE
+            rebuildNavigation()
+            val target = (0 until navBar.childCount).map { navBar.getChildAt(it) }
+                .firstOrNull { it.contentDescription?.toString() == lastSidebarFocusLabel && it.isFocusable && it.isShown }
+                ?: navBar.getChildAt(0)
+            target?.requestFocus()
+            return true
+        }
         if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
             handleSafeBack()
             return true
