@@ -275,7 +275,35 @@ class MainActivity : Activity() {
                     sidebar.visibility = View.VISIBLE
                 }
 
-                val candidate = super.focusSearch(focused, direction)
+                var candidate = super.focusSearch(focused, direction)
+                // Entering the content with RIGHT should land on content cards, not the
+                // search field at the top. The search field remains reachable by pressing UP.
+                if (focusIsInSidebar && direction == View.FOCUS_RIGHT &&
+                    candidate?.tag == "global_search_input") {
+                    val (fx, fy) = centerOnScreen(focused)
+                    val alternatives = ArrayList<View>()
+                    fun collectContent(parent: ViewGroup) {
+                        for (i in 0 until parent.childCount) {
+                            val child = parent.getChildAt(i)
+                            var inSearchBar = false
+                            var ancestor: android.view.ViewParent? = child
+                            while (ancestor is View) {
+                                if (ancestor.tag == "global_search_bar") { inSearchBar = true; break }
+                                ancestor = ancestor.parent
+                            }
+                            if (!inSearchBar && child.tag != "global_search_input" && child.isShown &&
+                                child.isEnabled && child.isFocusable && child.width > 0 && child.height > 0 &&
+                                !isDescendantView(sidebar, child)) alternatives.add(child)
+                            if (child is ViewGroup) collectContent(child)
+                        }
+                    }
+                    collectContent(this)
+                    candidate = alternatives.mapNotNull { view ->
+                        val (x, y) = centerOnScreen(view)
+                        val dx = x - fx
+                        if (dx <= 1f) null else view to (dx + kotlin.math.abs(y - fy) * 2.2f)
+                    }.minByOrNull { it.second }?.first ?: candidate
+                }
                 val crossingAllowed = (focusIsInSidebar && direction == View.FOCUS_RIGHT) ||
                     (focusIsInContent && direction == View.FOCUS_LEFT)
                 val candidateIsInSidebar = candidate != null && ::sidebar.isInitialized &&
@@ -1593,6 +1621,7 @@ class MainActivity : Activity() {
         // Wide search bar is fixed at the top of the right content area.
         if (!isLoadingSource) {
             val searchBar = LinearLayout(this).apply {
+                tag = "global_search_bar"
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(12), dp(4), dp(8), dp(4))
