@@ -51,6 +51,8 @@ class MainActivity : Activity() {
     private val favorites = mutableSetOf<String>()
     private val recent = mutableListOf<MediaItem>()
     private var selectedGroup = "Tüm kategoriler"
+    private var expandedSourceId = ""
+    private var selectedSourceFilter = ""
     private var selectedCategorySection = "Canlı TV"
     // Render live channels in small batches to avoid first-open freezes on Android TV.
     private var liveChannelsLimit = 72
@@ -426,28 +428,53 @@ class MainActivity : Activity() {
         if (!::sideCategoryList.isInitialized) return
         sideCategoryList.removeAllViews()
         val type = selectedType
-        val groups = items.filter { it.type == type }
-            .filter { !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" }) }
-            .map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
-        fun addCategory(label: String, selected: Boolean, action: () -> Unit) {
+        val relevantSources = savedSources.filter { source -> items.any { it.sourceId == source.id && it.type == type } }
+        fun addSideButton(label: String, selected: Boolean, action: () -> Unit, height: Int = 44, bold: Boolean = false) {
             val button = makeButton(label, selected, action)
             button.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            button.textSize = 12f
+            button.textSize = if (bold) 12.5f else 12f
             button.maxLines = 2
             button.setPadding(dp(8), dp(4), dp(4), dp(4))
-            sideCategoryList.addView(button, LinearLayout.LayoutParams(-1, dp(44)).apply { setMargins(0, 0, 0, dp(3)) })
+            if (bold) button.setTypeface(null, android.graphics.Typeface.BOLD)
+            sideCategoryList.addView(button, LinearLayout.LayoutParams(-1, dp(height)).apply { setMargins(0, 0, 0, dp(4)) })
         }
-        addCategory(if (selectedGroup == "Tüm kategoriler") "• Tüm kategoriler" else "Tüm kategoriler", selectedGroup == "Tüm kategoriler") {
-            selectedGroup = "Tüm kategoriler"; expandedCategory = null
-            prefs.edit().putString("last_group", selectedGroup).apply(); render()
-        }
-        groups.forEach { group ->
-            val selected = selectedGroup == group
-            val count = items.count { it.type == type && it.group.ifBlank { "Diğer" } == group }
-            addCategory((if (selected) "• " else "") + group + " (" + count + ")", selected) {
-                selectedGroup = group; expandedCategory = null
-                prefs.edit().putString("last_group", group).apply(); render()
+        relevantSources.forEach { source ->
+            val expanded = expandedSourceId == source.id
+            val count = items.count { it.sourceId == source.id && it.type == type }
+            addSideButton((if (expanded) "▾ " else "▸ ") + source.name + " ($count)", expanded, {
+                expandedSourceId = if (expanded) "" else source.id
+                selectedSourceFilter = if (expanded) "" else source.id
+                selectedGroup = "Tüm kategoriler"
+                expandedCategory = null
+                prefs.edit().putString("last_group", selectedGroup).apply()
+                rebuildNavigation()
+                render()
+            }, 48, true)
+            if (expanded) {
+                val sourceGroups = items.filter { it.sourceId == source.id && it.type == type }
+                    .filter { !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" }) }
+                    .map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+                addSideButton("   " + (if (selectedGroup == "Tüm kategoriler") "• Tüm kategoriler" else "Tüm kategoriler"), selectedGroup == "Tüm kategoriler", {
+                    selectedSourceFilter = source.id
+                    selectedGroup = "Tüm kategoriler"
+                    expandedCategory = null
+                    render()
+                }, 40)
+                sourceGroups.forEach { group ->
+                    val selected = selectedGroup == group && selectedSourceFilter == source.id
+                    val countInGroup = items.count { it.sourceId == source.id && it.type == type && it.group.ifBlank { "Diğer" } == group }
+                    addSideButton("   " + (if (selected) "• " else "") + group + " ($countInGroup)", selected, {
+                        selectedSourceFilter = source.id
+                        selectedGroup = group
+                        expandedCategory = null
+                        prefs.edit().putString("last_group", group).apply()
+                        render()
+                    }, 42)
+                }
             }
+        }
+        if (relevantSources.isEmpty()) {
+            sideCategoryList.addView(TextView(this).apply { text = "Kaynak yüklenmedi"; textSize = 12f; setTextColor(muted); setPadding(dp(8), dp(8), dp(8), dp(8)) })
         }
     }
     private fun rebuildNavigation() {
@@ -1666,8 +1693,11 @@ class MainActivity : Activity() {
             selectedType == "Son İzlenenler" -> recent.toList()
             else -> items.filter { it.type == selectedType }
         }
+        val sourceFilteredBase = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler") && selectedSourceFilter.isNotBlank()) {
+            unfilteredBase.filter { it.sourceId == selectedSourceFilter }
+        } else unfilteredBase
         val query = if (sidebarMode == "search") searchQuery.trim() else ""
-        val categoryVisibleBase = if (sidebarMode == "search") unfilteredBase else unfilteredBase.filter { item -> !hiddenCategories.contains(item.type + "|" + item.group.ifBlank { "Diğer" }) }
+        val categoryVisibleBase = if (sidebarMode == "search") sourceFilteredBase else sourceFilteredBase.filter { item -> !hiddenCategories.contains(item.type + "|" + item.group.ifBlank { "Diğer" }) }
         val baseVisible = if (query.isBlank()) categoryVisibleBase else categoryVisibleBase.filter {
             it.name.contains(query, ignoreCase = true) ||
             it.group.contains(query, ignoreCase = true) ||
