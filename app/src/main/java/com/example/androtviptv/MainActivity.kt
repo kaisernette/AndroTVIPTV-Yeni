@@ -2242,7 +2242,7 @@ class MainActivity : Activity() {
                 v.scaleY = if (hasFocus) 1.02f else 1f
                 v.elevation = 0f
             }
-        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 6, dp(10), 0) })
+        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 2, dp(10), 0) })
         val isFavorite = favorites.contains(movie.favoriteKey)
         val favoriteButton = makeButton(if (isFavorite) "★ Favori" else "☆ Favori", false) {
             if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
@@ -2268,9 +2268,9 @@ class MainActivity : Activity() {
                 v.scaleY = if (hasFocus) 1.02f else 1f
             }
         }
-        actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 6, 0, 0) })
+        actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 2, 0, 0) })
         copy.addView(actions)
-        hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
+        hero.addView(copy, FrameLayout.LayoutParams(-1, -1).apply { setMargins(0, 0, 0, dp(8)) })
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(380)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val infoTitle = TextView(this).apply {
@@ -2347,7 +2347,7 @@ class MainActivity : Activity() {
                 v.scaleX = if (hasFocus) 1.02f else 1f
                 v.scaleY = if (hasFocus) 1.02f else 1f
             }
-        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 14, 10, 0) })
+        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 8, 10, 0) })
         actions.addView(makeButton("←  GERİ", true) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
@@ -2366,14 +2366,14 @@ class MainActivity : Activity() {
                 v.scaleY = if (hasFocus) 1.02f else 1f
                 v.elevation = 0f
             }
-        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 14, 0, 0) })
+        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 8, 0, 0) })
         copy.addView(actions)
-        hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
+        hero.addView(copy, FrameLayout.LayoutParams(-1, -1).apply { setMargins(0, 0, 0, dp(8)) })
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val episodesPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setPadding(dp(14), dp(8), dp(14), dp(16))
             background = roundedDrawable(Color.rgb(14, 19, 29), 16, Color.rgb(42, 50, 66))
         }
         content.addView(episodesPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
