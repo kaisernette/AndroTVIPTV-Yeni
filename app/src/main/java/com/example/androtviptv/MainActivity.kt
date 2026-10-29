@@ -654,7 +654,14 @@ class MainActivity : Activity() {
                     startChannelPreview(channel)
                 }
                 navBar.getChildAt(navBar.childCount - 1).setOnFocusChangeListener { v, hasFocus ->
-                    (v as? Button)?.setTextColor(if (hasFocus) accentBright else Color.WHITE)
+                    (v as? Button)?.apply {
+                        setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
+                        background = roundedDrawable(
+                            if (hasFocus) accent else Color.TRANSPARENT,
+                            10,
+                            if (hasFocus) accent else Color.TRANSPARENT
+                        )
+                    }
                     v.scaleX = if (hasFocus) 1.025f else 1f
                     v.scaleY = if (hasFocus) 1.025f else 1f
                     if (hasFocus) startChannelPreview(channel)
