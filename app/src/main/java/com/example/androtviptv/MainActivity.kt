@@ -1787,9 +1787,18 @@ class MainActivity : Activity() {
             heroSubtitle.text = if (items.isEmpty()) "Kaynağını ekle, içeriklerini keşfet." else "${items.size} içerik kütüphanende hazır."
             if (::heroArt.isInitialized) {
                 heroArt.removeAllViews()
+                heroArt.clipChildren = true
+                heroArt.clipToPadding = true
+                heroArt.background = roundedDrawable(Color.rgb(14, 19, 29), 16)
+                heroArt.clipToOutline = true
                 val featured = baseVisible.firstOrNull { it.icon.startsWith("http://") || it.icon.startsWith("https://") }
                 if (featured != null) {
-                    val image = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; contentDescription = featured.name }
+                    val image = ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        contentDescription = featured.name
+                        background = roundedDrawable(Color.rgb(14, 19, 29), 16)
+                        clipToOutline = true
+                    }
                     heroArt.addView(image, FrameLayout.LayoutParams(-1, -1))
                     loadPoster(featured.icon, image)
                     heroArt.addView(TextView(this).apply {
@@ -1892,6 +1901,8 @@ class MainActivity : Activity() {
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(0, 0, 0, 0)
+                    clipChildren = true
+                    clipToPadding = true
                     if (!gridLayout) background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
@@ -1944,7 +1955,10 @@ class MainActivity : Activity() {
                     // Fill the poster card width so artwork appears larger on TV.
                     scaleType = ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
-                    if (!gridLayout) background = roundedDrawable(Color.rgb(31, 37, 50), 10)
+                    background = roundedDrawable(Color.rgb(31, 37, 50), if (gridLayout) 8 else 10)
+                    clipToOutline = true
+                    clipChildren = true
+                    clipToPadding = true
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     layoutParams = LinearLayout.LayoutParams(
                         if (weeklyPoster && !gridLayout) dp(140) else -1,
