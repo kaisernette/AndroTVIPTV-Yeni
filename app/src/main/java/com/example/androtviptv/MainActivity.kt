@@ -1726,21 +1726,7 @@ class MainActivity : Activity() {
                 }
             }
             searchBar.addView(globalSearch, LinearLayout.LayoutParams(0, dp(54), 1f))
-            searchBar.addView(makeButton("🗣️", false) {
-                try {
-                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
-                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Aramak istediğin içeriği söyle")
-                        putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                    }
-                    startActivityForResult(intent, 7251)
-                } catch (_: Exception) { Toast.makeText(this, "Sesli arama bu cihazda kullanılamıyor.", Toast.LENGTH_SHORT).show() }
-            }.apply {
-                textSize = 22f
-                setTextColor(Color.rgb(255, 224, 102))
-                background = roundedDrawable(Color.rgb(35, 48, 66), 12, Color.rgb(255, 224, 102))
-            }, LinearLayout.LayoutParams(dp(64), dp(48)))
+
             val container = mainContentScroll.parent as? ViewGroup
             if (container != null) {
                 val scrollIndex = container.indexOfChild(mainContentScroll).coerceAtLeast(0)
