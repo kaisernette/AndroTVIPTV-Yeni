@@ -1959,7 +1959,7 @@ class MainActivity : Activity() {
             }
             content.addView(sectionHeader)
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
-            val gridLayout = showingExpandedCategory || (weeklyMovieFeature && false) || selectedType == "Filmler" || selectedType == "Diziler"
+            val gridLayout = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler"
             val trendPosterRow = weeklyMovieFeature && !showingExpandedCategory
             val row = LinearLayout(this).apply { orientation = if (gridLayout) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
             val displayedEntries = if (showingExpandedCategory) entries else if (trendPosterRow) entries.take(24) else if (gridLayout) entries.take(4) else entries.take(5)
@@ -1968,19 +1968,15 @@ class MainActivity : Activity() {
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    // Keep artwork inset inside its frame on every screen, including trend rows.
-                    setPadding(dp(5), dp(5), dp(5), dp(6))
+                    // Trend rows use plain posters without individual card boxes.
+                    setPadding(if (trendPosterRow) 0 else dp(5), if (trendPosterRow) 0 else dp(5), if (trendPosterRow) 0 else dp(5), if (trendPosterRow) 0 else dp(6))
                     clipChildren = true
                     clipToPadding = true
-                    background = roundedDrawable(panel, 15, Color.rgb(48, 57, 73))
+                    background = if (trendPosterRow) Color.TRANSPARENT else roundedDrawable(panel, 15, Color.rgb(48, 57, 73))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        // Poster/card outline follows the selected theme accent on focus.
-                        v.background = roundedDrawable(
-                            if (hasFocus) Color.rgb(27, 39, 53) else panel,
-                            15,
-                            if (hasFocus) accent else Color.rgb(48, 57, 73)
-                        )
+                        v.background = if (trendPosterRow) roundedDrawable(Color.TRANSPARENT, 8, if (hasFocus) accent else Color.TRANSPARENT)
+                            else roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15, if (hasFocus) accent else Color.rgb(48, 57, 73))
                         v.elevation = if (hasFocus && !gridLayout) dp(4).toFloat() else 0f
                         v.scaleX = if (hasFocus) 1.03f else 1f
                         v.scaleY = if (hasFocus) 1.03f else 1f
@@ -2099,20 +2095,18 @@ class MainActivity : Activity() {
                     val allTrendCards = (0 until trendCards.childCount).map { trendCards.getChildAt(it) }
                     trendRows.clipChildren = false
                     trendRows.clipToPadding = false
-                    for (startIndex in allTrendCards.indices step 5) {
-                        val scrollingRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                        allTrendCards.drop(startIndex).take(5).forEach { cardView ->
-                            (cardView.parent as? ViewGroup)?.removeView(cardView)
-                            scrollingRow.addView(cardView, LinearLayout.LayoutParams(dp(150), ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(5), dp(6), dp(12), dp(10)) })
-                        }
-                        trendRows.addView(HorizontalScrollView(this).apply {
-                            isHorizontalScrollBarEnabled = false
-                            clipChildren = false
-                            clipToPadding = false
-                            setPadding(dp(18), 0, dp(30), 0)
-                            addView(scrollingRow)
-                        }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    val scrollingRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                    allTrendCards.forEach { cardView ->
+                        (cardView.parent as? ViewGroup)?.removeView(cardView)
+                        scrollingRow.addView(cardView, LinearLayout.LayoutParams(dp(150), ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(5), dp(6), dp(12), dp(10)) })
                     }
+                    trendRows.addView(HorizontalScrollView(this).apply {
+                        isHorizontalScrollBarEnabled = false
+                        clipChildren = false
+                        clipToPadding = false
+                        setPadding(dp(18), 0, dp(30), 0)
+                        addView(scrollingRow)
+                    }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     content.addView(trendRows, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                 } else {
                     content.addView(HorizontalScrollView(this).apply {
