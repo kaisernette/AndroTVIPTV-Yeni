@@ -1104,7 +1104,7 @@ class MainActivity : Activity() {
         var icon = ""
         fun attribute(line: String, key: String): String {
             // Accept quoted attributes with either quote style and unquoted values.
-            val match = Regex("""(?:^|\\s)${Regex.escape(key)}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s,]*))""", RegexOption.IGNORE_CASE).find(line)
+            val match = Regex("""(?:^|\s)${Regex.escape(key)}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s,]*))""", RegexOption.IGNORE_CASE).find(line)
             return match?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.trim().orEmpty()
         }
         text.lineSequence().map { it.trim() }.forEach { line ->
@@ -1114,7 +1114,7 @@ class MainActivity : Activity() {
                 group = attribute(line, "group-title").ifBlank { "Diğer" }
                 icon = attribute(line, "tvg-logo")
             } else if ((line.startsWith("http://", true) || line.startsWith("https://", true)) && line.isNotBlank()) {
-                val normalizedGroup = group.replace(Regex("""\\s+"""), " ").trim().ifBlank { "Diğer" }
+                val normalizedGroup = group.replace(Regex("""\s+"""), " ").trim().ifBlank { "Diğer" }
                 val type = classify(name, normalizedGroup)
                 out.add(MediaItem(line, name, line, normalizedGroup, type, icon))
                 name = "İçerik"
