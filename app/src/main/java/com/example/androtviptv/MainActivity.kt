@@ -1968,17 +1968,18 @@ class MainActivity : Activity() {
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(0, 0, 0, 0)
+                    // Keep artwork inset inside its frame on every screen, including trend rows.
+                    setPadding(dp(5), dp(5), dp(5), dp(6))
                     clipChildren = true
                     clipToPadding = true
-                    if (!gridLayout) background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
+                    background = roundedDrawable(panel, 15, Color.rgb(48, 57, 73))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
                         // Poster/card outline follows the selected theme accent on focus.
                         v.background = roundedDrawable(
-                            if (gridLayout) Color.TRANSPARENT else if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                            if (hasFocus) Color.rgb(27, 39, 53) else panel,
                             15,
-                            if (hasFocus) accent else if (gridLayout) Color.TRANSPARENT else Color.rgb(38, 45, 60)
+                            if (hasFocus) accent else Color.rgb(48, 57, 73)
                         )
                         v.elevation = if (hasFocus && !gridLayout) dp(4).toFloat() else 0f
                         v.scaleX = if (hasFocus) 1.03f else 1f
@@ -2028,7 +2029,7 @@ class MainActivity : Activity() {
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     layoutParams = LinearLayout.LayoutParams(
                         if (weeklyPoster && !gridLayout) dp(140) else -1,
-                        if (liveCard) 112 else if (weeklyPoster && !gridLayout) dp(240) else if (gridLayout) dp(205) else if (homeCard) 270 else 250
+                        if (liveCard) dp(104) else if (weeklyPoster && !gridLayout) dp(228) else if (gridLayout) dp(194) else if (homeCard) dp(254) else dp(236)
                     )
                 }
                 card.addView(poster)
