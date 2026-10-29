@@ -271,13 +271,22 @@ class MainActivity : Activity() {
                     event.action == android.view.KeyEvent.ACTION_DOWN &&
                     ::sidebar.isInitialized && sidebarMode == "context" &&
                     isDescendantView(sidebar, currentFocus ?: this)) {
-                    // Go back to the tab that opened the category list, not Home/All.
-                    sidebarMode = "main"
-                    selectedGroup = "Tüm kategoriler"
-                    prefs.edit().putString("last_section", selectedType)
-                        .putString("last_group", selectedGroup).apply()
-                    rebuildNavigation()
-                    render()
+                    // Return focus to the current tab's content, without switching the page.
+                    // If already at the tab level, leave the tab selected and focus its first item.
+                    if (selectedGroup != "Tüm kategoriler") {
+                        selectedGroup = "Tüm kategoriler"
+                        prefs.edit().putString("last_section", selectedType)
+                            .putString("last_group", selectedGroup).apply()
+                        rebuildNavigation()
+                        render()
+                    }
+                    val target = if (::mainContentScroll.isInitialized) findFirstContentFocusable(mainContentScroll) else null
+                    if (target != null) {
+                        target.requestFocus()
+                    } else {
+                        sidebarMode = "main"
+                        rebuildNavigation()
+                    }
                     return true
                 }
                 // A short UP press navigates among content cards. Holding UP moves focus to search.
@@ -3115,6 +3124,20 @@ class MainActivity : Activity() {
         }
     }
 
+
+    private fun findFirstContentFocusable(parent: ViewGroup): View? {
+        for (i in 0 until parent.childCount) {
+            val child = parent.getChildAt(i)
+            if (child.isShown && child.isEnabled && child.isFocusable &&
+                child.width > 0 && child.height > 0 &&
+                child.tag != "global_search_input" && child.tag != "global_search_bar") return child
+            if (child is ViewGroup) {
+                val nested = findFirstContentFocusable(child)
+                if (nested != null) return nested
+            }
+        }
+        return null
+    }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
