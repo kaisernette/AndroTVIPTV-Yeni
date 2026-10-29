@@ -365,7 +365,7 @@ class MainActivity : Activity() {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             isFillViewport = true
-            addView(navBar, ScrollView.LayoutParams(-1, ViewGroup.LayoutParams.MATCH_PARENT))
+            addView(navBar, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         sidebar.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         rebuildNavigation()
@@ -1990,8 +1990,6 @@ class MainActivity : Activity() {
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), if (gridLayout) 8 else 10)
                     clipToOutline = true
-                    clipChildren = true
-                    clipToPadding = true
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     layoutParams = LinearLayout.LayoutParams(
                         if (weeklyPoster && !gridLayout) dp(140) else -1,
