@@ -1103,23 +1103,37 @@ class MainActivity : Activity() {
         var group = "Diğer"
         var icon = ""
         fun attribute(line: String, key: String): String {
-            // Accept quoted attributes with either quote style and unquoted values.
-            val match = Regex("""(?:^|\s)${Regex.escape(key)}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s,]*))""", RegexOption.IGNORE_CASE).find(line)
+            // Playlist providers vary in attribute spacing and separators. Accept quoted
+            // values, unquoted values, and attributes preceded by whitespace or commas.
+            val match = Regex("""(?:^|[\\s,])${Regex.escape(key)}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s,]*))""", RegexOption.IGNORE_CASE).find(line)
             return match?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.trim().orEmpty()
         }
         text.lineSequence().map { it.trim() }.forEach { line ->
-            if (line.startsWith("#EXTINF", true)) {
-                val comma = line.indexOf(',')
-                name = if (comma >= 0) line.substring(comma + 1).trim().ifBlank { "İçerik" } else "İçerik"
-                group = attribute(line, "group-title").ifBlank { "Diğer" }
-                icon = attribute(line, "tvg-logo")
-            } else if ((line.startsWith("http://", true) || line.startsWith("https://", true)) && line.isNotBlank()) {
-                val normalizedGroup = group.replace(Regex("""\s+"""), " ").trim().ifBlank { "Diğer" }
-                val type = classify(name, normalizedGroup)
-                out.add(MediaItem(line, name, line, normalizedGroup, type, icon))
-                name = "İçerik"
-                group = "Diğer"
-                icon = ""
+            when {
+                line.startsWith("#EXTINF", true) -> {
+                    val comma = line.indexOf(',')
+                    name = if (comma >= 0) line.substring(comma + 1).trim().ifBlank { "İçerik" } else "İçerik"
+                    // Some M3U playlists use EXTGRP instead of group-title; preserve that
+                    // category when the current entry does not provide its own group.
+                    group = attribute(line, "group-title")
+                        .ifBlank { attribute(line, "group") }
+                        .ifBlank { attribute(line, "category") }
+                        .ifBlank { group }
+                        .ifBlank { "Diğer" }
+                    icon = attribute(line, "tvg-logo")
+                }
+                line.startsWith("#EXTGRP:", true) -> {
+                    val extGroup = line.substringAfter(':').trim()
+                    if (extGroup.isNotBlank()) group = extGroup
+                }
+                (line.startsWith("http://", true) || line.startsWith("https://", true)) && line.isNotBlank() -> {
+                    val normalizedGroup = group.replace(Regex("""\\s+"""), " ").trim().ifBlank { "Diğer" }
+                    val type = classify(name, normalizedGroup)
+                    out.add(MediaItem(line, name, line, normalizedGroup, type, icon))
+                    name = "İçerik"
+                    group = "Diğer"
+                    icon = ""
+                }
             }
         }
         return out
