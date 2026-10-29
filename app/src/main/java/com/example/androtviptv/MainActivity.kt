@@ -1931,7 +1931,7 @@ class MainActivity : Activity() {
                 val homeCard = selectedType == "Tümü"
                 val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
                 val poster = ImageView(this).apply {
-                    scaleType = if (liveCard || weeklyPoster) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+                    scaleType = ImageView.ScaleType.FIT_CENTER
                     contentDescription = item.name
                     background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
