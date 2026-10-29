@@ -492,7 +492,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▶  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌂  Ana Sayfa", "▣  Canlı TV", "▶  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -1877,24 +1877,23 @@ class MainActivity : Activity() {
                 })
             }
             content.addView(sectionHeader)
-            val row = LinearLayout(this).apply { orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
-            // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
-            // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
-            val featureCardWidth = dp(140) // Kart genişliği afişle aynı
-            val displayedEntries = if (showingExpandedCategory || weeklyMovieFeature) entries else entries.take(5)
+            val gridLayout = showingExpandedCategory || weeklyMovieFeature || selectedType == "Filmler" || selectedType == "Diziler"
+            val row = LinearLayout(this).apply { orientation = if (gridLayout) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
+            val featureCardWidth = dp(140)
+            val displayedEntries = if (showingExpandedCategory) entries else if (gridLayout) entries.take(4) else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 9)
-                    background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
+                    setPadding(0, 0, 0, 0)
+                    if (!gridLayout) background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
+                        if (!gridLayout) v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
                             if (hasFocus) focusColor else Color.rgb(38, 45, 60))
-                        v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+                        v.elevation = if (hasFocus && !gridLayout) dp(4).toFloat() else 0f
                         v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
                     }
                     setOnClickListener {
@@ -1936,12 +1935,11 @@ class MainActivity : Activity() {
                     // Fill the poster card width so artwork appears larger on TV.
                     scaleType = ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
-                    background = roundedDrawable(Color.rgb(31, 37, 50), 10)
+                    if (!gridLayout) background = roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
-                    // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
-                        if (weeklyPoster) dp(140) else -1,
-                        if (liveCard) 112 else if (weeklyPoster) dp(240) else if (showingExpandedCategory) 220 else if (homeCard) 270 else 250
+                        if (weeklyPoster && !gridLayout) dp(140) else -1,
+                        if (liveCard) 112 else if (weeklyPoster && !gridLayout) dp(240) else if (gridLayout) dp(205) else if (homeCard) 270 else 250
                     )
                 }
                 card.addView(poster)
@@ -1961,11 +1959,11 @@ class MainActivity : Activity() {
                     card.addView(actions)
                 }
                 card.addView(TextView(this).apply {
-                    text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
-                    minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
+                    text = item.name; textSize = if (gridLayout) 12f else 14f; setTextColor(Color.WHITE); maxLines = 2
+                    minHeight = if (gridLayout) dp(32) else 40; setPadding(2, dp(4), 2, 0)
                 })
 
-                if (showingExpandedCategory) {
+                if (gridLayout) {
                     if (expandedPosterCount % 4 == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
@@ -1974,17 +1972,16 @@ class MainActivity : Activity() {
                         row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
                     expandedPosterRow?.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        setMargins(dp(4), dp(3), dp(4), dp(9))
+                        setMargins(dp(14), dp(12), dp(14), dp(18))
                     })
                     expandedPosterCount++
                 } else {
-                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) featureCardWidth else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                        // Consistent TV-friendly breathing room between poster cards.
-                        setMargins(dp(5), 0, if (weeklyMovieFeature) dp(20) else dp(14), dp(10))
+                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(dp(5), 0, dp(14), dp(10))
                     })
                 }
             }
-            if (!showingExpandedCategory && entries.size > 5) {
+            if (!showingExpandedCategory && entries.size > (if (gridLayout) 4 else 5)) {
                 val moreButton = TextView(this).apply {
                     text = "+"; textSize = 28f
                     setTextColor(Color.WHITE)
@@ -2006,12 +2003,20 @@ class MainActivity : Activity() {
                     }
                     setOnClickListener { expandedCategory = groupName to entries; render() }
                 }
-                row.addView(moreButton, LinearLayout.LayoutParams(dp(52), dp(64)).apply {
-                    gravity = Gravity.CENTER_VERTICAL
-                    setMargins(dp(5), 0, dp(14), dp(10))
-                })
+                if (gridLayout) {
+                    if (expandedPosterCount % 4 == 0) {
+                        expandedPosterRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
+                        row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    }
+                    expandedPosterRow?.addView(moreButton, LinearLayout.LayoutParams(0, dp(64), 1f).apply { setMargins(dp(14), dp(12), dp(14), dp(18)) })
+                } else {
+                    row.addView(moreButton, LinearLayout.LayoutParams(dp(52), dp(64)).apply {
+                        gravity = Gravity.CENTER_VERTICAL
+                        setMargins(dp(5), 0, dp(14), dp(10))
+                    })
+                }
             }
-            if (showingExpandedCategory) {
+            if (gridLayout) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             } else {
                 content.addView(HorizontalScrollView(this).apply {
