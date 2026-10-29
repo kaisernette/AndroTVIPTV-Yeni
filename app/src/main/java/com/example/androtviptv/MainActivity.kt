@@ -5,7 +5,6 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.ColorDrawable
 import android.graphics.Bitmap
 import android.util.LruCache
 import android.os.Bundle
@@ -326,7 +325,7 @@ class MainActivity : Activity() {
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(8, 12, 8, 10)
-            background = android.graphics.drawable.ColorDrawable(menuBackgroundColor())
+            background = GradientDrawable().apply { setColor(menuBackgroundColor()) }
         }
         root.addView(sidebar, LinearLayout.LayoutParams(dp(140), -1).apply { setMargins(0, 0, dp(8), 0) })
 
@@ -473,10 +472,10 @@ class MainActivity : Activity() {
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
                 // Sidebar navigation stays neutral; theme accent is reserved for content items.
-                background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                background = GradientDrawable().apply { setColor(Color.TRANSPARENT) }
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
-                    v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    v.background = GradientDrawable().apply { setColor(Color.TRANSPARENT) }
                     (v as Button).setTextColor(Color.WHITE)
                     if (hasFocus) {
                         lastSidebarFocusLabel = v.contentDescription?.toString()
@@ -660,7 +659,7 @@ class MainActivity : Activity() {
                 navBar.getChildAt(navBar.childCount - 1).setOnFocusChangeListener { v, hasFocus ->
                     (v as? Button)?.apply {
                         setTextColor(Color.WHITE)
-                        background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        background = GradientDrawable().apply { setColor(Color.TRANSPARENT) }
                     }
                     v.scaleX = if (hasFocus) 1.025f else 1f
                     v.scaleY = if (hasFocus) 1.025f else 1f
@@ -1607,7 +1606,7 @@ class MainActivity : Activity() {
             val globalSearch = EditText(this).apply {
                 hint = "Film, dizi veya kanal ara…"; setSingleLine(true); textSize = 17f
                 setTextColor(Color.WHITE); setHintTextColor(muted)
-                background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                background = GradientDrawable().apply { setColor(Color.TRANSPARENT) }
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                 setPadding(dp(8), 0, dp(8), 0); tag = "global_search_input"
                 setText(searchQuery); setSelection(text.length)
