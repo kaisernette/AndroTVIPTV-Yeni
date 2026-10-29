@@ -2416,7 +2416,7 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
             gravity = Gravity.CENTER
             // Use the currently selected theme color, without the separate blue focus glow.
             fun updateWatchButton(hasFocus: Boolean) {
@@ -2431,7 +2431,8 @@ class MainActivity : Activity() {
                 v.scaleY = if (hasFocus) 1.02f else 1f
                 v.elevation = 0f
             }
-        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 2, dp(10), 0) })
+        }
+        actions.addView(watchButton, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 2, dp(10), 0) })
         val isFavorite = favorites.contains(movie.favoriteKey)
         val favoriteButton = makeButton(if (isFavorite) "★ Favori" else "☆ Favori", false) {
             if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
@@ -2474,6 +2475,8 @@ class MainActivity : Activity() {
             maxLines = 3; ellipsize = android.text.TextUtils.TruncateAt.END
             setPadding(4, 0, 0, 12)
         })
+        // On opening a movie, start on the primary action instead of the poster or favorite.
+        watchButton.post { if (watchButton.isShown) watchButton.requestFocus() }
     }
 
     private fun renderSeriesDetail(series: MediaItem) {
