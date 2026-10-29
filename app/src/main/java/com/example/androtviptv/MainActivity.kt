@@ -1650,8 +1650,10 @@ class MainActivity : Activity() {
             renderMovieDetail(detailMovie!!)
             return
         }
-        // Wide search bar is fixed at the top of the right content area.
-        if (!isLoadingSource) {
+        // Keep search outside the scrolling content so it stays pinned while lists scroll.
+        if (!isLoadingSource && selectedType in setOf("Tümü", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler")) {
+            val oldSearch = mainContentScroll.parent as? ViewGroup
+            oldSearch?.findViewWithTag<View>("global_search_bar")?.let { oldSearch.removeView(it) }
             val searchBar = LinearLayout(this).apply {
                 tag = "global_search_bar"
                 orientation = LinearLayout.HORIZONTAL
@@ -1693,7 +1695,17 @@ class MainActivity : Activity() {
                     startActivityForResult(intent, 7251)
                 } catch (_: Exception) { Toast.makeText(this, "Sesli arama bu cihazda kullanılamıyor.", Toast.LENGTH_SHORT).show() }
             }, LinearLayout.LayoutParams(dp(64), dp(48)))
-            content.addView(searchBar, 0, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(14)) })
+            val container = mainContentScroll.parent as? ViewGroup
+            if (container != null) {
+                val scrollIndex = container.indexOfChild(mainContentScroll).coerceAtLeast(0)
+                container.addView(searchBar, scrollIndex, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(18), dp(2), dp(30), dp(10))
+                })
+            }
+        } else {
+            (mainContentScroll.parent as? ViewGroup)?.findViewWithTag<View>("global_search_bar")?.let { parent ->
+                (parent.parent as? ViewGroup)?.removeView(parent)
+            }
         }
                 val unfilteredBase = when {
             sidebarMode == "search" -> items.toList()
