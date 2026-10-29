@@ -2243,10 +2243,12 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER },
-            LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
+        actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
+            gravity = Gravity.CENTER
+            background = roundedDrawable(accent, 10, if (hasFocus()) accentBright else accent)
+        }, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 6, dp(10), 0) })
         val isFavorite = favorites.contains(movie.favoriteKey)
-        val favoriteButton = makeButton(if (isFavorite) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
+        val favoriteButton = makeButton(if (isFavorite) "★ Favori" else "☆ Favori", false) {
             if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
             prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
             render()
@@ -2255,11 +2257,9 @@ class MainActivity : Activity() {
             val yellow = Color.rgb(255, 205, 55)
             fun updateFavoriteAppearance(hasFocus: Boolean) {
                 if (isFavorite) {
-                    // Keep the entire active button yellow even while focused.
                     setTextColor(Color.rgb(25, 25, 25))
                     background = roundedDrawable(yellow, 10, if (hasFocus) accentBright else yellow)
                 } else {
-                    // Transparent when inactive; focus only adds a blue outline.
                     setTextColor(Color.WHITE)
                     background = roundedDrawable(Color.TRANSPARENT, 10,
                         if (hasFocus) accentBright else Color.rgb(88, 96, 110))
@@ -2268,14 +2268,14 @@ class MainActivity : Activity() {
             updateFavoriteAppearance(hasFocus = false)
             setOnFocusChangeListener { v, hasFocus ->
                 updateFavoriteAppearance(hasFocus)
-                v.scaleX = if (hasFocus) 1.035f else 1f
-                v.scaleY = if (hasFocus) 1.035f else 1f
+                v.scaleX = if (hasFocus) 1.02f else 1f
+                v.scaleY = if (hasFocus) 1.02f else 1f
             }
         }
-        actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(160), 44).apply { setMargins(0, 8, 0, 0) })
+        actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(140), dp(40)).apply { setMargins(0, 6, 0, 0) })
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(380)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val infoTitle = TextView(this).apply {
             text = "FİLM HAKKINDA"; textSize = 20f
