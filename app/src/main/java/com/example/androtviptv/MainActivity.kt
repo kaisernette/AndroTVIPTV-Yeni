@@ -287,6 +287,8 @@ class MainActivity : Activity() {
                     isDescendantView(mainContentScroll, currentFocus ?: this)) {
                     val search = findViewWithTag<View>("global_search_input")
                     if (search != null && search.isShown) {
+                        search.isFocusable = true
+                        search.isFocusableInTouchMode = true
                         search.requestFocus()
                         return true
                     }
@@ -1702,6 +1704,10 @@ class MainActivity : Activity() {
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                 setPadding(dp(8), 0, dp(8), 0); tag = "global_search_input"
+                // Search is excluded from normal remote focus traversal. It becomes
+                // focusable only when the user holds the remote's UP button.
+                isFocusable = false
+                isFocusableInTouchMode = false
                 setText(searchQuery); setSelection(text.length)
                 setOnFocusChangeListener { _, hasFocus ->
                     if (hasFocus && ::sidebar.isInitialized) sidebar.visibility = View.GONE
