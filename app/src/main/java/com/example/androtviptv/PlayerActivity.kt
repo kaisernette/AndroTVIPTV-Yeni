@@ -33,6 +33,9 @@ class PlayerActivity : Activity() {
         @Volatile var pendingChannelIndex: Int = 0
         @Volatile var pendingRecentChannelNames: List<String> = emptyList()
         @Volatile var pendingRecentChannelUrls: List<String> = emptyList()
+        @Volatile var pendingEpisodeNames: List<String> = emptyList()
+        @Volatile var pendingEpisodeUrls: List<String> = emptyList()
+        @Volatile var pendingEpisodeIndex: Int = 0
     }
 
     private var player: ExoPlayer? = null
@@ -96,6 +99,9 @@ class PlayerActivity : Activity() {
     private var recentChannelRows: List<String> = emptyList()
     private var recentChannelUrls: List<String> = emptyList()
     private var overlayIsRecent = false
+    private var episodeNames: List<String> = emptyList()
+    private var episodeUrls: List<String> = emptyList()
+    private var currentEpisodeIndex = -1
     private var savedChannelRows: List<String> = emptyList()
     private var savedChannelUrls: List<String> = emptyList()
     private val playbackPrefs by lazy { getSharedPreferences("androtv_playback", Context.MODE_PRIVATE) }
@@ -140,11 +146,17 @@ class PlayerActivity : Activity() {
         highlightedChannelIndex = selectedChannelIndex
         recentChannelRows = pendingRecentChannelNames
         recentChannelUrls = pendingRecentChannelUrls
+        episodeNames = pendingEpisodeNames
+        episodeUrls = pendingEpisodeUrls
+        currentEpisodeIndex = pendingEpisodeIndex
         pendingChannelNames = emptyList()
         pendingChannelUrls = emptyList()
         pendingRecentChannelNames = emptyList()
         pendingRecentChannelUrls = emptyList()
+        pendingEpisodeNames = emptyList()
+        pendingEpisodeUrls = emptyList()
         pendingChannelIndex = 0
+        pendingEpisodeIndex = 0
         currentStreamUrl = url.trim()
         originalStreamUrl = currentStreamUrl
         triedHlsFallback = false
@@ -217,6 +229,27 @@ class PlayerActivity : Activity() {
                     view.player = exo
                     exo.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == Player.STATE_ENDED && !isLiveStream &&
+                                currentEpisodeIndex >= 0 && currentEpisodeIndex + 1 < episodeUrls.size) {
+                                currentEpisodeIndex++
+                                val nextUrl = episodeUrls[currentEpisodeIndex]
+                                val nextName = episodeNames.getOrNull(currentEpisodeIndex) ?: "Sonraki bölüm"
+                                currentStreamUrl = nextUrl
+                                originalStreamUrl = nextUrl
+                                triedHlsFallback = false
+                                usingHlsFallback = false
+                                retryCount = 0
+                                resumeKey = "position_" + nextUrl.hashCode().toString()
+                                android.widget.Toast.makeText(
+                                    this@PlayerActivity,
+                                    "Sonraki bölüm açılıyor: $nextName",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                                exo.setMediaItem(createStreamMediaItem(nextUrl))
+                                exo.prepare()
+                                exo.playWhenReady = true
+                                return
+                            }
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
                                 val cleanUrl = currentStreamUrl.substringBefore("?").lowercase()
                                 if (!triedHlsFallback && cleanUrl.endsWith(".ts")) {
