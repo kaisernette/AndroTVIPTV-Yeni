@@ -473,10 +473,10 @@ class MainActivity : Activity() {
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
                 // Sidebar navigation stays neutral; theme accent is reserved for content items.
-                background = ColorDrawable(Color.TRANSPARENT)
+                background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
-                    v.background = ColorDrawable(Color.TRANSPARENT)
+                    v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     (v as Button).setTextColor(Color.WHITE)
                     if (hasFocus) {
                         lastSidebarFocusLabel = v.contentDescription?.toString()
@@ -660,7 +660,7 @@ class MainActivity : Activity() {
                 navBar.getChildAt(navBar.childCount - 1).setOnFocusChangeListener { v, hasFocus ->
                     (v as? Button)?.apply {
                         setTextColor(Color.WHITE)
-                        background = ColorDrawable(Color.TRANSPARENT)
+                        background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     }
                     v.scaleX = if (hasFocus) 1.025f else 1f
                     v.scaleY = if (hasFocus) 1.025f else 1f
