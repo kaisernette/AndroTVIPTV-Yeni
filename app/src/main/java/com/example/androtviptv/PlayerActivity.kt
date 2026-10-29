@@ -192,6 +192,35 @@ class PlayerActivity : Activity() {
         playerView = view
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         view.post {
+            // Give the whole controller a translucent cinema panel, not just focused buttons.
+            listOf(
+                androidx.media3.ui.R.id.exo_controls_background,
+                androidx.media3.ui.R.id.exo_bottom_bar,
+                androidx.media3.ui.R.id.exo_center_controls
+            ).forEach { id ->
+                view.findViewById<View>(id)?.apply {
+                    background = GradientDrawable(
+                        GradientDrawable.Orientation.TOP_BOTTOM,
+                        intArrayOf(0x00101828, 0xE6101828.toInt(), 0xF20A0F18.toInt())
+                    ).apply { cornerRadius = dp(18).toFloat() }
+                }
+            }
+            view.findViewById<View>(androidx.media3.ui.R.id.exo_progress)?.let { progress ->
+                if (progress is android.widget.SeekBar) {
+                    progress.progressTintList = android.content.res.ColorStateList.valueOf(0xFF33B5FF.toInt())
+                    progress.thumbTintList = android.content.res.ColorStateList.valueOf(0xFF33B5FF.toInt())
+                    progress.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x668A96A8)
+                } else if (android.os.Build.VERSION.SDK_INT >= 21 && progress is android.widget.ProgressBar) {
+                    progress.progressTintList = android.content.res.ColorStateList.valueOf(0xFF33B5FF.toInt())
+                    progress.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x668A96A8)
+                }
+            }
+            listOf(androidx.media3.ui.R.id.exo_position, androidx.media3.ui.R.id.exo_duration).forEach { id ->
+                (view.findViewById<View>(id) as? android.widget.TextView)?.apply {
+                    setTextColor(0xFFEAF3FF.toInt())
+                    textSize = 14f
+                }
+            }
             val controlIds = intArrayOf(
                 androidx.media3.ui.R.id.exo_play,
                 androidx.media3.ui.R.id.exo_pause,
