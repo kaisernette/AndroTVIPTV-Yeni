@@ -208,15 +208,28 @@ class PlayerActivity : Activity() {
                 control.isFocusable = true
                 control.isFocusableInTouchMode = true
                 control.setOnFocusChangeListener { focusedView, hasFocus ->
+                    // High-contrast TV focus: a clear blue ring plus a subtle blue fill.
                     focusedView.background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dp(8).toFloat()
-                        setColor(if (hasFocus) 0x3329B6F6 else Color.TRANSPARENT)
-                        if (hasFocus) setStroke(dp(2), 0xFF29B6F6.toInt())
+                        cornerRadius = dp(12).toFloat()
+                        setColor(if (hasFocus) 0x5533B5FF else 0x22000000)
+                        if (hasFocus) setStroke(dp(3), 0xFF33B5FF.toInt())
                     }
-                    focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
+                    focusedView.elevation = if (hasFocus) dp(10).toFloat() else 0f
+                    focusedView.scaleX = if (hasFocus) 1.12f else 1f
+                    focusedView.scaleY = if (hasFocus) 1.12f else 1f
+                    focusedView.alpha = if (hasFocus) 1f else 0.88f
                 }
             }
+            // Keep controller actions easy to reach with a TV remote.
+            view.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
+                if (visibility == View.VISIBLE) {
+                    val focused = currentFocus
+                    if (focused == null || focused === view) {
+                        view.findViewById<View>(androidx.media3.ui.R.id.exo_play)?.requestFocus()
+                    }
+                }
+            })
         }
         episodePromptRoot = root
         setContentView(root)
