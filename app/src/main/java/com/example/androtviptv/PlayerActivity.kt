@@ -102,6 +102,22 @@ class PlayerActivity : Activity() {
     private var episodeNames: List<String> = emptyList()
     private var episodeUrls: List<String> = emptyList()
     private var currentEpisodeIndex = -1
+    private var episodePrompt: LinearLayout? = null
+    private var episodePromptRoot: FrameLayout? = null
+    private var episodeTransitionHandled = false
+    private val episodeTransitionCheck = object : Runnable {
+        override fun run() {
+            val exo = player
+            if (exo != null && !isLiveStream && currentEpisodeIndex >= 0 &&
+                currentEpisodeIndex + 1 < episodeUrls.size && exo.duration > 0L &&
+                exo.playbackState == Player.STATE_READY && !isFinishing) {
+                val remaining = exo.duration - exo.currentPosition
+                if (remaining in 1L..30000L) showEpisodePrompt(remaining)
+                if (remaining <= 0L && !episodeTransitionHandled) advanceToNextEpisode()
+            }
+            playbackHandler.postDelayed(this, 1000L)
+        }
+    }
     private var savedChannelRows: List<String> = emptyList()
     private var savedChannelUrls: List<String> = emptyList()
     private val playbackPrefs by lazy { getSharedPreferences("androtv_playback", Context.MODE_PRIVATE) }
@@ -202,7 +218,9 @@ class PlayerActivity : Activity() {
                 }
             }
         }
+        episodePromptRoot = root
         setContentView(root)
+        playbackHandler.post(episodeTransitionCheck)
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
             finish()
@@ -231,23 +249,7 @@ class PlayerActivity : Activity() {
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && !isLiveStream &&
                                 currentEpisodeIndex >= 0 && currentEpisodeIndex + 1 < episodeUrls.size) {
-                                currentEpisodeIndex++
-                                val nextUrl = episodeUrls[currentEpisodeIndex]
-                                val nextName = episodeNames.getOrNull(currentEpisodeIndex) ?: "Sonraki bölüm"
-                                currentStreamUrl = nextUrl
-                                originalStreamUrl = nextUrl
-                                triedHlsFallback = false
-                                usingHlsFallback = false
-                                retryCount = 0
-                                resumeKey = "position_" + nextUrl.hashCode().toString()
-                                android.widget.Toast.makeText(
-                                    this@PlayerActivity,
-                                    "Sonraki bölüm açılıyor: $nextName",
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
-                                exo.setMediaItem(createStreamMediaItem(nextUrl))
-                                exo.prepare()
-                                exo.playWhenReady = true
+                                advanceToNextEpisode()
                                 return
                             }
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
@@ -426,6 +428,107 @@ class PlayerActivity : Activity() {
                 }
             }
         }, 1200L)
+    }
+
+    private fun showEpisodePrompt(remainingMs: Long) {
+        if (episodePrompt == null) {
+            val nextIndex = currentEpisodeIndex + 1
+            val nextName = episodeNames.getOrNull(nextIndex) ?: "Sonraki bölüm"
+            val panel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(22), dp(16), dp(22), dp(16))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setColor(0xF0191E28.toInt())
+                    setStroke(dp(2), 0xFF29B6F6.toInt())
+                }
+                elevation = dp(12).toFloat()
+            }
+            panel.addView(TextView(this).apply {
+                text = "Sıradaki bölüm"
+                textSize = 18f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+            })
+            panel.addView(TextView(this).apply {
+                text = nextName
+                textSize = 15f
+                setTextColor(0xFFBFC7D5.toInt())
+                setPadding(0, dp(5), 0, dp(8))
+            })
+            val countdown = TextView(this).apply {
+                tag = "episode_countdown"
+                textSize = 16f
+                setTextColor(0xFF29B6F6.toInt())
+                setPadding(0, 0, 0, dp(8))
+            }
+            panel.addView(countdown)
+            val actions = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val skip = TextView(this).apply {
+                text = "▶  Şimdi Geç"
+                textSize = 16f
+                setTypeface(null, Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                setPadding(dp(20), dp(12), dp(20), dp(12))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(12).toFloat()
+                    setColor(0xFF079FE8.toInt())
+                }
+                setOnFocusChangeListener { v, hasFocus ->
+                    v.background = GradientDrawable().apply {
+                        cornerRadius = dp(12).toFloat()
+                        setColor(if (hasFocus) 0xFF29B6F6.toInt() else 0xFF079FE8.toInt())
+                        if (hasFocus) setStroke(dp(2), Color.WHITE)
+                    }
+                }
+                setOnClickListener { advanceToNextEpisode() }
+            }
+            actions.addView(skip)
+            panel.addView(actions)
+            episodePrompt = panel
+            episodePromptRoot?.addView(panel, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            ).apply { setMargins(dp(24), dp(12), dp(24), dp(72)) })
+            skip.requestFocus()
+        }
+        val seconds = ((remainingMs + 999L) / 1000L).coerceAtLeast(0L)
+        val countdown = episodePrompt?.findViewWithTag<TextView>("episode_countdown")
+        if (seconds <= 10L) {
+            countdown?.text = "Sonraki bölüm $seconds saniye içinde başlayacak"
+            countdown?.visibility = View.VISIBLE
+        } else {
+            countdown?.text = "Bölüm bitince sonraki bölüm açılacak"
+            countdown?.visibility = View.VISIBLE
+        }
+    }
+
+    private fun advanceToNextEpisode() {
+        if (episodeTransitionHandled || currentEpisodeIndex < 0 || currentEpisodeIndex + 1 >= episodeUrls.size) return
+        episodeTransitionHandled = true
+        val exo = player ?: return
+        currentEpisodeIndex++
+        val nextUrl = episodeUrls[currentEpisodeIndex]
+        val nextName = episodeNames.getOrNull(currentEpisodeIndex) ?: "Sonraki bölüm"
+        episodePrompt?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        episodePrompt = null
+        currentStreamUrl = nextUrl
+        originalStreamUrl = nextUrl
+        triedHlsFallback = false
+        usingHlsFallback = false
+        retryCount = 0
+        resumeKey = "position_" + nextUrl.hashCode().toString()
+        android.widget.Toast.makeText(this, "Sonraki bölüm açılıyor: $nextName", android.widget.Toast.LENGTH_LONG).show()
+        exo.setMediaItem(createStreamMediaItem(nextUrl))
+        exo.prepare()
+        exo.playWhenReady = true
+        episodeTransitionHandled = false
     }
 
     private fun tuneChannel(index: Int) {
