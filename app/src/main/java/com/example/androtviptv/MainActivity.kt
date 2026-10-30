@@ -2363,7 +2363,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
             // Keep text and buttons clear of the TV's right-edge system overlay.
-            setPadding(dp(18), dp(18), dp(64), dp(18))
+            setPadding(dp(18), dp(18), dp(64), dp(34))
         }
         copy.addView(TextView(this).apply {
             text = "FİLM  •  ${movie.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -2382,12 +2382,19 @@ class MainActivity : Activity() {
             maxWidth = dp(760); maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
             setPadding(0, 0, 0, 8)
         })
-        copy.addView(TextView(this).apply {
-            text = movie.plot.ifBlank { "Film bilgileri kaynakta bulunmuyorsa doğrudan izleyebilirsin." }
-            textSize = 13f; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
-            maxWidth = dp(760)
-            setTextColor(Color.rgb(226, 230, 238))
-        })
+        copy.addView(ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            isHorizontalScrollBarEnabled = false
+            isFocusable = true
+            isFocusableInTouchMode = true
+            descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
+            addView(TextView(this@MainActivity).apply {
+                text = movie.plot.ifBlank { "Film bilgileri kaynakta bulunmuyorsa doğrudan izleyebilirsin." }
+                textSize = 13f
+                maxWidth = dp(760)
+                setTextColor(Color.rgb(226, 230, 238))
+            })
+        }, LinearLayout.LayoutParams(-1, dp(54)))
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER }
         actions.addView(watchButton, LinearLayout.LayoutParams(dp(160), dp(46)).apply { setMargins(0, dp(8), dp(8), 0) })
@@ -2433,7 +2440,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
             // Leave space for Android's status bar so synopsis text never sits underneath it.
-            setPadding(dp(24), dp(42), dp(64), dp(22))
+            setPadding(dp(24), dp(42), dp(64), dp(38))
         }
         copy.addView(TextView(this).apply {
             text = "DİZİ  •  ${series.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -2444,10 +2451,18 @@ class MainActivity : Activity() {
             setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             setPadding(0, 8, 0, 6)
         })
-        copy.addView(TextView(this).apply {
-            text = series.plot.ifBlank { "Sezonları ve bölümleri aşağıdan seç." }
-            textSize = 13f; maxLines = 2; setTextColor(Color.rgb(226, 230, 238))
-        })
+        copy.addView(ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            isHorizontalScrollBarEnabled = false
+            isFocusable = true
+            isFocusableInTouchMode = true
+            descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
+            addView(TextView(this@MainActivity).apply {
+                text = series.plot.ifBlank { "Sezonları ve bölümleri aşağıdan seç." }
+                textSize = 13f
+                setTextColor(Color.rgb(226, 230, 238))
+            })
+        }, LinearLayout.LayoutParams(-1, dp(54)))
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
 
         // Put the series-level continue button first. PlayerActivity restores the saved
