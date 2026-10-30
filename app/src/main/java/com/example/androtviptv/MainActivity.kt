@@ -2362,6 +2362,23 @@ class MainActivity : Activity() {
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
 
+        // Put the series-level continue button first. PlayerActivity restores the saved
+        // playback position for the remembered episode URL.
+        val lastEpisode = recent.firstOrNull {
+            it.type == "Bölümler" && it.group.startsWith(series.name + " • Sezon") && it.url.isNotBlank()
+        }
+        actions.addView(makeButton("▶  DİZİYİ İZLE", true) {
+            val resumeEpisode = lastEpisode
+                ?: seriesEpisodeRows.firstOrNull()?.second?.firstOrNull()
+            if (resumeEpisode != null) {
+                play(resumeEpisode)
+            } else if (seriesEpisodesLoading) {
+                Toast.makeText(this, "Bölümler yükleniyor, lütfen bekle.", Toast.LENGTH_SHORT).show()
+            } else if (seriesEpisodeRows.isEmpty()) {
+                Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
+                showSeriesDetail(series)
+            }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
         actions.addView(makeButton("← Geri", false) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
