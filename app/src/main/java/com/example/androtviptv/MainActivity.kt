@@ -2775,8 +2775,12 @@ class MainActivity : Activity() {
                 setMargins(dp(6), dp(5), dp(6), dp(7))
             })
         }
-        if (settingsPage != "main") content.addView(makeButton("← Ayarlara dön", false) {
-            settingsPage = "main"; prefs.edit().putString("last_settings_page", "main").apply(); rebuildNavigation(); render()
+        if (settingsPage != "main") content.addView(makeButton(
+            if (settingsPage == "button_appearance") "← Temalara dön" else "← Ayarlara dön", false
+        ) {
+            settingsPage = if (settingsPage == "button_appearance") "themes" else "main"
+            prefs.edit().putString("last_settings_page", settingsPage).apply()
+            rebuildNavigation(); render()
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(6), dp(6), 0, dp(8)) })
         when (settingsPage) {
             "main" -> {
