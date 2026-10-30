@@ -93,6 +93,7 @@ class PlayerActivity : Activity() {
         }
     }
     private var playerView: PlayerView? = null
+    private var controllerVisible = false
     private var channelOverlay: LinearLayout? = null
     private var channelRows: List<String> = emptyList()
     private var channelUrls: List<String> = emptyList()
@@ -276,6 +277,7 @@ class PlayerActivity : Activity() {
             ViewGroup.LayoutParams.WRAP_CONTENT, dp(56), Gravity.END or Gravity.BOTTOM
         ).apply { rightMargin = dp(22); bottomMargin = dp(22) })
         view.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
+            controllerVisible = visibility == View.VISIBLE
             trackButtons.visibility = visibility
         })
         setContentView(root)
@@ -379,7 +381,7 @@ class PlayerActivity : Activity() {
                     // While the playback navigation is visible, let DPAD move between
                     // the player controls and the subtitle/audio buttons. Only change
                     // channels with UP/DOWN when the controller is hidden.
-                    if (playerView?.isControllerVisible == true) return super.dispatchKeyEvent(event)
+                    if (controllerVisible) return super.dispatchKeyEvent(event)
                     val next = (selectedChannelIndex +
                         if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
                         .let { if (it < 0) channelUrls.lastIndex else if (it > channelUrls.lastIndex) 0 else it }
