@@ -511,9 +511,10 @@ class MainActivity : Activity() {
                     addSidebarButton(tab, selectedType == "Ayarlar" && settingsPage != "history") {
                         detailSeries = null
                         detailMovie = null
-                        settingsPage = prefs.getString("last_settings_page", "main") ?: "main"
+                        // Ayarlar menüsüne her girişte ana ayarlar kartlarını göster.
+                        settingsPage = "main"
                         selectedType = "Ayarlar"
-                        prefs.edit().putString("last_section", "Ayarlar").apply()
+                        prefs.edit().putString("last_settings_page", "main").putString("last_section", "Ayarlar").apply()
                         selectedGroup = "Tüm kategoriler"
                         sidebarMode = "context"
                         rebuildNavigation()
@@ -598,9 +599,10 @@ class MainActivity : Activity() {
                         }
                         "Ayarlar" -> {
                             selectedType = key
-                            settingsPage = prefs.getString("last_settings_page", "main") ?: "main"
+                            // Ayarlar simgesine her basışta ana ayarlar ekranına dön.
+                            settingsPage = "main"
                             sidebarMode = "context"
-                            prefs.edit().putString("last_section", key).apply()
+                            prefs.edit().putString("last_settings_page", "main").putString("last_section", key).apply()
                         }
                         else -> {
                             selectedType = key
