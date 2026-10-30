@@ -618,9 +618,15 @@ class MainActivity : Activity() {
         if (sidebarMode == "context") {
             // Section mode: replace the main menu with compact, readable category names.
             val sectionItems = when (selectedType) {
-                "Canlı TV", "Filmler", "Diziler" -> items.filter { it.type == selectedType }
-                "Favoriler" -> items.filter { favorites.contains(it.favoriteKey) }
-                "Son İzlenenler" -> recent.toList()
+                "Canlı TV", "Filmler", "Diziler" -> items.filter { item ->
+                    item.type == selectedType &&
+                        !hiddenCategories.contains(item.type + "|" + item.group.ifBlank { "Diğer" })
+                }
+                "Favoriler" -> items.filter { favorites.contains(it.favoriteKey) &&
+                    !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" }) }
+                "Son İzlenenler" -> recent.filter {
+                    !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
+                }
                 else -> emptyList()
             }
             val categories = listOf("Tüm kategoriler") + sectionItems
@@ -1820,6 +1826,11 @@ class MainActivity : Activity() {
             it.type.contains(query, ignoreCase = true)
         }
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+        // If the previously selected category was hidden, return to all visible items.
+        if (selectedGroup != "Tüm kategoriler" && selectedGroup !in groupsAvailable) {
+            selectedGroup = "Tüm kategoriler"
+            prefs.edit().putString("last_group", selectedGroup).apply()
+        }
         categoryBar.removeAllViews()
         groupsAvailable.take(40).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
