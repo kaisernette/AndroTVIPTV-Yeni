@@ -462,19 +462,15 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Selected state and remote focus are visually distinct; focus always uses ice blue.
-                val selectedFill = if (buttonSelectionStyle == "Dolu") Color.rgb(30, 43, 58) else Color.TRANSPARENT
-                val selectedStroke = if (buttonSelectionStyle == "Sol çizgi") Color.TRANSPARENT else if (selected) accent else Color.TRANSPARENT
-                background = roundedDrawable(if (selected) selectedFill else Color.TRANSPARENT, buttonRadiusDp,
-                    if (selected) selectedStroke else Color.TRANSPARENT)
+                // Selected navigation item is filled with the active theme accent.
+                background = roundedDrawable(if (selected) accent else Color.TRANSPARENT, buttonRadiusDp,
+                    if (selected) accent else Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
-                    val normalFill = if (buttonSelectionStyle == "Dolu") Color.rgb(30, 43, 58) else Color.TRANSPARENT
-                    val normalStroke = if (buttonSelectionStyle == "Sol çizgi") Color.TRANSPARENT else if (selected) accent else Color.TRANSPARENT
                     v.background = roundedDrawable(
-                        if (hasFocus) Color.rgb(27, 39, 53) else if (selected) normalFill else Color.TRANSPARENT,
+                        if (selected) accent else if (hasFocus) Color.rgb(27, 39, 53) else Color.TRANSPARENT,
                         buttonRadiusDp,
-                        if (hasFocus) focusColor else if (selected) normalStroke else Color.TRANSPARENT
+                        if (selected || hasFocus) accent else Color.TRANSPARENT
                     )
                     (v as Button).setTextColor(Color.WHITE)
                     // Keep sidebar buttons at a fixed size on every screen.
@@ -1763,12 +1759,12 @@ class MainActivity : Activity() {
                         isFocusableInTouchMode = true
                         isClickable = true
                         setPadding(dp(8), dp(8), dp(8), dp(8))
-                        background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
+                        background = roundedDrawable(panel, 12, accent)
                         setOnFocusChangeListener { v, hasFocus ->
                             v.background = roundedDrawable(
                                 if (hasFocus) Color.rgb(27, 39, 53) else panel,
                                 12,
-                                if (hasFocus) focusColor else Color.rgb(43, 51, 68)
+                                accent
                             )
                             v.elevation = if (hasFocus) dp(4).toFloat() else 0f
                             v.scaleX = if (hasFocus) 1.02f else 1f
@@ -1966,11 +1962,11 @@ class MainActivity : Activity() {
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(0, 0, 0, 0)
-                    setBackgroundColor(Color.TRANSPARENT)
+                    setPadding(dp(2), dp(2), dp(2), dp(2))
+                    background = roundedDrawable(panel, 10, accent)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.setBackgroundColor(Color.TRANSPARENT)
+                        v.background = roundedDrawable(panel, 10, accent)
                         v.elevation = 0f
                         v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
                     }
