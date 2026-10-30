@@ -1354,7 +1354,7 @@ class MainActivity : Activity() {
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
             val welcomeLogo = TextView(this).apply {
-                val logo = android.text.SpannableString("KaıserIPTV+")
+                val logo = android.text.SpannableString("KaiserIPTV+")
                 logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 0, 6, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 6, 10, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 10, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -1541,18 +1541,18 @@ class MainActivity : Activity() {
                 override fun onDraw(canvas: android.graphics.Canvas) {
                     super.onDraw(canvas)
                     val textLayout = layout ?: return
-                    val x = paddingLeft + textLayout.getLineLeft(0) + textLayout.getPrimaryHorizontal(2) + dp(2)
-                    val y = paddingTop + textLayout.getLineBaseline(0) - dp(25)
+                    val x = paddingLeft.toFloat() + textLayout.getLineLeft(0) + textLayout.getPrimaryHorizontal(2) + dp(2).toFloat()
+                    val y = paddingTop.toFloat() + textLayout.getLineBaseline(0) - dp(25).toFloat()
                     val path = android.graphics.Path().apply {
                         moveTo(x, y)
-                        lineTo(x, y + dp(10))
-                        lineTo(x + dp(11), y + dp(5))
+                        lineTo(x, y + dp(10).toFloat())
+                        lineTo(x + dp(11).toFloat(), y + dp(5).toFloat())
                         close()
                     }
                     canvas.drawPath(path, playPaint)
                 }
             }.apply {
-                text = "Kaıser"
+                text = "Kaiser"
                 textSize = 34f
                 setTextColor(Color.WHITE)
                 setTypeface(null, android.graphics.Typeface.BOLD)
