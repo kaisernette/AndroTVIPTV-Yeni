@@ -92,6 +92,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
+        loadSearchHistory()
         sidebarTransparency = prefs.getInt("sidebar_transparency", if (transparentMenu) 100 else 0)
         // Restore the selected theme before constructing any views.
         when (prefs.getString("theme_name", "Siyah • Mavi")) {
@@ -180,6 +181,31 @@ class MainActivity : Activity() {
     private val hiddenCategories = mutableSetOf<String>()
     private var searchQuery = ""
     private var searchInputFocusPending = false
+    private val searchHistory = mutableListOf<String>()
+    private val searchHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var searchRenderRunnable: Runnable? = null
+
+    private fun saveSearchHistory(query: String) {
+        val value = query.trim()
+        if (value.isBlank()) return
+        searchHistory.remove(value)
+        searchHistory.add(0, value)
+        while (searchHistory.size > 12) searchHistory.removeAt(searchHistory.lastIndex)
+        val json = JSONArray()
+        searchHistory.forEach { json.put(it) }
+        prefs.edit().putString("search_history", json.toString()).apply()
+    }
+
+    private fun loadSearchHistory() {
+        searchHistory.clear()
+        try {
+            val json = JSONArray(prefs.getString("search_history", "[]") ?: "[]")
+            for (i in 0 until json.length()) {
+                val value = json.optString(i).trim()
+                if (value.isNotBlank() && value !in searchHistory) searchHistory.add(value)
+            }
+        } catch (_: Exception) { }
+    }
     private var isLoadingSource = false
     private var loadProgress = 0
     private var hasLoadedSource = false
