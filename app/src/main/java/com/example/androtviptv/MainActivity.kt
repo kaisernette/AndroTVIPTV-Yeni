@@ -2502,17 +2502,15 @@ class MainActivity : Activity() {
         }
         hero.addView(poster, FrameLayout.LayoutParams(-1, -1))
         if (series.icon.startsWith("http://") || series.icon.startsWith("https://")) loadPoster(series.icon, poster)
-        val shade = View(this).apply {
+        hero.addView(View(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(0x22070A11, 0xEE070A11.toInt()))
-        }
-        hero.addView(shade, FrameLayout.LayoutParams(-1, -1))
+        }, FrameLayout.LayoutParams(-1, -1))
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
             clipChildren = false
             clipToPadding = false
-            // Keep the synopsis below the status bar and leave room for the complete action row.
             setPadding(dp(24), dp(42), dp(64), dp(18))
         }
         copy.addView(TextView(this).apply {
@@ -2537,20 +2535,18 @@ class MainActivity : Activity() {
             })
         }, LinearLayout.LayoutParams(-1, dp(54)))
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-
-        // Put the series-level continue button first. PlayerActivity restores the saved
-        // playback position for the remembered episode URL.
         val lastEpisode = recent.firstOrNull {
             it.type == "Bölümler" && it.group.startsWith(series.name + " • Sezon") && it.url.isNotBlank()
         }
         val watchSeriesButton = makeButton("▶  DİZİYİ İZLE", true) {
-            val resumeEpisode = lastEpisode
+            val resumeEpisode = lastEpisode ?: seriesEpisodeRows
+                .firstOrNull { it.first == selectedSeriesSeason }?.second?.firstOrNull()
                 ?: seriesEpisodeRows.firstOrNull()?.second?.firstOrNull()
             if (resumeEpisode != null) {
                 play(resumeEpisode)
             } else if (seriesEpisodesLoading) {
                 Toast.makeText(this, "Bölümler yükleniyor, lütfen bekle.", Toast.LENGTH_SHORT).show()
-            } else if (seriesEpisodeRows.isEmpty()) {
+            } else {
                 Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
                 showSeriesDetail(series)
             }
@@ -2559,6 +2555,7 @@ class MainActivity : Activity() {
         actions.addView(makeButton("← Geri", false) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
+            selectedSeriesSeason = ""
             render()
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, dp(14), dp(8), 0) })
         actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(dp(160), dp(46)).apply { setMargins(0, dp(14), 0, 0) })
@@ -2576,7 +2573,7 @@ class MainActivity : Activity() {
             setMargins(0, 0, 0, dp(12))
         })
         episodesPanel.addView(TextView(this).apply {
-            text = "SEZONLAR VE BÖLÜMLER"
+            text = "SEZON VE BÖLÜMLER"
             textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             setPadding(0, 0, 0, dp(10))
         })
@@ -2590,28 +2587,96 @@ class MainActivity : Activity() {
             seriesEpisodeRows.isEmpty() -> episodesPanel.addView(TextView(this).apply {
                 text = "Bu dizi için bölüm bulunamadı."; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
             })
-            else -> seriesEpisodeRows.forEach { (season, episodes) ->
-                episodesPanel.addView(TextView(this).apply {
-                    text = "Sezon $season"; textSize = 18f
-                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accentBright)
-                    setPadding(0, dp(12), 0, dp(8))
-                })
-                episodes.forEachIndexed { index, episode ->
-                    val episodeRow = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(14), dp(10), dp(12), dp(10))
-                        background = roundedDrawable(panel, 12, Color.rgb(42, 50, 66))
-                    }
-                    episodeRow.addView(TextView(this).apply {
-                        text = "${index + 1}."; textSize = 15f; setTextColor(accentBright)
-                    }, LinearLayout.LayoutParams(38, ViewGroup.LayoutParams.WRAP_CONTENT))
-                    episodeRow.addView(TextView(this).apply {
-                        text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
-                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("▶ İzle", true) { play(episode) },
-                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(dp(12), 0, 0, 0) })
-                    episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
+            else -> {
+                if (selectedSeriesSeason.isBlank() || seriesEpisodeRows.none { it.first == selectedSeriesSeason }) {
+                    selectedSeriesSeason = seriesEpisodeRows.first().first
                 }
+                val seasonLabels = seriesEpisodeRows.map { "Sezon ${it.first}" }
+                val selectedIndex = seriesEpisodeRows.indexOfFirst { it.first == selectedSeriesSeason }.coerceAtLeast(0)
+                val seasonPicker = Spinner(this).apply {
+                    adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, seasonLabels).also {
+                        it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    }
+                    background = roundedDrawable(Color.rgb(28, 35, 49), 12, Color.rgb(48, 58, 76))
+                    setPadding(dp(12), 0, dp(12), 0)
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    setSelection(selectedIndex, false)
+                    onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                        override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+                        override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                            val newSeason = seriesEpisodeRows.getOrNull(position)?.first ?: return
+                            if (newSeason != selectedSeriesSeason) {
+                                selectedSeriesSeason = newSeason
+                                render()
+                            }
+                        }
+                    }
+                }
+                episodesPanel.addView(seasonPicker, LinearLayout.LayoutParams(dp(250), dp(48)).apply {
+                    setMargins(0, 0, 0, dp(14))
+                })
+
+                val selectedEpisodes = seriesEpisodeRows.firstOrNull { it.first == selectedSeriesSeason }?.second.orEmpty()
+                val episodeRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.TOP
+                }
+                selectedEpisodes.forEachIndexed { index, episode ->
+                    val episodeCard = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.TOP
+                        setPadding(dp(2), dp(2), dp(2), dp(2))
+                        background = roundedDrawable(panel, 10)
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                        contentDescription = episode.name
+                        setOnFocusChangeListener { v, hasFocus ->
+                            v.background = roundedDrawable(panel, 10, if (hasFocus) accent else null)
+                            v.scaleX = if (hasFocus) 1.02f else 1f
+                            v.scaleY = if (hasFocus) 1.02f else 1f
+                        }
+                        setOnClickListener { play(episode) }
+                    }
+                    val episodePoster = ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        contentDescription = episode.name
+                        background = roundedDrawable(Color.rgb(31, 37, 50), 10)
+                        layoutParams = LinearLayout.LayoutParams(-1, dp(210))
+                    }
+                    if (episode.icon.startsWith("http://") || episode.icon.startsWith("https://")) {
+                        loadPoster(episode.icon, episodePoster)
+                    } else {
+                        episodePoster.setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                            intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
+                    }
+                    episodeCard.addView(episodePoster)
+                    episodeCard.addView(TextView(this).apply {
+                        text = "BÖLÜM ${index + 1}"
+                        textSize = 10f
+                        setTextColor(accent)
+                        setPadding(dp(3), dp(8), dp(2), dp(4))
+                        letterSpacing = 0.05f
+                    })
+                    episodeCard.addView(TextView(this).apply {
+                        text = episode.name
+                        textSize = 14f
+                        setTextColor(Color.WHITE)
+                        maxLines = 2
+                        minHeight = dp(40)
+                        setPadding(dp(3), 0, dp(3), dp(4))
+                    })
+                    episodeRow.addView(episodeCard, LinearLayout.LayoutParams(dp(166), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(dp(5), 0, dp(14), dp(10))
+                    })
+                }
+                episodesPanel.addView(HorizontalScrollView(this).apply {
+                    isHorizontalScrollBarEnabled = false
+                    clipToPadding = false
+                    setPadding(dp(4), 0, dp(18), 0)
+                    addView(episodeRow)
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
         }
     }
