@@ -85,6 +85,9 @@ class MainActivity : Activity() {
     // Sidebar transparency is independent from the selected color theme.
     private var transparentMenu = true
     private var sidebarTransparency = 100
+    private var buttonRadiusDp = 12
+    private var buttonSelectionStyle = "Dolu"
+    private var customAccentColor: Int? = null
 
     private fun sidebarBackgroundColor(): Int = Color.argb(255 * (100 - sidebarTransparency) / 100, Color.red(panel), Color.green(panel), Color.blue(panel))
 
@@ -94,6 +97,8 @@ class MainActivity : Activity() {
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         loadSearchHistory()
         sidebarTransparency = prefs.getInt("sidebar_transparency", if (transparentMenu) 100 else 0)
+        buttonRadiusDp = prefs.getInt("button_radius_dp", 12)
+        buttonSelectionStyle = prefs.getString("button_selection_style", "Dolu") ?: "Dolu"
         // Restore the selected theme before constructing any views.
         when (prefs.getString("theme_name", "Siyah • Mavi")) {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
@@ -103,6 +108,8 @@ class MainActivity : Activity() {
             else -> { bg = Color.BLACK; accent = Color.rgb(0, 166, 255); accentBright = accent }
         }
         panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
+        customAccentColor = if (prefs.contains("custom_accent_color")) prefs.getInt("custom_accent_color", accent) else null
+        customAccentColor?.let { accent = it; accentBright = it }
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
         try {
@@ -456,14 +463,18 @@ class MainActivity : Activity() {
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
                 // Selected state and remote focus are visually distinct; focus always uses ice blue.
-                background = roundedDrawable(if (selected) Color.rgb(30, 43, 58) else Color.TRANSPARENT, 10,
-                    if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT)
+                val selectedFill = if (buttonSelectionStyle == "Dolu") Color.rgb(30, 43, 58) else Color.TRANSPARENT
+                val selectedStroke = if (buttonSelectionStyle == "Sol çizgi") Color.TRANSPARENT else if (selected) accent else Color.TRANSPARENT
+                background = roundedDrawable(if (selected) selectedFill else Color.TRANSPARENT, buttonRadiusDp,
+                    if (selected) selectedStroke else Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
+                    val normalFill = if (buttonSelectionStyle == "Dolu") Color.rgb(30, 43, 58) else Color.TRANSPARENT
+                    val normalStroke = if (buttonSelectionStyle == "Sol çizgi") Color.TRANSPARENT else if (selected) accent else Color.TRANSPARENT
                     v.background = roundedDrawable(
-                        if (hasFocus) Color.rgb(27, 39, 53) else if (selected) Color.rgb(30, 43, 58) else Color.TRANSPARENT,
-                        10,
-                        if (hasFocus) focusColor else if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT
+                        if (hasFocus) Color.rgb(27, 39, 53) else if (selected) normalFill else Color.TRANSPARENT,
+                        buttonRadiusDp,
+                        if (hasFocus) focusColor else if (selected) normalStroke else Color.TRANSPARENT
                     )
                     (v as Button).setTextColor(Color.WHITE)
                     // Keep sidebar buttons at a fixed size on every screen.
@@ -762,13 +773,13 @@ class MainActivity : Activity() {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
         setTextColor(if (primary) Color.rgb(12, 14, 19) else Color.WHITE)
-        background = roundedDrawable(if (primary) accent else panel, 12,
+        background = roundedDrawable(if (primary) accent else panel, buttonRadiusDp,
             if (primary) accentBright else Color.rgb(44, 52, 68))
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
             v.background = roundedDrawable(
                 if (primary) accent else if (hasFocus) Color.rgb(27, 39, 53) else panel,
-                12, if (hasFocus) focusColor else if (primary) accentBright else Color.rgb(44, 52, 68))
+                buttonRadiusDp, if (hasFocus) focusColor else if (primary) accentBright else Color.rgb(44, 52, 68))
             v.elevation = if (hasFocus) dp(4).toFloat() else 0f
             v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
         }
@@ -2663,6 +2674,11 @@ class MainActivity : Activity() {
                         settingsPage = "themes"; render()
                     }
                 }
+                option("▣  Buton görünümü", "Buton şekli, vurgu rengi ve seçili görünümünü düzenle") {
+                    settingsPage = "button_appearance"
+                    prefs.edit().putString("last_settings_page", settingsPage).apply()
+                    render()
+                }
                 val transparencyRow = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -2698,6 +2714,28 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(dp(42), dp(40)))
                 transparencyRow.addView(percentControl, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 content.addView(transparencyRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
+            }
+            "button_appearance" -> {
+                heading("Buton görünümü", "Şekli, vurgu rengini ve seçili buton stilini seç.")
+                heading("Buton şekli", "Tüm standart butonlarda uygulanır.")
+                listOf("Yuvarlak" to 18, "Yumuşak" to 10, "Köşeli" to 3).forEach { (label, radius) ->
+                    option((if (buttonRadiusDp == radius) "✓  " else "") + label, "Buton köşe biçimi") {
+                        buttonRadiusDp = radius; prefs.edit().putInt("button_radius_dp", radius).apply(); render()
+                    }
+                }
+                heading("Vurgu rengi", "Buton ve arayüz vurgusu için renk seç.")
+                listOf("Mavi" to Color.rgb(0, 166, 255), "Turkuaz" to Color.rgb(35, 205, 190), "Mor" to Color.rgb(174, 115, 255), "Altın" to Color.rgb(224, 184, 95), "Yeşil" to Color.rgb(70, 190, 120)).forEach { (label, color) ->
+                    option((if (accent == color) "✓  " else "") + "●  " + label, "Vurgu rengini uygula") {
+                        accent = color; accentBright = color; customAccentColor = color
+                        prefs.edit().putInt("custom_accent_color", color).apply(); rebuildNavigation(); render()
+                    }
+                }
+                heading("Seçili buton stili", "Menüde seçili olan bölümün görünümü.")
+                listOf("Dolu", "Çerçeve", "Sol çizgi").forEach { style ->
+                    option((if (buttonSelectionStyle == style) "✓  " else "") + style, "Seçili bölüm görünümü") {
+                        buttonSelectionStyle = style; prefs.edit().putString("button_selection_style", style).apply(); rebuildNavigation(); render()
+                    }
+                }
             }
             "history" -> {
                 heading("Geçmiş", "Türü seçerek izleme geçmişini görüntüle.")
