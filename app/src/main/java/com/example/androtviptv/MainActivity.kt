@@ -75,7 +75,7 @@ class MainActivity : Activity() {
     private var xtreamPass = ""
     private var xtreamBase = ""
     private val prefs by lazy { getSharedPreferences("androtv", MODE_PRIVATE) }
-    private var bg = Color.rgb(17, 20, 25)
+    private var bg = Color.BLACK
     private var panel = Color.rgb(25, 30, 38)
     private var accent = Color.rgb(0, 166, 255)
     private var accentBright = Color.rgb(72, 190, 255)
@@ -90,11 +90,12 @@ class MainActivity : Activity() {
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         // Restore the selected theme before constructing any views.
-        when (prefs.getString("theme_name", "Antrasit • Mavi")) {
+        when (prefs.getString("theme_name", "Siyah • Mavi")) {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
             "Lacivert • Turkuaz" -> { bg = Color.rgb(10, 22, 38); accent = Color.rgb(35, 205, 190); accentBright = accent }
             "Koyu • Mor" -> { bg = Color.rgb(20, 16, 29); accent = Color.rgb(174, 115, 255); accentBright = accent }
-            else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
+            "Siyah • Mavi" -> { bg = Color.BLACK; accent = Color.rgb(0, 166, 255); accentBright = accent }
+            else -> { bg = Color.BLACK; accent = Color.rgb(0, 166, 255); accentBright = accent }
         }
         panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
         window.statusBarColor = bg; window.navigationBarColor = bg
@@ -2596,7 +2597,7 @@ class MainActivity : Activity() {
             "themes" -> {
                 heading("Temalar", "Renk seçimi anında uygulanır.")
                 val themes = listOf(
-                    Triple("Antrasit • Mavi", Color.rgb(17, 20, 25), Color.rgb(0, 166, 255)),
+                    Triple("Siyah • Mavi", Color.BLACK, Color.rgb(0, 166, 255)),
                     Triple("Gece • Altın", Color.rgb(15, 16, 20), Color.rgb(224, 184, 95)),
                     Triple("Lacivert • Turkuaz", Color.rgb(10, 22, 38), Color.rgb(35, 205, 190)),
                     Triple("Koyu • Mor", Color.rgb(20, 16, 29), Color.rgb(174, 115, 255))
