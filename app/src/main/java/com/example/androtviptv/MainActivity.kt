@@ -80,7 +80,7 @@ class MainActivity : Activity() {
     private var accent = Color.rgb(0, 166, 255)
     private var accentBright = Color.rgb(72, 190, 255)
     // Focus styling is independent from the selectable app theme.
-    private val focusColor = Color.rgb(137, 214, 255)
+    private val focusColor: Int get() = accent
     private var muted = Color.rgb(190, 198, 210)
     // Sidebar transparency is independent from the selected color theme.
     private var transparentMenu = true
@@ -1973,10 +1973,10 @@ class MainActivity : Activity() {
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(dp(2), dp(2), dp(2), dp(2))
-                    background = roundedDrawable(panel, 10, accent)
+                    background = roundedDrawable(panel, 10)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = roundedDrawable(panel, 10, accent)
+                        v.background = roundedDrawable(panel, 10, if (hasFocus) accent else null)
                         v.elevation = 0f
                         v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
                     }
@@ -2461,14 +2461,13 @@ class MainActivity : Activity() {
         fun option(title: String, detail: String, action: () -> Unit) {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; setPadding(dp(18), dp(14), dp(18), dp(14))
-                background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
+                background = roundedDrawable(panel, 14)
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
                 setOnFocusChangeListener { v, hasFocus ->
-                    // Ice-blue focus is independent from the selected theme palette.
                     v.background = roundedDrawable(
                         if (hasFocus) Color.rgb(27, 39, 53) else panel,
                         14,
-                        if (hasFocus) focusColor else Color.rgb(48, 57, 73)
+                        if (hasFocus) accent else null
                     )
                     v.elevation = if (hasFocus) dp(4).toFloat() else 0f
                 }
@@ -2589,12 +2588,18 @@ class MainActivity : Activity() {
                         setTextColor(if (selected) Color.WHITE else muted)
                         setPadding(dp(8), dp(12), dp(8), dp(12))
                         background = roundedDrawable(
-                            if (selected) accentBright else panel,
+                            if (selected) accent else Color.TRANSPARENT,
                             12,
-                            if (selected) accentBright else Color.rgb(48, 57, 73)
+                            if (selected) accent else null
                         )
                         isFocusable = true
                         isClickable = true
+                        setOnFocusChangeListener { v, hasFocus ->
+                            v.background = roundedDrawable(
+                                if (selected) accent else if (hasFocus) Color.rgb(27, 39, 53) else Color.TRANSPARENT,
+                                12, if (hasFocus || selected) accent else null
+                            )
+                        }
                         setOnClickListener {
                             selectedCategorySection = tab.first
                             render()
