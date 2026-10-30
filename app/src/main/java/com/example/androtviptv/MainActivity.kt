@@ -80,7 +80,7 @@ class MainActivity : Activity() {
     private var accent = Color.rgb(0, 166, 255)
     private var accentBright = Color.rgb(72, 190, 255)
     // Focus styling is independent from the selectable app theme.
-    private val focusColor: Int get() = accent
+    private val focusColor: Int = Color.rgb(0, 166, 255)
     private var muted = Color.rgb(190, 198, 210)
     // Sidebar transparency is independent from the selected color theme.
     private var transparentMenu = true
@@ -778,17 +778,19 @@ class MainActivity : Activity() {
 
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
-        setPadding(16, 0, 16, 0)
+        setPadding(dp(16), 0, dp(16), 0)
         setTextColor(if (primary) Color.rgb(12, 14, 19) else Color.WHITE)
         background = roundedDrawable(if (primary) accent else panel, buttonRadiusDp,
             if (primary) accentBright else Color.rgb(44, 52, 68))
         stateListAnimator = null
+        // Keep the focus stroke inside the button bounds: no scaling or outside shadow.
         setOnFocusChangeListener { v, hasFocus ->
             v.background = roundedDrawable(
                 if (primary) accent else if (hasFocus) Color.rgb(27, 39, 53) else panel,
                 buttonRadiusDp, if (hasFocus) focusColor else if (primary) accentBright else Color.rgb(44, 52, 68))
-            v.elevation = if (hasFocus) dp(4).toFloat() else 0f
-            v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
+            v.elevation = 0f
+            v.scaleX = 1f
+            v.scaleY = 1f
         }
         setOnClickListener { action() }
     }
@@ -2361,11 +2363,12 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER },
-            LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER }
+        actions.addView(watchButton, LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
         actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 0, 0) })
 
         copy.addView(actions)
+        watchButton.post { if (watchButton.isShown) watchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
 
@@ -2425,7 +2428,7 @@ class MainActivity : Activity() {
         val lastEpisode = recent.firstOrNull {
             it.type == "Bölümler" && it.group.startsWith(series.name + " • Sezon") && it.url.isNotBlank()
         }
-        actions.addView(makeButton("▶  DİZİYİ İZLE", true) {
+        val watchSeriesButton = makeButton("▶  DİZİYİ İZLE", true) {
             val resumeEpisode = lastEpisode
                 ?: seriesEpisodeRows.firstOrNull()?.second?.firstOrNull()
             if (resumeEpisode != null) {
@@ -2436,7 +2439,8 @@ class MainActivity : Activity() {
                 Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
                 showSeriesDetail(series)
             }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
+        }
+        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
         actions.addView(makeButton("← Geri", false) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
@@ -2444,6 +2448,7 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
         actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
+        watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
 
