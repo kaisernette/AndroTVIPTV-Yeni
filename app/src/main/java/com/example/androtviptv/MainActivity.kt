@@ -2056,8 +2056,7 @@ class MainActivity : Activity() {
                     actions.addView(makeButton("▶ İzle", true) { play(item) },
                         LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
                 }
-                actions.addView(makeFavoriteButton(item), LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(4, 7, 0, 0) })
-                card.addView(actions)
+                if (actions.childCount > 0) card.addView(actions)
                 if (showingExpandedCategory) {
                     if (expandedPosterCount % 4 == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
