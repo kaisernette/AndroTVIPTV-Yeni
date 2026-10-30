@@ -188,6 +188,8 @@ class MainActivity : Activity() {
     private var previewUrl: String = ""
     private var previewChannel: MediaItem? = null
     private var sidebarMode = "main"
+    // Remember the actual main-menu destination independently of rebuilt view indices.
+    private var lastSidebarFocusIndex = 1
     private var settingsPage = "main"
     private var historyType = "Canlı TV"
     private val hiddenCategories = mutableSetOf<String>()
@@ -483,12 +485,17 @@ class MainActivity : Activity() {
         navBar.removeAllViews()
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
-            navBar.addView(makeButton(label, selected, action).apply {
+            val sidebarIndex = navBar.childCount
+            navBar.addView(makeButton(label, selected) {
+                lastSidebarFocusIndex = sidebarIndex
+                action()
+            }.apply {
                 // Selected navigation item is filled with the active theme accent.
                 background = roundedDrawable(if (selected) accent else Color.TRANSPARENT, buttonRadiusDp,
                     if (selected) accent else Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
+                    if (hasFocus) lastSidebarFocusIndex = sidebarIndex
                     v.background = roundedDrawable(
                         if (hasFocus) accent else Color.TRANSPARENT,
                         buttonRadiusDp,
@@ -688,11 +695,7 @@ class MainActivity : Activity() {
         // Keep the remote on the last sidebar destination instead of resetting to Search.
         navBar.post {
             if (previousFocusWasInSidebar && navBar.childCount > 0) {
-                val restoreIndex = (previousSidebarIndex ?: when (selectedType) {
-                    "Canlı TV" -> 2; "Filmler" -> 3; "Diziler" -> 4
-                    "Favoriler" -> 5; "Son İzlenenler" -> 6; "Ayarlar" -> 7
-                    else -> 1
-                }).coerceIn(0, navBar.childCount - 1)
+                val restoreIndex = lastSidebarFocusIndex.coerceIn(0, navBar.childCount - 1)
                 navBar.getChildAt(restoreIndex)?.requestFocus()
             } else if (currentFocus == null && sidebarMode == "main" && navBar.childCount > 1) {
                 val selectedIndex = when (selectedType) {
