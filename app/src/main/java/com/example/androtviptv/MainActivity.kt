@@ -870,8 +870,8 @@ class MainActivity : Activity() {
                     prefs.edit().putString("last_group", selectedGroup).apply()
                 }
                 isLoadingSource = false
-                status.visibility = View.VISIBLE
-                status.text = "${items.size} kayıtlı içerik hazır."
+                status.visibility = View.GONE
+                status.text = ""
                 sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
                 render()
             } else if (sourceToRestore != null && !isLoadingSource) {
@@ -1330,7 +1330,7 @@ class MainActivity : Activity() {
         if (::brandView.isInitialized) brandView.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
-        if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
+        if (::status.isInitialized) status.visibility = View.GONE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
             mainContentScroll.visibility = View.VISIBLE
