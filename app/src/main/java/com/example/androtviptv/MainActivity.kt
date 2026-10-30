@@ -62,6 +62,7 @@ class MainActivity : Activity() {
     private var detailSeries: MediaItem? = null
     private var detailMovie: MediaItem? = null
     private var seriesEpisodeRows: List<Pair<String, List<MediaItem>>> = emptyList()
+    private var selectedSeriesSeasonKey: String = ""
     private var seriesEpisodesLoading = false
     private var seriesEpisodesError = ""
     private lateinit var status: TextView
@@ -378,8 +379,6 @@ class MainActivity : Activity() {
             }
             isFocusable = true
             setOnFocusChangeListener { v, hasFocus ->
-                v.scaleX = if (hasFocus) 1.08f else 1f
-                v.scaleY = if (hasFocus) 1.08f else 1f
             }
             contentDescription = "Kaynak ekle"
             setOnClickListener { showConnectionDialog() }
@@ -665,8 +664,6 @@ class MainActivity : Activity() {
                 }
                 navBar.getChildAt(navBar.childCount - 1).setOnFocusChangeListener { v, hasFocus ->
                     (v as? Button)?.setTextColor(if (hasFocus) accentBright else Color.WHITE)
-                    v.scaleX = if (hasFocus) 1.025f else 1f
-                    v.scaleY = if (hasFocus) 1.025f else 1f
                     if (hasFocus) startChannelPreview(channel)
                 }
             }
@@ -788,7 +785,6 @@ class MainActivity : Activity() {
                 if (primary) accent else if (hasFocus) Color.rgb(27, 39, 53) else panel,
                 buttonRadiusDp, if (hasFocus) focusColor else if (primary) accentBright else Color.rgb(44, 52, 68))
             v.elevation = if (hasFocus) dp(4).toFloat() else 0f
-            v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
         }
         setOnClickListener { action() }
     }
@@ -1817,8 +1813,6 @@ class MainActivity : Activity() {
                                 if (hasFocus) accent else null
                             )
                             v.elevation = if (hasFocus) dp(4).toFloat() else 0f
-                            v.scaleX = if (hasFocus) 1.02f else 1f
-                            v.scaleY = if (hasFocus) 1.035f else 1f
                         }
                         setOnClickListener { play(channel) }
                         contentDescription = channel.name
@@ -2019,7 +2013,6 @@ class MainActivity : Activity() {
                     setOnFocusChangeListener { v, hasFocus ->
                         v.background = roundedDrawable(panel, 10, if (hasFocus) accent else null)
                         v.elevation = 0f
-                        v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
@@ -2148,6 +2141,7 @@ class MainActivity : Activity() {
     private fun showSeriesDetail(series: MediaItem) {
         detailSeries = series
         seriesEpisodeRows = emptyList()
+        selectedSeriesSeasonKey = ""
         seriesEpisodesLoading = true
         seriesEpisodesError = ""
         render()
@@ -2188,6 +2182,7 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     if (detailSeries?.favoriteKey != series.favoriteKey) return@runOnUiThread
                     seriesEpisodeRows = sortedRows
+                    selectedSeriesSeasonKey = sortedRows.firstOrNull()?.first.orEmpty()
                     seriesEpisodesLoading = false
                     if (sortedRows.isEmpty()) seriesEpisodesError = "Bu dizi için bölüm bulunamadı."
                     render()
@@ -2361,11 +2356,12 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER },
-            LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER }
+        actions.addView(watchButton, LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
         actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 0, 0) })
 
         copy.addView(actions)
+        watchButton.post { if (watchButton.isShown) watchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
 
@@ -2420,23 +2416,18 @@ class MainActivity : Activity() {
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
 
-        // Put the series-level continue button first. PlayerActivity restores the saved
-        // playback position for the remembered episode URL.
+        // The series-level watch action is the first focus target on the detail screen.
         val lastEpisode = recent.firstOrNull {
             it.type == "Bölümler" && it.group.startsWith(series.name + " • Sezon") && it.url.isNotBlank()
         }
-        actions.addView(makeButton("▶  DİZİYİ İZLE", true) {
-            val resumeEpisode = lastEpisode
+        val watchSeriesButton = makeButton("▶  DİZİYİ İZLE", true) {
+            val resumeEpisode = lastEpisode ?: seriesEpisodeRows.firstOrNull { it.first == selectedSeriesSeasonKey }?.second?.firstOrNull()
                 ?: seriesEpisodeRows.firstOrNull()?.second?.firstOrNull()
-            if (resumeEpisode != null) {
-                play(resumeEpisode)
-            } else if (seriesEpisodesLoading) {
-                Toast.makeText(this, "Bölümler yükleniyor, lütfen bekle.", Toast.LENGTH_SHORT).show()
-            } else if (seriesEpisodeRows.isEmpty()) {
-                Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
-                showSeriesDetail(series)
-            }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
+            if (resumeEpisode != null) play(resumeEpisode)
+            else if (seriesEpisodesLoading) Toast.makeText(this, "Bölümler yükleniyor, lütfen bekle.", Toast.LENGTH_SHORT).show()
+            else Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
+        }
+        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
         actions.addView(makeButton("← Geri", false) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
@@ -2444,6 +2435,7 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
         actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
+        watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
 
@@ -2470,27 +2462,87 @@ class MainActivity : Activity() {
             seriesEpisodeRows.isEmpty() -> episodesPanel.addView(TextView(this).apply {
                 text = "Bu dizi için bölüm bulunamadı."; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
             })
-            else -> seriesEpisodeRows.forEach { (season, episodes) ->
-                episodesPanel.addView(TextView(this).apply {
-                    text = "Sezon $season"; textSize = 18f
-                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accentBright)
-                    setPadding(0, dp(12), 0, dp(8))
+            else -> {
+                // Seasons are a horizontal tab row; only the selected season's episodes appear below.
+                val seasonTabs = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                seriesEpisodeRows.forEach { (season, _) ->
+                    val selected = season == selectedSeriesSeasonKey
+                    seasonTabs.addView(makeButton("SEZON $season", selected) {
+                        if (selectedSeriesSeasonKey != season) {
+                            selectedSeriesSeasonKey = season
+                            render()
+                        }
+                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply {
+                        setMargins(0, 0, dp(8), 0)
+                    })
+                }
+                episodesPanel.addView(HorizontalScrollView(this).apply {
+                    isHorizontalScrollBarEnabled = false
+                    clipToPadding = false
+                    addView(seasonTabs)
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(0, 0, 0, dp(12))
                 })
-                episodes.forEachIndexed { index, episode ->
-                    val episodeRow = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(14), dp(10), dp(12), dp(10))
-                        background = roundedDrawable(panel, 12, Color.rgb(42, 50, 66))
+
+                val selectedEpisodes = seriesEpisodeRows.firstOrNull { it.first == selectedSeriesSeasonKey }?.second.orEmpty()
+                if (selectedEpisodes.isEmpty()) {
+                    episodesPanel.addView(TextView(this).apply {
+                        text = "Bu sezon için bölüm bulunamadı."
+                        textSize = 14f; setTextColor(muted)
+                        setPadding(dp(4), dp(10), dp(4), dp(10))
+                    })
+                } else {
+                    selectedEpisodes.forEachIndexed { index, episode ->
+                        val episodeRow = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            isFocusable = true
+                            isFocusableInTouchMode = true
+                            isClickable = true
+                            setPadding(dp(14), dp(12), dp(14), dp(12))
+                            background = roundedDrawable(panel, 12, Color.rgb(42, 50, 66))
+                            setOnClickListener {
+                                val allEpisodes = seriesEpisodeRows.flatMap { it.second }
+                                val episodeIndex = allEpisodes.indexOfFirst { it.favoriteKey == episode.favoriteKey }
+                                if (episodeIndex >= 0) {
+                                    PlayerActivity.pendingEpisodeNames = allEpisodes.map { it.name }
+                                    PlayerActivity.pendingEpisodeUrls = allEpisodes.map { it.url }
+                                    PlayerActivity.pendingEpisodeIndex = episodeIndex
+                                }
+                                play(episode)
+                            }
+                            setOnFocusChangeListener { view, hasFocus ->
+                                view.background = roundedDrawable(
+                                    if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                                    12,
+                                    if (hasFocus) focusColor else Color.rgb(42, 50, 66)
+                                )
+                                view.elevation = if (hasFocus) dp(3).toFloat() else 0f
+                            }
+                        }
+                        episodeRow.addView(TextView(this).apply {
+                            text = String.format("%02d", index + 1)
+                            textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(accentBright)
+                        }, LinearLayout.LayoutParams(dp(42), ViewGroup.LayoutParams.WRAP_CONTENT))
+                        episodeRow.addView(TextView(this).apply {
+                            text = episode.name
+                            textSize = 15f; maxLines = 2
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            setTextColor(Color.WHITE)
+                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                        episodeRow.addView(TextView(this).apply {
+                            text = "▶"
+                            textSize = 18f; setTextColor(accentBright)
+                            gravity = Gravity.CENTER
+                        }, LinearLayout.LayoutParams(dp(34), dp(34)))
+                        episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            setMargins(0, 0, 0, dp(8))
+                        })
                     }
-                    episodeRow.addView(TextView(this).apply {
-                        text = "${index + 1}."; textSize = 15f; setTextColor(accentBright)
-                    }, LinearLayout.LayoutParams(38, ViewGroup.LayoutParams.WRAP_CONTENT))
-                    episodeRow.addView(TextView(this).apply {
-                        text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
-                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("▶ İzle", true) { play(episode) },
-                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(12, 0, 0, 0) })
-                    episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
         }
