@@ -794,8 +794,6 @@ class MainActivity : Activity() {
         background = roundedDrawable(if (primary) accent else panel, 12,
             if (primary) accentBright else Color.rgb(44, 52, 68))
         stateListAnimator = null
-        insetTop = 0
-        insetBottom = 0
         setOnFocusChangeListener { v, hasFocus ->
             v.background = roundedDrawable(
                 if (primary) accent else if (hasFocus) Color.rgb(27, 39, 53) else panel,
