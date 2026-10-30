@@ -623,7 +623,7 @@ class MainActivity : Activity() {
                     render()
                 }.apply {
                     textSize = 12f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTypeface(null, android.graphics.Typeface.NORMAL)
                     gravity = Gravity.CENTER_VERTICAL
                     isSingleLine = true
                     ellipsize = android.text.TextUtils.TruncateAt.END
