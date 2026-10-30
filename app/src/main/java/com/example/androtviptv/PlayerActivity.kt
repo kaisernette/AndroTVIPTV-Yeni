@@ -172,7 +172,6 @@ class PlayerActivity : Activity() {
                 androidx.media3.ui.R.id.exo_prev,
                 androidx.media3.ui.R.id.exo_next,
                 androidx.media3.ui.R.id.exo_repeat_toggle,
-                androidx.media3.ui.R.id.exo_settings,
                 androidx.media3.ui.R.id.exo_subtitle
             )
             controlIds.forEach { controlId ->
@@ -189,7 +188,44 @@ class PlayerActivity : Activity() {
                     focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
                 }
             }
+            // Replace the stock gear with the custom bottom-right language button.
+            view.findViewById<View>(androidx.media3.ui.R.id.exo_settings)?.visibility = View.GONE
         }
+        val languageButton = TextView(this).apply {
+            text = "Altyazı ve Diller"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(0xD91A2030.toInt())
+                setStroke(dp(1), 0xFF29B6F6.toInt())
+            }
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            elevation = dp(8).toFloat()
+            contentDescription = "Altyazı ve Diller"
+            setOnFocusChangeListener { v, focused ->
+                v.background = GradientDrawable().apply {
+                    cornerRadius = dp(10).toFloat()
+                    setColor(if (focused) 0xFF168ED0.toInt() else 0xD91A2030.toInt())
+                    setStroke(dp(2), 0xFF29B6F6.toInt())
+                }
+            }
+            setOnClickListener {
+                val settings = playerView?.findViewById<View>(androidx.media3.ui.R.id.exo_settings)
+                if (settings != null) {
+                    settings.performClick()
+                } else {
+                    android.widget.Toast.makeText(this@PlayerActivity, "Ses ve altyazı seçenekleri şu anda kullanılamıyor.", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        root.addView(languageButton, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, dp(48), Gravity.END or Gravity.BOTTOM
+        ).apply { rightMargin = dp(22); bottomMargin = dp(22) })
         setContentView(root)
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
