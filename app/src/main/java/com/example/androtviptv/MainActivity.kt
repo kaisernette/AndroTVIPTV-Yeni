@@ -413,7 +413,8 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = dp(if (sidebarMode == "context") 76 else 140)
+            // Keep the full icon + text navigation visible in every section.
+            val desiredWidth = dp(180)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -557,22 +558,22 @@ class MainActivity : Activity() {
             // In TV/Movies/Series, collapse the left rail to icons only.
             // Category filters remain in the main content area on the right.
             val compactTabs = listOf(
-                Triple("⌕", "Ara", "Ara"),
-                Triple("⌂", "Ana Sayfa", "Tümü"),
-                Triple("▣", "Canlı TV", "Canlı TV"),
-                Triple("▶", "Filmler", "Filmler"),
-                Triple("▤", "Diziler", "Diziler"),
-                Triple("♡", "Favoriler", "Favoriler"),
-                Triple("◷", "Geçmiş", "Son İzlenenler"),
-                Triple("⚙", "Ayarlar", "Ayarlar")
+                Triple("⌕  Ara", "Ara", "Ara"),
+                Triple("⌂  Ana Sayfa", "Ana Sayfa", "Tümü"),
+                Triple("▣  Canlı TV", "Canlı TV", "Canlı TV"),
+                Triple("▶  Filmler", "Filmler", "Filmler"),
+                Triple("▤  Diziler", "Diziler", "Diziler"),
+                Triple("♡  Favoriler", "Favoriler", "Favoriler"),
+                Triple("◷  Geçmiş", "Geçmiş", "Son İzlenenler"),
+                Triple("⚙  Ayarlar", "Ayarlar", "Ayarlar")
             )
-            compactTabs.forEach { (glyph, label, key) ->
+            compactTabs.forEach { (tabLabel, label, key) ->
                 val isSelected = when (key) {
                     "Ara" -> false
                     "Tümü" -> selectedType == "Tümü"
                     else -> selectedType == key
                 }
-                addSidebarButton(glyph, isSelected) {
+                addSidebarButton(tabLabel, isSelected) {
                     when (key) {
                         "Ara" -> {
                             detailSeries = null
