@@ -3,7 +3,7 @@ name: Build Kaisertv APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, kaisertv-redesign, series-fullscreen-detail, tv-channel-menu-home, kaisertv-purple-ui, kaisertv-lite-design, design/c7c8330-clean-poster-layout, design/329-button-focus-polish]
+    branches: [main, kaisertv-redesign, series-fullscreen-detail, tv-channel-menu-home, kaisertv-purple-ui, kaisertv-lite-design, design/c7c8330-clean-poster-layout, design/329-button-focus-polish, design/332-global-button-layout]
 
 permissions:
   contents: read
