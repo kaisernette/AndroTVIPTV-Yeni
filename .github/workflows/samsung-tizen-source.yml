@@ -6,7 +6,7 @@ on:
     paths:
       - 'samsung-tizen/**'
       - '.github/workflows/samsung-tizen-source.yml'
-    branches: [main]
+    branches: [main, samsung-tizen-v340]
 
 permissions:
   contents: read
@@ -23,6 +23,8 @@ jobs:
           test -f samsung-tizen/index.html
           test -f samsung-tizen/style.css
           test -f samsung-tizen/app.js
+      - name: Validate JavaScript syntax
+        run: node --check samsung-tizen/app.js
       - name: Package source archive
         run: zip -r KaiserTvPlus-Tizen-source.zip samsung-tizen
       - name: Upload source archive
