@@ -84,11 +84,15 @@ class MainActivity : Activity() {
     private var muted = Color.rgb(190, 198, 210)
     // Sidebar transparency is independent from the selected color theme.
     private var transparentMenu = true
+    private var sidebarTransparency = 100
+
+    private fun sidebarBackgroundColor(): Int = Color.argb(255 * (100 - sidebarTransparency) / 100, Color.red(panel), Color.green(panel), Color.blue(panel))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
+        sidebarTransparency = prefs.getInt("sidebar_transparency", if (transparentMenu) 100 else 0)
         // Restore the selected theme before constructing any views.
         when (prefs.getString("theme_name", "Siyah • Mavi")) {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
@@ -280,7 +284,7 @@ class MainActivity : Activity() {
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(8, 12, 8, 10)
-            background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
+            background = android.graphics.drawable.ColorDrawable(sidebarBackgroundColor())
         }
         root.addView(sidebar, LinearLayout.LayoutParams(dp(140), -1).apply { setMargins(0, 0, dp(8), 0) })
 
@@ -2608,19 +2612,39 @@ class MainActivity : Activity() {
                         panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
                         accent = theme.third; accentBright = theme.third
                         prefs.edit().putString("theme_name", theme.first).apply()
-                        rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel); mainContentScroll.setBackgroundColor(bg)
+                        rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(sidebarBackgroundColor()); mainContentScroll.setBackgroundColor(bg)
                         window.statusBarColor = bg; window.navigationBarColor = bg
                         settingsPage = "themes"; render()
                     }
                 }
-                option("◧  Şeffaf menü: ${if (transparentMenu) "Açık" else "Kapalı"}",
-                    if (transparentMenu) "Sol menü arka planı saydam; kapatmak için seç." else "Sol menü ayrı bir panel olarak görünür; saydam yapmak için seç.") {
-                    transparentMenu = !transparentMenu
-                    prefs.edit().putBoolean("transparent_menu", transparentMenu).apply()
-                    sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
-                    settingsPage = "themes"
-                    render()
+                val transparencyRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(14), dp(12), dp(14), dp(12))
+                    background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
                 }
+                transparencyRow.addView(TextView(this).apply {
+                    text = "Menü saydamlığı"; textSize = 17f
+                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                val percentStrip = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                for (percent in 0..100 step 10) {
+                    val percentButton = TextView(this).apply {
+                        text = "$percent%"; textSize = 11f; gravity = Gravity.CENTER
+                        setTextColor(if (sidebarTransparency == percent) Color.WHITE else muted)
+                        background = roundedDrawable(if (sidebarTransparency == percent) Color.rgb(27, 55, 82) else Color.TRANSPARENT, 7, if (sidebarTransparency == percent) accent else Color.rgb(65, 74, 90))
+                        isFocusable = true; isClickable = true
+                        setPadding(dp(5), dp(9), dp(5), dp(9))
+                        setOnClickListener {
+                            sidebarTransparency = percent; transparentMenu = percent == 100
+                            prefs.edit().putInt("sidebar_transparency", percent).putBoolean("transparent_menu", transparentMenu).apply()
+                            sidebar.setBackgroundColor(sidebarBackgroundColor()); settingsPage = "themes"; render()
+                        }
+                    }
+                    percentStrip.addView(percentButton, LinearLayout.LayoutParams(dp(43), dp(40)).apply { setMargins(dp(2), 0, dp(2), 0) })
+                }
+                transparencyRow.addView(HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(percentStrip) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f))
+                content.addView(transparencyRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
             }
             "history" -> {
                 heading("Geçmiş", "Türü seçerek izleme geçmişini görüntüle.")
