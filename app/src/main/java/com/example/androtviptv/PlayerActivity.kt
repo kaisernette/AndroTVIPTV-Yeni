@@ -211,6 +211,7 @@ class PlayerActivity : Activity() {
             )
             controlIds.forEach { controlId ->
                 val control = view.findViewById<View>(controlId) ?: return@forEach
+                (control as? android.widget.ImageView)?.setColorFilter(themeAccent)
                 control.isFocusable = true
                 control.isFocusableInTouchMode = true
                 control.setOnFocusChangeListener { focusedView, hasFocus ->
@@ -495,6 +496,28 @@ class PlayerActivity : Activity() {
                 }
             }
         }, 1200L)
+    }
+
+    private fun playEpisode(index: Int) {
+        if (index !in episodeUrls.indices) return
+        episodeIndex = index
+        currentStreamUrl = episodeUrls[index]
+        originalStreamUrl = currentStreamUrl
+        triedHlsFallback = false
+        usingHlsFallback = false
+        retryCount = 0
+        bufferingSinceMs = 0L
+        lastStablePlaybackMs = 0L
+        resumeKey = "position_" + currentStreamUrl.hashCode().toString()
+        player?.let { exo ->
+            exo.setMediaItem(MediaItem.Builder().setUri(currentStreamUrl)
+                .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder()
+                    .setTitle(episodeNames.getOrNull(index) ?: "Bölüm ${index + 1}").build())
+                .build())
+            exo.prepare()
+            exo.playWhenReady = true
+        }
+        playerView?.showController()
     }
 
     private fun tuneChannel(index: Int) {
