@@ -1281,9 +1281,24 @@ class MainActivity : Activity() {
         val buttons = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
+            clipChildren = false
+            clipToPadding = false
         }
         val backButton = makeButton("UYGULAMAYA DÖN", true) { dialog.dismiss() }
         val exitButton = makeButton("ÇIKIŞ YAP", false) { dialog.dismiss(); finish() }
+        // Dialog buttons must not scale beyond their rounded outline when focused.
+        listOf(backButton, exitButton).forEach { button ->
+            button.setOnFocusChangeListener { v, focused ->
+                v.background = roundedDrawable(
+                    if (button === backButton) accent else if (focused) Color.rgb(27, 39, 53) else panel,
+                    buttonRadiusDp,
+                    if (focused) focusColor else if (button === backButton) accentBright else Color.rgb(44, 52, 68)
+                )
+                v.scaleX = 1f
+                v.scaleY = 1f
+                v.elevation = 0f
+            }
+        }
         buttons.addView(backButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(0, 0, dp(8), 0) })
         buttons.addView(exitButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(dp(8), 0, 0, 0) })
         dialogBody.addView(buttons)
