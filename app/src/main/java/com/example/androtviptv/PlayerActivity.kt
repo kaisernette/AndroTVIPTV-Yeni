@@ -18,6 +18,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.common.PlaybackException
@@ -25,6 +26,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.TrackSelectionDialogBuilder
 
 class PlayerActivity : Activity() {
     companion object {
@@ -191,41 +193,57 @@ class PlayerActivity : Activity() {
             // Replace the stock gear with the custom bottom-right language button.
             view.findViewById<View>(androidx.media3.ui.R.id.exo_settings)?.visibility = View.GONE
         }
-        val languageButton = TextView(this).apply {
-            text = "Altyazı ve Diller"
-            textSize = 14f
-            setTextColor(Color.WHITE)
+        val trackButtons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setPadding(dp(4), dp(4), dp(4), dp(4))
             background = GradientDrawable().apply {
-                cornerRadius = dp(10).toFloat()
+                cornerRadius = dp(12).toFloat()
                 setColor(0xD91A2030.toInt())
-                setStroke(dp(1), 0xFF29B6F6.toInt())
             }
-            isFocusable = true
-            isFocusableInTouchMode = true
-            isClickable = true
             elevation = dp(8).toFloat()
-            contentDescription = "Altyazı ve Diller"
-            setOnFocusChangeListener { v, focused ->
-                v.background = GradientDrawable().apply {
-                    cornerRadius = dp(10).toFloat()
-                    setColor(if (focused) 0xFF168ED0.toInt() else 0xD91A2030.toInt())
-                    setStroke(dp(2), 0xFF29B6F6.toInt())
-                }
-            }
-            setOnClickListener {
-                val settings = playerView?.findViewById<View>(androidx.media3.ui.R.id.exo_settings)
-                if (settings != null) {
-                    settings.performClick()
-                } else {
-                    android.widget.Toast.makeText(this@PlayerActivity, "Ses ve altyazı seçenekleri şu anda kullanılamıyor.", android.widget.Toast.LENGTH_SHORT).show()
-                }
-            }
         }
-        root.addView(languageButton, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, dp(48), Gravity.END or Gravity.BOTTOM
+        fun trackButton(label: String, trackType: Int): TextView =
+            TextView(this).apply {
+                text = label
+                textSize = 14f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding(dp(14), dp(10), dp(14), dp(10))
+                isFocusable = true
+                isFocusableInTouchMode = true
+                isClickable = true
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(9).toFloat()
+                    setColor(0xD91A2030.toInt())
+                }
+                contentDescription = label
+                setOnFocusChangeListener { v, focused ->
+                    v.background = GradientDrawable().apply {
+                        cornerRadius = dp(9).toFloat()
+                        setColor(if (focused) 0xFF168ED0.toInt() else 0xD91A2030.toInt())
+                        if (focused) setStroke(dp(2), 0xFF29B6F6.toInt())
+                    }
+                }
+                setOnClickListener {
+                    val exo = player
+                    if (exo != null) {
+                        TrackSelectionDialogBuilder(this@PlayerActivity, label, exo, trackType)
+                            .build()
+                            .show()
+                    }
+                }
+            }
+        trackButtons.addView(trackButton("Altyazı", C.TRACK_TYPE_TEXT))
+        trackButtons.addView(trackButton("Ses Dili", C.TRACK_TYPE_AUDIO), LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply { leftMargin = dp(8) })
+        root.addView(trackButtons, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, dp(56), Gravity.END or Gravity.BOTTOM
         ).apply { rightMargin = dp(22); bottomMargin = dp(22) })
+        view.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
+            trackButtons.visibility = visibility
+        })
         setContentView(root)
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
@@ -322,12 +340,16 @@ class PlayerActivity : Activity() {
                             if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
                             .coerceIn(0, channelUrls.lastIndex)
                         refreshChannelHighlight()
-                    } else {
-                        val next = (selectedChannelIndex +
-                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
-                            .let { if (it < 0) channelUrls.lastIndex else if (it > channelUrls.lastIndex) 0 else it }
-                        tuneChannel(next)
+                        return true
                     }
+                    // While the playback navigation is visible, let DPAD move between
+                    // the player controls and the subtitle/audio buttons. Only change
+                    // channels with UP/DOWN when the controller is hidden.
+                    if (playerView?.isControllerVisible == true) return super.dispatchKeyEvent(event)
+                    val next = (selectedChannelIndex +
+                        if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
+                        .let { if (it < 0) channelUrls.lastIndex else if (it > channelUrls.lastIndex) 0 else it }
+                    tuneChannel(next)
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
