@@ -252,7 +252,18 @@ class PlayerActivity : Activity() {
                 .build().also { exo ->
                     view.player = exo
                     exo.addListener(object : Player.Listener {
+                        override fun onIsPlayingChanged(isPlaying: Boolean) {
+                            // Keep Android TV screensavers/asleep timers from interrupting active playback.
+                            if (isPlaying && !isFinishing) {
+                                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            } else {
+                                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            }
+                        }
                         override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
+                                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            }
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
                                 val cleanUrl = currentStreamUrl.substringBefore("?").lowercase()
                                 if (!triedHlsFallback && cleanUrl.endsWith(".ts")) {
@@ -465,7 +476,18 @@ class PlayerActivity : Activity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    override fun onPause() { savePlaybackPosition(); super.onPause() }
+    override fun onPause() {
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        savePlaybackPosition()
+        super.onPause()
+    }
     override fun onStop() { savePlaybackPosition(); player?.pause(); super.onStop() }
-    override fun onDestroy() { playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
+    override fun onDestroy() {
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        playbackHandler.removeCallbacksAndMessages(null)
+        savePlaybackPosition()
+        player?.release()
+        player = null
+        super.onDestroy()
+    }
 }
