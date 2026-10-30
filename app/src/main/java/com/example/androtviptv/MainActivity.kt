@@ -769,6 +769,36 @@ class MainActivity : Activity() {
         if (secret) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
     }
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
+    private fun makeFavoriteButton(item: MediaItem, onChanged: (() -> Unit)? = null): TextView {
+        fun update(view: TextView, selected: Boolean, focused: Boolean = false) {
+            val paleYellow = Color.rgb(255, 232, 145)
+            val selectedYellow = Color.rgb(255, 196, 0)
+            view.text = if (selected) "★ Favori" else "☆ Favori"
+            view.setTextColor(if (selected) Color.rgb(25, 22, 12) else paleYellow)
+            view.background = roundedDrawable(
+                if (selected) selectedYellow else Color.TRANSPARENT,
+                buttonRadiusDp,
+                if (focused) paleYellow else selectedYellow
+            )
+        }
+        return TextView(this).apply {
+            textSize = 14f; gravity = Gravity.CENTER; isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            update(this, favorites.contains(item.favoriteKey))
+            setOnFocusChangeListener { v, hasFocus -> update(v as TextView, favorites.contains(item.favoriteKey), hasFocus) }
+            setOnClickListener {
+                val nowSelected = if (favorites.contains(item.favoriteKey)) {
+                    favorites.remove(item.favoriteKey); false
+                } else {
+                    favorites.add(item.favoriteKey); true
+                }
+                prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                update(this, nowSelected, hasFocus())
+                onChanged?.invoke()
+            }
+        }
+    }
+
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
@@ -1238,7 +1268,10 @@ class MainActivity : Activity() {
         val actorsView = field("OYUNCULAR", item.actors, if (item.sourceId.isNotBlank()) "Bilgiler yükleniyor…" else "Oyuncu bilgisi bulunmuyor.")
         metaScroll.addView(meta)
         info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
-        info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
+        val detailActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        detailActions.addView(makeFavoriteButton(item), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 0, dp(8), 0) })
+        detailActions.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
+        info.addView(detailActions)
         
         body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog
@@ -2012,12 +2045,13 @@ class MainActivity : Activity() {
                     text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
                     minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
                 })
-                if (!weeklyPoster) {
-                    val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                    if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
+                val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                if (!weeklyPoster && !homeCard && selectedType != "Filmler" && selectedType != "Diziler") {
+                    actions.addView(makeButton("▶ İzle", true) { play(item) },
                         LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
-                    if (actions.childCount > 0) card.addView(actions)
                 }
+                actions.addView(makeFavoriteButton(item), LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(4, 7, 0, 0) })
+                card.addView(actions)
                 if (showingExpandedCategory) {
                     if (expandedPosterCount % 4 == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
@@ -2271,6 +2305,7 @@ class MainActivity : Activity() {
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
+        actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 0, 0) })
 
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
@@ -2331,7 +2366,8 @@ class MainActivity : Activity() {
             detailSeries = null
             seriesEpisodeRows = emptyList()
             render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
+        actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
