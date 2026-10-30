@@ -1858,7 +1858,10 @@ class MainActivity : Activity() {
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
-            val featureCardWidth = dp(140) // Kart genişliği afişle aynı
+            // Kart genişliğini kullanılabilir içerik alanına göre hesapla: yatay satırda dört kart görünür.
+            val screenWidthDp = (resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt()
+            val posterCardWidthDp = ((screenWidthDp - 308) / 4).coerceAtLeast(180)
+            val posterCardWidth = dp(posterCardWidthDp)
             val displayedEntries = if (showingExpandedCategory || weeklyMovieFeature) entries else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
@@ -1915,8 +1918,8 @@ class MainActivity : Activity() {
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
-                        if (weeklyPoster) dp(140) else -1,
-                        if (liveCard) 112 else if (weeklyPoster) dp(210) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210
+                        -1,
+                        if (liveCard) 112 else if (weeklyPoster) dp((posterCardWidthDp * 1.45f).toInt()) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210
                     )
                 }
                 card.addView(poster)
@@ -1963,7 +1966,7 @@ class MainActivity : Activity() {
                     })
                     expandedPosterCount++
                 } else {
-                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) featureCardWidth else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else posterCardWidth, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         // Consistent TV-friendly breathing room between poster cards.
                         setMargins(dp(5), 0, if (weeklyMovieFeature) dp(20) else dp(14), dp(10))
                     })
