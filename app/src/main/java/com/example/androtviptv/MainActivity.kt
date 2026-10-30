@@ -440,6 +440,19 @@ class MainActivity : Activity() {
         mainContentScroll.addView(content)
         main.addView(mainContentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
+        root.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
+            if (!::sidebar.isInitialized || newFocus == null) return@addOnGlobalFocusChangeListener
+            var node: android.view.ViewParent? = newFocus.parent
+            var insideSidebar = newFocus === sidebar
+            while (node != null && !insideSidebar) {
+                if (node === sidebar) insideSidebar = true else node = node.parent
+            }
+            if (sidebarMode == "context" && !insideSidebar && sidebar.visibility == View.VISIBLE) {
+                sidebar.visibility = View.GONE
+            } else if (insideSidebar && sidebar.visibility != View.VISIBLE) {
+                sidebar.visibility = View.VISIBLE
+            }
+        }
         render()
     }
 
@@ -448,10 +461,7 @@ class MainActivity : Activity() {
         // Keep the main navigation icon-only, but expand the sidebar when a
         // category list is open so full category names remain readable.
         if (::sidebar.isInitialized) {
-            val showReadableCategories = sidebarMode == "context" &&
-                selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            // Keep the full icon + text navigation visible in every section.
             val desiredWidth = dp(180)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
@@ -594,65 +604,32 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "context") {
-            // In TV/Movies/Series, collapse the left rail to icons only.
-            // Category filters remain in the main content area on the right.
-            val compactTabs = listOf(
-                Triple("⌕  Ara", "Ara", "Ara"),
-                Triple("⌂  Ana Sayfa", "Ana Sayfa", "Tümü"),
-                Triple("▣  Canlı TV", "Canlı TV", "Canlı TV"),
-                Triple("▶  Filmler", "Filmler", "Filmler"),
-                Triple("▤  Diziler", "Diziler", "Diziler"),
-                Triple("♡  Favoriler", "Favoriler", "Favoriler"),
-                Triple("◷  Geçmiş", "Geçmiş", "Son İzlenenler"),
-                Triple("⚙  Ayarlar", "Ayarlar", "Ayarlar")
-            )
-            compactTabs.forEach { (tabLabel, label, key) ->
-                val isSelected = when (key) {
-                    "Ara" -> false
-                    "Tümü" -> selectedType == "Tümü"
-                    else -> selectedType == key
-                }
-                addSidebarButton(tabLabel, isSelected) {
-                    when (key) {
-                        "Ara" -> {
-                            detailSeries = null
-                            detailMovie = null
-                            sidebarMode = "search"
-                            searchInputFocusPending = true
-                            searchQuery = ""
-                            selectedType = "Tümü"
-                        }
-                        "Tümü" -> returnToMainMenu()
-                        "Favoriler" -> {
-                            selectedType = key
-                            selectedGroup = "Tüm kategoriler"
-                            sidebarMode = "context"
-                            prefs.edit().putString("last_section", key).apply()
-                        }
-                        "Son İzlenenler" -> {
-                            selectedType = key
-                            selectedGroup = "Tüm kategoriler"
-                            sidebarMode = "context"
-                            prefs.edit().putString("last_section", key).apply()
-                        }
-                        "Ayarlar" -> {
-                            selectedType = key
-                            // Ayarlar simgesine her basışta ana ayarlar ekranına dön.
-                            settingsPage = "main"
-                            sidebarMode = "context"
-                            prefs.edit().putString("last_settings_page", "main").putString("last_section", key).apply()
-                        }
-                        else -> {
-                            selectedType = key
-                            selectedGroup = "Tüm kategoriler"
-                            expandedCategory = null
-                            sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
-                            prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
-                        }
-                    }
-                    rebuildNavigation()
+            // Section mode: replace the main menu with compact, readable category names.
+            val sectionItems = when (selectedType) {
+                "Canlı TV", "Filmler", "Diziler" -> items.filter { it.type == selectedType }
+                "Favoriler" -> items.filter { favorites.contains(it.favoriteKey) }
+                "Son İzlenenler" -> recent.toList()
+                else -> emptyList()
+            }
+            val categories = listOf("Tüm kategoriler") + sectionItems
+                .map { it.group.ifBlank { "Diğer" } }
+                .distinct()
+                .sorted()
+            categories.forEach { category ->
+                navBar.addView(makeButton(category, selectedGroup == category) {
+                    selectedGroup = category
+                    expandedCategory = null
+                    prefs.edit().putString("last_group", category).apply()
                     render()
-                }
+                }.apply {
+                    textSize = 12f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    gravity = Gravity.CENTER_VERTICAL
+                    isSingleLine = true
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    setPadding(dp(10), 0, dp(8), 0)
+                    minHeight = dp(38)
+                }, LinearLayout.LayoutParams(-1, dp(40)).apply { setMargins(0, dp(2), 0, dp(2)) })
             }
             return
         }
@@ -1178,6 +1155,39 @@ class MainActivity : Activity() {
         if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
             handleSafeBack()
             return true
+        }
+        if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event?.action == android.view.KeyEvent.ACTION_DOWN) {
+            val focused = currentFocus
+            var parent: android.view.ViewParent? = focused?.parent
+            var focusInSidebar = focused === sidebar
+            while (parent != null && !focusInSidebar) {
+                if (parent === sidebar) focusInSidebar = true else parent = parent.parent
+            }
+            if (sidebarMode == "context" && focusInSidebar) {
+                sidebarMode = "main"
+                rebuildNavigation()
+                sidebar.visibility = View.VISIBLE
+                val target = navBar.getChildAt(when (selectedType) {
+                    "Canlı TV" -> 2
+                    "Filmler" -> 3
+                    "Diziler" -> 4
+                    "Favoriler" -> 5
+                    "Son İzlenenler" -> 6
+                    "Ayarlar" -> 7
+                    else -> 1
+                }) ?: navBar.getChildAt(0)
+                target?.requestFocus()
+                return true
+            }
+            if (sidebarMode == "context" && !focusInSidebar) {
+                sidebar.visibility = View.VISIBLE
+                rebuildNavigation()
+                val selectedCategoryIndex = (0 until navBar.childCount).firstOrNull {
+                    (navBar.getChildAt(it) as? TextView)?.text?.toString()?.removePrefix("● ") == selectedGroup
+                } ?: 0
+                navBar.getChildAt(selectedCategoryIndex)?.requestFocus()
+                return true
+            }
         }
         return super.onKeyDown(keyCode, event)
     }
