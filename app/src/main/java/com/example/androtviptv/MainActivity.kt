@@ -568,7 +568,7 @@ class MainActivity : Activity() {
                         selectedType = "Ayarlar"
                         prefs.edit().putString("last_settings_page", "main").putString("last_section", "Ayarlar").apply()
                         selectedGroup = "Tüm kategoriler"
-                        sidebarMode = "context"
+                        sidebarMode = "main"
                         rebuildNavigation()
                         render()
                     }
@@ -1249,12 +1249,47 @@ class MainActivity : Activity() {
             return
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Kaisertv'den çıkılsın mı?")
-            .setMessage("Uygulamadan çıkmak istediğine emin misin?")
-            .setNegativeButton("Uygulamaya dön", null)
-            .setPositiveButton("Çıkış yap") { _, _ -> finish() }
-            .show()
+        val dialogBody = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(28), dp(24), dp(28), dp(22))
+            background = roundedDrawable(Color.rgb(18, 22, 31), 18, accent)
+        }
+        dialogBody.addView(TextView(this).apply {
+            text = "▶ KaiserTv+"
+            textSize = 27f
+            gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            setPadding(0, 0, 0, dp(14))
+        })
+        dialogBody.addView(TextView(this).apply {
+            text = "KaiserTv'den çıkılsın mı?"
+            textSize = 20f
+            gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+        })
+        dialogBody.addView(TextView(this).apply {
+            text = "Uygulamadan çıkmak istediğine emin misin?"
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(muted)
+            setPadding(0, dp(8), 0, dp(20))
+        })
+        val dialog = AlertDialog.Builder(this).setView(dialogBody).create()
+        val buttons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        val backButton = makeButton("UYGULAMAYA DÖN", true) { dialog.dismiss() }
+        val exitButton = makeButton("ÇIKIŞ YAP", false) { dialog.dismiss(); finish() }
+        buttons.addView(backButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(0, 0, dp(8), 0) })
+        buttons.addView(exitButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(dp(8), 0, 0, 0) })
+        dialogBody.addView(buttons)
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        backButton.requestFocus()
     }
 
     private fun showItemDetails(item: MediaItem) {
@@ -1354,9 +1389,10 @@ class MainActivity : Activity() {
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
             val welcomeLogo = TextView(this).apply {
-                val logo = android.text.SpannableString("KaiserIPTV+")
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 0, 6, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 6, 10, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                val logo = android.text.SpannableString("▶ KaiserTv+")
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 190, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 8, 10, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 10, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 text = logo
                 textSize = 38f; gravity = Gravity.CENTER
@@ -1533,37 +1569,13 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
             }
-            logoLine.addView(object : TextView(this) {
-                private val playPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.rgb(0, 190, 255)
-                    style = android.graphics.Paint.Style.FILL
-                }
-                override fun onDraw(canvas: android.graphics.Canvas) {
-                    super.onDraw(canvas)
-                    val textLayout = layout ?: return
-                    val x = paddingLeft.toFloat() + textLayout.getLineLeft(0) + textLayout.getPrimaryHorizontal(2) + dp(2).toFloat()
-                    val y = paddingTop.toFloat() + textLayout.getLineBaseline(0) - dp(25).toFloat()
-                    val path = android.graphics.Path().apply {
-                        moveTo(x, y)
-                        lineTo(x, y + dp(10).toFloat())
-                        lineTo(x + dp(11).toFloat(), y + dp(5).toFloat())
-                        close()
-                    }
-                    canvas.drawPath(path, playPaint)
-                }
-            }.apply {
-                text = "Kaiser"
-                textSize = 34f
-                setTextColor(Color.WHITE)
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setShadowLayer(dp(5).toFloat(), 0f, dp(1).toFloat(), Color.rgb(35, 80, 145))
-            })
             logoLine.addView(TextView(this).apply {
-                val brand = android.text.SpannableString("IPTV+")
-                brand.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 170, 255)), 0, 4, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                brand.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 4, 5, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                text = brand
+                val logo = android.text.SpannableString("▶ KaiserTv+")
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 190, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 8, 10, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 10, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                text = logo
                 textSize = 34f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 gravity = Gravity.CENTER
@@ -1979,7 +1991,8 @@ class MainActivity : Activity() {
             val screenWidthDp = (resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt()
             val posterCardWidthDp = ((screenWidthDp - 308) / 4).coerceAtLeast(180)
             val posterCardWidth = dp(posterCardWidthDp)
-            val displayedEntries = if (showingExpandedCategory || weeklyMovieFeature) entries else entries.take(5)
+            val compactThreeCardRow = !showingExpandedCategory && (selectedType == "Filmler" || selectedType == "Diziler")
+            val displayedEntries = if (showingExpandedCategory || weeklyMovieFeature) entries else entries.take(if (compactThreeCardRow) 3 else 5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
             displayedEntries.forEach { item ->
@@ -2064,6 +2077,18 @@ class MainActivity : Activity() {
                     text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
                     minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
                 })
+                if (compactThreeCardRow && item == displayedEntries.lastOrNull()) {
+                    card.addView(TextView(this).apply {
+                        text = "Tümü >"
+                        textSize = 13f
+                        setTextColor(accent)
+                        gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                        setPadding(0, dp(7), dp(3), dp(2))
+                        isFocusable = true
+                        setOnClickListener { expandedCategory = groupName to entries; render() }
+                        setOnFocusChangeListener { v, focused -> (v as TextView).setTextColor(if (focused) Color.WHITE else accent) }
+                    }, LinearLayout.LayoutParams(-1, dp(30)))
+                }
                 val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 if (!weeklyPoster && !homeCard && selectedType != "Filmler" && selectedType != "Diziler") {
                     actions.addView(makeButton("▶ İzle", true) { play(item) },
