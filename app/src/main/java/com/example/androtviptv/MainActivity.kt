@@ -1932,17 +1932,7 @@ class MainActivity : Activity() {
                         text = item.type.uppercase()
                         textSize = 10f; setTextColor(accent); letterSpacing = 0.03f
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    metaRow.addView(TextView(this).apply {
-                        text = if (favorites.contains(item.favoriteKey)) "♥" else "♡"
-                        textSize = 22f; setTextColor(if (favorites.contains(item.favoriteKey)) accent else Color.WHITE)
-                        gravity = Gravity.CENTER
-                        isFocusable = true
-                        setOnClickListener {
-                            if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-                            render()
-                        }
-                    }, LinearLayout.LayoutParams(dp(30), dp(30)))
+
                     card.addView(metaRow)
                 } else {
                     card.addView(TextView(this).apply {
@@ -1958,12 +1948,7 @@ class MainActivity : Activity() {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
                         LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
-                    actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
-                        if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                        prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-                        render()
-                    }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
-                    card.addView(actions)
+                    if (actions.childCount > 0) card.addView(actions)
                 }
                 if (showingExpandedCategory) {
                     if (expandedPosterCount % 4 == 0) {
@@ -2218,34 +2203,7 @@ class MainActivity : Activity() {
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
-        val isFavorite = favorites.contains(movie.favoriteKey)
-        val favoriteButton = makeButton(if (isFavorite) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
-            if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
-            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-            render()
-        }.apply {
-            gravity = Gravity.CENTER
-            val yellow = Color.rgb(255, 205, 55)
-            fun updateFavoriteAppearance(hasFocus: Boolean) {
-                if (isFavorite) {
-                    // Keep the entire active button yellow even while focused.
-                    setTextColor(Color.rgb(25, 25, 25))
-                    background = roundedDrawable(yellow, 10, if (hasFocus) accentBright else yellow)
-                } else {
-                    // Transparent when inactive; focus only adds a blue outline.
-                    setTextColor(Color.WHITE)
-                    background = roundedDrawable(Color.TRANSPARENT, 10,
-                        if (hasFocus) accentBright else Color.rgb(88, 96, 110))
-                }
-            }
-            updateFavoriteAppearance(hasFocus = false)
-            setOnFocusChangeListener { v, hasFocus ->
-                updateFavoriteAppearance(hasFocus)
-                v.scaleX = if (hasFocus) 1.035f else 1f
-                v.scaleY = if (hasFocus) 1.035f else 1f
-            }
-        }
-        actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(160), 44).apply { setMargins(0, 8, 0, 0) })
+
         copy.addView(actions)
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
@@ -2300,11 +2258,7 @@ class MainActivity : Activity() {
             textSize = 13f; maxLines = 2; setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(makeButton(if (favorites.contains(series.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
-            if (!favorites.add(series.favoriteKey)) favorites.remove(series.favoriteKey)
-            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-            render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 10, 0) })
+
         actions.addView(makeButton("← Geri", false) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
