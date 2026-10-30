@@ -473,6 +473,13 @@ class MainActivity : Activity() {
                 sidebar.layoutParams = params
             }
         }
+        val previousFocusWasInSidebar = run {
+            var node: android.view.ViewParent? = currentFocus?.parent
+            var inside = currentFocus === sidebar
+            while (node != null && !inside) { if (node === sidebar) inside = true else node = node.parent }
+            inside
+        }
+        val previousSidebarIndex = if (previousFocusWasInSidebar) (0 until navBar.childCount).firstOrNull { navBar.getChildAt(it) === currentFocus } else null
         navBar.removeAllViews()
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
@@ -483,9 +490,9 @@ class MainActivity : Activity() {
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(
-                        if (selected) accent else if (hasFocus) Color.rgb(27, 39, 53) else Color.TRANSPARENT,
+                        if (hasFocus) accent else Color.TRANSPARENT,
                         buttonRadiusDp,
-                        if (selected || hasFocus) accent else Color.TRANSPARENT
+                        if (hasFocus) accent else Color.TRANSPARENT
                     )
                     (v as Button).setTextColor(Color.WHITE)
                     // Keep sidebar buttons at a fixed size on every screen.
@@ -670,6 +677,24 @@ class MainActivity : Activity() {
                     v.scaleY = if (hasFocus) 1.025f else 1f
                     if (hasFocus) startChannelPreview(channel)
                 }
+            }
+        }
+        // Keep the remote on the last sidebar destination instead of resetting to Search.
+        navBar.post {
+            if (previousFocusWasInSidebar && navBar.childCount > 0) {
+                val restoreIndex = (previousSidebarIndex ?: when (selectedType) {
+                    "Canlı TV" -> 2; "Filmler" -> 3; "Diziler" -> 4
+                    "Favoriler" -> 5; "Son İzlenenler" -> 6; "Ayarlar" -> 7
+                    else -> 1
+                }).coerceIn(0, navBar.childCount - 1)
+                navBar.getChildAt(restoreIndex)?.requestFocus()
+            } else if (currentFocus == null && sidebarMode == "main" && navBar.childCount > 1) {
+                val selectedIndex = when (selectedType) {
+                    "Canlı TV" -> 2; "Filmler" -> 3; "Diziler" -> 4
+                    "Favoriler" -> 5; "Son İzlenenler" -> 6; "Ayarlar" -> 7
+                    else -> 1
+                }.coerceIn(0, navBar.childCount - 1)
+                navBar.getChildAt(selectedIndex)?.requestFocus()
             }
         }
     }
@@ -1222,6 +1247,16 @@ class MainActivity : Activity() {
     private fun handleSafeBack() {
         // Handle Android system/remote back in one place and keep the activity alive.
         try {
+            if (selectedType == "Ayarlar" && settingsPage != "main") {
+                settingsPage = when (settingsPage) {
+                    "button_appearance" -> "themes"
+                    else -> "main"
+                }
+                prefs.edit().putString("last_settings_page", settingsPage).apply()
+                rebuildNavigation()
+                render()
+                return
+            }
             if (detailSeries != null || detailMovie != null) {
                 detailSeries = null
                 detailMovie = null
@@ -2724,11 +2759,11 @@ class MainActivity : Activity() {
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(
-                        if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                        if (hasFocus) accent else panel,
                         14,
                         if (hasFocus) accent else null
                     )
-                    v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+                    v.elevation = 0f
                 }
                 setOnClickListener { action() }
             }
@@ -3166,6 +3201,25 @@ class MainActivity : Activity() {
                 }
             }
         }
+        // Apply one consistent, visible remote-focus state to every actionable
+        // settings control, including the category action chips and section tabs.
+        fun styleSettingsFocus(view: View) {
+            if (view.isFocusable && view.isClickable && view !is EditText) {
+                view.setOnFocusChangeListener { v, focused ->
+                    v.background = roundedDrawable(
+                        if (focused) accent else panel,
+                        12,
+                        if (focused) accent else Color.rgb(48, 57, 73)
+                    )
+                    if (v is TextView) v.setTextColor(Color.WHITE)
+                    v.elevation = 0f
+                    v.scaleX = 1f
+                    v.scaleY = 1f
+                }
+            }
+            if (view is ViewGroup) for (i in 0 until view.childCount) styleSettingsFocus(view.getChildAt(i))
+        }
+        styleSettingsFocus(content)
     }
 
     private fun loadPoster(address: String, target: ImageView) {
