@@ -25,6 +25,8 @@ jobs:
           test -f samsung-tizen/app.js
       - name: Validate JavaScript syntax
         run: node --check samsung-tizen/app.js
+      - name: Validate Tizen XML
+        run: python -c "import xml.etree.ElementTree as ET; ET.parse('samsung-tizen/config.xml')"
       - name: Package source archive
         run: zip -r KaiserTvPlus-Tizen-source.zip samsung-tizen
       - name: Upload source archive
