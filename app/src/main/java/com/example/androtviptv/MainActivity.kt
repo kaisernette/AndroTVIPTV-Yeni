@@ -62,6 +62,7 @@ class MainActivity : Activity() {
     private var detailSeries: MediaItem? = null
     private var detailMovie: MediaItem? = null
     private var seriesEpisodeRows: List<Pair<String, List<MediaItem>>> = emptyList()
+    private var selectedSeriesSeason: String = ""
     private var seriesEpisodesLoading = false
     private var seriesEpisodesError = ""
     private lateinit var status: TextView
@@ -2194,72 +2195,91 @@ class MainActivity : Activity() {
                 val p = URLEncoder.encode(source.password, "UTF-8")
                 val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p&action=get_series_info&series_id=${URLEncoder.encode(series.seriesId.ifBlank { series.id }, "UTF-8")}"
                 val data = JSONObject(request(api))
-                // Xtream providers do not all return get_series_info in exactly the same shape.
-                // Some provide season metadata separately, while others only provide the
-                // season-keyed episodes object. Merge both sources instead of relying on
-                // JSONObject key iteration alone.
-                val episodesObject = data.optJSONObject("episodes")
-                val episodesArray = data.optJSONArray("episodes")
-                val seasonKeys = linkedSetOf<String>()
+                // Xtream providers vary: episodes may be grouped arrays, nested objects,
+                // or a flat array. Read each shape and keep only seasons with playable episodes.
+                val episodesValue = data.opt("episodes")
+                val episodesObject = episodesValue as? JSONObject
+                val episodesArray = episodesValue as? JSONArray
                 val seasonMetadata = data.optJSONArray("seasons")
+                val seasonEpisodes = linkedMapOf<String, MutableList<MediaItem>>()
+
+                fun episodeValue(ep: JSONObject, fallbackIndex: Int, seasonNumber: String): MediaItem? {
+                    val id = ep.optString("id").ifBlank {
+                        ep.optString("episode_id").ifBlank { ep.optString("stream_id") }
+                    }
+                    if (id.isBlank()) return null
+                    val ext = ep.optString("container_extension").ifBlank {
+                        ep.optString("extension").ifBlank { "mp4" }
+                    }
+                    val name = ep.optString("title").ifBlank {
+                        ep.optString("name").ifBlank {
+                            ep.optString("episode_name").ifBlank { "Bölüm $fallbackIndex" }
+                        }
+                    }
+                    val stream = ep.optString("direct_source").ifBlank {
+                        "${source.address.trimEnd('/')}/series/$u/$p/$id.$ext"
+                    }
+                    return MediaItem(id, name, stream, "${series.name} • Sezon $seasonNumber",
+                        "Bölümler", "", ext, series.seriesId, source.id)
+                }
+
+                fun addEpisodeArray(seasonNumber: String, array: JSONArray) {
+                    val target = seasonEpisodes.getOrPut(seasonNumber) { mutableListOf() }
+                    for (i in 0 until array.length()) {
+                        val ep = array.optJSONObject(i) ?: continue
+                        val item = episodeValue(ep, target.size + 1, seasonNumber) ?: continue
+                        if (target.none { it.id == item.id }) target.add(item)
+                    }
+                }
+
+                if (episodesObject != null) {
+                    val keys = episodesObject.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        when (val value = episodesObject.opt(key)) {
+                            is JSONArray -> addEpisodeArray(key, value)
+                            is JSONObject -> {
+                                val nested = value.optJSONArray("episodes") ?: value.optJSONArray("episode")
+                                if (nested != null) addEpisodeArray(key, nested)
+                            }
+                        }
+                    }
+                }
+
+                if (episodesArray != null) {
+                    for (i in 0 until episodesArray.length()) {
+                        val ep = episodesArray.optJSONObject(i) ?: continue
+                        val seasonNumber = ep.optString("season").ifBlank {
+                            ep.optString("season_number").ifBlank { ep.optString("season_num") }
+                        }
+                        if (seasonNumber.isBlank()) continue
+                        val target = seasonEpisodes.getOrPut(seasonNumber) { mutableListOf() }
+                        val item = episodeValue(ep, target.size + 1, seasonNumber) ?: continue
+                        if (target.none { it.id == item.id }) target.add(item)
+                    }
+                }
+
+                // Some providers put episode arrays directly inside season metadata.
                 if (seasonMetadata != null) {
                     for (i in 0 until seasonMetadata.length()) {
                         val season = seasonMetadata.optJSONObject(i) ?: continue
-                        val number = season.optString("season_number")
-                            .ifBlank { season.optString("season_num") }
-                            .ifBlank { season.optString("number") }
-                            .ifBlank { season.optString("name").removePrefix("Season ").removePrefix("Sezon ") }
-                        if (number.isNotBlank()) seasonKeys.add(number)
-                    }
-                }
-                if (episodesObject != null) {
-                    val keys = episodesObject.keys()
-                    while (keys.hasNext()) seasonKeys.add(keys.next())
-                }
-                if (episodesArray != null) {
-                    for (i in 0 until episodesArray.length()) {
-                        val episode = episodesArray.optJSONObject(i) ?: continue
-                        val number = episode.optString("season")
-                            .ifBlank { episode.optString("season_number") }
-                            .ifBlank { episode.optString("season_num") }
-                        if (number.isNotBlank()) seasonKeys.add(number)
-                    }
-                }
-                val rows = mutableListOf<Pair<String, List<MediaItem>>>()
-                for (key in seasonKeys) {
-                    val seasonItems = mutableListOf<MediaItem>()
-                    val seasonArray = episodesObject?.optJSONArray(key)
-                    if (seasonArray != null) {
-                        for (i in 0 until seasonArray.length()) {
-                            val ep = seasonArray.optJSONObject(i) ?: continue
-                            val id = ep.optString("id").ifBlank { ep.optString("episode_id") }
-                            if (id.isBlank()) continue
-                            val ext = ep.optString("container_extension").ifBlank { "mp4" }
-                            val name = ep.optString("title").ifBlank { ep.optString("name").ifBlank { "Bölüm ${i + 1}" } }
-                            val stream = "${source.address.trimEnd('/')}/series/$u/$p/$id.$ext"
-                            seasonItems.add(MediaItem(id, name, stream, "${series.name} • Sezon $key", "Bölümler", "", ext, series.seriesId, source.id))
+                        val number = season.optString("season_number").ifBlank {
+                            season.optString("season_num").ifBlank {
+                                season.optString("number").ifBlank {
+                                    season.optString("name").removePrefix("Season ").removePrefix("Sezon ")
+                                }
+                            }
                         }
-                    } else if (episodesArray != null) {
-                        var episodeIndex = 0
-                        for (i in 0 until episodesArray.length()) {
-                            val ep = episodesArray.optJSONObject(i) ?: continue
-                            val number = ep.optString("season")
-                                .ifBlank { ep.optString("season_number") }
-                                .ifBlank { ep.optString("season_num") }
-                            if (number != key) continue
-                            val id = ep.optString("id").ifBlank { ep.optString("episode_id") }
-                            if (id.isBlank()) continue
-                            episodeIndex++
-                            val ext = ep.optString("container_extension").ifBlank { "mp4" }
-                            val name = ep.optString("title").ifBlank { ep.optString("name").ifBlank { "Bölüm $episodeIndex" } }
-                            val stream = "${source.address.trimEnd('/')}/series/$u/$p/$id.$ext"
-                            seasonItems.add(MediaItem(id, name, stream, "${series.name} • Sezon $key", "Bölümler", "", ext, series.seriesId, source.id))
-                        }
+                        if (number.isBlank()) continue
+                        val nested = season.optJSONArray("episodes") ?: season.optJSONArray("episode")
+                        if (nested != null) addEpisodeArray(number, nested)
                     }
-                    // Keep season metadata even if the provider reports an empty episode list.
-                    rows.add(Pair(key, seasonItems))
                 }
-                val sortedRows = rows.sortedWith(compareBy { it.first.toIntOrNull() ?: Int.MAX_VALUE })
+
+                val sortedRows = seasonEpisodes.entries
+                    .filter { it.value.isNotEmpty() }
+                    .sortedWith(compareBy { it.key.toIntOrNull() ?: Int.MAX_VALUE })
+                    .map { it.key to it.value.toList() }
                 runOnUiThread {
                     if (detailSeries?.favoriteKey != series.favoriteKey) return@runOnUiThread
                     seriesEpisodeRows = sortedRows
