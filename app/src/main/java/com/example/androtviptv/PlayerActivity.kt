@@ -35,6 +35,9 @@ class PlayerActivity : Activity() {
         @Volatile var pendingChannelIndex: Int = 0
         @Volatile var pendingRecentChannelNames: List<String> = emptyList()
         @Volatile var pendingRecentChannelUrls: List<String> = emptyList()
+        @Volatile var pendingEpisodeNames: List<String> = emptyList()
+        @Volatile var pendingEpisodeUrls: List<String> = emptyList()
+        @Volatile var pendingEpisodeIndex: Int = 0
     }
 
     private var player: ExoPlayer? = null
@@ -101,6 +104,10 @@ class PlayerActivity : Activity() {
     private var savedChannelRows: List<String> = emptyList()
     private var savedChannelUrls: List<String> = emptyList()
     private val playbackPrefs by lazy { getSharedPreferences("androtv_playback", Context.MODE_PRIVATE) }
+    private var episodeNames: List<String> = emptyList()
+    private var episodeUrls: List<String> = emptyList()
+    private var episodeIndex = 0
+    private var themeAccent = 0xFF00A6FF.toInt()
 
     private fun createStreamMediaItem(url: String): MediaItem {
         val cleanUrl = url.substringBefore("?").lowercase()
@@ -142,6 +149,13 @@ class PlayerActivity : Activity() {
         highlightedChannelIndex = selectedChannelIndex
         recentChannelRows = pendingRecentChannelNames
         recentChannelUrls = pendingRecentChannelUrls
+        episodeNames = pendingEpisodeNames
+        episodeUrls = pendingEpisodeUrls
+        episodeIndex = pendingEpisodeIndex.coerceIn(0, (episodeUrls.size - 1).coerceAtLeast(0))
+        pendingEpisodeNames = emptyList()
+        pendingEpisodeUrls = emptyList()
+        pendingEpisodeIndex = 0
+        themeAccent = intent.getIntExtra("themeAccent", 0xFF00A6FF.toInt())
         pendingChannelNames = emptyList()
         pendingChannelUrls = emptyList()
         pendingRecentChannelNames = emptyList()
@@ -166,6 +180,25 @@ class PlayerActivity : Activity() {
         playerView = view
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         view.post {
+            (view.findViewById<View>(androidx.media3.ui.R.id.exo_progress) as? androidx.media3.ui.DefaultTimeBar)?.apply {
+                setPlayedColor(themeAccent)
+                setScrubberColor(themeAccent)
+                setBufferedColor(0x8899AABB.toInt())
+                setUnplayedColor(0x66556677)
+            }
+            val previousControl = view.findViewById<View>(androidx.media3.ui.R.id.exo_prev)
+            val nextControl = view.findViewById<View>(androidx.media3.ui.R.id.exo_next)
+            if (episodeUrls.size > 1) {
+                previousControl?.visibility = View.VISIBLE
+                nextControl?.visibility = View.VISIBLE
+                previousControl?.contentDescription = "Önceki bölüm"
+                nextControl?.contentDescription = "Sonraki bölüm"
+                previousControl?.setOnClickListener { playEpisode(episodeIndex - 1) }
+                nextControl?.setOnClickListener { playEpisode(episodeIndex + 1) }
+            } else if (!isLiveStream) {
+                previousControl?.visibility = View.GONE
+                nextControl?.visibility = View.GONE
+            }
             val controlIds = intArrayOf(
                 androidx.media3.ui.R.id.exo_play,
                 androidx.media3.ui.R.id.exo_pause,
