@@ -555,7 +555,7 @@ class MainActivity : Activity() {
                         prefs.edit().putString("last_section", "Son İzlenenler").apply()
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
-                        sidebarMode = "context"
+                        sidebarMode = "main"
                         rebuildNavigation()
                         render()
                     }
@@ -594,7 +594,7 @@ class MainActivity : Activity() {
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
                         selectedType = key
-                        sidebarMode = if (normalizedTab in listOf("TV", "Filmler", "Diziler", "Favoriler")) "context" else "main"
+                        sidebarMode = if (normalizedTab in listOf("TV", "Filmler", "Diziler")) "context" else "main"
                         prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
                         rebuildNavigation()
                         render()
@@ -1354,11 +1354,10 @@ class MainActivity : Activity() {
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
             val welcomeLogo = TextView(this).apply {
-                val logo = android.text.SpannableString("▶ KaiserIPTV+")
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 8, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 12, 13, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                val logo = android.text.SpannableString("KaıserIPTV+")
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 0, 6, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 6, 10, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 10, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 text = logo
                 textSize = 38f; gravity = Gravity.CENTER
                 setTypeface(null, android.graphics.Typeface.BOLD)
@@ -1534,16 +1533,26 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
             }
-            logoLine.addView(TextView(this).apply {
-                text = "▶"
-                textSize = 30f
-                setTextColor(Color.rgb(0, 190, 255))
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setShadowLayer(dp(12).toFloat(), 0f, 0f, Color.rgb(0, 120, 255))
-            })
-            logoLine.addView(TextView(this).apply {
-                text = "Kaiser"
+            logoLine.addView(object : TextView(this) {
+                private val playPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    color = Color.rgb(0, 190, 255)
+                    style = android.graphics.Paint.Style.FILL
+                }
+                override fun onDraw(canvas: android.graphics.Canvas) {
+                    super.onDraw(canvas)
+                    val textLayout = layout ?: return
+                    val x = paddingLeft + textLayout.getLineLeft(0) + textLayout.getPrimaryHorizontal(2) + dp(2)
+                    val y = paddingTop + textLayout.getLineBaseline(0) - dp(25)
+                    val path = android.graphics.Path().apply {
+                        moveTo(x, y)
+                        lineTo(x, y + dp(10))
+                        lineTo(x + dp(11), y + dp(5))
+                        close()
+                    }
+                    canvas.drawPath(path, playPaint)
+                }
+            }.apply {
+                text = "Kaıser"
                 textSize = 34f
                 setTextColor(Color.WHITE)
                 setTypeface(null, android.graphics.Typeface.BOLD)
@@ -1773,12 +1782,12 @@ class MainActivity : Activity() {
                         isFocusableInTouchMode = true
                         isClickable = true
                         setPadding(dp(8), dp(8), dp(8), dp(8))
-                        background = roundedDrawable(panel, 12, accent)
+                        background = roundedDrawable(panel, 12)
                         setOnFocusChangeListener { v, hasFocus ->
                             v.background = roundedDrawable(
                                 if (hasFocus) Color.rgb(27, 39, 53) else panel,
                                 12,
-                                accent
+                                if (hasFocus) accent else null
                             )
                             v.elevation = if (hasFocus) dp(4).toFloat() else 0f
                             v.scaleX = if (hasFocus) 1.02f else 1f
@@ -1954,7 +1963,7 @@ class MainActivity : Activity() {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             }, LinearLayout.LayoutParams(0, -2, 1f))
             sectionHeader.addView(TextView(this).apply {
-                text = if (showingExpandedCategory) "← Geri dön" else if (selectedType == "Filmler" || selectedType == "Diziler") "" else "${entries.size} içerik"
+                text = if (showingExpandedCategory) "← Geri dön" else ""
                 textSize = 12f; setTextColor(accent)
                 gravity = Gravity.CENTER
                 setPadding(dp(8), 0, dp(8), 0)
