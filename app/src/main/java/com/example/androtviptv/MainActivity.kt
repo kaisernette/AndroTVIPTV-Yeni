@@ -1194,7 +1194,7 @@ class MainActivity : Activity() {
         metaScroll.addView(meta)
         info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
         info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
-        info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
+        
         body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog
         dialog.show()
@@ -1846,34 +1846,13 @@ class MainActivity : Activity() {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             }, LinearLayout.LayoutParams(0, -2, 1f))
             sectionHeader.addView(TextView(this).apply {
-                text = if (showingExpandedCategory) "← Geri dön" else "${entries.size} içerik"
+                text = if (showingExpandedCategory) "← Geri dön" else if (selectedType == "Filmler" || selectedType == "Diziler") "" else "${entries.size} içerik"
                 textSize = 12f; setTextColor(accent)
                 gravity = Gravity.CENTER
                 setPadding(dp(8), 0, dp(8), 0)
                 if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
             })
-            if (!showingExpandedCategory && entries.size > 5 && (selectedType == "Filmler" || selectedType == "Diziler")) {
-                sectionHeader.addView(TextView(this).apply {
-                    text = "Tümü"; textSize = 12f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE); gravity = Gravity.CENTER
-                    background = GradientDrawable().apply {
-                        cornerRadius = dp(10).toFloat()
-                        setColor(Color.TRANSPARENT); setStroke(dp(1), accent)
-                    }
-                    isFocusable = true
-                    setPadding(dp(16), dp(7), dp(16), dp(7))
-                    setOnFocusChangeListener { v, hasFocus ->
-                        v.background = GradientDrawable().apply {
-                            cornerRadius = dp(10).toFloat()
-                            setColor(if (hasFocus) Color.rgb(43, 49, 63) else Color.TRANSPARENT)
-                            setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) focusColor else Color.rgb(54, 64, 82))
-                        }
-                        v.elevation = if (hasFocus) dp(3).toFloat() else 0f
-                    }
-                    setOnClickListener { expandedCategory = groupName to entries; render() }
-                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)).apply { setMargins(dp(10), 0, 0, 0) })
-            }
+
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
@@ -1886,13 +1865,12 @@ class MainActivity : Activity() {
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 9)
-                    background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
+                    setPadding(0, 0, 0, 0)
+                    setBackgroundColor(Color.TRANSPARENT)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
-                            if (hasFocus) focusColor else Color.rgb(38, 45, 60))
-                        v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+                        v.setBackgroundColor(Color.TRANSPARENT)
+                        v.elevation = 0f
                         v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
                     }
                     setOnClickListener {
