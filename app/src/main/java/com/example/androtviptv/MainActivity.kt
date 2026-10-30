@@ -1603,9 +1603,12 @@ class MainActivity : Activity() {
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                         searchQuery = s?.toString().orEmpty()
                         selectedGroup = "Tüm kategoriler"
-                        // Keep this EditText attached while the user types. Re-rendering the
-                        // whole screen here detaches it and Android closes the keyboard per character.
-                        // Results refresh when the user presses the keyboard Search action.
+                        // Debounce live results and restore the edit field after refreshing.
+                        searchRenderRunnable?.let { searchHandler.removeCallbacks(it) }
+                        searchRenderRunnable = Runnable {
+                            if (sidebarMode == "search") { searchInputFocusPending = true; render() }
+                        }
+                        searchHandler.postDelayed(searchRenderRunnable!!, 280)
 
                     }
                     override fun afterTextChanged(s: android.text.Editable?) {}
@@ -1613,14 +1616,31 @@ class MainActivity : Activity() {
                 setOnEditorActionListener { _, actionId, _ ->
                     if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
                         actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                        imm.hideSoftInputFromWindow(windowToken, 0)
+                        saveSearchHistory(searchQuery)
+                        searchInputFocusPending = true
                         render()
                         true
                     } else false
                 }
             }
             searchPanel.addView(searchInput, LinearLayout.LayoutParams(-1, dp(52)))
+            if (searchQuery.isBlank() && searchHistory.isNotEmpty()) {
+                searchPanel.addView(TextView(this).apply {
+                    text = "Son aramalar"; textSize = 15f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE); setPadding(0, dp(14), 0, dp(6))
+                })
+                searchHistory.forEach { term ->
+                    searchPanel.addView(makeButton("⌕  $term", false) {
+                        searchQuery = term; saveSearchHistory(term); searchInputFocusPending = true; render()
+                    }, LinearLayout.LayoutParams(-1, dp(42)).apply { setMargins(0, dp(2), 0, dp(2)) })
+                }
+                searchPanel.addView(makeButton("Arama geçmişini temizle", false) {
+                    searchHistory.clear()
+                    prefs.edit().remove("search_history").apply()
+                    render()
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)).apply { setMargins(0, dp(8), 0, 0) })
+            }
             content.addView(searchPanel)
             if (searchInputFocusPending) {
                 searchInputFocusPending = false
