@@ -771,14 +771,14 @@ class MainActivity : Activity() {
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
     private fun makeFavoriteButton(item: MediaItem, onChanged: (() -> Unit)? = null): TextView {
         fun update(view: TextView, selected: Boolean, focused: Boolean = false) {
-            val paleYellow = Color.rgb(255, 232, 145)
             val selectedYellow = Color.rgb(255, 196, 0)
             view.text = if (selected) "★ Favori" else "☆ Favori"
-            view.setTextColor(if (selected) Color.rgb(25, 22, 12) else paleYellow)
+            // Keep the existing normal button appearance unchanged; only the selected state is yellow.
+            view.setTextColor(if (selected) Color.rgb(25, 22, 12) else Color.WHITE)
             view.background = roundedDrawable(
-                if (selected) selectedYellow else Color.TRANSPARENT,
+                if (selected) selectedYellow else panel,
                 buttonRadiusDp,
-                if (focused) paleYellow else selectedYellow
+                if (selected) selectedYellow else if (focused) focusColor else Color.rgb(44, 52, 68)
             )
         }
         return TextView(this).apply {
