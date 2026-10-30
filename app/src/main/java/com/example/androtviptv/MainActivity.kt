@@ -2219,8 +2219,29 @@ class MainActivity : Activity() {
                     val stream = ep.optString("direct_source").ifBlank {
                         "${source.address.trimEnd('/')}/series/$u/$p/$id.$ext"
                     }
+                    // Xtream providers put episode artwork under different keys.
+                    // Check both the episode object and its nested info object.
+                    val info = ep.optJSONObject("info")
+                    val artwork = listOf(
+                        ep.optString("movie_image"),
+                        ep.optString("cover_big"),
+                        ep.optString("cover"),
+                        ep.optString("stream_icon"),
+                        ep.optString("movie_image_url"),
+                        info?.optString("movie_image").orEmpty(),
+                        info?.optString("cover_big").orEmpty(),
+                        info?.optString("cover").orEmpty(),
+                        info?.optString("stream_icon").orEmpty(),
+                        info?.optString("movie_image_url").orEmpty()
+                    ).firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                    val posterUrl = when {
+                        artwork.startsWith("https://", true) || artwork.startsWith("http://", true) -> artwork
+                        artwork.startsWith("/") -> "${source.address.trimEnd('/')}$artwork"
+                        artwork.isNotBlank() -> "${source.address.trimEnd('/')}/$artwork"
+                        else -> ""
+                    }
                     return MediaItem(id, name, stream, "${series.name} • Sezon $seasonNumber",
-                        "Bölümler", "", ext, series.seriesId, source.id)
+                        "Bölümler", posterUrl, ext, series.seriesId, source.id)
                 }
 
                 fun addEpisodeArray(seasonNumber: String, array: JSONArray) {
