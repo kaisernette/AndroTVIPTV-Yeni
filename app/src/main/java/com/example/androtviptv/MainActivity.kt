@@ -3364,6 +3364,21 @@ class MainActivity : Activity() {
                 .putExtra("name", item.name)
                 .putExtra("url", item.url)
                 .putExtra("isLive", item.type == "Canlı TV")
+                .putExtra("themeAccent", accent)
+            PlayerActivity.pendingEpisodeNames = emptyList()
+            PlayerActivity.pendingEpisodeUrls = emptyList()
+            PlayerActivity.pendingEpisodeIndex = 0
+            if (item.type == "Diziler") {
+                val episodeQueue = seriesEpisodeRows.flatMap { it.second }.filter { it.url.isNotBlank() }
+                val currentEpisodeIndex = episodeQueue.indexOfFirst {
+                    it.url == item.url || (it.id == item.id && it.sourceId == item.sourceId)
+                }
+                if (currentEpisodeIndex >= 0 && episodeQueue.size > 1) {
+                    PlayerActivity.pendingEpisodeNames = episodeQueue.map { it.name }
+                    PlayerActivity.pendingEpisodeUrls = episodeQueue.map { it.url }
+                    PlayerActivity.pendingEpisodeIndex = currentEpisodeIndex
+                }
+            }
             if (item.type == "Canlı TV") {
                 val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
                 val recentChannels = recent.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
