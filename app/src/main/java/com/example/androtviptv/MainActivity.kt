@@ -759,8 +759,18 @@ class MainActivity : Activity() {
             )
         }
         return TextView(this).apply {
-            textSize = 14f; gravity = Gravity.CENTER; isFocusable = true; isFocusableInTouchMode = true; isClickable = true
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            textSize = 14f
+            gravity = Gravity.CENTER
+            textAlignment = View.TEXT_ALIGNMENT_CENTER
+            includeFontPadding = false
+            minWidth = 0
+            minimumWidth = 0
+            minHeight = dp(46)
+            minimumHeight = dp(46)
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            setPadding(dp(12), 0, dp(12), 0)
             update(this, favorites.contains(item.favoriteKey))
             setOnFocusChangeListener { v, hasFocus -> update(v as TextView, favorites.contains(item.favoriteKey), hasFocus) }
             setOnClickListener {
@@ -2132,6 +2142,7 @@ class MainActivity : Activity() {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.TOP
+                            setBaselineAligned(false)
                         }
                         row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
@@ -2155,7 +2166,7 @@ class MainActivity : Activity() {
                     isFillViewport = true
                     setPadding(dp(18), 0, dp(30), 0)
                     // Keep poster rows anchored to the left, even when there is only one item.
-                    row.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                    row.gravity = Gravity.START or Gravity.TOP
                     addView(row)
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
@@ -2380,7 +2391,7 @@ class MainActivity : Activity() {
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER }
         actions.addView(watchButton, LinearLayout.LayoutParams(dp(160), dp(46)).apply { setMargins(0, dp(8), dp(8), 0) })
-        actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, dp(8), 0, 0) })
+        actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(dp(160), dp(46)).apply { setMargins(0, dp(8), 0, 0) })
 
         copy.addView(actions)
         watchButton.post { if (watchButton.isShown) watchButton.requestFocus() }
@@ -2456,13 +2467,13 @@ class MainActivity : Activity() {
                 showSeriesDetail(series)
             }
         }
-        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, dp(14), dp(8), 0) })
+        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(dp(160), dp(46)).apply { setMargins(0, dp(14), dp(8), 0) })
         actions.addView(makeButton("← Geri", false) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
             render()
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, dp(14), dp(8), 0) })
-        actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, dp(14), 0, 0) })
+        actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(dp(160), dp(46)).apply { setMargins(0, dp(14), 0, 0) })
         copy.addView(actions)
         watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
