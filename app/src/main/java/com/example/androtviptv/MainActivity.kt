@@ -777,17 +777,29 @@ class MainActivity : Activity() {
     }
 
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
-        text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
-        setPadding(dp(16), 0, dp(16), 0)
+        text = label
+        textSize = 14f
+        isAllCaps = false
+        isFocusable = true
+        isFocusableInTouchMode = true
+        gravity = Gravity.CENTER
+        textAlignment = View.TEXT_ALIGNMENT_CENTER
+        includeFontPadding = false
+        minWidth = 0
+        minimumWidth = 0
+        minHeight = dp(46)
+        minimumHeight = dp(46)
+        setPadding(dp(12), 0, dp(12), 0)
         setTextColor(if (primary) Color.rgb(12, 14, 19) else Color.WHITE)
-        background = roundedDrawable(if (primary) accent else panel, buttonRadiusDp,
+        background = roundedDrawable(if (primary) accent else panel, 12,
             if (primary) accentBright else Color.rgb(44, 52, 68))
         stateListAnimator = null
-        // Keep the focus stroke inside the button bounds: no scaling or outside shadow.
+        insetTop = 0
+        insetBottom = 0
         setOnFocusChangeListener { v, hasFocus ->
             v.background = roundedDrawable(
                 if (primary) accent else if (hasFocus) Color.rgb(27, 39, 53) else panel,
-                buttonRadiusDp, if (hasFocus) focusColor else if (primary) accentBright else Color.rgb(44, 52, 68))
+                12, if (hasFocus) focusColor else if (primary) accentBright else Color.rgb(44, 52, 68))
             v.elevation = 0f
             v.scaleX = 1f
             v.scaleY = 1f
@@ -1331,7 +1343,7 @@ class MainActivity : Activity() {
         metaScroll.addView(meta)
         info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
         val detailActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        detailActions.addView(makeFavoriteButton(item), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 0, dp(8), 0) })
+        detailActions.addView(makeFavoriteButton(item), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, 0, dp(8), 0) })
         detailActions.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
         info.addView(detailActions)
         
@@ -1392,9 +1404,9 @@ class MainActivity : Activity() {
         content.removeAllViews()
         val detailMode = detailSeries != null || detailMovie != null
         val firstEntry = items.isEmpty() && !isLoadingSource
-        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::brandView.isInitialized) brandView.visibility = View.GONE
-        if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::status.isInitialized) status.visibility = View.GONE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
@@ -1801,6 +1813,7 @@ class MainActivity : Activity() {
                         channelRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.TOP
+                            setBaselineAligned(false)
                         }
                         content.addView(channelRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
@@ -2000,7 +2013,10 @@ class MainActivity : Activity() {
             })
 
             content.addView(sectionHeader)
-            val row = LinearLayout(this).apply { orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
+            val row = LinearLayout(this).apply {
+                orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+                gravity = Gravity.TOP
+            }
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
@@ -2015,6 +2031,7 @@ class MainActivity : Activity() {
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.TOP
                     setPadding(dp(2), dp(2), dp(2), dp(2))
                     background = roundedDrawable(panel, 10)
                     isFocusable = true; isFocusableInTouchMode = true
@@ -2109,7 +2126,7 @@ class MainActivity : Activity() {
                 val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 if (!weeklyPoster && !homeCard && selectedType != "Filmler" && selectedType != "Diziler") {
                     actions.addView(makeButton("▶ İzle", true) { play(item) },
-                        LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
+                        LinearLayout.LayoutParams(0, dp(46), 1f).apply { setMargins(0, dp(7), dp(4), 0) })
                 }
                 if (actions.childCount > 0) card.addView(actions)
                 if (showingExpandedCategory) {
@@ -2364,8 +2381,8 @@ class MainActivity : Activity() {
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER }
-        actions.addView(watchButton, LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
-        actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 0, 0) })
+        actions.addView(watchButton, LinearLayout.LayoutParams(dp(160), dp(46)).apply { setMargins(0, dp(8), dp(8), 0) })
+        actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, dp(8), 0, 0) })
 
         copy.addView(actions)
         watchButton.post { if (watchButton.isShown) watchButton.requestFocus() }
@@ -2406,7 +2423,8 @@ class MainActivity : Activity() {
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            setPadding(24, 22, 24, 22)
+            // Leave space for Android's status bar so synopsis text never sits underneath it.
+            setPadding(dp(24), dp(42), dp(64), dp(22))
         }
         copy.addView(TextView(this).apply {
             text = "DİZİ  •  ${series.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -2440,13 +2458,13 @@ class MainActivity : Activity() {
                 showSeriesDetail(series)
             }
         }
-        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
+        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, dp(14), dp(8), 0) })
         actions.addView(makeButton("← Geri", false) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
             render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
-        actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, dp(14), dp(8), 0) })
+        actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(0, dp(14), 0, 0) })
         copy.addView(actions)
         watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
@@ -2494,7 +2512,7 @@ class MainActivity : Activity() {
                         text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                     episodeRow.addView(makeButton("▶ İzle", true) { play(episode) },
-                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(12, 0, 0, 0) })
+                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { setMargins(dp(12), 0, 0, 0) })
                     episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
