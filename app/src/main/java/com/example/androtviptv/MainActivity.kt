@@ -2347,6 +2347,8 @@ class MainActivity : Activity() {
         val hero = FrameLayout(this).apply {
             background = roundedDrawable(Color.rgb(24, 31, 45), 18, Color.rgb(50, 60, 78))
             clipToOutline = true
+            clipChildren = false
+            clipToPadding = false
         }
         val poster = ImageView(this).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
@@ -2362,8 +2364,10 @@ class MainActivity : Activity() {
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            // Keep text and buttons clear of the TV's right-edge system overlay.
-            setPadding(dp(18), dp(18), dp(64), dp(34))
+            clipChildren = false
+            clipToPadding = false
+            // Reserve enough room below the action row so its rounded lower edge stays visible.
+            setPadding(dp(18), dp(18), dp(64), dp(18))
         }
         copy.addView(TextView(this).apply {
             text = "FİLM  •  ${movie.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -2403,7 +2407,7 @@ class MainActivity : Activity() {
         copy.addView(actions)
         watchButton.post { if (watchButton.isShown) watchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(390)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val infoTitle = TextView(this).apply {
             text = "FİLM HAKKINDA"; textSize = 20f
@@ -2439,8 +2443,10 @@ class MainActivity : Activity() {
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            // Leave space for Android's status bar so synopsis text never sits underneath it.
-            setPadding(dp(24), dp(42), dp(64), dp(38))
+            clipChildren = false
+            clipToPadding = false
+            // Keep the synopsis below the status bar and leave room for the complete action row.
+            setPadding(dp(24), dp(42), dp(64), dp(18))
         }
         copy.addView(TextView(this).apply {
             text = "DİZİ  •  ${series.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -2492,7 +2498,7 @@ class MainActivity : Activity() {
         copy.addView(actions)
         watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(360)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val episodesPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
