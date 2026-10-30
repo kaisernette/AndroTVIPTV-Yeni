@@ -87,7 +87,7 @@ class MainActivity : Activity() {
     private var sidebarTransparency = 100
     private var buttonRadiusDp = 10
     private var buttonSelectionStyle = "Dolu"
-    private var customAccentColor: Int? = Color.rgb(57, 198, 232)
+    private var customAccentColor: Int? = Color.rgb(255, 112, 79)
 
     private fun sidebarBackgroundColor(): Int = Color.argb(255 * (100 - sidebarTransparency) / 100, Color.red(panel), Color.green(panel), Color.blue(panel))
 
@@ -104,11 +104,11 @@ class MainActivity : Activity() {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
             "Lacivert • Turkuaz" -> { bg = Color.rgb(10, 22, 38); accent = Color.rgb(35, 205, 190); accentBright = accent }
             "Koyu • Mor" -> { bg = Color.rgb(20, 16, 29); accent = Color.rgb(174, 115, 255); accentBright = accent }
-            "Siyah • Mavi" -> { bg = Color.BLACK; accent = Color.rgb(57, 198, 232); accentBright = accent }
-            else -> { bg = Color.BLACK; accent = Color.rgb(57, 198, 232); accentBright = accent }
+            "Siyah • Mavi" -> { bg = Color.BLACK; accent = Color.rgb(255, 112, 79); accentBright = accent }
+            else -> { bg = Color.BLACK; accent = Color.rgb(255, 112, 79); accentBright = accent }
         }
         panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
-        customAccentColor = prefs.getInt("custom_accent_color", Color.rgb(57, 198, 232))
+        customAccentColor = prefs.getInt("custom_accent_color", Color.rgb(255, 112, 79))
         customAccentColor?.let { accent = it; accentBright = it }
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
@@ -2724,7 +2724,7 @@ class MainActivity : Activity() {
                     }
                 }
                 heading("Vurgu rengi", "Buton ve arayüz vurgusu için renk seç.")
-                listOf("Buz mavisi" to Color.rgb(57, 198, 232), "Mavi" to Color.rgb(0, 166, 255), "Turkuaz" to Color.rgb(35, 205, 190), "Mor" to Color.rgb(174, 115, 255), "Altın" to Color.rgb(224, 184, 95), "Yeşil" to Color.rgb(70, 190, 120)).forEach { (label, color) ->
+                listOf("Mercan" to Color.rgb(255, 112, 79), "Buz mavisi" to Color.rgb(57, 198, 232), "Mavi" to Color.rgb(0, 166, 255), "Turkuaz" to Color.rgb(35, 205, 190), "Mor" to Color.rgb(174, 115, 255), "Altın" to Color.rgb(224, 184, 95), "Yeşil" to Color.rgb(70, 190, 120)).forEach { (label, color) ->
                     option((if (accent == color) "✓  " else "") + "●  " + label, "Vurgu rengini uygula") {
                         accent = color; accentBright = color; customAccentColor = color
                         prefs.edit().putInt("custom_accent_color", color).apply(); rebuildNavigation(); render()
