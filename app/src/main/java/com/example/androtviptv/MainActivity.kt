@@ -2627,23 +2627,30 @@ class MainActivity : Activity() {
                     text = "Menü saydamlığı"; textSize = 17f
                     setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                val percentStrip = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                for (percent in 0..100 step 10) {
-                    val percentButton = TextView(this).apply {
-                        text = "$percent%"; textSize = 11f; gravity = Gravity.CENTER
-                        setTextColor(if (sidebarTransparency == percent) Color.WHITE else muted)
-                        background = roundedDrawable(if (sidebarTransparency == percent) Color.rgb(27, 55, 82) else Color.TRANSPARENT, 7, if (sidebarTransparency == percent) accent else Color.rgb(65, 74, 90))
-                        isFocusable = true; isClickable = true
-                        setPadding(dp(5), dp(9), dp(5), dp(9))
-                        setOnClickListener {
-                            sidebarTransparency = percent; transparentMenu = percent == 100
-                            prefs.edit().putInt("sidebar_transparency", percent).putBoolean("transparent_menu", transparentMenu).apply()
-                            sidebar.setBackgroundColor(sidebarBackgroundColor()); settingsPage = "themes"; render()
-                        }
-                    }
-                    percentStrip.addView(percentButton, LinearLayout.LayoutParams(dp(43), dp(40)).apply { setMargins(dp(2), 0, dp(2), 0) })
+                val percentControl = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    background = roundedDrawable(Color.rgb(10, 13, 19), 9, Color.rgb(65, 74, 90))
+                    setPadding(dp(4), dp(3), dp(4), dp(3))
                 }
-                transparencyRow.addView(HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(percentStrip) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f))
+                percentControl.addView(makeButton("−", false) {
+                    sidebarTransparency = (sidebarTransparency - 10).coerceAtLeast(0)
+                    transparentMenu = sidebarTransparency == 100
+                    prefs.edit().putInt("sidebar_transparency", sidebarTransparency).putBoolean("transparent_menu", transparentMenu).apply()
+                    sidebar.setBackgroundColor(sidebarBackgroundColor()); settingsPage = "themes"; render()
+                }, LinearLayout.LayoutParams(dp(42), dp(40)))
+                percentControl.addView(TextView(this).apply {
+                    text = "$sidebarTransparency%"; textSize = 16f
+                    gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                }, LinearLayout.LayoutParams(dp(68), dp(40)))
+                percentControl.addView(makeButton("+", false) {
+                    sidebarTransparency = (sidebarTransparency + 10).coerceAtMost(100)
+                    transparentMenu = sidebarTransparency == 100
+                    prefs.edit().putInt("sidebar_transparency", sidebarTransparency).putBoolean("transparent_menu", transparentMenu).apply()
+                    sidebar.setBackgroundColor(sidebarBackgroundColor()); settingsPage = "themes"; render()
+                }, LinearLayout.LayoutParams(dp(42), dp(40)))
+                transparencyRow.addView(percentControl, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 content.addView(transparencyRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
             }
             "history" -> {
