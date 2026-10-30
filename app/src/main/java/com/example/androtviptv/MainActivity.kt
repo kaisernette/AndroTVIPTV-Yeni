@@ -104,11 +104,15 @@ class MainActivity : Activity() {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
             "Lacivert • Turkuaz" -> { bg = Color.rgb(10, 22, 38); accent = Color.rgb(35, 205, 190); accentBright = accent }
             "Koyu • Mor" -> { bg = Color.rgb(20, 16, 29); accent = Color.rgb(174, 115, 255); accentBright = accent }
-            "Siyah • Mavi" -> { bg = Color.BLACK; accent = Color.rgb(255, 112, 79); accentBright = accent }
-            else -> { bg = Color.BLACK; accent = Color.rgb(255, 112, 79); accentBright = accent }
+            "Siyah • Mavi" -> { bg = Color.BLACK; accent = Color.rgb(0, 166, 255); accentBright = accent }
+            else -> { bg = Color.BLACK; accent = Color.rgb(0, 166, 255); accentBright = accent }
         }
         panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
-        customAccentColor = prefs.getInt("custom_accent_color", Color.rgb(255, 112, 79))
+        val savedAccent = prefs.getInt("custom_accent_color", Color.rgb(0, 166, 255))
+        // Migrate the previous coral default to the new blue default.
+        val defaultCoral = Color.rgb(255, 112, 79)
+        customAccentColor = if (savedAccent == defaultCoral) Color.rgb(0, 166, 255) else savedAccent
+        if (savedAccent == defaultCoral) prefs.edit().putInt("custom_accent_color", Color.rgb(0, 166, 255)).apply()
         customAccentColor?.let { accent = it; accentBright = it }
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
