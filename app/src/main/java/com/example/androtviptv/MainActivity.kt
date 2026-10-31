@@ -2006,13 +2006,23 @@ class MainActivity : Activity() {
             sectionHeader.addView(TextView(this).apply {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             }, LinearLayout.LayoutParams(0, -2, 1f))
-            sectionHeader.addView(TextView(this).apply {
-                text = if (showingExpandedCategory) "← Geri dön" else ""
-                textSize = 12f; setTextColor(accent)
-                gravity = Gravity.CENTER
-                setPadding(dp(8), 0, dp(8), 0)
-                if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
-            })
+            if (showingExpandedCategory) {
+                sectionHeader.addView(TextView(this).apply {
+                    text = "← Geri dön"
+                    textSize = 12f; setTextColor(accent)
+                    gravity = Gravity.CENTER
+                    setPadding(dp(8), 0, dp(8), 0)
+                    isFocusable = true
+                    setOnClickListener { expandedCategory = null; render() }
+                })
+            } else if (selectedType == "Filmler" || selectedType == "Diziler") {
+                sectionHeader.addView(makeButton("Tümü  ›", false) {
+                    expandedCategory = groupName to entries
+                    render()
+                }, LinearLayout.LayoutParams(dp(116), dp(42)).apply {
+                    setMargins(dp(8), 0, 0, 0)
+                })
+            }
 
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
@@ -2145,16 +2155,7 @@ class MainActivity : Activity() {
                     row.gravity = Gravity.TOP or Gravity.START
                     addView(row)
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                if (compactThreeCardRow && entries.size > 3) {
-                    content.addView(makeButton("Tümü  ›", false) {
-                        expandedCategory = groupName to entries
-                        render()
-                    }, LinearLayout.LayoutParams(dp(116), dp(42)).apply {
-                        setMargins(dp(22), 0, 0, dp(14))
-                    })
-                }
             }
-        }
         if (!detailMode && sidebarMode != "search" && focusTagBeforeRender.isNotBlank()) {
             content.post {
                 val target = content.findViewWithTag<View>(focusTagBeforeRender)
