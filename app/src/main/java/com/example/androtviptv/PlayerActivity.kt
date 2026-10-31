@@ -99,6 +99,13 @@ class PlayerActivity : Activity() {
     }
     private var playerView: PlayerView? = null
     private var playerRoot: FrameLayout? = null
+    private var centerControlPanel: View? = null
+    private var bottomControlPanel: View? = null
+    private var rightControlPanel: View? = null
+    private var playPauseControl: View? = null
+    private var subtitleControl: View? = null
+    private var isPlaybackControlsVisible = true
+    private val hidePlaybackControls = Runnable { setPlaybackControlsVisible(false) }
     private var nextEpisodeOverlay: View? = null
     private var nextEpisodePromptedForIndex: Int = -1
     private var nextEpisodeCancelledForIndex: Int = -1
@@ -264,6 +271,8 @@ class PlayerActivity : Activity() {
             val size = if (i == 2) 84 else 68
             centerControls.addView(button, LinearLayout.LayoutParams(dp(size), dp(size)).apply { setMargins(dp(6), 0, dp(6), 0) })
         }
+        centerControlPanel = centerControls
+        playPauseControl = playControl
         root.addView(centerControls, FrameLayout.LayoutParams(-2, dp(100), Gravity.CENTER))
 
         fun createTrackPanel(type: Int): LinearLayout {
@@ -294,9 +303,11 @@ class PlayerActivity : Activity() {
             background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(0x99101824.toInt()); setStroke(dp(1), 0xFF079BE8.toInt()) }
             setOnClickListener { val other = if (panel === subtitlePanel) audioPanel else subtitlePanel; other?.visibility = View.GONE; panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
         }
-        trackButtons.addView(trackButton("▣  Altyazı", subtitlePanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
+        subtitleControl = trackButton("▣  Altyazı", subtitlePanel!!)
+        trackButtons.addView(subtitleControl, LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
         trackButtons.addView(trackButton("◖  Ses Dili", audioPanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
         right.addView(trackButtons)
+        rightControlPanel = right
         root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
 
         val bottom = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -314,6 +325,7 @@ class PlayerActivity : Activity() {
         elapsedLabel = TextView(this).apply { text = "00:00"; textSize = 14f; setTextColor(Color.WHITE) }
         durationLabel = TextView(this).apply { text = " •  00:00"; textSize = 14f; setTextColor(0xFFB8BEC8.toInt()) }
         times.addView(elapsedLabel); times.addView(durationLabel); bottom.addView(times)
+        bottomControlPanel = bottom
         root.addView(bottom, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM).apply { setMargins(dp(24), 0, dp(24), dp(88)) })
         view.post {
             val controlIds = intArrayOf(
@@ -343,6 +355,8 @@ class PlayerActivity : Activity() {
             }
         }
         setContentView(root)
+        setPlaybackControlsVisible(true)
+        playbackHandler.postDelayed(hidePlaybackControls, 5000L)
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
             finish()
@@ -456,8 +470,9 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isNotEmpty()) {
-            when (event.keyCode) {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            // Live TV keeps its channel navigation; movie/series playback uses the visible control surface.
+            if (isLiveStream && channelUrls.isNotEmpty()) when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (channelOverlay != null) {
                         highlightedChannelIndex = (highlightedChannelIndex +
@@ -487,8 +502,55 @@ class PlayerActivity : Activity() {
                     if (channelOverlay != null) { hideChannelOverlay(); return true }
                 }
             }
+            if (!isLiveStream && nextEpisodeOverlay == null) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        if (!isPlaybackControlsVisible) {
+                            setPlaybackControlsVisible(true)
+                            playPauseControl?.requestFocus()
+                            return true
+                        }
+                        playbackHandler.removeCallbacks(hidePlaybackControls)
+                        playbackHandler.postDelayed(hidePlaybackControls, 5000L)
+                        when (event.keyCode) {
+                            KeyEvent.KEYCODE_DPAD_UP -> {
+                                subtitleControl?.requestFocus()
+                                return true
+                            }
+                            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                progressBar?.requestFocus()
+                                return true
+                            }
+                        }
+                    }
+                    KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                        if (isPlaybackControlsVisible) {
+                            setPlaybackControlsVisible(false)
+                            return true
+                        }
+                    }
+                }
+            }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun setPlaybackControlsVisible(visible: Boolean) {
+        isPlaybackControlsVisible = visible
+        val visibility = if (visible) View.VISIBLE else View.GONE
+        centerControlPanel?.visibility = visibility
+        bottomControlPanel?.visibility = visibility
+        rightControlPanel?.visibility = visibility
+        if (visible) {
+            playbackHandler.removeCallbacks(hidePlaybackControls)
+            playbackHandler.postDelayed(hidePlaybackControls, 5000L)
+        } else {
+            playbackHandler.removeCallbacks(hidePlaybackControls)
+            subtitlePanel?.visibility = View.GONE
+            audioPanel?.visibility = View.GONE
+            playerView?.requestFocus()
+        }
     }
 
     private fun showRecentOverlay() {
