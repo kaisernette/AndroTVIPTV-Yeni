@@ -65,7 +65,7 @@ class PlayerActivity : Activity() {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (exo.playbackState == Player.STATE_BUFFERING) {
                     if (bufferingSinceMs == 0L) bufferingSinceMs = now
-                    if (now - bufferingSinceMs >= 18000L) {
+                    if (now - bufferingSinceMs >= (if (isLiveStream) 8000L else 18000L)) {
                         restartCurrentStream("Yayın akışı 18 saniyeden uzun süre bekledi.")
                     }
                 } else if (exo.playbackState == Player.STATE_READY) {
@@ -516,9 +516,9 @@ class PlayerActivity : Activity() {
 
     private fun restartCurrentStream(reason: String) {
         val exo = player ?: return
-        if (currentStreamUrl.isBlank() || isFinishing || retryCount >= 3) {
-            if (retryCount >= 3) {
-                android.widget.Toast.makeText(this, "Yayın birkaç kez yeniden bağlanamadı. Kanalı tekrar seçmeyi dene.", android.widget.Toast.LENGTH_LONG).show()
+        if (currentStreamUrl.isBlank() || isFinishing || (!isLiveStream && retryCount >= 3)) {
+            if (!isLiveStream && retryCount >= 3) {
+                android.widget.Toast.makeText(this, "Yayın yeniden bağlanamadı. Tekrar deneyebilirsin.", android.widget.Toast.LENGTH_LONG).show()
             }
             return
         }
@@ -526,19 +526,23 @@ class PlayerActivity : Activity() {
         bufferingSinceMs = android.os.SystemClock.elapsedRealtime()
         positionStalledSinceMs = 0L
         lastObservedPositionMs = -1L
-        android.util.Log.w("KaiserTVPlayer", "$reason Yeniden bağlanma denemesi $retryCount/3")
-        android.widget.Toast.makeText(this, "Yayın yeniden bağlanıyor… ($retryCount/3)", android.widget.Toast.LENGTH_SHORT).show()
+        val retryDelay = if (isLiveStream) (500L + (retryCount.coerceAtMost(6) - 1) * 500L) else 1200L
+        android.util.Log.w("KaiserTVPlayer", "$reason Yeniden bağlanma denemesi $retryCount")
+        if (retryCount == 1 || !isLiveStream) {
+            android.widget.Toast.makeText(this, "Canlı yayın yeniden bağlanıyor…", android.widget.Toast.LENGTH_SHORT).show()
+        }
         playbackHandler.postDelayed({
-            if (!isFinishing && player === exo) {
+            if (!isFinishing && player === exo && currentStreamUrl.isNotBlank()) {
                 try {
                     exo.setMediaItem(createStreamMediaItem(currentStreamUrl))
                     exo.prepare()
                     exo.playWhenReady = true
                 } catch (e: Exception) {
                     android.util.Log.e("KaiserTVPlayer", "Reconnect failed", e)
+                    if (isLiveStream) restartCurrentStream("Yeniden bağlantı başlatılamadı.")
                 }
             }
-        }, 1200L)
+        }, retryDelay)
     }
 
     private fun tuneChannel(index: Int) {
