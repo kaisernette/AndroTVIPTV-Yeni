@@ -359,7 +359,8 @@ class MainActivity : Activity() {
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
-            addView(navBar)
+            isFillViewport = true
+            addView(navBar, ScrollView.LayoutParams(-1, -1))
         }
         sidebar.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         rebuildNavigation()
@@ -635,6 +636,10 @@ class MainActivity : Activity() {
                 if (normalizedTab == "Ana Sayfa") {
                     // Visually separate the primary navigation from the utility items.
                 }
+            }
+            // Keep Search at the top; push the main navigation items to the bottom.
+            if (navBar.childCount > 1) {
+                navBar.addView(View(this), 1, LinearLayout.LayoutParams(-1, 0, 1f))
             }
             if (sidebarMode == "main") return
         }
