@@ -251,7 +251,7 @@ class PlayerActivity : Activity() {
         audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
         val panels = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         panels.addView(subtitlePanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
-        panels.addView(audioPanel, LinearLayout.LayoutParams(dp(154), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
+        panels.addView(audioPanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
         val right = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(panels) }
         val trackButtons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun trackButton(label: String, panel: LinearLayout) = TextView(this).apply {
@@ -260,7 +260,7 @@ class PlayerActivity : Activity() {
             setOnClickListener { val other = if (panel === subtitlePanel) audioPanel else subtitlePanel; other?.visibility = View.GONE; panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
         }
         trackButtons.addView(trackButton("▣  Altyazı", subtitlePanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
-        trackButtons.addView(trackButton("◖  Ses Dili", audioPanel!!), LinearLayout.LayoutParams(dp(154), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
+        trackButtons.addView(trackButton("◖  Ses Dili", audioPanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
         right.addView(trackButtons)
         root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
 
