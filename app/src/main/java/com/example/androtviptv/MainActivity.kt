@@ -477,20 +477,27 @@ class MainActivity : Activity() {
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
                 // One filled blue focus indicator follows the currently focused navigation item.
+                // Use our own filled focus background on Android TV; suppress the
+                // platform's default focus halo so it cannot replace the blue tile.
+                defaultFocusHighlightEnabled = false
                 background = roundedDrawable(Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
-                setOnFocusChangeListener { v, hasFocus ->
-                    // Ayarlar ekraninda sol ana menude odak vurgusu gosterilmez.
+                isFocusable = true
+                isFocusableInTouchMode = true
+                setOnFocusChangeListener { view, hasFocus ->
                     val settingsScreen = selectedType == "Ayarlar"
-                    v.background = roundedDrawable(
-                        if (hasFocus && !settingsScreen) accent else Color.TRANSPARENT,
+                    val showBlueFocus = hasFocus && !settingsScreen
+                    view.background = roundedDrawable(
+                        if (showBlueFocus) accent else Color.TRANSPARENT,
                         buttonRadiusDp, Color.TRANSPARENT
                     )
-                    (v as Button).setTextColor(if (hasFocus && !settingsScreen) Color.rgb(12, 14, 19) else Color.WHITE)
-                    // No outline stroke or extra focus frame.
-                    v.elevation = 0f
-                    v.scaleX = 1f
-                    v.scaleY = 1f
+                    (view as Button).setTextColor(
+                        if (showBlueFocus) Color.rgb(12, 14, 19) else Color.WHITE
+                    )
+                    view.elevation = 0f
+                    view.scaleX = 1f
+                    view.scaleY = 1f
+                    view.invalidate()
                 }
                 textSize = 14f
                 val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
