@@ -98,6 +98,11 @@ class PlayerActivity : Activity() {
         }
     }
     private var playerView: PlayerView? = null
+    private var playerChrome: List<View> = emptyList()
+    private var playPauseControl: View? = null
+    private var controlsVisible = true
+    private val controlsHandler = Handler(Looper.getMainLooper())
+    private val hideControlsRunnable = Runnable { hidePlayerControls() }
     private var currentTracks: Tracks = Tracks.EMPTY
     private var subtitlePanel: LinearLayout? = null
     private var audioPanel: LinearLayout? = null
@@ -288,6 +293,18 @@ class PlayerActivity : Activity() {
         durationLabel = TextView(this).apply { text = " •  00:00"; textSize = 14f; setTextColor(0xFFB8BEC8.toInt()) }
         times.addView(elapsedLabel); times.addView(durationLabel); bottom.addView(times)
         root.addView(bottom, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM).apply { setMargins(dp(24), 0, dp(24), dp(88)) })
+        playerChrome = listOf(shade, centerControls, right, bottom)
+        playPauseControl = playControl
+        listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEach { control ->
+            control.setOnFocusChangeListener { focused, hasFocus ->
+                focused.background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(if (hasFocus) 0x3329B6F6 else 0x66101824)
+                    setStroke(dp(if (hasFocus) 3 else 1), if (hasFocus) 0xFF079BE8.toInt() else 0x889AA7B8.toInt())
+                }
+                if (hasFocus) scheduleHidePlayerControls()
+            }
+        }
         view.post {
             val controlIds = intArrayOf(
                 androidx.media3.ui.R.id.exo_play,
@@ -403,9 +420,9 @@ class PlayerActivity : Activity() {
             playbackHandler.removeCallbacks(playbackWatchdog)
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
             // Android TV kumandasında ilk odak görünür oynatıcı kontrolünde olsun.
-            if (isLiveStream && channelUrls.size > 1) view.requestFocus()
-            else playControl.requestFocus()
+            playControl.requestFocus()
             refreshTrackChoices()
+            scheduleHidePlayerControls()
             uiHandler.post(uiTicker)
         } catch (e: Exception) {
             player?.release()
@@ -416,16 +433,24 @@ class PlayerActivity : Activity() {
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
-            // Fiziksel TV kumandalarının medya tuşlarını da destekle.
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                     player?.let { if (it.isPlaying) it.pause() else it.play() }
+                    scheduleHidePlayerControls()
                     return true
                 }
-                KeyEvent.KEYCODE_MEDIA_PLAY -> { player?.play(); return true }
-                KeyEvent.KEYCODE_MEDIA_PAUSE -> { player?.pause(); return true }
-                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { if (!isLiveStream) player?.seekForward(); return true }
-                KeyEvent.KEYCODE_MEDIA_REWIND -> { if (!isLiveStream) player?.seekBack(); return true }
+                KeyEvent.KEYCODE_MEDIA_PLAY -> { player?.play(); scheduleHidePlayerControls(); return true }
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> { player?.pause(); scheduleHidePlayerControls(); return true }
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                    if (!isLiveStream) player?.seekForward()
+                    scheduleHidePlayerControls()
+                    return true
+                }
+                KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                    if (!isLiveStream) player?.seekBack()
+                    scheduleHidePlayerControls()
+                    return true
+                }
                 KeyEvent.KEYCODE_CHANNEL_UP -> {
                     if (isLiveStream && channelUrls.isNotEmpty()) {
                         tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
@@ -439,50 +464,75 @@ class PlayerActivity : Activity() {
                     }
                 }
             }
-            if (!isLiveStream) {
+
+            if (isLiveStream && channelOverlay != null) {
                 when (event.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                        player?.let { if (it.isPlaying) it.pause() else it.play() }
-                        return true
-                    }
-                    KeyEvent.KEYCODE_DPAD_LEFT -> { player?.seekBack(); return true }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> { player?.seekForward(); return true }
-                }
-            }
-        }
-        if (event.action == KeyEvent.ACTION_DOWN && isLiveStream && channelUrls.isNotEmpty()) {
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (channelOverlay != null) {
+                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
                         highlightedChannelIndex = (highlightedChannelIndex +
                             if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
                             .coerceIn(0, channelUrls.lastIndex)
                         refreshChannelHighlight()
-                    } else {
-                        val next = (selectedChannelIndex +
-                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
-                            .let { if (it < 0) channelUrls.lastIndex else if (it > channelUrls.lastIndex) 0 else it }
-                        tuneChannel(next)
+                        return true
                     }
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        tuneChannel(highlightedChannelIndex)
+                        return true
+                    }
+                    KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                        hideChannelOverlay()
+                        return true
+                    }
+                }
+            }
+
+            val isDpad = event.keyCode in setOf(
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER
+            )
+            if (isDpad) {
+                if (!controlsVisible) {
+                    showPlayerControls()
+                    playPauseControl?.requestFocus()
                     return true
                 }
-                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    if (channelOverlay == null) showChannelOverlay()
+                scheduleHidePlayerControls()
+                if (!isLiveStream && event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                    !isLiveStream && event.keyCode == KeyEvent.KEYCODE_ENTER ||
+                    !isLiveStream && event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+                    player?.let { if (it.isPlaying) it.pause() else it.play() }
                     return true
                 }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (channelOverlay == null) showRecentOverlay()
+                if (!isLiveStream && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    player?.seekBack()
                     return true
                 }
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
-                }
-                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                    if (channelOverlay != null) { hideChannelOverlay(); return true }
+                if (!isLiveStream && event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    player?.seekForward()
+                    return true
                 }
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun showPlayerControls() {
+        controlsVisible = true
+        playerChrome.forEach { it.visibility = View.VISIBLE }
+        scheduleHidePlayerControls()
+    }
+
+    private fun hidePlayerControls() {
+        if (channelOverlay != null || isFinishing || player?.isPlaying != true) return
+        controlsVisible = false
+        playerChrome.forEach { it.visibility = View.GONE }
+        playerView?.requestFocus()
+    }
+
+    private fun scheduleHidePlayerControls() {
+        controlsHandler.removeCallbacks(hideControlsRunnable)
+        controlsHandler.postDelayed(hideControlsRunnable, 5000L)
     }
 
     private fun showRecentOverlay() {
@@ -684,5 +734,5 @@ class PlayerActivity : Activity() {
 
     override fun onPause() { savePlaybackPosition(); super.onPause() }
     override fun onStop() { savePlaybackPosition(); player?.pause(); super.onStop() }
-    override fun onDestroy() { uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
+    override fun onDestroy() { controlsHandler.removeCallbacksAndMessages(null); uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
 }
