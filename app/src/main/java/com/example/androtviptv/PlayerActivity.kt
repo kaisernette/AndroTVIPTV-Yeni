@@ -334,6 +334,19 @@ class PlayerActivity : Activity() {
                     view.player = exo
                     exo.addListener(object : Player.Listener {
                         override fun onTracksChanged(tracks: Tracks) { currentTracks = tracks; refreshTrackChoices() }
+                        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                            if (!isLiveStream && episodeUrls.isNotEmpty()) {
+                                val index = exo.currentMediaItemIndex
+                                if (index in episodeUrls.indices) {
+                                    selectedEpisodeIndex = index
+                                    currentStreamUrl = episodeUrls[index]
+                                    originalStreamUrl = currentStreamUrl
+                                    resumeKey = "position_" + currentStreamUrl.hashCode().toString()
+                                    triedHlsFallback = false
+                                    usingHlsFallback = false
+                                }
+                            }
+                        }
                         override fun onIsPlayingChanged(isPlaying: Boolean) { playControl.text = if (isPlaying) "Ⅱ" else "▶" }
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
@@ -554,15 +567,30 @@ class PlayerActivity : Activity() {
 
 
     private fun playEpisodeAt(index: Int) {
-        if (index !in episodeUrls.indices) return
+        val exo = player ?: return
+        if (episodeUrls.isEmpty() || index !in episodeUrls.indices) {
+            android.widget.Toast.makeText(
+                this,
+                if (index < 0) "Bu sezonun ilk bölümündesin." else "Bu sezonun son bölümündesin.",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        if (exo.mediaItemCount != episodeUrls.size) {
+            val queue = episodeUrls.map { createStreamMediaItem(it) }
+            exo.setMediaItems(queue, index, 0L)
+            exo.prepare()
+        } else {
+            exo.seekTo(index, 0L)
+        }
         selectedEpisodeIndex = index
         currentStreamUrl = episodeUrls[index]
         originalStreamUrl = currentStreamUrl
         resumeKey = "position_" + currentStreamUrl.hashCode().toString()
         triedHlsFallback = false
         usingHlsFallback = false
-        player?.seekTo(index, 0L)
-        player?.playWhenReady = true
+        exo.playWhenReady = true
+        exo.play()
     }
 
     private fun formatTime(ms: Long): String {
