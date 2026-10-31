@@ -356,7 +356,7 @@ class PlayerActivity : Activity() {
         }
         setContentView(root)
         setPlaybackControlsVisible(true)
-        playbackHandler.postDelayed(hidePlaybackControls, 5000L)
+        playbackHandler.postDelayed(hidePlaybackControls, 3000L)
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
             finish()
@@ -518,7 +518,7 @@ class PlayerActivity : Activity() {
                         // Do not consume direction keys while controls are visible.
                         // Android's normal focus engine can move freely in all four directions.
                         playbackHandler.removeCallbacks(hidePlaybackControls)
-                        playbackHandler.postDelayed(hidePlaybackControls, 5000L)
+                        playbackHandler.postDelayed(hidePlaybackControls, 3000L)
                     }
                     KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
                         if (isPlaybackControlsVisible) {
@@ -540,7 +540,7 @@ class PlayerActivity : Activity() {
         rightControlPanel?.visibility = visibility
         if (visible) {
             playbackHandler.removeCallbacks(hidePlaybackControls)
-            playbackHandler.postDelayed(hidePlaybackControls, 5000L)
+            playbackHandler.postDelayed(hidePlaybackControls, 3000L)
         } else {
             playbackHandler.removeCallbacks(hidePlaybackControls)
             subtitlePanel?.visibility = View.GONE
