@@ -95,8 +95,8 @@ class PlayerActivity : Activity() {
         val panels = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         subtitlePanel = trackPanel()
         audioPanel = trackPanel()
-        panels.addView(subtitlePanel, LinearLayout.LayoutParams(dp(176), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(8)) })
-        panels.addView(audioPanel, LinearLayout.LayoutParams(dp(176), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(8)) })
+        panels.addView(subtitlePanel, LinearLayout.LayoutParams(dp(150), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(8)) })
+        panels.addView(audioPanel, LinearLayout.LayoutParams(dp(150), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(8)) })
         right.addView(panels)
         val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         subtitleButton = panelButton("▣  Altyazı") { subtitlePanel.visibility = if (subtitlePanel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
