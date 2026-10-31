@@ -2030,6 +2030,7 @@ class MainActivity : Activity() {
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
+                    tag = "poster:${item.favoriteKey}"
                     setPadding(dp(2), dp(2), dp(2), dp(2))
                     background = roundedDrawable(panel, 10)
                     isFocusable = true; isFocusableInTouchMode = true
@@ -2383,9 +2384,35 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER; minHeight = dp(48) }
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
+            id = View.generateViewId()
+            tag = "detail_watch_movie"
+            gravity = Gravity.CENTER
+            minHeight = dp(48)
+            setOnKeyListener { _, keyCode, event ->
+                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT &&
+                    event.action == android.view.KeyEvent.ACTION_DOWN) {
+                    detailMovie = null
+                    selectedType = "Filmler"
+                    selectedGroup = "Tüm kategoriler"
+                    expandedCategory = null
+                    sidebarMode = "main"
+                    render()
+                    content.post {
+                        val exactCard = content.findViewWithTag<View>("poster:${movie.favoriteKey}")
+                        (exactCard ?: content.findFocus() ?: content.getChildAt(0))?.requestFocus()
+                    }
+                    true
+                } else false
+            }
+        }
+        val favoriteButton = makeFavoriteButton(movie).apply {
+            id = View.generateViewId()
+            tag = "detail_favorite_movie"
+            nextFocusLeftId = watchButton.id
+        }
         actions.addView(watchButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), dp(8), dp(4)) })
-        actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), 0, dp(4)) })
+        actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), 0, dp(4)) })
 
         copy.addView(actions)
         watchButton.post { if (watchButton.isShown) watchButton.requestFocus() }
@@ -2453,9 +2480,36 @@ class MainActivity : Activity() {
             if (resumeEpisode != null) play(resumeEpisode)
             else if (seriesEpisodesLoading) Toast.makeText(this, "Bölümler yükleniyor, lütfen bekle.", Toast.LENGTH_SHORT).show()
             else Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
+        }.apply {
+            id = View.generateViewId()
+            tag = "detail_watch_series"
+            setOnKeyListener { _, keyCode, event ->
+                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT &&
+                    event.action == android.view.KeyEvent.ACTION_DOWN) {
+                    detailSeries = null
+                    seriesEpisodeRows = emptyList()
+                    seriesEpisodesLoading = false
+                    seriesEpisodesError = ""
+                    selectedType = "Diziler"
+                    selectedGroup = "Tüm kategoriler"
+                    expandedCategory = null
+                    sidebarMode = "main"
+                    render()
+                    content.post {
+                        val exactCard = content.findViewWithTag<View>("poster:${series.favoriteKey}")
+                        (exactCard ?: content.findFocus() ?: content.getChildAt(0))?.requestFocus()
+                    }
+                    true
+                } else false
+            }
+        }
+        val seriesFavoriteButton = makeFavoriteButton(series).apply {
+            id = View.generateViewId()
+            tag = "detail_favorite_series"
+            nextFocusLeftId = watchSeriesButton.id
         }
         actions.addView(watchSeriesButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), dp(8), dp(4)) })
-        actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), 0, dp(4)) })
+        actions.addView(seriesFavoriteButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), 0, dp(4)) })
         copy.addView(actions)
         watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
