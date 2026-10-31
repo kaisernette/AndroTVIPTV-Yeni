@@ -2902,6 +2902,19 @@ class MainActivity : Activity() {
                             setPadding(0, dp(5), 0, 0)
                         })
                         row.addView(labels, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                        // Kategori kartında odak, ana menüdeki gibi dolu mavi kutuyla gösterilir.
+                        row.background = roundedDrawable(bg, 14, null)
+                        row.setOnFocusChangeListener { view, hasFocus ->
+                            view.background = roundedDrawable(if (hasFocus) accent else bg, 14, null)
+                            indicator.setTextColor(if (hasFocus) Color.WHITE else if (isHidden) Color.WHITE else accentBright)
+                            (0 until labels.childCount).forEach { index ->
+                                (labels.getChildAt(index) as? TextView)?.setTextColor(
+                                    if (hasFocus) Color.rgb(12, 14, 19)
+                                    else if (index == 0) Color.WHITE else muted
+                                )
+                            }
+                            view.elevation = if (hasFocus) dp(3).toFloat() else 0f
+                        }
                         content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                             setMargins(dp(6), dp(5), dp(6), dp(7))
                         })
