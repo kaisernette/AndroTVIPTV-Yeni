@@ -2591,12 +2591,17 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL; setPadding(dp(18), dp(14), dp(18), dp(14))
                 background = roundedDrawable(panel, 14)
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+                defaultFocusHighlightEnabled = false
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(
-                        if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                        if (hasFocus) accent else panel,
                         14,
-                        if (hasFocus) accent else null
+                        null
                     )
+                    val titleView = getChildAt(0) as? TextView
+                    val detailView = getChildAt(1) as? TextView
+                    titleView?.setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
+                    detailView?.setTextColor(if (hasFocus) Color.rgb(35, 43, 55) else muted)
                     v.elevation = if (hasFocus) dp(4).toFloat() else 0f
                 }
                 setOnClickListener { action() }
