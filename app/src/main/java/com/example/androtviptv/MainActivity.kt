@@ -782,8 +782,9 @@ class MainActivity : Activity() {
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
             v.background = roundedDrawable(
-                if (primary) accent else if (hasFocus) Color.rgb(27, 39, 53) else panel,
-                buttonRadiusDp, if (hasFocus) focusColor else if (primary) accentBright else Color.rgb(44, 52, 68))
+                if (primary || hasFocus) accent else panel,
+                buttonRadiusDp, if (primary || hasFocus) accent else Color.rgb(44, 52, 68))
+            v.setTextColor(if (primary || hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
             v.elevation = if (hasFocus) dp(4).toFloat() else 0f
         }
         setOnClickListener { action() }
@@ -1949,7 +1950,8 @@ class MainActivity : Activity() {
                 ranked.addAll(remaining)
                 return ranked
             }
-            val homeItems = if (homeSourceIds.isEmpty()) items.toList() else items.filter { homeSourceIds.contains(it.sourceId) }
+            val homeItems = (if (homeSourceIds.isEmpty()) items.toList() else items.filter { homeSourceIds.contains(it.sourceId) })
+                .filter { !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" }) }
             listOf(
                 "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(homeItems.filter { it.type == "Filmler" }, trendingMovies).take(24),
                 "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(homeItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
@@ -2085,18 +2087,6 @@ class MainActivity : Activity() {
                     text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
                     minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
                 })
-                if (compactThreeCardRow && item == displayedEntries.lastOrNull()) {
-                    card.addView(TextView(this).apply {
-                        text = "Tümü >"
-                        textSize = 13f
-                        setTextColor(accent)
-                        gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                        setPadding(0, dp(7), dp(3), dp(2))
-                        isFocusable = true
-                        setOnClickListener { expandedCategory = groupName to entries; render() }
-                        setOnFocusChangeListener { v, focused -> (v as TextView).setTextColor(if (focused) Color.WHITE else accent) }
-                    }, LinearLayout.LayoutParams(-1, dp(30)))
-                }
                 val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 if (!weeklyPoster && !homeCard && selectedType != "Filmler" && selectedType != "Diziler") {
                     actions.addView(makeButton("▶ İzle", true) { play(item) },
@@ -2130,10 +2120,17 @@ class MainActivity : Activity() {
                     clipToPadding = false
                     isFillViewport = true
                     setPadding(dp(18), 0, dp(30), 0)
-                    // Keep poster rows anchored to the left, even when there is only one item.
                     row.gravity = Gravity.TOP or Gravity.START
                     addView(row)
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                if (compactThreeCardRow && entries.size > 3) {
+                    content.addView(makeButton("Tümü  ›", false) {
+                        expandedCategory = groupName to entries
+                        render()
+                    }, LinearLayout.LayoutParams(dp(116), dp(42)).apply {
+                        setMargins(dp(22), 0, 0, dp(14))
+                    })
+                }
             }
         }
     }
@@ -2356,8 +2353,8 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER }
-        actions.addView(watchButton, LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER; minHeight = dp(48) }
+        actions.addView(watchButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), dp(8), dp(4)) })
         actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 0, 0) })
 
         copy.addView(actions)
@@ -2427,12 +2424,12 @@ class MainActivity : Activity() {
             else if (seriesEpisodesLoading) Toast.makeText(this, "Bölümler yükleniyor, lütfen bekle.", Toast.LENGTH_SHORT).show()
             else Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
         }
-        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
+        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { setMargins(0, dp(14), dp(8), dp(4)) })
         actions.addView(makeButton("← Geri", false) {
             detailSeries = null
             seriesEpisodeRows = emptyList()
             render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, dp(8), 0) })
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { setMargins(0, dp(14), dp(8), dp(4)) })
         actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
         watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
@@ -2739,10 +2736,11 @@ class MainActivity : Activity() {
                         isClickable = true
                         setOnFocusChangeListener { view, focused ->
                             view.background = roundedDrawable(
-                                if (focused) Color.rgb(24, 43, 62) else panel,
-                                10,
+                                if (focused) accent else panel,
+                                buttonRadiusDp,
                                 if (focused) accent else Color.rgb(48, 57, 73)
                             )
+                            view.setTextColor(if (focused) Color.rgb(12, 14, 19) else Color.WHITE)
                             view.elevation = if (focused) dp(3).toFloat() else 0f
                         }
                         setOnClickListener {
