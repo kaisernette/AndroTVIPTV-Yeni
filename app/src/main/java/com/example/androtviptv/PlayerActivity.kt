@@ -215,15 +215,23 @@ class PlayerActivity : Activity() {
             setOnClickListener { action() }
         }
         val previousControl = roundControl("|◀") {
-            if (isLiveStream && channelUrls.isNotEmpty()) tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
-            else if (episodeUrls.isNotEmpty()) playEpisodeAt(selectedEpisodeIndex - 1) else player?.seekToPreviousMediaItem()
+            if (isLiveStream && channelUrls.isNotEmpty()) {
+                tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
+            } else if (episodeUrls.isNotEmpty()) {
+                val current = player?.currentMediaItemIndex ?: selectedEpisodeIndex
+                playEpisodeAt(current - 1)
+            } else player?.seekToPreviousMediaItem()
         }
         val rewindControl = roundControl("↶") { player?.seekBack() }
         val playControl = roundControl("Ⅱ", true) { player?.let { if (it.isPlaying) it.pause() else it.play() } }
         val forwardControl = roundControl("↷") { player?.seekForward() }
         val nextControl = roundControl("▶|") {
-            if (isLiveStream && channelUrls.isNotEmpty()) tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
-            else if (episodeUrls.isNotEmpty()) playEpisodeAt(selectedEpisodeIndex + 1) else player?.seekToNextMediaItem()
+            if (isLiveStream && channelUrls.isNotEmpty()) {
+                tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
+            } else if (episodeUrls.isNotEmpty()) {
+                val current = player?.currentMediaItemIndex ?: selectedEpisodeIndex
+                playEpisodeAt(current + 1)
+            } else player?.seekToNextMediaItem()
         }
         listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEachIndexed { i, button ->
             val size = if (i == 2) 84 else 68
