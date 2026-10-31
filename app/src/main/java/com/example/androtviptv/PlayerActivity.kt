@@ -98,6 +98,31 @@ class PlayerActivity : Activity() {
         }
     }
     private var playerView: PlayerView? = null
+    private var playerRoot: FrameLayout? = null
+    private var centerControlPanel: View? = null
+    private var bottomControlPanel: View? = null
+    private var rightControlPanel: View? = null
+    private var playPauseControl: View? = null
+    private var subtitleControl: View? = null
+    private var isPlaybackControlsVisible = true
+    private val hidePlaybackControls = Runnable { setPlaybackControlsVisible(false) }
+    private var nextEpisodeOverlay: View? = null
+    private var nextEpisodePromptedForIndex: Int = -1
+    private var nextEpisodeCancelledForIndex: Int = -1
+    private var nextEpisodeCountdownSeconds: Int = 10
+    private val nextEpisodeCountdown = object : Runnable {
+        override fun run() {
+            if (nextEpisodeOverlay == null || isFinishing) return
+            nextEpisodeCountdownSeconds--
+            if (nextEpisodeCountdownSeconds <= 0) {
+                hideNextEpisodePrompt()
+                playEpisodeAt(selectedEpisodeIndex + 1)
+            } else {
+                updateNextEpisodeCountdown()
+                playbackHandler.postDelayed(this, 1000L)
+            }
+        }
+    }
     private var currentTracks: Tracks = Tracks.EMPTY
     private var subtitlePanel: LinearLayout? = null
     private var audioPanel: LinearLayout? = null
@@ -109,6 +134,14 @@ class PlayerActivity : Activity() {
         override fun run() {
             val exo = player
             val bar = progressBar
+            if (exo != null && !isLiveStream && episodeUrls.isNotEmpty() &&
+                exo.isPlaying && exo.duration > 0 && exo.currentMediaItemIndex == selectedEpisodeIndex &&
+                exo.currentPosition >= (exo.duration - 10000L).coerceAtLeast(0L) &&
+                selectedEpisodeIndex < episodeUrls.lastIndex &&
+                nextEpisodePromptedForIndex != selectedEpisodeIndex &&
+                nextEpisodeCancelledForIndex != selectedEpisodeIndex) {
+                showNextEpisodePrompt()
+            }
             if (exo != null && bar != null && exo.duration > 0 && !isLiveStream) {
                 bar.max = exo.duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                 bar.progress = exo.currentPosition.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -201,6 +234,7 @@ class PlayerActivity : Activity() {
             isFocusableInTouchMode = true
         }
         playerView = view
+        playerRoot = root
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val shade = View(this).apply {
@@ -237,6 +271,8 @@ class PlayerActivity : Activity() {
             val size = if (i == 2) 84 else 68
             centerControls.addView(button, LinearLayout.LayoutParams(dp(size), dp(size)).apply { setMargins(dp(6), 0, dp(6), 0) })
         }
+        centerControlPanel = centerControls
+        playPauseControl = playControl
         root.addView(centerControls, FrameLayout.LayoutParams(-2, dp(100), Gravity.CENTER))
 
         fun createTrackPanel(type: Int): LinearLayout {
@@ -257,20 +293,32 @@ class PlayerActivity : Activity() {
         }
         subtitlePanel = createTrackPanel(C.TRACK_TYPE_TEXT)
         audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
-        val panels = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        panels.addView(subtitlePanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
-        panels.addView(audioPanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
-        val right = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(panels) }
+        // Each track menu is an overlay anchored directly above its own button.
+        val right = FrameLayout(this)
+        right.addView(subtitlePanel, FrameLayout.LayoutParams(dp(126), dp(220), Gravity.BOTTOM or Gravity.START).apply {
+            leftMargin = dp(3)
+            bottomMargin = dp(58)
+        })
+        right.addView(audioPanel, FrameLayout.LayoutParams(dp(126), dp(220), Gravity.BOTTOM or Gravity.END).apply {
+            rightMargin = dp(3)
+            bottomMargin = dp(58)
+        })
         val trackButtons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun trackButton(label: String, panel: LinearLayout) = TextView(this).apply {
             text = label; textSize = 15f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); isFocusable = true; isClickable = true
             background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(0x99101824.toInt()); setStroke(dp(1), 0xFF079BE8.toInt()) }
-            setOnClickListener { val other = if (panel === subtitlePanel) audioPanel else subtitlePanel; other?.visibility = View.GONE; panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+            setOnClickListener {
+                val other = if (panel === subtitlePanel) audioPanel else subtitlePanel
+                other?.visibility = View.GONE
+                panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            }
         }
-        trackButtons.addView(trackButton("▣  Altyazı", subtitlePanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
+        subtitleControl = trackButton("▣  Altyazı", subtitlePanel!!)
+        trackButtons.addView(subtitleControl, LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
         trackButtons.addView(trackButton("◖  Ses Dili", audioPanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
-        right.addView(trackButtons)
-        root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
+        right.addView(trackButtons, FrameLayout.LayoutParams(-1, dp(52), Gravity.BOTTOM))
+        rightControlPanel = right
+        root.addView(right, FrameLayout.LayoutParams(dp(258), dp(278), Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
 
         val bottom = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         progressBar = SeekBar(this).apply {
@@ -287,6 +335,7 @@ class PlayerActivity : Activity() {
         elapsedLabel = TextView(this).apply { text = "00:00"; textSize = 14f; setTextColor(Color.WHITE) }
         durationLabel = TextView(this).apply { text = " •  00:00"; textSize = 14f; setTextColor(0xFFB8BEC8.toInt()) }
         times.addView(elapsedLabel); times.addView(durationLabel); bottom.addView(times)
+        bottomControlPanel = bottom
         root.addView(bottom, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM).apply { setMargins(dp(24), 0, dp(24), dp(88)) })
         view.post {
             val controlIds = intArrayOf(
@@ -316,6 +365,8 @@ class PlayerActivity : Activity() {
             }
         }
         setContentView(root)
+        setPlaybackControlsVisible(true)
+        playbackHandler.postDelayed(hidePlaybackControls, 3000L)
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
             finish()
@@ -340,6 +391,8 @@ class PlayerActivity : Activity() {
                 .setLoadControl(loadControl)
                 .build().also { exo ->
                     view.player = exo
+                    // Episode queues should always advance normally; keep repeat disabled.
+                    exo.repeatMode = Player.REPEAT_MODE_OFF
                     exo.addListener(object : Player.Listener {
                         override fun onTracksChanged(tracks: Tracks) { currentTracks = tracks; refreshTrackChoices() }
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -347,6 +400,9 @@ class PlayerActivity : Activity() {
                                 val index = exo.currentMediaItemIndex
                                 if (index in episodeUrls.indices) {
                                     selectedEpisodeIndex = index
+                                    nextEpisodePromptedForIndex = -1
+                                    nextEpisodeCancelledForIndex = -1
+                                    hideNextEpisodePrompt()
                                     currentStreamUrl = episodeUrls[index]
                                     originalStreamUrl = currentStreamUrl
                                     resumeKey = "position_" + currentStreamUrl.hashCode().toString()
@@ -370,6 +426,17 @@ class PlayerActivity : Activity() {
                                     android.util.Log.w("KaiserTVPlayer", "Live stream ended unexpectedly; reconnecting")
                                     restartCurrentStream("Canlı yayın sona erdi gibi görünüyor.")
                                 }
+                                return
+                            }
+                            // Safety fallback: if the playlist reaches ENDED with another episode queued,
+                            // explicitly advance and resume playback instead of stopping on the finished episode.
+                            if (playbackState == Player.STATE_ENDED && !isLiveStream &&
+                                episodeUrls.isNotEmpty() && exo.currentMediaItemIndex < episodeUrls.lastIndex &&
+                                nextEpisodeCancelledForIndex != exo.currentMediaItemIndex) {
+                                hideNextEpisodePrompt()
+                                exo.seekToNextMediaItem()
+                                exo.playWhenReady = true
+                                exo.play()
                                 return
                             }
                             if (playbackState == Player.STATE_BUFFERING) {
@@ -413,8 +480,9 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isNotEmpty()) {
-            when (event.keyCode) {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            // Live TV keeps its channel navigation; movie/series playback uses the visible control surface.
+            if (isLiveStream && channelUrls.isNotEmpty()) when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (channelOverlay != null) {
                         highlightedChannelIndex = (highlightedChannelIndex +
@@ -444,8 +512,64 @@ class PlayerActivity : Activity() {
                     if (channelOverlay != null) { hideChannelOverlay(); return true }
                 }
             }
+            if (!isLiveStream && nextEpisodeOverlay == null) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BUTTON_SELECT -> {
+                        if (!isPlaybackControlsVisible) {
+                            setPlaybackControlsVisible(true)
+                            // Give the newly visible control panel a frame to become focusable.
+                            (playPauseControl ?: playerView)?.post {
+                                (playPauseControl ?: playerView)?.requestFocus()
+                            }
+                            return true
+                        }
+                        playbackHandler.removeCallbacks(hidePlaybackControls)
+                        playbackHandler.postDelayed(hidePlaybackControls, 3000L)
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        if (!isPlaybackControlsVisible) {
+                            setPlaybackControlsVisible(true)
+                            // Start at the last focused control; only use play/pause as a fallback.
+                            val currentFocus = currentFocus
+                            if (currentFocus == null || !currentFocus.isShown) {
+                                (playPauseControl ?: playerView)?.requestFocus()
+                            }
+                            return true
+                        }
+                        // Do not consume direction keys while controls are visible.
+                        // Android's normal focus engine can move freely in all four directions.
+                        playbackHandler.removeCallbacks(hidePlaybackControls)
+                        playbackHandler.postDelayed(hidePlaybackControls, 3000L)
+                    }
+                    KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                        if (isPlaybackControlsVisible) {
+                            setPlaybackControlsVisible(false)
+                            return true
+                        }
+                    }
+                }
+            }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun setPlaybackControlsVisible(visible: Boolean) {
+        isPlaybackControlsVisible = visible
+        val visibility = if (visible) View.VISIBLE else View.GONE
+        centerControlPanel?.visibility = visibility
+        bottomControlPanel?.visibility = visibility
+        rightControlPanel?.visibility = visibility
+        if (visible) {
+            playbackHandler.removeCallbacks(hidePlaybackControls)
+            playbackHandler.postDelayed(hidePlaybackControls, 3000L)
+        } else {
+            playbackHandler.removeCallbacks(hidePlaybackControls)
+            subtitlePanel?.visibility = View.GONE
+            audioPanel?.visibility = View.GONE
+            playerView?.requestFocus()
+        }
     }
 
     private fun showRecentOverlay() {
@@ -573,6 +697,106 @@ class PlayerActivity : Activity() {
         playerView?.requestFocus()
     }
 
+
+    private fun showNextEpisodePrompt() {
+        val root = playerRoot ?: return
+        val nextIndex = selectedEpisodeIndex + 1
+        if (nextIndex !in episodeUrls.indices || nextEpisodeOverlay != null) return
+        nextEpisodePromptedForIndex = selectedEpisodeIndex
+        nextEpisodeCountdownSeconds = 10
+
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(24), dp(18), dp(24), dp(18))
+            background = GradientDrawable().apply {
+                setColor(0xF20A0D12.toInt())
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), 0x664B596B)
+            }
+            elevation = dp(18).toFloat()
+        }
+        val heading = TextView(this).apply {
+            text = "SONRAKİ BÖLÜM"
+            textSize = 14f
+            setTextColor(0xFFB8C4D3.toInt())
+            gravity = Gravity.CENTER
+        }
+        val seriesTitle = intent.getStringExtra("name") ?: "Dizi"
+        val nextTitle = episodeNames.getOrNull(nextIndex)?.takeIf { it.isNotBlank() } ?: "Bölüm ${nextIndex + 1}"
+        val episodeTitle = TextView(this).apply {
+            text = "$seriesTitle\n$nextTitle"
+            textSize = 22f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        val detail = TextView(this).apply {
+            text = "Sonraki bölüm 10 saniye içinde otomatik başlayacak."
+            textSize = 14f
+            setTextColor(0xFFD0D6DF.toInt())
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(14))
+        }
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        fun actionButton(label: String, primary: Boolean, action: () -> Unit) = TextView(this).apply {
+            text = label
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            setPadding(dp(18), dp(12), dp(18), dp(12))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(if (primary) 0xFF087FE8.toInt() else 0xFF343B45.toInt())
+            }
+            setOnClickListener { action() }
+        }
+        val start = actionButton("▶  Hemen Başlat", true) {
+            hideNextEpisodePrompt()
+            playEpisodeAt(nextIndex)
+        }
+        val cancel = actionButton("İptal", false) {
+            nextEpisodeCancelledForIndex = selectedEpisodeIndex
+            hideNextEpisodePrompt()
+        }
+        actions.addView(start, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(dp(5), 0, dp(5), 0) })
+        actions.addView(cancel, LinearLayout.LayoutParams(dp(130), dp(48)).apply { setMargins(dp(5), 0, dp(5), 0) })
+        panel.addView(heading)
+        panel.addView(episodeTitle)
+        val countdown = TextView(this).apply {
+            tag = "next_episode_countdown"
+            text = "10 saniye"
+            textSize = 18f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(0xFF39A4FF.toInt())
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(10))
+        }
+        panel.addView(countdown)
+        panel.addView(detail)
+        panel.addView(actions)
+        root.addView(panel, FrameLayout.LayoutParams(dp(620), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        nextEpisodeOverlay = panel
+        start.requestFocus()
+        playbackHandler.removeCallbacks(nextEpisodeCountdown)
+        playbackHandler.postDelayed(nextEpisodeCountdown, 1000L)
+    }
+
+    private fun updateNextEpisodeCountdown() {
+        val countdown = nextEpisodeOverlay?.findViewWithTag<TextView>("next_episode_countdown") ?: return
+        countdown.text = "$nextEpisodeCountdownSeconds saniye"
+    }
+
+    private fun hideNextEpisodePrompt() {
+        playbackHandler.removeCallbacks(nextEpisodeCountdown)
+        val overlay = nextEpisodeOverlay ?: return
+        (overlay.parent as? ViewGroup)?.removeView(overlay)
+        nextEpisodeOverlay = null
+    }
 
     private fun playEpisodeAt(index: Int) {
         val exo = player ?: return

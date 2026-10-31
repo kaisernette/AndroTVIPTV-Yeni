@@ -23,6 +23,9 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.concurrent.thread
 import java.util.concurrent.Executors
 import java.util.concurrent.ConcurrentHashMap
@@ -196,6 +199,14 @@ class MainActivity : Activity() {
     private var lastFocusedActionTag: String = ""
     private val searchHistory = mutableListOf<String>()
     private val searchHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var clockView: TextView? = null
+    private val clockTicker = object : Runnable {
+        override fun run() {
+            clockView?.text = SimpleDateFormat("d MMMM yyyy, EEEE  •  HH:mm", Locale("tr", "TR")).format(Date())
+            clockHandler.postDelayed(this, 30_000L)
+        }
+    }
     private var searchRenderRunnable: Runnable? = null
 
     private fun saveSearchHistory(query: String) {
@@ -348,7 +359,8 @@ class MainActivity : Activity() {
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
-            addView(navBar)
+            isFillViewport = true
+            addView(navBar, FrameLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         sidebar.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         rebuildNavigation()
@@ -372,6 +384,17 @@ class MainActivity : Activity() {
             setPadding(dp(10), 0, dp(10), 0)
             setOnClickListener { showSourcesDialog() }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)))
+        clockView = TextView(this).apply {
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            setPadding(dp(14), 0, dp(10), 0)
+            contentDescription = "Tarih ve saat"
+        }
+        mainHeader.addView(clockView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)))
+        clockHandler.removeCallbacks(clockTicker)
+        clockTicker.run()
         mainHeader.addView(TextView(this).apply {
             text = "+"; textSize = 25f; gravity = Gravity.CENTER
             setTextColor(Color.rgb(15, 18, 27))
@@ -491,12 +514,25 @@ class MainActivity : Activity() {
                     v.scaleY = 1f
                 }
                 textSize = 14f
-                val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
-                text = android.text.SpannableString(label).apply {
-                    setSpan(android.text.style.RelativeSizeSpan(1.7f), 0, iconEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, iconEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                val iconResource = when {
+                    label.contains("Ana Sayfa") -> R.drawable.ic_nav_home
+                    label.contains("Canlı TV") -> R.drawable.ic_nav_tv
+                    label.contains("Filmler") -> R.drawable.ic_nav_movies
+                    label.contains("Diziler") -> R.drawable.ic_nav_series
+                    label.contains("Favoriler") -> R.drawable.ic_nav_favorites
+                    label.contains("Geçmiş") -> R.drawable.ic_nav_history
+                    label.contains("Ara") -> R.drawable.ic_nav_search
+                    label.contains("Ayarlar") -> R.drawable.ic_nav_settings
+                    else -> 0
                 }
-                gravity = Gravity.CENTER_VERTICAL
+                text = ""
+                gravity = Gravity.CENTER
+                if (iconResource != 0) {
+                    val icon = getDrawable(iconResource)?.mutate()
+                    icon?.setBounds(0, 0, dp(28), dp(28))
+                    setCompoundDrawables(icon, null, null, null)
+                }
+                gravity = Gravity.CENTER
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 contentDescription = label
@@ -600,6 +636,10 @@ class MainActivity : Activity() {
                 if (normalizedTab == "Ana Sayfa") {
                     // Visually separate the primary navigation from the utility items.
                 }
+            }
+            // Keep Search at the top; push the main navigation items to the bottom.
+            if (navBar.childCount > 1) {
+                navBar.addView(View(this), 1, LinearLayout.LayoutParams(-1, 0, 1f))
             }
             if (sidebarMode == "main") return
         }
@@ -2006,13 +2046,23 @@ class MainActivity : Activity() {
             sectionHeader.addView(TextView(this).apply {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             }, LinearLayout.LayoutParams(0, -2, 1f))
-            sectionHeader.addView(TextView(this).apply {
-                text = if (showingExpandedCategory) "← Geri dön" else ""
-                textSize = 12f; setTextColor(accent)
-                gravity = Gravity.CENTER
-                setPadding(dp(8), 0, dp(8), 0)
-                if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
-            })
+            if (showingExpandedCategory) {
+                sectionHeader.addView(TextView(this).apply {
+                    text = "← Geri dön"
+                    textSize = 12f; setTextColor(accent)
+                    gravity = Gravity.CENTER
+                    setPadding(dp(8), 0, dp(8), 0)
+                    isFocusable = true
+                    setOnClickListener { expandedCategory = null; render() }
+                })
+            } else if (selectedType == "Filmler" || selectedType == "Diziler") {
+                sectionHeader.addView(makeButton("Tümü  ›", false) {
+                    expandedCategory = groupName to entries
+                    render()
+                }, LinearLayout.LayoutParams(dp(116), dp(42)).apply {
+                    setMargins(dp(8), 0, 0, 0)
+                })
+            }
 
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply { orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
@@ -2030,11 +2080,13 @@ class MainActivity : Activity() {
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
+                    tag = "poster:${item.favoriteKey}"
                     setPadding(dp(2), dp(2), dp(2), dp(2))
                     background = roundedDrawable(panel, 10)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = roundedDrawable(panel, 10, if (hasFocus) accent else null)
+                        // Match the main menu: solid accent fill, no outline frame.
+                        v.background = roundedDrawable(if (hasFocus) accent else panel, 10, Color.TRANSPARENT)
                         v.elevation = 0f
                     }
                     setOnClickListener {
@@ -2144,14 +2196,6 @@ class MainActivity : Activity() {
                     row.gravity = Gravity.TOP or Gravity.START
                     addView(row)
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                if (compactThreeCardRow && entries.size > 3) {
-                    content.addView(makeButton("Tümü  ›", false) {
-                        expandedCategory = groupName to entries
-                        render()
-                    }, LinearLayout.LayoutParams(dp(116), dp(42)).apply {
-                        setMargins(dp(22), 0, 0, dp(14))
-                    })
-                }
             }
         }
         if (!detailMode && sidebarMode != "search" && focusTagBeforeRender.isNotBlank()) {
@@ -2242,8 +2286,7 @@ class MainActivity : Activity() {
             contentDescription = "Canlı TV önizlemesi"
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = roundedDrawable(
-                    Color.BLACK, 16,
-                    if (hasFocus) accentBright else Color.rgb(48, 58, 76)
+                    if (hasFocus) accent else Color.BLACK, 16, Color.TRANSPARENT
                 )
             }
         }
@@ -2383,9 +2426,35 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER; minHeight = dp(48) }
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
+            id = View.generateViewId()
+            tag = "detail_watch_movie"
+            gravity = Gravity.CENTER
+            minHeight = dp(48)
+            setOnKeyListener { _, keyCode, event ->
+                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT &&
+                    event.action == android.view.KeyEvent.ACTION_DOWN) {
+                    detailMovie = null
+                    selectedType = "Filmler"
+                    selectedGroup = "Tüm kategoriler"
+                    expandedCategory = null
+                    sidebarMode = "main"
+                    render()
+                    content.post {
+                        val exactCard = content.findViewWithTag<View>("poster:${movie.favoriteKey}")
+                        (exactCard ?: content.findFocus() ?: content.getChildAt(0))?.requestFocus()
+                    }
+                    true
+                } else false
+            }
+        }
+        val favoriteButton = makeFavoriteButton(movie).apply {
+            id = View.generateViewId()
+            tag = "detail_favorite_movie"
+            nextFocusLeftId = watchButton.id
+        }
         actions.addView(watchButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), dp(8), dp(4)) })
-        actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), 0, dp(4)) })
+        actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), 0, dp(4)) })
 
         copy.addView(actions)
         watchButton.post { if (watchButton.isShown) watchButton.requestFocus() }
@@ -2453,9 +2522,36 @@ class MainActivity : Activity() {
             if (resumeEpisode != null) play(resumeEpisode)
             else if (seriesEpisodesLoading) Toast.makeText(this, "Bölümler yükleniyor, lütfen bekle.", Toast.LENGTH_SHORT).show()
             else Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
+        }.apply {
+            id = View.generateViewId()
+            tag = "detail_watch_series"
+            setOnKeyListener { _, keyCode, event ->
+                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT &&
+                    event.action == android.view.KeyEvent.ACTION_DOWN) {
+                    detailSeries = null
+                    seriesEpisodeRows = emptyList()
+                    seriesEpisodesLoading = false
+                    seriesEpisodesError = ""
+                    selectedType = "Diziler"
+                    selectedGroup = "Tüm kategoriler"
+                    expandedCategory = null
+                    sidebarMode = "main"
+                    render()
+                    content.post {
+                        val exactCard = content.findViewWithTag<View>("poster:${series.favoriteKey}")
+                        (exactCard ?: content.findFocus() ?: content.getChildAt(0))?.requestFocus()
+                    }
+                    true
+                } else false
+            }
+        }
+        val seriesFavoriteButton = makeFavoriteButton(series).apply {
+            id = View.generateViewId()
+            tag = "detail_favorite_series"
+            nextFocusLeftId = watchSeriesButton.id
         }
         actions.addView(watchSeriesButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), dp(8), dp(4)) })
-        actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), 0, dp(4)) })
+        actions.addView(seriesFavoriteButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), 0, dp(4)) })
         copy.addView(actions)
         watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
@@ -2591,12 +2687,20 @@ class MainActivity : Activity() {
                 background = roundedDrawable(panel, 14)
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
                 setOnFocusChangeListener { v, hasFocus ->
+                    // Use the same filled focus treatment as the sidebar, without a border.
                     v.background = roundedDrawable(
-                        if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                        if (hasFocus) accent else panel,
                         14,
-                        if (hasFocus) accent else null
+                        Color.TRANSPARENT
                     )
-                    v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+                    (v as? LinearLayout)?.let { focusedRow ->
+                        for (index in 0 until focusedRow.childCount) {
+                            (focusedRow.getChildAt(index) as? TextView)?.setTextColor(
+                                if (hasFocus) Color.rgb(12, 14, 19) else if (index == 0) Color.WHITE else muted
+                            )
+                        }
+                    }
+                    v.elevation = 0f
                 }
                 setOnClickListener { action() }
             }
