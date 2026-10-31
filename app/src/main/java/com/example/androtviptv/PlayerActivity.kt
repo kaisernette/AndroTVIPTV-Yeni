@@ -37,9 +37,15 @@ class PlayerActivity : Activity() {
         @Volatile var pendingChannelIndex: Int = 0
         @Volatile var pendingRecentChannelNames: List<String> = emptyList()
         @Volatile var pendingRecentChannelUrls: List<String> = emptyList()
+        @Volatile var pendingEpisodeNames: List<String> = emptyList()
+        @Volatile var pendingEpisodeUrls: List<String> = emptyList()
+        @Volatile var pendingEpisodeIndex: Int = 0
     }
 
     private var player: ExoPlayer? = null
+    private var episodeNames: List<String> = emptyList()
+    private var episodeUrls: List<String> = emptyList()
+    private var selectedEpisodeIndex: Int = 0
     private var resumeKey: String = ""
     private var currentStreamUrl: String = ""
     private var originalStreamUrl: String = ""
@@ -171,6 +177,12 @@ class PlayerActivity : Activity() {
         pendingChannelUrls = emptyList()
         pendingRecentChannelNames = emptyList()
         pendingRecentChannelUrls = emptyList()
+        episodeNames = pendingEpisodeNames
+        episodeUrls = pendingEpisodeUrls
+        selectedEpisodeIndex = pendingEpisodeIndex.coerceIn(0, (episodeUrls.size - 1).coerceAtLeast(0))
+        pendingEpisodeNames = emptyList()
+        pendingEpisodeUrls = emptyList()
+        pendingEpisodeIndex = 0
         pendingChannelIndex = 0
         currentStreamUrl = url.trim()
         originalStreamUrl = currentStreamUrl
@@ -204,14 +216,14 @@ class PlayerActivity : Activity() {
         }
         val previousControl = roundControl("|◀") {
             if (isLiveStream && channelUrls.isNotEmpty()) tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
-            else player?.seekToPreviousMediaItem()
+            else if (episodeUrls.isNotEmpty()) playEpisodeAt(selectedEpisodeIndex - 1) else player?.seekToPreviousMediaItem()
         }
         val rewindControl = roundControl("↶") { player?.seekBack() }
         val playControl = roundControl("Ⅱ", true) { player?.let { if (it.isPlaying) it.pause() else it.play() } }
         val forwardControl = roundControl("↷") { player?.seekForward() }
         val nextControl = roundControl("▶|") {
             if (isLiveStream && channelUrls.isNotEmpty()) tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
-            else player?.seekToNextMediaItem()
+            else if (episodeUrls.isNotEmpty()) playEpisodeAt(selectedEpisodeIndex + 1) else player?.seekToNextMediaItem()
         }
         listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEachIndexed { i, button ->
             val size = if (i == 2) 84 else 68
@@ -357,10 +369,14 @@ class PlayerActivity : Activity() {
                             restartCurrentStream("Akış hatası: ${error.errorCodeName}")
                         }
                     })
-                    exo.setMediaItem(mediaItem)
                     val resumePosition = if (isLiveStream) 0L else playbackPrefs.getLong(resumeKey, 0L)
+                    if (episodeUrls.isNotEmpty()) {
+                        val queue = episodeUrls.map { createStreamMediaItem(it) }
+                        exo.setMediaItems(queue, selectedEpisodeIndex, resumePosition)
+                    } else {
+                        exo.setMediaItem(mediaItem)
+                    }
                     exo.prepare()
-                    if (resumePosition > 5000L) exo.seekTo(resumePosition)
                     exo.playWhenReady = true
                 }
             playbackHandler.removeCallbacks(playbackWatchdog)
@@ -536,6 +552,18 @@ class PlayerActivity : Activity() {
         playerView?.requestFocus()
     }
 
+
+    private fun playEpisodeAt(index: Int) {
+        if (index !in episodeUrls.indices) return
+        selectedEpisodeIndex = index
+        currentStreamUrl = episodeUrls[index]
+        originalStreamUrl = currentStreamUrl
+        resumeKey = "position_" + currentStreamUrl.hashCode().toString()
+        triedHlsFallback = false
+        usingHlsFallback = false
+        player?.seekTo(index, 0L)
+        player?.playWhenReady = true
+    }
 
     private fun formatTime(ms: Long): String {
         val seconds = (ms / 1000L).coerceAtLeast(0L)
