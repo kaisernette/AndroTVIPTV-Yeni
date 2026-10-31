@@ -2735,7 +2735,16 @@ class MainActivity : Activity() {
                         setPadding(dp(5), dp(11), dp(5), dp(11))
                         background = roundedDrawable(panel, 10, Color.rgb(48, 57, 73))
                         isFocusable = true
+                        isFocusableInTouchMode = true
                         isClickable = true
+                        setOnFocusChangeListener { view, focused ->
+                            view.background = roundedDrawable(
+                                if (focused) Color.rgb(24, 43, 62) else panel,
+                                10,
+                                if (focused) accent else Color.rgb(48, 57, 73)
+                            )
+                            view.elevation = if (focused) dp(3).toFloat() else 0f
+                        }
                         setOnClickListener {
                             when (actionLabel) {
                                 "Hepsini gizle" -> sectionGroups.forEach { group ->
