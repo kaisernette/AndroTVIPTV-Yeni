@@ -99,6 +99,7 @@ class PlayerActivity : Activity() {
         }
     }
     private var playerView: PlayerView? = null
+    private var centerControlsView: LinearLayout? = null
     private var currentTracks: Tracks = Tracks.EMPTY
     private var subtitlePanel: LinearLayout? = null
     private var audioPanel: LinearLayout? = null
@@ -238,6 +239,7 @@ class PlayerActivity : Activity() {
             val size = if (i == 2) 84 else 68
             centerControls.addView(button, LinearLayout.LayoutParams(dp(size), dp(size)).apply { setMargins(dp(6), 0, dp(6), 0) })
         }
+        centerControlsView = centerControls
         root.addView(centerControls, FrameLayout.LayoutParams(-2, dp(100), Gravity.CENTER))
 
         fun createTrackPanel(type: Int): LinearLayout {
@@ -404,7 +406,7 @@ class PlayerActivity : Activity() {
                 }
             playbackHandler.removeCallbacks(playbackWatchdog)
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
-            if (channelUrls.size > 1) view.requestFocus()
+            playControl.post { playControl.requestFocus() }
             refreshTrackChoices()
             uiHandler.post(uiTicker)
         } catch (e: Exception) {
@@ -414,7 +416,21 @@ class PlayerActivity : Activity() {
             finish()
         }
     }
+    private fun isFocusInsideCenterControls(): Boolean {
+        val controls = centerControlsView ?: return false
+        var focused: View? = currentFocus
+        while (focused != null) {
+            if (focused === controls) return true
+            focused = focused.parent as? View
+        }
+        return false
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && channelOverlay == null && isFocusInsideCenterControls() &&
+            event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT)) {
+            return super.dispatchKeyEvent(event)
+        }
         if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isNotEmpty()) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
@@ -580,7 +596,7 @@ class PlayerActivity : Activity() {
             highlightedChannelIndex = selectedChannelIndex
             overlayIsRecent = false
         }
-        playerView?.requestFocus()
+        centerControlsView?.getChildAt(2)?.requestFocus() ?: playerView?.requestFocus()
     }
 
 
