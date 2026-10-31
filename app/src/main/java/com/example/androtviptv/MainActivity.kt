@@ -2633,7 +2633,7 @@ class MainActivity : Activity() {
                     setPadding(0, 0, 0, dp(12))
                 })
                 aboutCard.addView(ImageView(this).apply {
-                    setImageResource(R.drawable.kaisertv_launcher)
+                    setImageResource(R.drawable.kaisertv_about_logo)
                     scaleType = ImageView.ScaleType.FIT_CENTER
                     setBackgroundColor(Color.BLACK)
                     contentDescription = "KaiserTV+ logosu"
