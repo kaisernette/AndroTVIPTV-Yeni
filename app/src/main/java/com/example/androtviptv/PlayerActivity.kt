@@ -293,22 +293,32 @@ class PlayerActivity : Activity() {
         }
         subtitlePanel = createTrackPanel(C.TRACK_TYPE_TEXT)
         audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
-        val panels = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        panels.addView(subtitlePanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
-        panels.addView(audioPanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
-        val right = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(panels) }
+        // Each track menu is an overlay anchored directly above its own button.
+        val right = FrameLayout(this)
+        right.addView(subtitlePanel, FrameLayout.LayoutParams(dp(126), dp(220), Gravity.BOTTOM or Gravity.START).apply {
+            leftMargin = dp(3)
+            bottomMargin = dp(58)
+        })
+        right.addView(audioPanel, FrameLayout.LayoutParams(dp(126), dp(220), Gravity.BOTTOM or Gravity.END).apply {
+            rightMargin = dp(3)
+            bottomMargin = dp(58)
+        })
         val trackButtons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun trackButton(label: String, panel: LinearLayout) = TextView(this).apply {
             text = label; textSize = 15f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); isFocusable = true; isClickable = true
             background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(0x99101824.toInt()); setStroke(dp(1), 0xFF079BE8.toInt()) }
-            setOnClickListener { val other = if (panel === subtitlePanel) audioPanel else subtitlePanel; other?.visibility = View.GONE; panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+            setOnClickListener {
+                val other = if (panel === subtitlePanel) audioPanel else subtitlePanel
+                other?.visibility = View.GONE
+                panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            }
         }
         subtitleControl = trackButton("▣  Altyazı", subtitlePanel!!)
         trackButtons.addView(subtitleControl, LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
         trackButtons.addView(trackButton("◖  Ses Dili", audioPanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
-        right.addView(trackButtons)
+        right.addView(trackButtons, FrameLayout.LayoutParams(-1, dp(52), Gravity.BOTTOM))
         rightControlPanel = right
-        root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
+        root.addView(right, FrameLayout.LayoutParams(dp(258), dp(278), Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
 
         val bottom = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         progressBar = SeekBar(this).apply {
