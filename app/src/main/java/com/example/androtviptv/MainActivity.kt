@@ -2085,7 +2085,8 @@ class MainActivity : Activity() {
                     background = roundedDrawable(panel, 10)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = roundedDrawable(panel, 10, if (hasFocus) accent else null)
+                        // Match the main menu: solid accent fill, no outline frame.
+                        v.background = roundedDrawable(if (hasFocus) accent else panel, 10, Color.TRANSPARENT)
                         v.elevation = 0f
                     }
                     setOnClickListener {
@@ -2285,8 +2286,7 @@ class MainActivity : Activity() {
             contentDescription = "Canlı TV önizlemesi"
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = roundedDrawable(
-                    Color.BLACK, 16,
-                    if (hasFocus) accentBright else Color.rgb(48, 58, 76)
+                    if (hasFocus) accent else Color.BLACK, 16, Color.TRANSPARENT
                 )
             }
         }
@@ -2687,12 +2687,20 @@ class MainActivity : Activity() {
                 background = roundedDrawable(panel, 14)
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
                 setOnFocusChangeListener { v, hasFocus ->
+                    // Use the same filled focus treatment as the sidebar, without a border.
                     v.background = roundedDrawable(
-                        if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                        if (hasFocus) accent else panel,
                         14,
-                        if (hasFocus) accent else null
+                        Color.TRANSPARENT
                     )
-                    v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+                    (v as? LinearLayout)?.let { focusedRow ->
+                        for (index in 0 until focusedRow.childCount) {
+                            (focusedRow.getChildAt(index) as? TextView)?.setTextColor(
+                                if (hasFocus) Color.rgb(12, 14, 19) else if (index == 0) Color.WHITE else muted
+                            )
+                        }
+                    }
+                    v.elevation = 0f
                 }
                 setOnClickListener { action() }
             }
