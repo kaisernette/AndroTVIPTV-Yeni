@@ -1225,12 +1225,16 @@ class MainActivity : Activity() {
                 return true
             }
             if (sidebarMode == "context" && !focusInSidebar) {
-                sidebar.visibility = View.VISIBLE
+                sidebarMode = "main"
                 rebuildNavigation()
-                val selectedCategoryIndex = (0 until navBar.childCount).firstOrNull {
-                    (navBar.getChildAt(it) as? TextView)?.text?.toString()?.removePrefix("● ") == selectedGroup
-                } ?: 0
-                navBar.getChildAt(selectedCategoryIndex)?.requestFocus()
+                sidebar.visibility = View.VISIBLE
+                val tabIndex = when (selectedType) {
+                    "Canlı TV" -> 3
+                    "Filmler" -> 4
+                    "Diziler" -> 5
+                    else -> 2
+                }
+                navBar.getChildAt(tabIndex)?.requestFocus()
                 return true
             }
         }
