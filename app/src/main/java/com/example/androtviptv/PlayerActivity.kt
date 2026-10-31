@@ -402,7 +402,9 @@ class PlayerActivity : Activity() {
                 }
             playbackHandler.removeCallbacks(playbackWatchdog)
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
-            if (channelUrls.size > 1) view.requestFocus()
+            // Android TV kumandasında ilk odak görünür oynatıcı kontrolünde olsun.
+            if (isLiveStream && channelUrls.size > 1) view.requestFocus()
+            else playControl.requestFocus()
             refreshTrackChoices()
             uiHandler.post(uiTicker)
         } catch (e: Exception) {
@@ -413,7 +415,42 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isNotEmpty()) {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            // Fiziksel TV kumandalarının medya tuşlarını da destekle.
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                    player?.let { if (it.isPlaying) it.pause() else it.play() }
+                    return true
+                }
+                KeyEvent.KEYCODE_MEDIA_PLAY -> { player?.play(); return true }
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> { player?.pause(); return true }
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { if (!isLiveStream) player?.seekForward(); return true }
+                KeyEvent.KEYCODE_MEDIA_REWIND -> { if (!isLiveStream) player?.seekBack(); return true }
+                KeyEvent.KEYCODE_CHANNEL_UP -> {
+                    if (isLiveStream && channelUrls.isNotEmpty()) {
+                        tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_CHANNEL_DOWN -> {
+                    if (isLiveStream && channelUrls.isNotEmpty()) {
+                        tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
+                        return true
+                    }
+                }
+            }
+            if (!isLiveStream) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                        player?.let { if (it.isPlaying) it.pause() else it.play() }
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_LEFT -> { player?.seekBack(); return true }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> { player?.seekForward(); return true }
+                }
+            }
+        }
+        if (event.action == KeyEvent.ACTION_DOWN && isLiveStream && channelUrls.isNotEmpty()) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (channelOverlay != null) {
