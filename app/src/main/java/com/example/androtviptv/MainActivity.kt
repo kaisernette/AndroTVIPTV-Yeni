@@ -476,19 +476,16 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Selected navigation item is filled with the active theme accent.
-                background = roundedDrawable(if (selected) accent else Color.TRANSPARENT, buttonRadiusDp,
-                    if (selected) accent else Color.TRANSPARENT)
+                // One filled blue focus indicator follows the currently focused navigation item.
+                background = roundedDrawable(Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(
-                        if (selected) accent else if (hasFocus) Color.rgb(27, 39, 53) else Color.TRANSPARENT,
-                        buttonRadiusDp,
-                        if (selected || hasFocus) accent else Color.TRANSPARENT
+                        if (hasFocus) accent else Color.TRANSPARENT,
+                        buttonRadiusDp, Color.TRANSPARENT
                     )
-                    (v as Button).setTextColor(Color.WHITE)
-                    // Keep sidebar buttons at a fixed size on every screen.
-                    // Scaling/elevation can leave vertical focus trails on some Android TV renderers.
+                    (v as Button).setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
+                    // No outline stroke or extra focus frame.
                     v.elevation = 0f
                     v.scaleX = 1f
                     v.scaleY = 1f
@@ -788,17 +785,17 @@ class MainActivity : Activity() {
         tag = "action:" + label
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
-        setTextColor(if (primary) Color.rgb(12, 14, 19) else Color.WHITE)
-        background = roundedDrawable(if (primary) accent else panel, buttonRadiusDp,
-            if (primary) accentBright else Color.rgb(44, 52, 68))
         stateListAnimator = null
+        fun applyFocusStyle(focused: Boolean) {
+            background = roundedDrawable(if (focused) accent else Color.TRANSPARENT,
+                buttonRadiusDp, Color.TRANSPARENT)
+            setTextColor(if (focused) Color.rgb(12, 14, 19) else Color.WHITE)
+            elevation = 0f
+        }
+        applyFocusStyle(false)
         setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) lastFocusedActionTag = tag?.toString().orEmpty()
-            v.background = roundedDrawable(
-                if (primary || hasFocus) accent else panel,
-                buttonRadiusDp, if (primary || hasFocus) accent else Color.rgb(44, 52, 68))
-            (v as Button).setTextColor(if (primary || hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
-            v.elevation = if (hasFocus) dp(4).toFloat() else 0f
+            (v as Button).applyFocusStyle(hasFocus)
         }
         setOnClickListener { action() }
     }
