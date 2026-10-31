@@ -98,6 +98,24 @@ class PlayerActivity : Activity() {
         }
     }
     private var playerView: PlayerView? = null
+    private var playerRoot: FrameLayout? = null
+    private var nextEpisodeOverlay: View? = null
+    private var nextEpisodePromptedForIndex: Int = -1
+    private var nextEpisodeCancelledForIndex: Int = -1
+    private var nextEpisodeCountdownSeconds: Int = 10
+    private val nextEpisodeCountdown = object : Runnable {
+        override fun run() {
+            if (nextEpisodeOverlay == null || isFinishing) return
+            nextEpisodeCountdownSeconds--
+            if (nextEpisodeCountdownSeconds <= 0) {
+                hideNextEpisodePrompt()
+                playEpisodeAt(selectedEpisodeIndex + 1)
+            } else {
+                updateNextEpisodeCountdown()
+                playbackHandler.postDelayed(this, 1000L)
+            }
+        }
+    }
     private var currentTracks: Tracks = Tracks.EMPTY
     private var subtitlePanel: LinearLayout? = null
     private var audioPanel: LinearLayout? = null
@@ -109,6 +127,14 @@ class PlayerActivity : Activity() {
         override fun run() {
             val exo = player
             val bar = progressBar
+            if (exo != null && !isLiveStream && episodeUrls.isNotEmpty() &&
+                exo.isPlaying && exo.duration > 0 && exo.currentMediaItemIndex == selectedEpisodeIndex &&
+                exo.currentPosition >= (exo.duration - 10000L).coerceAtLeast(0L) &&
+                selectedEpisodeIndex < episodeUrls.lastIndex &&
+                nextEpisodePromptedForIndex != selectedEpisodeIndex &&
+                nextEpisodeCancelledForIndex != selectedEpisodeIndex) {
+                showNextEpisodePrompt()
+            }
             if (exo != null && bar != null && exo.duration > 0 && !isLiveStream) {
                 bar.max = exo.duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                 bar.progress = exo.currentPosition.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -201,6 +227,7 @@ class PlayerActivity : Activity() {
             isFocusableInTouchMode = true
         }
         playerView = view
+        playerRoot = root
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val shade = View(this).apply {
@@ -349,6 +376,9 @@ class PlayerActivity : Activity() {
                                 val index = exo.currentMediaItemIndex
                                 if (index in episodeUrls.indices) {
                                     selectedEpisodeIndex = index
+                                    nextEpisodePromptedForIndex = -1
+                                    nextEpisodeCancelledForIndex = -1
+                                    hideNextEpisodePrompt()
                                     currentStreamUrl = episodeUrls[index]
                                     originalStreamUrl = currentStreamUrl
                                     resumeKey = "position_" + currentStreamUrl.hashCode().toString()
@@ -377,7 +407,9 @@ class PlayerActivity : Activity() {
                             // Safety fallback: if the playlist reaches ENDED with another episode queued,
                             // explicitly advance and resume playback instead of stopping on the finished episode.
                             if (playbackState == Player.STATE_ENDED && !isLiveStream &&
-                                episodeUrls.isNotEmpty() && exo.currentMediaItemIndex < episodeUrls.lastIndex) {
+                                episodeUrls.isNotEmpty() && exo.currentMediaItemIndex < episodeUrls.lastIndex &&
+                                nextEpisodeCancelledForIndex != exo.currentMediaItemIndex) {
+                                hideNextEpisodePrompt()
                                 exo.seekToNextMediaItem()
                                 exo.playWhenReady = true
                                 exo.play()
@@ -584,6 +616,106 @@ class PlayerActivity : Activity() {
         playerView?.requestFocus()
     }
 
+
+    private fun showNextEpisodePrompt() {
+        val root = playerRoot ?: return
+        val nextIndex = selectedEpisodeIndex + 1
+        if (nextIndex !in episodeUrls.indices || nextEpisodeOverlay != null) return
+        nextEpisodePromptedForIndex = selectedEpisodeIndex
+        nextEpisodeCountdownSeconds = 10
+
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(24), dp(18), dp(24), dp(18))
+            background = GradientDrawable().apply {
+                setColor(0xF20A0D12.toInt())
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), 0x664B596B)
+            }
+            elevation = dp(18).toFloat()
+        }
+        val heading = TextView(this).apply {
+            text = "SONRAKİ BÖLÜM"
+            textSize = 14f
+            setTextColor(0xFFB8C4D3.toInt())
+            gravity = Gravity.CENTER
+        }
+        val seriesTitle = intent.getStringExtra("name") ?: "Dizi"
+        val nextTitle = episodeNames.getOrNull(nextIndex)?.takeIf { it.isNotBlank() } ?: "Bölüm ${nextIndex + 1}"
+        val episodeTitle = TextView(this).apply {
+            text = "$seriesTitle\n$nextTitle"
+            textSize = 22f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        val detail = TextView(this).apply {
+            text = "Sonraki bölüm 10 saniye içinde otomatik başlayacak."
+            textSize = 14f
+            setTextColor(0xFFD0D6DF.toInt())
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(14))
+        }
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        fun actionButton(label: String, primary: Boolean, action: () -> Unit) = TextView(this).apply {
+            text = label
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            setPadding(dp(18), dp(12), dp(18), dp(12))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(if (primary) 0xFF087FE8.toInt() else 0xFF343B45.toInt())
+            }
+            setOnClickListener { action() }
+        }
+        val start = actionButton("▶  Hemen Başlat", true) {
+            hideNextEpisodePrompt()
+            playEpisodeAt(nextIndex)
+        }
+        val cancel = actionButton("İptal", false) {
+            nextEpisodeCancelledForIndex = selectedEpisodeIndex
+            hideNextEpisodePrompt()
+        }
+        actions.addView(start, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(dp(5), 0, dp(5), 0) })
+        actions.addView(cancel, LinearLayout.LayoutParams(dp(130), dp(48)).apply { setMargins(dp(5), 0, dp(5), 0) })
+        panel.addView(heading)
+        panel.addView(episodeTitle)
+        val countdown = TextView(this).apply {
+            tag = "next_episode_countdown"
+            text = "10 saniye"
+            textSize = 18f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(0xFF39A4FF.toInt())
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(10))
+        }
+        panel.addView(countdown)
+        panel.addView(detail)
+        panel.addView(actions)
+        root.addView(panel, FrameLayout.LayoutParams(dp(620), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        nextEpisodeOverlay = panel
+        start.requestFocus()
+        playbackHandler.removeCallbacks(nextEpisodeCountdown)
+        playbackHandler.postDelayed(nextEpisodeCountdown, 1000L)
+    }
+
+    private fun updateNextEpisodeCountdown() {
+        val countdown = nextEpisodeOverlay?.findViewWithTag<TextView>("next_episode_countdown") ?: return
+        countdown.text = "$nextEpisodeCountdownSeconds saniye"
+    }
+
+    private fun hideNextEpisodePrompt() {
+        playbackHandler.removeCallbacks(nextEpisodeCountdown)
+        val overlay = nextEpisodeOverlay ?: return
+        (overlay.parent as? ViewGroup)?.removeView(overlay)
+        nextEpisodeOverlay = null
+    }
 
     private fun playEpisodeAt(index: Int) {
         val exo = player ?: return
