@@ -193,6 +193,7 @@ class MainActivity : Activity() {
     private val hiddenCategories = mutableSetOf<String>()
     private var searchQuery = ""
     private var searchInputFocusPending = false
+    private var lastFocusedActionTag: String = ""
     private val searchHistory = mutableListOf<String>()
     private val searchHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var searchRenderRunnable: Runnable? = null
@@ -774,6 +775,7 @@ class MainActivity : Activity() {
     }
 
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
+        tag = "action:" + label
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
         setTextColor(if (primary) Color.rgb(12, 14, 19) else Color.WHITE)
@@ -781,6 +783,7 @@ class MainActivity : Activity() {
             if (primary) accentBright else Color.rgb(44, 52, 68))
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) lastFocusedActionTag = tag?.toString().orEmpty()
             v.background = roundedDrawable(
                 if (primary || hasFocus) accent else panel,
                 buttonRadiusDp, if (primary || hasFocus) accent else Color.rgb(44, 52, 68))
@@ -1384,8 +1387,10 @@ class MainActivity : Activity() {
 
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
-        content.removeAllViews()
         val detailMode = detailSeries != null || detailMovie != null
+        val focusTagBeforeRender = currentFocus?.tag?.toString()?.takeIf { it.isNotBlank() }
+            ?: lastFocusedActionTag
+        content.removeAllViews()
         val firstEntry = items.isEmpty() && !isLoadingSource
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::brandView.isInitialized) brandView.visibility = View.GONE
@@ -2130,6 +2135,15 @@ class MainActivity : Activity() {
                     }, LinearLayout.LayoutParams(dp(116), dp(42)).apply {
                         setMargins(dp(22), 0, 0, dp(14))
                     })
+                }
+            }
+        }
+        if (!detailMode && sidebarMode != "search" && focusTagBeforeRender.isNotBlank()) {
+            content.post {
+                val target = content.findViewWithTag<View>(focusTagBeforeRender)
+                if (target != null && target.isShown && target.isFocusable) {
+                    target.requestFocus()
+                    lastFocusedActionTag = focusTagBeforeRender
                 }
             }
         }
