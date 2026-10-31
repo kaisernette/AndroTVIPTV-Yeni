@@ -795,7 +795,13 @@ class MainActivity : Activity() {
         applyFocusStyle(false)
         setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) lastFocusedActionTag = tag?.toString().orEmpty()
-            (v as Button).applyFocusStyle(hasFocus)
+            val button = v as Button
+            button.background = roundedDrawable(
+                if (hasFocus) accent else Color.TRANSPARENT,
+                buttonRadiusDp, Color.TRANSPARENT
+            )
+            button.setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
+            button.elevation = 0f
         }
         setOnClickListener { action() }
     }
