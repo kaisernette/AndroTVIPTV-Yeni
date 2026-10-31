@@ -2626,23 +2626,19 @@ class MainActivity : Activity() {
                     background = roundedDrawable(panel, 14)
                 }
                 aboutCard.addView(TextView(this).apply {
-                    text = "Program Hakkında"
+                    text = "Hakkında"
                     textSize = 18f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(Color.WHITE)
                     setPadding(0, 0, 0, dp(12))
                 })
-                aboutCard.addView(TextView(this).apply {
-                    text = "KaiserTV+"
-                    textSize = 21f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE)
-                })
-                aboutCard.addView(TextView(this).apply {
-                    text = "Televizyonun Artısı"
-                    textSize = 13f
-                    setTextColor(Color.WHITE)
-                    setPadding(0, dp(2), 0, dp(12))
+                aboutCard.addView(ImageView(this).apply {
+                    setImageResource(R.drawable.kaisertv_launcher)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    setBackgroundColor(Color.BLACK)
+                    contentDescription = "KaiserTV+ logosu"
+                }, LinearLayout.LayoutParams(-1, dp(76)).apply {
+                    setMargins(0, 0, 0, dp(12))
                 })
                 aboutCard.addView(View(this).apply {
                     setBackgroundColor(Color.WHITE)
