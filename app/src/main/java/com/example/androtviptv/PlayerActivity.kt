@@ -340,6 +340,8 @@ class PlayerActivity : Activity() {
                 .setLoadControl(loadControl)
                 .build().also { exo ->
                     view.player = exo
+                    // Episode queues should always advance normally; keep repeat disabled.
+                    exo.repeatMode = Player.REPEAT_MODE_OFF
                     exo.addListener(object : Player.Listener {
                         override fun onTracksChanged(tracks: Tracks) { currentTracks = tracks; refreshTrackChoices() }
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -370,6 +372,15 @@ class PlayerActivity : Activity() {
                                     android.util.Log.w("KaiserTVPlayer", "Live stream ended unexpectedly; reconnecting")
                                     restartCurrentStream("Canlı yayın sona erdi gibi görünüyor.")
                                 }
+                                return
+                            }
+                            // Safety fallback: if the playlist reaches ENDED with another episode queued,
+                            // explicitly advance and resume playback instead of stopping on the finished episode.
+                            if (playbackState == Player.STATE_ENDED && !isLiveStream &&
+                                episodeUrls.isNotEmpty() && exo.currentMediaItemIndex < episodeUrls.lastIndex) {
+                                exo.seekToNextMediaItem()
+                                exo.playWhenReady = true
+                                exo.play()
                                 return
                             }
                             if (playbackState == Player.STATE_BUFFERING) {
