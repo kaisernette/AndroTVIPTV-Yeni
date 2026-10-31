@@ -480,11 +480,13 @@ class MainActivity : Activity() {
                 background = roundedDrawable(Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
+                    // Ayarlar ekraninda sol ana menude odak vurgusu gosterilmez.
+                    val settingsScreen = selectedType == "Ayarlar"
                     v.background = roundedDrawable(
-                        if (hasFocus) accent else Color.TRANSPARENT,
+                        if (hasFocus && !settingsScreen) accent else Color.TRANSPARENT,
                         buttonRadiusDp, Color.TRANSPARENT
                     )
-                    (v as Button).setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
+                    (v as Button).setTextColor(if (hasFocus && !settingsScreen) Color.rgb(12, 14, 19) else Color.WHITE)
                     // No outline stroke or extra focus frame.
                     v.elevation = 0f
                     v.scaleX = 1f
