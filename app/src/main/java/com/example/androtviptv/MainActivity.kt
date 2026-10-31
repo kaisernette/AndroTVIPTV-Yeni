@@ -2618,6 +2618,72 @@ class MainActivity : Activity() {
                 option("▤  Kategoriler", "Film ve dizi kategorilerini görüntüle") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("◐  Temalar", "Uygulamanın renk görünümünü değiştir") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("◷  Geçmiş", "İzlediğin dizileri ve filmleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+
+                // Program bilgileri: ayarlar ana sayfasının en altında, seçili temaya uyumlu kart.
+                val aboutCard = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(18), dp(16), dp(18), dp(16))
+                    background = roundedDrawable(panel, 14)
+                }
+                aboutCard.addView(TextView(this).apply {
+                    text = "Program Hakkında"
+                    textSize = 18f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                    setPadding(0, 0, 0, dp(12))
+                })
+                aboutCard.addView(TextView(this).apply {
+                    text = "KaiserTV+"
+                    textSize = 21f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                })
+                aboutCard.addView(TextView(this).apply {
+                    text = "Televizyonun Artısı"
+                    textSize = 13f
+                    setTextColor(Color.WHITE)
+                    setPadding(0, dp(2), 0, dp(12))
+                })
+                aboutCard.addView(View(this).apply {
+                    setBackgroundColor(Color.WHITE)
+                    alpha = 0.35f
+                }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, 0, 0, dp(10)) })
+                fun aboutInfoRow(label: String, value: String) {
+                    val row = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(0, dp(5), 0, dp(5))
+                    }
+                    row.addView(TextView(this).apply {
+                        text = label
+                        textSize = 14f
+                        setTextColor(Color.WHITE)
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    row.addView(TextView(this).apply {
+                        text = value
+                        textSize = 14f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.END
+                    })
+                    aboutCard.addView(row)
+                }
+                aboutInfoRow("Sürüm", "2.0.027")
+                aboutInfoRow("Platform", "Android TV")
+                aboutInfoRow("Geliştirici", "Kaisernet")
+                aboutCard.addView(View(this).apply {
+                    setBackgroundColor(Color.WHITE)
+                    alpha = 0.35f
+                }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(10), 0, dp(10)) })
+                aboutCard.addView(TextView(this).apply {
+                    text = "KaiserTV+ · Televizyonun Artısı"
+                    textSize = 12f
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                })
+                content.addView(aboutCard, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(6), dp(18), dp(6), dp(18))
+                })
             }
             "sources" -> {
                 heading("Kaynaklar", "Kaynak ekle ve kayıtlı bağlantılarını buradan yönet.")
