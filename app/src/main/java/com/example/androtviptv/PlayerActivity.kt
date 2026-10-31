@@ -514,6 +514,16 @@ class PlayerActivity : Activity() {
             }
             if (!isLiveStream && nextEpisodeOverlay == null) {
                 when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                        if (!isPlaybackControlsVisible) {
+                            setPlaybackControlsVisible(true)
+                            // Focus the primary playback control so the center key opens a usable control bar.
+                            (playPauseControl ?: playerView)?.requestFocus()
+                            return true
+                        }
+                        playbackHandler.removeCallbacks(hidePlaybackControls)
+                        playbackHandler.postDelayed(hidePlaybackControls, 3000L)
+                    }
                     KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
                     KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
                         if (!isPlaybackControlsVisible) {
