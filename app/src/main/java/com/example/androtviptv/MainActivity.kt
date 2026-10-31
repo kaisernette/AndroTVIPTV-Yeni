@@ -172,8 +172,9 @@ class MainActivity : Activity() {
     private lateinit var heroArt: FrameLayout
     private lateinit var navBar: LinearLayout
     private lateinit var sidebarMenuScroll: ScrollView
-    private lateinit var brandView: LinearLayout
     private lateinit var sidebar: LinearLayout
+    private lateinit var searchButton: Button
+    private lateinit var settingsFooter: LinearLayout
     private lateinit var rootLayout: LinearLayout
     private lateinit var mainContentScroll: ScrollView
     private fun kaiserLogoView(): ImageView = ImageView(this).apply {
@@ -327,30 +328,44 @@ class MainActivity : Activity() {
         }
         root.addView(sidebar, LinearLayout.LayoutParams(dp(140), -1).apply { setMargins(0, 0, dp(8), 0) })
 
-        brandView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 0)
+        searchButton = makeButton("⌕  Ara", false) {
+            detailSeries = null
+            detailMovie = null
+            sidebarMode = "search"
+            searchInputFocusPending = true
+            searchQuery = ""
+            selectedType = "Tümü"
+            selectedGroup = "Tüm kategoriler"
+            rebuildNavigation()
+            render()
+        }.apply {
+            textSize = 17f
+            gravity = Gravity.CENTER_VERTICAL
+            setTextColor(Color.rgb(8, 18, 30))
+            background = roundedDrawable(accent, 16, accentBright)
+            setPadding(dp(14), 0, dp(10), 0)
+            minHeight = dp(50)
+            contentDescription = "Ara"
         }
-        brandView.addView(TextView(this).apply {
-            val logo = android.text.SpannableString("▶ KIP+")
-            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 5, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 170, 0)), 5, 6, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            text = logo
-            textSize = 23f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            gravity = Gravity.CENTER
-            contentDescription = "KIP+"
-        }, LinearLayout.LayoutParams(-1, dp(54)))
-        sidebar.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
-        navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        sidebar.addView(searchButton, LinearLayout.LayoutParams(-1, dp(52)).apply {
+            setMargins(dp(2), dp(4), dp(2), dp(12))
+        })
+        navBar = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(72), 0, dp(8))
+            clipToPadding = false
+        }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             addView(navBar)
         }
         sidebar.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        settingsFooter = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(6), 0, dp(2))
+        }
+        sidebar.addView(settingsFooter, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         rebuildNavigation()
 
         val main = LinearLayout(this).apply {
@@ -473,6 +488,33 @@ class MainActivity : Activity() {
             }
         }
         navBar.removeAllViews()
+        if (::settingsFooter.isInitialized) {
+            settingsFooter.removeAllViews()
+            settingsFooter.addView(makeButton("⚙  Ayarlar", selectedType == "Ayarlar") {
+                detailSeries = null
+                detailMovie = null
+                settingsPage = "main"
+                selectedType = "Ayarlar"
+                prefs.edit().putString("last_settings_page", "main").putString("last_section", "Ayarlar").apply()
+                selectedGroup = "Tüm kategoriler"
+                sidebarMode = "main"
+                rebuildNavigation()
+                render()
+            }.apply {
+                textSize = 14f
+                gravity = Gravity.CENTER_VERTICAL
+                setTextColor(Color.WHITE)
+                background = roundedDrawable(Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
+                setOnFocusChangeListener { v, hasFocus ->
+                    v.background = roundedDrawable(if (hasFocus) accent else Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
+                    (v as Button).setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
+                    v.elevation = 0f
+                }
+                setPadding(dp(10), 0, dp(8), 0)
+                minHeight = dp(46)
+                contentDescription = "Ayarlar"
+            }, LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(0, dp(2), 0, dp(2)) })
+        }
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
@@ -525,7 +567,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▶  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌂  Ana Sayfa", "▣  Canlı TV", "▶  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
