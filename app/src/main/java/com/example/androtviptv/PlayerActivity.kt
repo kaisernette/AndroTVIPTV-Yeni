@@ -483,25 +483,7 @@ class PlayerActivity : Activity() {
         if (event.action == KeyEvent.ACTION_DOWN) {
             // Live TV keeps its channel navigation; movie/series playback uses the visible control surface.
             if (isLiveStream && channelUrls.isNotEmpty()) when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
-                KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BUTTON_SELECT -> {
-                    if (channelOverlay != null) {
-                        tuneChannel(highlightedChannelIndex)
-                        return true
-                    }
-                    if (!isPlaybackControlsVisible) {
-                        setPlaybackControlsVisible(true)
-                        (playPauseControl ?: playerView)?.post {
-                            (playPauseControl ?: playerView)?.requestFocus()
-                        }
-                        return true
-                    }
-                }
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (isPlaybackControlsVisible) {
-                        playbackHandler.removeCallbacks(hidePlaybackControls)
-                        playbackHandler.postDelayed(hidePlaybackControls, 3000L)
-                    } else {
                     if (channelOverlay != null) {
                         highlightedChannelIndex = (highlightedChannelIndex +
                             if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
@@ -513,25 +495,18 @@ class PlayerActivity : Activity() {
                             .let { if (it < 0) channelUrls.lastIndex else if (it > channelUrls.lastIndex) 0 else it }
                         tuneChannel(next)
                     }
-                    if (!isPlaybackControlsVisible) return true
+                    return true
                 }
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    if (isPlaybackControlsVisible) {
-                        playbackHandler.removeCallbacks(hidePlaybackControls)
-                        playbackHandler.postDelayed(hidePlaybackControls, 3000L)
-                    } else {
-                        if (channelOverlay == null) showChannelOverlay()
-                        return true
-                    }
+                    if (channelOverlay == null) showChannelOverlay()
+                    return true
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (isPlaybackControlsVisible) {
-                        playbackHandler.removeCallbacks(hidePlaybackControls)
-                        playbackHandler.postDelayed(hidePlaybackControls, 3000L)
-                    } else {
-                        if (channelOverlay == null) showRecentOverlay()
-                        return true
-                    }
+                    if (channelOverlay == null) showRecentOverlay()
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
                 }
                 KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
                     if (channelOverlay != null) { hideChannelOverlay(); return true }
