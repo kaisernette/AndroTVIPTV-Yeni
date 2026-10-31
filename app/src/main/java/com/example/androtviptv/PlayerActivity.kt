@@ -508,21 +508,17 @@ class PlayerActivity : Activity() {
                     KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
                         if (!isPlaybackControlsVisible) {
                             setPlaybackControlsVisible(true)
-                            playPauseControl?.requestFocus()
+                            // Start at the last focused control; only use play/pause as a fallback.
+                            val currentFocus = currentFocus
+                            if (currentFocus == null || !currentFocus.isShown) {
+                                (playPauseControl ?: playerView)?.requestFocus()
+                            }
                             return true
                         }
+                        // Do not consume direction keys while controls are visible.
+                        // Android's normal focus engine can move freely in all four directions.
                         playbackHandler.removeCallbacks(hidePlaybackControls)
                         playbackHandler.postDelayed(hidePlaybackControls, 5000L)
-                        when (event.keyCode) {
-                            KeyEvent.KEYCODE_DPAD_UP -> {
-                                subtitleControl?.requestFocus()
-                                return true
-                            }
-                            KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                progressBar?.requestFocus()
-                                return true
-                            }
-                        }
                     }
                     KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
                         if (isPlaybackControlsVisible) {
