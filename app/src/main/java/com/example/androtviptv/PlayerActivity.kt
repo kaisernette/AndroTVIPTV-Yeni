@@ -78,8 +78,8 @@ class PlayerActivity : Activity() {
         }
         val prev = control("◀|", 34) { playEpisode(episodeIndex - 1) }
         val back = control("↶", 38) { player?.seekBack() }
-        val toggle = control("Ⅱ", 42) { p ->
-            if (p.isPlaying) p.pause() else p.play()
+        val toggle = control("Ⅱ", 42) {
+            player?.let { p -> if (p.isPlaying) p.pause() else p.play() }
         }
         val forward = control("↷", 38) { player?.seekForward() }
         val next = control("|▶", 34) { playEpisode(episodeIndex + 1) }
@@ -153,12 +153,12 @@ class PlayerActivity : Activity() {
         handler.post(tick)
     }
 
-    private fun control(label: String, textSize: Int, action: (ExoPlayer) -> Unit): TextView =
+    private fun control(label: String, textSize: Int, action: () -> Unit): TextView =
         TextView(this).apply {
             text = label; textSize = textSize.toFloat(); gravity = Gravity.CENTER
             setTextColor(Color.WHITE); isFocusable = true; isClickable = true
             background = circle(0x660e1724, 0xff9aa7b8.toInt())
-            setOnClickListener { player?.let(action) }
+            setOnClickListener { action() }
         }
 
     private fun panelButton(label: String, action: () -> Unit) = TextView(this).apply {
