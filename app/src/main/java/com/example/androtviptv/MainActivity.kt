@@ -611,7 +611,7 @@ class MainActivity : Activity() {
                     // Visually separate the primary navigation from the utility items.
                 }
             }
-            if (sidebarMode == "main") return
+            if (sidebarMode == "main" || sidebarMode == "search") return
         }
 
         if (sidebarMode == "context") {
@@ -642,15 +642,6 @@ class MainActivity : Activity() {
                     minHeight = dp(38)
                 }, LinearLayout.LayoutParams(-1, dp(40)).apply { setMargins(0, dp(2), 0, dp(2)) })
             }
-            return
-        }
-
-        if (sidebarMode == "search") {
-            addSidebarButton("⌕  Ara", true) {
-                searchInputFocusPending = true
-                render()
-            }
-            addSidebarButton("⌂  Ana Sayfa") { returnToMainMenu() }
             return
         }
 
