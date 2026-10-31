@@ -527,7 +527,20 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▶  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
+            // Ara üstte sabit kalır; ana gezinme öğeleri sol menünün altına yaslanır.
+            addSidebarButton("⌕  Ara", false) {
+                detailSeries = null
+                detailMovie = null
+                sidebarMode = "search"
+                searchInputFocusPending = true
+                searchQuery = ""
+                selectedType = "Tümü"
+                selectedGroup = "Tüm kategoriler"
+                rebuildNavigation()
+                render()
+            }
+            navBar.addView(View(this), LinearLayout.LayoutParams(1, 0, 1f))
+            listOf("⌂  Ana Sayfa", "▣  Canlı TV", "▶  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -573,18 +586,6 @@ class MainActivity : Activity() {
                     }
                 } else {
                     addSidebarButton(tab, selectedType == key && normalizedTab != "Ara") {
-                        if (normalizedTab == "Ara") {
-                            detailSeries = null
-                            detailMovie = null
-                            sidebarMode = "search"
-                            searchInputFocusPending = true
-                            searchQuery = ""
-                            selectedType = "Tümü"
-                            selectedGroup = "Tüm kategoriler"
-                            rebuildNavigation()
-                            render()
-                            return@addSidebarButton
-                        }
                         detailSeries = null
                         detailMovie = null
                         seriesEpisodeRows = emptyList()
