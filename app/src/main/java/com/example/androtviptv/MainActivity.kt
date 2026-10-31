@@ -23,6 +23,9 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.concurrent.thread
 import java.util.concurrent.Executors
 import java.util.concurrent.ConcurrentHashMap
@@ -196,6 +199,14 @@ class MainActivity : Activity() {
     private var lastFocusedActionTag: String = ""
     private val searchHistory = mutableListOf<String>()
     private val searchHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val clockHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var clockView: TextView? = null
+    private val clockTicker = object : Runnable {
+        override fun run() {
+            clockView?.text = SimpleDateFormat("d MMMM yyyy, EEEE  •  HH:mm", Locale("tr", "TR")).format(Date())
+            clockHandler.postDelayed(this, 30_000L)
+        }
+    }
     private var searchRenderRunnable: Runnable? = null
 
     private fun saveSearchHistory(query: String) {
@@ -372,6 +383,17 @@ class MainActivity : Activity() {
             setPadding(dp(10), 0, dp(10), 0)
             setOnClickListener { showSourcesDialog() }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)))
+        clockView = TextView(this).apply {
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            setPadding(dp(14), 0, dp(10), 0)
+            contentDescription = "Tarih ve saat"
+        }
+        mainHeader.addView(clockView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)))
+        clockHandler.removeCallbacks(clockTicker)
+        clockTicker.run()
         mainHeader.addView(TextView(this).apply {
             text = "+"; textSize = 25f; gravity = Gravity.CENTER
             setTextColor(Color.rgb(15, 18, 27))
@@ -491,6 +513,24 @@ class MainActivity : Activity() {
                     v.scaleY = 1f
                 }
                 textSize = 14f
+                val iconResource = when {
+                    label.contains("Ana Sayfa") -> R.drawable.ic_nav_home
+                    label.contains("Canlı TV") -> R.drawable.ic_nav_tv
+                    label.contains("Filmler") -> R.drawable.ic_nav_movies
+                    label.contains("Diziler") -> R.drawable.ic_nav_series
+                    label.contains("Favoriler") -> R.drawable.ic_nav_favorites
+                    label.contains("Geçmiş") -> R.drawable.ic_nav_history
+                    label.contains("Ara") -> R.drawable.ic_nav_search
+                    label.contains("Ayarlar") -> R.drawable.ic_nav_settings
+                    else -> 0
+                }
+                text = ""
+                gravity = Gravity.CENTER
+                if (iconResource != 0) {
+                    val icon = getDrawable(iconResource)?.mutate()
+                    icon?.setBounds(0, 0, dp(28), dp(28))
+                    setCompoundDrawables(icon, null, null, null)
+                }
                 val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
                 text = android.text.SpannableString(label).apply {
                     setSpan(android.text.style.RelativeSizeSpan(1.7f), 0, iconEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
