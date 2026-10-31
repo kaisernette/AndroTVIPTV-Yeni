@@ -155,7 +155,7 @@ class PlayerActivity : Activity() {
 
     private fun control(label: String, textSize: Int, action: () -> Unit): TextView =
         TextView(this).apply {
-            text = label; textSize = textSize.toFloat(); gravity = Gravity.CENTER
+            text = label; this.textSize = textSize.toFloat(); gravity = Gravity.CENTER
             setTextColor(Color.WHITE); isFocusable = true; isClickable = true
             background = circle(0x660e1724, 0xff9aa7b8.toInt())
             setOnClickListener { action() }
