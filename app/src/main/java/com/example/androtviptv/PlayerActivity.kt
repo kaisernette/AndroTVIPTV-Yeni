@@ -273,13 +273,18 @@ class PlayerActivity : Activity() {
             background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(0x99101824.toInt()); setStroke(dp(1), 0xFF079BE8.toInt()) }
             setOnClickListener { val other = if (panel === subtitlePanel) audioPanel else subtitlePanel; other?.visibility = View.GONE; panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
         }
-        trackButtons.addView(trackButton("▣  Altyazı", subtitlePanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
-        trackButtons.addView(trackButton("◖  Ses Dili", audioPanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
+        val subtitleButton = trackButton("▣  Altyazı", subtitlePanel!!)
+        val audioButton = trackButton("◖  Ses Dili", audioPanel!!)
+        trackButtons.addView(subtitleButton, LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
+        trackButtons.addView(audioButton, LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
         right.addView(trackButtons)
         root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
 
         val bottom = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         progressBar = SeekBar(this).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            contentDescription = "İlerleme çubuğu"
             progressTintList = android.content.res.ColorStateList.valueOf(0xFF079BE8.toInt())
             thumbTintList = android.content.res.ColorStateList.valueOf(0xFF079BE8.toInt())
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -297,7 +302,25 @@ class PlayerActivity : Activity() {
         playerChrome = listOf(shade, centerControls, right, bottom)
         playPauseControl = playControl
         remoteControls = listOf(previousControl, rewindControl, playControl, forwardControl, nextControl)
+        val allRemoteControls = listOf(previousControl, rewindControl, playControl, forwardControl, nextControl, progressBar!!, subtitleButton, audioButton)
         root.isFocusableInTouchMode = true
+        progressBar?.setOnFocusChangeListener { focused, hasFocus ->
+            focused.background = GradientDrawable().apply {
+                setColor(if (hasFocus) 0x3329B6F6 else Color.TRANSPARENT)
+                cornerRadius = dp(8).toFloat()
+                if (hasFocus) setStroke(dp(2), 0xFF29B6F6.toInt())
+            }
+        }
+        listOf(subtitleButton, audioButton).forEach { control ->
+            control.setOnFocusChangeListener { focused, hasFocus ->
+                focused.background = GradientDrawable().apply {
+                    cornerRadius = dp(14).toFloat()
+                    setColor(if (hasFocus) 0x3329B6F6 else 0x99101824.toInt())
+                    setStroke(dp(if (hasFocus) 3 else 1), if (hasFocus) 0xFF079BE8.toInt() else 0xFF079BE8.toInt())
+                }
+                focused.setTextColor(if (hasFocus) 0xFF29B6F6.toInt() else Color.WHITE)
+            }
+        }
         listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEach { control ->
             control.setOnFocusChangeListener { focused, hasFocus ->
                 focused.background = GradientDrawable().apply {
@@ -446,14 +469,8 @@ class PlayerActivity : Activity() {
             }
             KeyEvent.KEYCODE_MEDIA_PLAY -> { player?.play(); return true }
             KeyEvent.KEYCODE_MEDIA_PAUSE -> { player?.pause(); return true }
-            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
-                if (!isLiveStream) player?.seekForward()
-                return true
-            }
-            KeyEvent.KEYCODE_MEDIA_REWIND -> {
-                if (!isLiveStream) player?.seekBack()
-                return true
-            }
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { if (!isLiveStream) player?.seekForward(); return true }
+            KeyEvent.KEYCODE_MEDIA_REWIND -> { if (!isLiveStream) player?.seekBack(); return true }
             KeyEvent.KEYCODE_CHANNEL_UP -> {
                 if (isLiveStream && channelUrls.isNotEmpty()) {
                     tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
@@ -488,6 +505,7 @@ class PlayerActivity : Activity() {
             }
         }
 
+        val focused = currentFocus
         val dpad = event.keyCode in setOf(
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
@@ -501,36 +519,50 @@ class PlayerActivity : Activity() {
                 return true
             }
             scheduleHidePlayerControls()
-
-            if (isLiveStream) {
-                when (event.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_LEFT -> { if (channelOverlay == null) showChannelOverlay(); return true }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> { if (channelOverlay == null) showRecentOverlay(); return true }
-                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        val current = remoteControls.indexOf(currentFocus).coerceAtLeast(0)
-                        val step = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1
-                        remoteControls[(current + step).mod(remoteControls.size)].requestFocus()
-                        return true
+            val controls = listOfNotNull(
+                remoteControls.getOrNull(0), remoteControls.getOrNull(1),
+                remoteControls.getOrNull(2), remoteControls.getOrNull(3),
+                remoteControls.getOrNull(4), progressBar, subtitleButton, audioButton
+            )
+            val index = controls.indexOf(focused)
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (focused === progressBar && !isLiveStream) return super.dispatchKeyEvent(event)
+                    if (index in 1..4) { controls[index - 1].requestFocus(); return true }
+                    if (focused === audioButton) { subtitleButton.requestFocus(); return true }
+                    if (focused === subtitleButton) { remoteControls.last().requestFocus(); return true }
+                    if (isLiveStream && index < 0) { showChannelOverlay(); return true }
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (focused === progressBar && !isLiveStream) return super.dispatchKeyEvent(event)
+                    if (index in 0..3) { controls[index + 1].requestFocus(); return true }
+                    if (focused === subtitleButton) { audioButton.requestFocus(); return true }
+                    if (focused === audioButton) { progressBar?.requestFocus(); return true }
+                    if (isLiveStream && index < 0) { showRecentOverlay(); return true }
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    when (focused) {
+                        progressBar -> { playPauseControl?.requestFocus(); return true }
+                        subtitleButton, audioButton -> { progressBar?.requestFocus(); return true }
+                        else -> { if (index in 0..4) { progressBar?.requestFocus(); return true } }
                     }
                 }
-            } else {
-                when (event.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP -> {
-                        val current = remoteControls.indexOf(currentFocus).let { if (it < 0) 2 else it }
-                        remoteControls[(current - 1).coerceAtLeast(0)].requestFocus()
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    when (focused) {
+                        progressBar -> { subtitleButton.requestFocus(); return true }
+                        subtitleButton -> { subtitlePanel?.takeIf { it.visibility == View.VISIBLE }?.let { it.requestFocus() } ?: playPauseControl?.requestFocus(); return true }
+                        audioButton -> { audioPanel?.takeIf { it.visibility == View.VISIBLE }?.let { it.requestFocus() } ?: playPauseControl?.requestFocus(); return true }
+                        else -> { if (index in 0..4) { progressBar?.requestFocus(); return true } }
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                    if (focused != null && controls.contains(focused)) {
+                        if (focused === progressBar) return true
+                        focused.performClick()
                         return true
                     }
-                    KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        val current = remoteControls.indexOf(currentFocus).let { if (it < 0) 2 else it }
-                        remoteControls[(current + 1).coerceAtMost(remoteControls.lastIndex)].requestFocus()
-                        return true
-                    }
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                        val focused = currentFocus
-                        if (focused != null && remoteControls.contains(focused)) focused.performClick()
-                        else playPauseControl?.performClick()
-                        return true
-                    }
+                    playPauseControl?.performClick()
+                    return true
                 }
             }
         }
