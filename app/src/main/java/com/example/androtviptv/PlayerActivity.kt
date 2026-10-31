@@ -100,6 +100,7 @@ class PlayerActivity : Activity() {
     private var playerView: PlayerView? = null
     private var playerChrome: List<View> = emptyList()
     private var playPauseControl: View? = null
+    private var remoteControls: List<View> = emptyList()
     private var controlsVisible = true
     private val controlsHandler = Handler(Looper.getMainLooper())
     private val hideControlsRunnable = Runnable { hidePlayerControls() }
@@ -295,6 +296,8 @@ class PlayerActivity : Activity() {
         root.addView(bottom, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM).apply { setMargins(dp(24), 0, dp(24), dp(88)) })
         playerChrome = listOf(shade, centerControls, right, bottom)
         playPauseControl = playControl
+        remoteControls = listOf(previousControl, rewindControl, playControl, forwardControl, nextControl)
+        root.isFocusableInTouchMode = true
         listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEach { control ->
             control.setOnFocusChangeListener { focused, hasFocus ->
                 focused.background = GradientDrawable().apply {
@@ -420,7 +423,8 @@ class PlayerActivity : Activity() {
             playbackHandler.removeCallbacks(playbackWatchdog)
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
             // Android TV kumandasında ilk odak görünür oynatıcı kontrolünde olsun.
-            playControl.requestFocus()
+            root.requestFocus()
+            playControl.post { if (controlsVisible && playControl.isShown) playControl.requestFocus() }
             refreshTrackChoices()
             scheduleHidePlayerControls()
             uiHandler.post(uiTicker)
@@ -432,85 +436,101 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN) {
+        if (event.action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event)
+
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                player?.let { if (it.isPlaying) it.pause() else it.play() }
+                if (controlsVisible) scheduleHidePlayerControls()
+                return true
+            }
+            KeyEvent.KEYCODE_MEDIA_PLAY -> { player?.play(); return true }
+            KeyEvent.KEYCODE_MEDIA_PAUSE -> { player?.pause(); return true }
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                if (!isLiveStream) player?.seekForward()
+                return true
+            }
+            KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                if (!isLiveStream) player?.seekBack()
+                return true
+            }
+            KeyEvent.KEYCODE_CHANNEL_UP -> {
+                if (isLiveStream && channelUrls.isNotEmpty()) {
+                    tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
+                    return true
+                }
+            }
+            KeyEvent.KEYCODE_CHANNEL_DOWN -> {
+                if (isLiveStream && channelUrls.isNotEmpty()) {
+                    tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
+                    return true
+                }
+            }
+        }
+
+        if (isLiveStream && channelOverlay != null) {
             when (event.keyCode) {
-                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                    player?.let { if (it.isPlaying) it.pause() else it.play() }
-                    scheduleHidePlayerControls()
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    highlightedChannelIndex = (highlightedChannelIndex +
+                        if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
+                        .coerceIn(0, channelUrls.lastIndex)
+                    refreshChannelHighlight()
                     return true
                 }
-                KeyEvent.KEYCODE_MEDIA_PLAY -> { player?.play(); scheduleHidePlayerControls(); return true }
-                KeyEvent.KEYCODE_MEDIA_PAUSE -> { player?.pause(); scheduleHidePlayerControls(); return true }
-                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
-                    if (!isLiveStream) player?.seekForward()
-                    scheduleHidePlayerControls()
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    tuneChannel(highlightedChannelIndex)
                     return true
                 }
-                KeyEvent.KEYCODE_MEDIA_REWIND -> {
-                    if (!isLiveStream) player?.seekBack()
-                    scheduleHidePlayerControls()
+                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                    hideChannelOverlay()
                     return true
-                }
-                KeyEvent.KEYCODE_CHANNEL_UP -> {
-                    if (isLiveStream && channelUrls.isNotEmpty()) {
-                        tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
-                        return true
-                    }
-                }
-                KeyEvent.KEYCODE_CHANNEL_DOWN -> {
-                    if (isLiveStream && channelUrls.isNotEmpty()) {
-                        tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
-                        return true
-                    }
                 }
             }
+        }
 
-            if (isLiveStream && channelOverlay != null) {
+        val dpad = event.keyCode in setOf(
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER
+        )
+        if (dpad) {
+            if (!controlsVisible) {
+                showPlayerControls()
+                playPauseControl?.requestFocus()
+                return true
+            }
+            scheduleHidePlayerControls()
+
+            if (isLiveStream) {
                 when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> { if (channelOverlay == null) showChannelOverlay(); return true }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> { if (channelOverlay == null) showRecentOverlay(); return true }
                     KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        highlightedChannelIndex = (highlightedChannelIndex +
-                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
-                            .coerceIn(0, channelUrls.lastIndex)
-                        refreshChannelHighlight()
-                        return true
-                    }
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                        tuneChannel(highlightedChannelIndex)
-                        return true
-                    }
-                    KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                        hideChannelOverlay()
+                        val current = remoteControls.indexOf(currentFocus).coerceAtLeast(0)
+                        val step = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1
+                        remoteControls[(current + step).mod(remoteControls.size)].requestFocus()
                         return true
                     }
                 }
-            }
-
-            val isDpad = event.keyCode in setOf(
-                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
-                KeyEvent.KEYCODE_NUMPAD_ENTER
-            )
-            if (isDpad) {
-                if (!controlsVisible) {
-                    showPlayerControls()
-                    playPauseControl?.requestFocus()
-                    return true
-                }
-                scheduleHidePlayerControls()
-                if (!isLiveStream && event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                    !isLiveStream && event.keyCode == KeyEvent.KEYCODE_ENTER ||
-                    !isLiveStream && event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
-                    player?.let { if (it.isPlaying) it.pause() else it.play() }
-                    return true
-                }
-                if (!isLiveStream && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                    player?.seekBack()
-                    return true
-                }
-                if (!isLiveStream && event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                    player?.seekForward()
-                    return true
+            } else {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP -> {
+                        val current = remoteControls.indexOf(currentFocus).let { if (it < 0) 2 else it }
+                        remoteControls[(current - 1).coerceAtLeast(0)].requestFocus()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        val current = remoteControls.indexOf(currentFocus).let { if (it < 0) 2 else it }
+                        remoteControls[(current + 1).coerceAtMost(remoteControls.lastIndex)].requestFocus()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                        val focused = currentFocus
+                        if (focused != null && remoteControls.contains(focused)) focused.performClick()
+                        else playPauseControl?.performClick()
+                        return true
+                    }
                 }
             }
         }
