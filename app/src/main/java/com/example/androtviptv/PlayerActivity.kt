@@ -53,6 +53,7 @@ class PlayerActivity : Activity() {
     private var usingHlsFallback: Boolean = false
     private var isLiveStream: Boolean = false
     private var retryCount = 0
+    private var reconnectScheduled = false
     private var bufferingSinceMs = 0L
     private var lastStablePlaybackMs = 0L
     private var lastObservedPositionMs = -1L
@@ -357,6 +358,7 @@ class PlayerActivity : Activity() {
                         }
                         override fun onIsPlayingChanged(isPlaying: Boolean) { playControl.text = if (isPlaying) "Ⅱ" else "▶" }
                         override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == Player.STATE_READY) reconnectScheduled = false
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
                                 val cleanUrl = currentStreamUrl.substringBefore("?").lowercase()
                                 if (!triedHlsFallback && cleanUrl.endsWith(".ts")) {
@@ -516,6 +518,7 @@ class PlayerActivity : Activity() {
 
     private fun restartCurrentStream(reason: String) {
         val exo = player ?: return
+        if (reconnectScheduled) return
         if (currentStreamUrl.isBlank() || isFinishing || (!isLiveStream && retryCount >= 3)) {
             if (!isLiveStream && retryCount >= 3) {
                 android.widget.Toast.makeText(this, "Yayın yeniden bağlanamadı. Tekrar deneyebilirsin.", android.widget.Toast.LENGTH_LONG).show()
@@ -523,6 +526,7 @@ class PlayerActivity : Activity() {
             return
         }
         retryCount++
+        reconnectScheduled = true
         bufferingSinceMs = android.os.SystemClock.elapsedRealtime()
         positionStalledSinceMs = 0L
         lastObservedPositionMs = -1L
@@ -532,6 +536,7 @@ class PlayerActivity : Activity() {
             android.widget.Toast.makeText(this, "Canlı yayın yeniden bağlanıyor…", android.widget.Toast.LENGTH_SHORT).show()
         }
         playbackHandler.postDelayed({
+            reconnectScheduled = false
             if (!isFinishing && player === exo && currentStreamUrl.isNotBlank()) {
                 try {
                     exo.setMediaItem(createStreamMediaItem(currentStreamUrl))
@@ -554,6 +559,7 @@ class PlayerActivity : Activity() {
         triedHlsFallback = false
         usingHlsFallback = false
         retryCount = 0
+        reconnectScheduled = false
         bufferingSinceMs = 0L
         lastStablePlaybackMs = 0L
         resumeKey = "position_" + url.hashCode().toString()
