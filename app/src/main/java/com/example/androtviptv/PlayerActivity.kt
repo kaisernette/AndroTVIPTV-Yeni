@@ -108,6 +108,8 @@ class PlayerActivity : Activity() {
     private var subtitlePanel: LinearLayout? = null
     private var audioPanel: LinearLayout? = null
     private var progressBar: SeekBar? = null
+    private lateinit var subtitleButton: TextView
+    private lateinit var audioButton: TextView
     private var elapsedLabel: TextView? = null
     private var durationLabel: TextView? = null
     private val uiHandler = Handler(Looper.getMainLooper())
@@ -273,8 +275,8 @@ class PlayerActivity : Activity() {
             background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(0x99101824.toInt()); setStroke(dp(1), 0xFF079BE8.toInt()) }
             setOnClickListener { val other = if (panel === subtitlePanel) audioPanel else subtitlePanel; other?.visibility = View.GONE; panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
         }
-        val subtitleButton = trackButton("▣  Altyazı", subtitlePanel!!)
-        val audioButton = trackButton("◖  Ses Dili", audioPanel!!)
+        subtitleButton = trackButton("▣  Altyazı", subtitlePanel!!)
+        audioButton = trackButton("◖  Ses Dili", audioPanel!!)
         trackButtons.addView(subtitleButton, LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
         trackButtons.addView(audioButton, LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
         right.addView(trackButtons)
@@ -318,7 +320,7 @@ class PlayerActivity : Activity() {
                     setColor(if (hasFocus) 0x3329B6F6 else 0x99101824.toInt())
                     setStroke(dp(if (hasFocus) 3 else 1), if (hasFocus) 0xFF079BE8.toInt() else 0xFF079BE8.toInt())
                 }
-                focused.setTextColor(if (hasFocus) 0xFF29B6F6.toInt() else Color.WHITE)
+                (focused as? TextView)?.setTextColor(if (hasFocus) 0xFF29B6F6.toInt() else Color.WHITE)
             }
         }
         listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEach { control ->
