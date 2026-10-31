@@ -61,6 +61,7 @@ class MainActivity : Activity() {
     private lateinit var content: LinearLayout
     private var detailSeries: MediaItem? = null
     private var detailMovie: MediaItem? = null
+    private var detailPrimaryAction: View? = null
     private var seriesEpisodeRows: List<Pair<String, List<MediaItem>>> = emptyList()
     private var selectedSeriesSeasonKey: String = ""
     private var seriesEpisodesLoading = false
@@ -1178,6 +1179,14 @@ class MainActivity : Activity() {
             return true
         }
         if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event?.action == android.view.KeyEvent.ACTION_DOWN) {
+            if (detailMovie != null || detailSeries != null) {
+                detailPrimaryAction?.let { target ->
+                    if (target.isShown) {
+                        target.requestFocus()
+                        return true
+                    }
+                }
+            }
             val focused = currentFocus
             var parent: android.view.ViewParent? = focused?.parent
             var focusInSidebar = focused === sidebar
@@ -1219,6 +1228,7 @@ class MainActivity : Activity() {
             if (detailSeries != null || detailMovie != null) {
                 detailSeries = null
                 detailMovie = null
+                detailPrimaryAction = null
                 seriesEpisodeRows = emptyList()
                 seriesEpisodesLoading = false
                 seriesEpisodesError = ""
@@ -2385,6 +2395,7 @@ class MainActivity : Activity() {
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER; minHeight = dp(48) }
+        detailPrimaryAction = watchButton
         actions.addView(watchButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), dp(8), dp(4)) })
         actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), 0, dp(4)) })
 
@@ -2449,12 +2460,14 @@ class MainActivity : Activity() {
             it.type == "Bölümler" && it.group.startsWith(series.name + " • Sezon") && it.url.isNotBlank()
         }
         val watchSeriesButton = makeButton("▶  DİZİYİ İZLE", true) {
+            // Keep the primary action available as the left-navigation target.
             val resumeEpisode = lastEpisode ?: seriesEpisodeRows.firstOrNull { it.first == selectedSeriesSeasonKey }?.second?.firstOrNull()
                 ?: seriesEpisodeRows.firstOrNull()?.second?.firstOrNull()
             if (resumeEpisode != null) play(resumeEpisode)
             else if (seriesEpisodesLoading) Toast.makeText(this, "Bölümler yükleniyor, lütfen bekle.", Toast.LENGTH_SHORT).show()
             else Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
         }
+        detailPrimaryAction = watchSeriesButton
         actions.addView(watchSeriesButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), dp(8), dp(4)) })
         actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), 0, dp(4)) })
         copy.addView(actions)
