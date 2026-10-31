@@ -1179,6 +1179,21 @@ class MainActivity : Activity() {
             return true
         }
         if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event?.action == android.view.KeyEvent.ACTION_DOWN) {
+            if (selectedType == "Ayarlar") {
+                val focused = currentFocus
+                var parent: android.view.ViewParent? = focused?.parent
+                var focusInSidebar = focused === sidebar
+                while (parent != null && !focusInSidebar) {
+                    if (parent === sidebar) focusInSidebar = true else parent = parent.parent
+                }
+                if (!focusInSidebar) {
+                    val settingsTab = (0 until navBar.childCount).map { navBar.getChildAt(it) }
+                        .firstOrNull { (it as? TextView)?.contentDescription?.toString()?.contains("Ayarlar") == true }
+                    settingsTab?.requestFocus()
+                    return true
+                }
+                return true
+            }
             if (detailMovie != null || detailSeries != null) {
                 detailPrimaryAction?.let { target ->
                     if (target.isShown) {
@@ -3141,6 +3156,19 @@ class MainActivity : Activity() {
                     }
                 }
             }
+        }
+        // Ayarlar açıldığında odak sol menüde kalmasın; sağ içerikteki ilk seçeneğe geçsin.
+        content.post {
+            fun firstFocusable(view: View): View? {
+                if (view !== content && view.visibility == View.VISIBLE && view.isFocusable && view.isEnabled) return view
+                if (view is ViewGroup) {
+                    for (index in 0 until view.childCount) {
+                        firstFocusable(view.getChildAt(index))?.let { return it }
+                    }
+                }
+                return null
+            }
+            firstFocusable(content)?.requestFocus()
         }
     }
 
