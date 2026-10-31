@@ -1339,7 +1339,7 @@ class MainActivity : Activity() {
         metaScroll.addView(meta)
         info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
         val detailActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        detailActions.addView(makeFavoriteButton(item), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 0, dp(8), 0) })
+        detailActions.addView(makeFavoriteButton(item), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, 0, dp(8), 0) })
         detailActions.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
         info.addView(detailActions)
         
@@ -2379,7 +2379,7 @@ class MainActivity : Activity() {
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER; minHeight = dp(48) }
         actions.addView(watchButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), dp(8), dp(4)) })
-        actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44).apply { setMargins(0, 8, 0, 0) })
+        actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), 0, dp(4)) })
 
         copy.addView(actions)
         watchButton.post { if (watchButton.isShown) watchButton.requestFocus() }
@@ -2454,7 +2454,7 @@ class MainActivity : Activity() {
             seriesEpisodeRows = emptyList()
             render()
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { setMargins(0, dp(14), dp(8), dp(4)) })
-        actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
+        actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), 0, dp(4)) })
         copy.addView(actions)
         watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
