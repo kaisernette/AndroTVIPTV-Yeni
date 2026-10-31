@@ -2156,6 +2156,7 @@ class MainActivity : Activity() {
                     addView(row)
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
+        }
         if (!detailMode && sidebarMode != "search" && focusTagBeforeRender.isNotBlank()) {
             content.post {
                 val target = content.findViewWithTag<View>(focusTagBeforeRender)
