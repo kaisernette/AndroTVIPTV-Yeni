@@ -744,19 +744,19 @@ class MainActivity : Activity() {
         if (secret) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
     }
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
-    private fun makeFavoriteButton(item: MediaItem, onChanged: (() -> Unit)? = null): TextView {
-        fun update(view: TextView, selected: Boolean, focused: Boolean = false) {
+    private fun makeFavoriteButton(item: MediaItem, onChanged: (() -> Unit)? = null): Button {
+        fun update(view: Button, selected: Boolean, focused: Boolean = false) {
             val yellow = Color.rgb(255, 196, 0)
+            val fill = if (selected) yellow else accent
             view.text = if (selected) "★  FAVORİLERDE" else "☆  FAVORİYE EKLE"
-            view.setTextColor(if (selected) Color.rgb(24, 20, 8) else Color.WHITE)
-            view.background = roundedDrawable(
-                if (selected) yellow else if (focused) accent else panel,
-                buttonRadiusDp,
-                if (selected) yellow else if (focused) accent else Color.rgb(44, 52, 68)
-            )
+            view.setTextColor(if (selected) Color.rgb(24, 20, 8) else Color.rgb(12, 14, 19))
+            view.background = roundedDrawable(fill, buttonRadiusDp,
+                if (selected) yellow else accentBright)
+            view.elevation = if (focused) dp(4).toFloat() else 0f
         }
-        return TextView(this).apply {
+        return Button(this).apply {
             textSize = 12f
+            isAllCaps = false
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             includeFontPadding = false
@@ -765,9 +765,12 @@ class MainActivity : Activity() {
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            stateListAnimator = null
+            setPadding(dp(16), 0, dp(16), 0)
             update(this, favorites.contains(item.favoriteKey))
-            setOnFocusChangeListener { v, hasFocus -> update(v as TextView, favorites.contains(item.favoriteKey), hasFocus) }
+            setOnFocusChangeListener { v, hasFocus ->
+                update(v as Button, favorites.contains(item.favoriteKey), hasFocus)
+            }
             setOnClickListener {
                 val selected = if (favorites.contains(item.favoriteKey)) {
                     favorites.remove(item.favoriteKey); false
