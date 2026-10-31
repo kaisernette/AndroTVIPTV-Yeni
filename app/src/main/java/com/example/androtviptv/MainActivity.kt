@@ -746,29 +746,36 @@ class MainActivity : Activity() {
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
     private fun makeFavoriteButton(item: MediaItem, onChanged: (() -> Unit)? = null): TextView {
         fun update(view: TextView, selected: Boolean, focused: Boolean = false) {
-            val selectedYellow = Color.rgb(255, 196, 0)
-            view.text = if (selected) "★ Favori" else "☆ Favori"
-            // Keep the existing normal button appearance unchanged; only the selected state is yellow.
-            view.setTextColor(if (selected) Color.rgb(25, 22, 12) else Color.WHITE)
+            val yellow = Color.rgb(255, 196, 0)
+            view.text = if (selected) "★  FAVORİLERDE" else "☆  FAVORİYE EKLE"
+            view.setTextColor(if (selected) Color.rgb(24, 20, 8) else Color.WHITE)
             view.background = roundedDrawable(
-                if (selected) selectedYellow else panel,
+                if (selected) yellow else if (focused) accent else panel,
                 buttonRadiusDp,
-                if (selected) selectedYellow else if (focused) focusColor else Color.rgb(44, 52, 68)
+                if (selected) yellow else if (focused) accent else Color.rgb(44, 52, 68)
             )
         }
         return TextView(this).apply {
-            textSize = 14f; gravity = Gravity.CENTER; isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+            textSize = 12f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            minWidth = dp(154)
+            minHeight = dp(48)
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
             setPadding(dp(12), dp(8), dp(12), dp(8))
             update(this, favorites.contains(item.favoriteKey))
             setOnFocusChangeListener { v, hasFocus -> update(v as TextView, favorites.contains(item.favoriteKey), hasFocus) }
             setOnClickListener {
-                val nowSelected = if (favorites.contains(item.favoriteKey)) {
+                val selected = if (favorites.contains(item.favoriteKey)) {
                     favorites.remove(item.favoriteKey); false
                 } else {
                     favorites.add(item.favoriteKey); true
                 }
                 prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-                update(this, nowSelected, hasFocus())
+                update(this, selected, hasFocus())
                 onChanged?.invoke()
             }
         }
