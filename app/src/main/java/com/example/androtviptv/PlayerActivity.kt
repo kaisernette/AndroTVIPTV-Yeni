@@ -172,7 +172,7 @@ class PlayerActivity : Activity() {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(8), dp(8), dp(8), dp(8))
         background = rounded(0xdd101722.toInt(), 0xff079be8.toInt(), 1)
-        visibility = View.VISIBLE
+        visibility = View.GONE
     }
 
     private fun refreshTrackPanels() {
