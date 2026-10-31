@@ -1820,6 +1820,17 @@ class MainActivity : Activity() {
                 setPadding(12, 0, 12, 0)
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
         }
+        if (selectedType == "Filmler" || selectedType == "Diziler") {
+            categoryBar.addView(makeButton(if (selectedGroup == "Tüm kategoriler") "● Tümü" else "Tümü", selectedGroup == "Tüm kategoriler") {
+                selectedGroup = "Tüm kategoriler"
+                prefs.edit().putString("last_group", selectedGroup).apply()
+                render()
+            }.apply {
+                textSize = 11f; minWidth = 0; minimumWidth = 0
+                setPadding(12, 0, 12, 0)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 0, 2) })
+            categoryScroll.post { categoryScroll.fullScroll(View.FOCUS_RIGHT) }
+        }
         val visible = if (selectedGroup == "Tüm kategoriler" || sidebarMode == "search") baseVisible
             else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
 
