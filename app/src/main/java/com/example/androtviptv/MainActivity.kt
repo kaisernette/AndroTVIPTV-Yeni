@@ -787,7 +787,7 @@ class MainActivity : Activity() {
             v.background = roundedDrawable(
                 if (primary || hasFocus) accent else panel,
                 buttonRadiusDp, if (primary || hasFocus) accent else Color.rgb(44, 52, 68))
-            v.setTextColor(if (primary || hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
+            (v as Button).setTextColor(if (primary || hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
             v.elevation = if (hasFocus) dp(4).toFloat() else 0f
         }
         setOnClickListener { action() }
@@ -2754,7 +2754,7 @@ class MainActivity : Activity() {
                                 buttonRadiusDp,
                                 if (focused) accent else Color.rgb(48, 57, 73)
                             )
-                            view.setTextColor(if (focused) Color.rgb(12, 14, 19) else Color.WHITE)
+                            (view as TextView).setTextColor(if (focused) Color.rgb(12, 14, 19) else Color.WHITE)
                             view.elevation = if (focused) dp(3).toFloat() else 0f
                         }
                         setOnClickListener {
