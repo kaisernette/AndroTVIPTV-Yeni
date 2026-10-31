@@ -531,12 +531,7 @@ class MainActivity : Activity() {
                     icon?.setBounds(0, 0, dp(28), dp(28))
                     setCompoundDrawables(icon, null, null, null)
                 }
-                val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
-                text = android.text.SpannableString(label).apply {
-                    setSpan(android.text.style.RelativeSizeSpan(1.7f), 0, iconEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, iconEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-                gravity = Gravity.CENTER_VERTICAL
+                gravity = Gravity.CENTER
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 contentDescription = label
