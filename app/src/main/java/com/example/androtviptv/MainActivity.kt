@@ -2637,8 +2637,12 @@ class MainActivity : Activity() {
                 option("▤  Kategoriler", "Film ve dizi kategorilerini görüntüle") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("◐  Temalar", "Uygulamanın renk görünümünü değiştir") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("◷  Geçmiş", "İzlediğin dizileri ve filmleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("ⓘ  Hakkında", "Uygulama ve sürüm bilgilerini görüntüle") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
 
-                // Program bilgileri: ayarlar ana sayfasının en altında, seçili temaya uyumlu kart.
+            }
+            "about" -> {
+                heading("Hakkında", "KaiserTV+ uygulama bilgileri.")
+
                 val aboutCard = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(dp(18), dp(16), dp(18), dp(16))
