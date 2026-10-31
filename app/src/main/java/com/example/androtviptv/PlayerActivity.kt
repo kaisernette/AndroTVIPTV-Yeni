@@ -17,7 +17,11 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.SeekBar
 import androidx.media3.common.MediaItem
+import androidx.media3.common.C
+import androidx.media3.common.Tracks
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.MimeTypes
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.common.PlaybackException
@@ -88,6 +92,29 @@ class PlayerActivity : Activity() {
         }
     }
     private var playerView: PlayerView? = null
+    private var currentTracks: Tracks = Tracks.EMPTY
+    private var subtitlePanel: LinearLayout? = null
+    private var audioPanel: LinearLayout? = null
+    private var progressBar: SeekBar? = null
+    private var elapsedLabel: TextView? = null
+    private var durationLabel: TextView? = null
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private val uiTicker = object : Runnable {
+        override fun run() {
+            val exo = player
+            val bar = progressBar
+            if (exo != null && bar != null && exo.duration > 0 && !isLiveStream) {
+                bar.max = exo.duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                bar.progress = exo.currentPosition.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                elapsedLabel?.text = formatTime(exo.currentPosition)
+                durationLabel?.text = " •  " + formatTime(exo.duration)
+            } else if (isLiveStream) {
+                elapsedLabel?.text = "CANLI"
+                durationLabel?.text = ""
+            }
+            uiHandler.postDelayed(this, 500L)
+        }
+    }
     private var channelOverlay: LinearLayout? = null
     private var channelRows: List<String> = emptyList()
     private var channelUrls: List<String> = emptyList()
@@ -156,13 +183,91 @@ class PlayerActivity : Activity() {
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val view = PlayerView(this).apply {
-            useController = true
+            useController = false
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
             isFocusable = true
             isFocusableInTouchMode = true
         }
         playerView = view
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
+        val shade = View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x22000000, 0x00000000, 0x99000000.toInt()))
+        }
+        root.addView(shade, FrameLayout.LayoutParams(-1, -1))
+        val centerControls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        fun roundControl(symbol: String, big: Boolean = false, action: () -> Unit) = TextView(this).apply {
+            text = symbol; textSize = if (big) 30f else 26f; gravity = Gravity.CENTER
+            setTextColor(Color.WHITE); isFocusable = true; isClickable = true
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x66101824); setStroke(dp(if (big) 2 else 1), if (big) 0xFF079BE8.toInt() else 0x889AA7B8.toInt()) }
+            setOnClickListener { action() }
+        }
+        val previousControl = roundControl("|◀") {
+            if (isLiveStream && channelUrls.isNotEmpty()) tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
+            else player?.seekToPreviousMediaItem()
+        }
+        val rewindControl = roundControl("↶") { player?.seekBack() }
+        val playControl = roundControl("Ⅱ", true) { player?.let { if (it.isPlaying) it.pause() else it.play() } }
+        val forwardControl = roundControl("↷") { player?.seekForward() }
+        val nextControl = roundControl("▶|") {
+            if (isLiveStream && channelUrls.isNotEmpty()) tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
+            else player?.seekToNextMediaItem()
+        }
+        listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEachIndexed { i, button ->
+            val size = if (i == 2) 84 else 68
+            centerControls.addView(button, LinearLayout.LayoutParams(dp(size), dp(size)).apply { setMargins(dp(6), 0, dp(6), 0) })
+        }
+        root.addView(centerControls, FrameLayout.LayoutParams(-2, dp(100), Gravity.CENTER))
+
+        fun createTrackPanel(type: Int): LinearLayout {
+            val panel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(8), dp(8), dp(8))
+                background = GradientDrawable().apply { setColor(0xDD101722.toInt()); cornerRadius = dp(14).toFloat(); setStroke(dp(1), 0xFF079BE8.toInt()) }
+                visibility = View.GONE
+            }
+            panel.addView(TextView(this).apply {
+                text = if (type == C.TRACK_TYPE_TEXT) "▣   Altyazı" else "◖   Ses Dili"
+                textSize = 15f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); setPadding(dp(4), dp(2), dp(4), dp(7))
+            })
+            val options = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            val scroll = ScrollView(this).apply { isVerticalScrollBarEnabled = false; addView(options) }
+            panel.addView(scroll, LinearLayout.LayoutParams(-1, dp(174)))
+            panel.tag = Pair(type, options)
+            return panel
+        }
+        subtitlePanel = createTrackPanel(C.TRACK_TYPE_TEXT)
+        audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
+        val panels = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        panels.addView(subtitlePanel, LinearLayout.LayoutParams(dp(154), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
+        panels.addView(audioPanel, LinearLayout.LayoutParams(dp(154), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
+        val right = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(panels) }
+        val trackButtons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        fun trackButton(label: String, panel: LinearLayout) = TextView(this).apply {
+            text = label; textSize = 15f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); isFocusable = true; isClickable = true
+            background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(0x99101824.toInt()); setStroke(dp(1), 0xFF079BE8.toInt()) }
+            setOnClickListener { val other = if (panel === subtitlePanel) audioPanel else subtitlePanel; other?.visibility = View.GONE; panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+        }
+        trackButtons.addView(trackButton("▣  Altyazı", subtitlePanel!!), LinearLayout.LayoutParams(dp(154), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
+        trackButtons.addView(trackButton("◖  Ses Dili", audioPanel!!), LinearLayout.LayoutParams(dp(154), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
+        right.addView(trackButtons)
+        root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(20)) })
+
+        val bottom = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        progressBar = SeekBar(this).apply {
+            progressTintList = android.content.res.ColorStateList.valueOf(0xFF079BE8.toInt())
+            thumbTintList = android.content.res.ColorStateList.valueOf(0xFF079BE8.toInt())
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) { if (fromUser) elapsedLabel?.text = formatTime(value.toLong()) }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) { player?.seekTo(seekBar?.progress?.toLong() ?: 0L) }
+            })
+        }
+        bottom.addView(progressBar, LinearLayout.LayoutParams(-1, dp(28)))
+        val times = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        elapsedLabel = TextView(this).apply { text = "00:00"; textSize = 14f; setTextColor(Color.WHITE) }
+        durationLabel = TextView(this).apply { text = " •  00:00"; textSize = 14f; setTextColor(0xFFB8BEC8.toInt()) }
+        times.addView(elapsedLabel); times.addView(durationLabel); bottom.addView(times)
+        root.addView(bottom, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM).apply { setMargins(dp(24), 0, dp(510), dp(20)) })
         view.post {
             val controlIds = intArrayOf(
                 androidx.media3.ui.R.id.exo_play,
@@ -216,6 +321,8 @@ class PlayerActivity : Activity() {
                 .build().also { exo ->
                     view.player = exo
                     exo.addListener(object : Player.Listener {
+                        override fun onTracksChanged(tracks: Tracks) { currentTracks = tracks; refreshTrackChoices() }
+                        override fun onIsPlayingChanged(isPlaying: Boolean) { playControl.text = if (isPlaying) "Ⅱ" else "▶" }
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
                                 val cleanUrl = currentStreamUrl.substringBefore("?").lowercase()
@@ -259,6 +366,8 @@ class PlayerActivity : Activity() {
             playbackHandler.removeCallbacks(playbackWatchdog)
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
             if (channelUrls.size > 1) view.requestFocus()
+            refreshTrackChoices()
+            uiHandler.post(uiTicker)
         } catch (e: Exception) {
             player?.release()
             player = null
@@ -427,9 +536,52 @@ class PlayerActivity : Activity() {
         playerView?.requestFocus()
     }
 
+
+    private fun formatTime(ms: Long): String {
+        val seconds = (ms / 1000L).coerceAtLeast(0L)
+        return String.format(java.util.Locale.US, "%02d:%02d", seconds / 60L, seconds % 60L)
+    }
+
+    private fun refreshTrackChoices() {
+        fun fill(panel: LinearLayout?, type: Int) {
+            val target = panel ?: return
+            val options = (target.tag as? Pair<*, *>)?.second as? LinearLayout ?: return
+            options.removeAllViews()
+            fun add(label: String, group: Tracks.Group? = null, index: Int? = null, disabled: Boolean = false) {
+                options.addView(TextView(this).apply {
+                    text = label; textSize = 14f; gravity = Gravity.CENTER_VERTICAL; setTextColor(Color.WHITE)
+                    setPadding(dp(8), dp(7), dp(8), dp(7)); isFocusable = true; isClickable = true
+                    background = GradientDrawable().apply { cornerRadius = dp(8).toFloat(); setColor(if (label == "Otomatik") 0xFF087FCA.toInt() else Color.TRANSPARENT) }
+                    setOnClickListener {
+                        val exo = player ?: return@setOnClickListener
+                        val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(type).setTrackTypeDisabled(type, disabled)
+                        if (group != null && index != null) { builder.setTrackTypeDisabled(type, false); builder.setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index)) }
+                        exo.trackSelectionParameters = builder.build()
+                        target.visibility = View.GONE
+                    }
+                }, LinearLayout.LayoutParams(-1, dp(35)))
+            }
+            add("Otomatik")
+            if (type == C.TRACK_TYPE_TEXT) add("Kapalı", disabled = true)
+            var count = 0
+            currentTracks.groups.forEach { group ->
+                if (group.type != type) return@forEach
+                for (i in 0 until group.length) {
+                    val format = group.getTrackFormat(i)
+                    val language = format.language?.takeIf { it.isNotBlank() && it != "und" }
+                    val label = format.label?.takeIf { it.isNotBlank() } ?: language?.let { java.util.Locale.forLanguageTag(it).getDisplayLanguage(java.util.Locale("tr")) } ?: if (type == C.TRACK_TYPE_TEXT) "Altyazı ${count + 1}" else "Ses ${count + 1}"
+                    add(label, group, i); count++
+                }
+            }
+            if (count == 0) options.addView(TextView(this).apply { text = "Yayın parçası bulunamadı"; textSize = 12f; setTextColor(0xFFC5CCD6.toInt()); setPadding(dp(6), dp(8), dp(6), dp(8)) })
+        }
+        fill(subtitlePanel, C.TRACK_TYPE_TEXT)
+        fill(audioPanel, C.TRACK_TYPE_AUDIO)
+    }
+
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     override fun onPause() { savePlaybackPosition(); super.onPause() }
     override fun onStop() { savePlaybackPosition(); player?.pause(); super.onStop() }
-    override fun onDestroy() { playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
+    override fun onDestroy() { uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
 }
