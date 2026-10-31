@@ -278,10 +278,18 @@ class MainActivity : Activity() {
         getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
     }
 
-    private fun play(item: MediaItem) {
+    private fun play(item: MediaItem, episodeList: List<MediaItem> = emptyList(), episodeIndex: Int = 0) {
         if (item.type == "Diziler" && item.url.isBlank()) { loadSeriesEpisodes(item); return }
         saveRecent(item)
-        startActivity(Intent(this, PlayerActivity::class.java).putExtra("name", item.name).putExtra("url", item.url))
+        val intent = Intent(this, PlayerActivity::class.java)
+            .putExtra("name", item.name)
+            .putExtra("url", item.url)
+        if (episodeList.isNotEmpty()) {
+            intent.putExtra("episode_names", episodeList.map { it.name }.toTypedArray())
+            intent.putExtra("episode_urls", episodeList.map { it.url }.toTypedArray())
+            intent.putExtra("episode_index", episodeIndex)
+        }
+        startActivity(intent)
     }
 
     private fun loadSeriesEpisodes(series: MediaItem) {
@@ -318,7 +326,7 @@ class MainActivity : Activity() {
                     AlertDialog.Builder(this).setTitle(series.name).setItems(seasonLabels.toTypedArray()) { _, which ->
                         val chosen = episodeRows[which].second
                         if (chosen.isEmpty()) { Toast.makeText(this, "Bu sezonda bölüm bulunamadı.", Toast.LENGTH_SHORT).show(); return@setItems }
-                        AlertDialog.Builder(this).setTitle(seasonLabels[which]).setItems(chosen.map { it.name }.toTypedArray()) { _, epIndex -> play(chosen[epIndex]) }.setNegativeButton("Geri", null).show()
+                        AlertDialog.Builder(this).setTitle(seasonLabels[which]).setItems(chosen.map { it.name }.toTypedArray()) { _, epIndex -> play(chosen[epIndex], chosen, epIndex) }.setNegativeButton("Geri", null).show()
                     }.setNegativeButton("Kapat", null).show()
                 }
             } catch (e: Exception) { runOnUiThread { status.text = "Bölümler yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
