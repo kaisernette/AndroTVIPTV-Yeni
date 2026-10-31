@@ -744,12 +744,15 @@ class MainActivity : Activity() {
     private fun makeFavoriteButton(item: MediaItem, onChanged: (() -> Unit)? = null): Button {
         fun update(view: Button, selected: Boolean, focused: Boolean = false) {
             val yellow = Color.rgb(255, 196, 0)
-            val fill = if (selected) yellow else accent
+            val fill = when {
+                selected -> yellow
+                focused -> accent
+                else -> Color.TRANSPARENT
+            }
             view.text = if (selected) "★  FAVORİLERDE" else "☆  FAVORİYE EKLE"
-            view.setTextColor(if (selected) Color.rgb(24, 20, 8) else Color.rgb(12, 14, 19))
-            view.background = roundedDrawable(fill, buttonRadiusDp,
-                if (selected) yellow else accentBright)
-            view.elevation = if (focused) dp(4).toFloat() else 0f
+            view.setTextColor(if (selected || focused) Color.rgb(12, 14, 19) else Color.WHITE)
+            view.background = roundedDrawable(fill, buttonRadiusDp, Color.TRANSPARENT)
+            view.elevation = 0f
         }
         return Button(this).apply {
             textSize = 12f
@@ -2451,12 +2454,7 @@ class MainActivity : Activity() {
             else if (seriesEpisodesLoading) Toast.makeText(this, "Bölümler yükleniyor, lütfen bekle.", Toast.LENGTH_SHORT).show()
             else Toast.makeText(this, seriesEpisodesError.ifBlank { "Bu dizi için bölüm bulunamadı." }, Toast.LENGTH_SHORT).show()
         }
-        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { setMargins(0, dp(14), dp(8), dp(4)) })
-        actions.addView(makeButton("← Geri", false) {
-            detailSeries = null
-            seriesEpisodeRows = emptyList()
-            render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { setMargins(0, dp(14), dp(8), dp(4)) })
+        actions.addView(watchSeriesButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), dp(8), dp(4)) })
         actions.addView(makeFavoriteButton(series), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(14), 0, dp(4)) })
         copy.addView(actions)
         watchSeriesButton.post { if (watchSeriesButton.isShown) watchSeriesButton.requestFocus() }
