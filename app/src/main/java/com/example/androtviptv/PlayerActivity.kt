@@ -316,10 +316,6 @@ class PlayerActivity : Activity() {
             }
         }
         setContentView(root)
-        // Give the remote a deterministic starting focus on playback controls.
-        view.post {
-            if (channelUrls.size > 1) view.requestFocus() else playControl.requestFocus()
-        }
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
             finish()
@@ -417,28 +413,6 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isEmpty()) {
-            val direction = when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT
-                KeyEvent.KEYCODE_DPAD_RIGHT -> View.FOCUS_RIGHT
-                KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP
-                KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN
-                else -> 0
-            }
-            if (direction != 0) {
-                val focused = currentFocus ?: playerView
-                val next = focused?.focusSearch(direction)
-                if (next != null && next !== focused) {
-                    next.requestFocus()
-                    return true
-                }
-            }
-            if (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER) {
-                if (currentFocus?.performClick() == true) return true
-                player?.let { if (it.isPlaying) it.pause() else it.play() }
-                return true
-            }
-        }
         if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isNotEmpty()) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {

@@ -480,9 +480,11 @@ class MainActivity : Activity() {
                 background = roundedDrawable(Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
-                    // Sidebar focus is intentionally neutral; blue focus belongs to right-side content.
-                    v.background = roundedDrawable(Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
-                    (v as Button).setTextColor(Color.WHITE)
+                    v.background = roundedDrawable(
+                        if (hasFocus) accent else Color.TRANSPARENT,
+                        buttonRadiusDp, Color.TRANSPARENT
+                    )
+                    (v as Button).setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
                     // No outline stroke or extra focus frame.
                     v.elevation = 0f
                     v.scaleX = 1f
@@ -522,7 +524,7 @@ class MainActivity : Activity() {
         }
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
-        if (sidebarMode in listOf("main", "settings")) {
+        if (sidebarMode in listOf("main", "settings", "search")) {
             listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▶  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
@@ -1175,12 +1177,6 @@ class MainActivity : Activity() {
             return true
         }
         if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event?.action == android.view.KeyEvent.ACTION_DOWN) {
-            if (detailMovie != null) {
-                content.findViewWithTag<View>("movie_watch_button")?.let {
-                    it.requestFocus()
-                    return true
-                }
-            }
             val focused = currentFocus
             var parent: android.view.ViewParent? = focused?.parent
             var focusInSidebar = focused === sidebar
@@ -2387,13 +2383,7 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
-            gravity = Gravity.CENTER
-            minHeight = dp(48)
-            tag = "movie_watch_button"
-            isFocusable = true
-            isFocusableInTouchMode = true
-        }
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER; minHeight = dp(48) }
         actions.addView(watchButton, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), dp(8), dp(4)) })
         actions.addView(makeFavoriteButton(movie), LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, dp(10), 0, dp(4)) })
 
@@ -2601,9 +2591,12 @@ class MainActivity : Activity() {
                 background = roundedDrawable(panel, 14)
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
                 setOnFocusChangeListener { v, hasFocus ->
-                    // No blue outline or filled focus frame on settings cards.
-                    v.background = roundedDrawable(panel, 14)
-                    v.elevation = 0f
+                    v.background = roundedDrawable(
+                        if (hasFocus) Color.rgb(27, 39, 53) else panel,
+                        14,
+                        if (hasFocus) accent else null
+                    )
+                    v.elevation = if (hasFocus) dp(4).toFloat() else 0f
                 }
                 setOnClickListener { action() }
             }
