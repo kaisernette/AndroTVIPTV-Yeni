@@ -3150,6 +3150,15 @@ class MainActivity : Activity() {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
             return
         }
+        if (item.type == "Bölümler") {
+            val queue = seriesEpisodeRows.flatMap { it.second }
+            val index = queue.indexOfFirst { it.favoriteKey == item.favoriteKey }
+            if (index >= 0) {
+                PlayerActivity.pendingEpisodeNames = queue.map { it.name }
+                PlayerActivity.pendingEpisodeUrls = queue.map { it.url }
+                PlayerActivity.pendingEpisodeIndex = index
+            }
+        }
         openingPlayer = true
         try {
             // Önizleme oynatıcısını kapat; tam ekran için yeni ExoPlayer açılacak.
