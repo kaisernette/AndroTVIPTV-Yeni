@@ -189,6 +189,12 @@ class PlayerActivity : Activity() {
                     focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
                 }
             }
+            if (isLiveStream) {
+                view.showController()
+                val initialControl = view.findViewById<View>(androidx.media3.ui.R.id.exo_pause)
+                    ?: view.findViewById(androidx.media3.ui.R.id.exo_play)
+                initialControl?.requestFocus()
+            }
         }
         setContentView(root)
         if (url.isBlank()) {
@@ -267,38 +273,27 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isNotEmpty()) {
+        if (event.action == KeyEvent.ACTION_DOWN && channelOverlay != null) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (channelOverlay != null) {
-                        highlightedChannelIndex = (highlightedChannelIndex +
-                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
-                            .coerceIn(0, channelUrls.lastIndex)
-                        refreshChannelHighlight()
-                    } else {
-                        val next = (selectedChannelIndex +
-                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
-                            .let { if (it < 0) channelUrls.lastIndex else if (it > channelUrls.lastIndex) 0 else it }
-                        tuneChannel(next)
-                    }
-                    return true
-                }
-                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    if (channelOverlay == null) showChannelOverlay()
-                    return true
-                }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (channelOverlay == null) showRecentOverlay()
+                    highlightedChannelIndex = (highlightedChannelIndex +
+                        if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
+                        .coerceIn(0, channelUrls.lastIndex)
+                    refreshChannelHighlight()
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
+                    tuneChannel(highlightedChannelIndex)
+                    return true
                 }
                 KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                    if (channelOverlay != null) { hideChannelOverlay(); return true }
+                    hideChannelOverlay()
+                    return true
                 }
             }
         }
+        // Live-TV DPAD keys are left to Android focus navigation so they move
+        // between the visible player controls instead of changing channels.
         return super.dispatchKeyEvent(event)
     }
 
