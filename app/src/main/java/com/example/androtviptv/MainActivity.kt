@@ -514,12 +514,12 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Theme-color fill indicates both selected and focused states; no outline frame.
-                background = roundedDrawable(panel, 10)
+                // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
+                background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     val button = v as Button
-                    button.background = roundedDrawable(if (hasFocus) accent else panel, 10)
+                    button.background = if (hasFocus) roundedDrawable(accent, 0) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     button.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
                     button.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
                     v.elevation = 0f
@@ -883,10 +883,10 @@ class MainActivity : Activity() {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
         setTextColor(Color.WHITE)
-        background = roundedDrawable(panel, 12)
+        background = roundedDrawable(panel, 0)
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
-            v.background = roundedDrawable(if (hasFocus) accent else panel, 12)
+            v.background = roundedDrawable(if (hasFocus) accent else panel, 0)
             (v as Button).setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
             v.elevation = 0f
             v.scaleX = 1f; v.scaleY = 1f
