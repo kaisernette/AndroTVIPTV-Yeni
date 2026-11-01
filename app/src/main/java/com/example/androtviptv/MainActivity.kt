@@ -2038,12 +2038,13 @@ class MainActivity : Activity() {
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(0, 0, 0, 0)
-                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    background = roundedDrawable(Color.TRANSPARENT, 10)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        // Cards use a theme-colored outline only; the card surface stays empty.
+                        v.background = roundedDrawable(Color.TRANSPARENT, 10, if (hasFocus) accent else null)
                         v.elevation = 0f
-                        v.scaleX = if (hasFocus) 1.025f else 1f; v.scaleY = if (hasFocus) 1.025f else 1f
+                        v.scaleX = 1f; v.scaleY = 1f
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
@@ -2092,6 +2093,9 @@ class MainActivity : Activity() {
                     )
                 }
                 card.addView(poster)
+                if (focusFirstContentOnRender && item == displayedEntries.firstOrNull()) {
+                    card.post { if (card.isAttachedToWindow) card.requestFocus() }
+                }
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
                 else poster.setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
