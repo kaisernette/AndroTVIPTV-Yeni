@@ -215,7 +215,7 @@ class PlayerActivity : Activity() {
                 control.setOnFocusChangeListener { focusedView, hasFocus ->
                     focusedView.background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dp(8).toFloat()
+                        cornerRadius = 0f
                         setColor(if (hasFocus) playerAccentColor() else Color.TRANSPARENT)
                     }
                     focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
@@ -381,7 +381,7 @@ class PlayerActivity : Activity() {
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(14), dp(14), dp(14))
-            background = GradientDrawable().apply { setColor(0xD91A2030.toInt()); cornerRadius = dp(16).toFloat(); setStroke(dp(1), 0xAADEB55B.toInt()) }
+            background = GradientDrawable().apply { setColor(0xD91A2030.toInt()); cornerRadius = 0f; setStroke(dp(1), 0xAADEB55B.toInt()) }
             elevation = dp(12).toFloat()
         }
         panel.addView(TextView(this).apply { text = "CANLI KANALLAR"; textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); setPadding(dp(4), dp(2), dp(4), dp(10)) })
@@ -419,7 +419,7 @@ class PlayerActivity : Activity() {
 
     private fun channelRowBackground(highlighted: Boolean) = GradientDrawable().apply {
         setColor(if (highlighted) 0xAADEB55B.toInt() else 0x33000000)
-        cornerRadius = dp(8).toFloat()
+        cornerRadius = 0f
         if (highlighted) setStroke(dp(1), 0xFFDEB55B.toInt())
     }
 
