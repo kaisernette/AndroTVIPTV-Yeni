@@ -58,6 +58,7 @@ class MainActivity : Activity() {
     private lateinit var categoryBar: LinearLayout
     private lateinit var categoryScroll: HorizontalScrollView
     private lateinit var mainHeader: LinearLayout
+    private lateinit var dateClockRow: LinearLayout
     private lateinit var content: LinearLayout
     private var detailSeries: MediaItem? = null
     private var detailMovie: MediaItem? = null
@@ -359,7 +360,7 @@ class MainActivity : Activity() {
             setOnClickListener { showConnectionDialog() }
         }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { setMargins(dp(8), 0, dp(4), 0) })
         // Fixed date and live clock: remains visible while the content below scrolls.
-        val dateClockRow = LinearLayout(this).apply {
+        dateClockRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
             setPadding(dp(4), 0, dp(10), dp(8))
@@ -1507,6 +1508,7 @@ class MainActivity : Activity() {
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
+        if (::dateClockRow.isInitialized) dateClockRow.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Tümü" || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
