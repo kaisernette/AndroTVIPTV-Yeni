@@ -838,19 +838,19 @@ class MainActivity : Activity() {
         val xtreamFieldsFrame = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(10), dp(7), dp(10), dp(7))
-            background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
+            background = roundedDrawable(panel, 0, Color.rgb(48, 57, 73))
         }
         fun framedInput(input: EditText): LinearLayout {
             return LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_VERTICAL
-                background = roundedDrawable(panel, 10, Color.rgb(48, 57, 73))
+                background = roundedDrawable(panel, 0, Color.rgb(48, 57, 73))
                 setPadding(dp(8), 0, dp(8), 0)
                 isFocusable = false
                 input.background = roundedDrawable(Color.TRANSPARENT, 0)
                 addView(input, LinearLayout.LayoutParams(-1, dp(48)))
                 input.setOnFocusChangeListener { _, hasFocus ->
-                    background = roundedDrawable(panel, 10, if (hasFocus) accent else Color.rgb(48, 57, 73))
+                    background = roundedDrawable(panel, 0, if (hasFocus) accent else Color.rgb(48, 57, 73))
                 }
             }
         }
