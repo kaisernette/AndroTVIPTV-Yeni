@@ -513,14 +513,12 @@ class MainActivity : Activity() {
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
                 // Theme-color fill indicates both selected and focused states; no outline frame.
-                background = roundedDrawable(if (selected) accent else Color.TRANSPARENT, 10)
-                setTextColor(if (selected) Color.rgb(8, 13, 22) else Color.WHITE)
+                background = roundedDrawable(panel, 10)
+                setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     val button = v as Button
-                    button.background = if (selected) roundedDrawable(accent, 10)
-                        else if (hasFocus) roundedDrawable(panel, 10).apply { setStroke(dp(2), accent) }
-                        else roundedDrawable(Color.TRANSPARENT, 10)
-                    button.setTextColor(if (selected) Color.rgb(8, 13, 22) else Color.WHITE)
+                    button.background = roundedDrawable(if (hasFocus) accent else panel, 10)
+                    button.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
                     button.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
                     v.elevation = 0f
                     v.scaleX = 1f
@@ -881,12 +879,12 @@ class MainActivity : Activity() {
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
-        setTextColor(if (primary) Color.rgb(8, 13, 22) else Color.WHITE)
-        background = roundedDrawable(if (primary) accent else panel, 12)
+        setTextColor(Color.WHITE)
+        background = roundedDrawable(panel, 12)
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
-            v.background = roundedDrawable(if (primary || hasFocus) accent else panel, 12)
-            (v as Button).setTextColor(if (primary || hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
+            v.background = roundedDrawable(if (hasFocus) accent else panel, 12)
+            (v as Button).setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
             v.elevation = 0f
             v.scaleX = 1f; v.scaleY = 1f
         }
@@ -2731,15 +2729,13 @@ class MainActivity : Activity() {
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(if (selected) Color.WHITE else muted)
                         setPadding(dp(8), dp(12), dp(8), dp(12))
-                        background = roundedDrawable(if (selected) accent else panel, 12)
+                        background = roundedDrawable(panel, 12)
                         isFocusable = true
                         isFocusableInTouchMode = true
                         isClickable = true
                         setOnFocusChangeListener { v, hasFocus ->
-                            v.background = if (selected) roundedDrawable(accent, 12)
-                                else if (hasFocus) roundedDrawable(panel, 12).apply { setStroke(dp(2), accent) }
-                                else roundedDrawable(panel, 12)
-                            (v as TextView).setTextColor(if (selected) Color.WHITE else if (hasFocus) accentBright else muted)
+                            v.background = roundedDrawable(if (hasFocus) accent else panel, 12)
+                            (v as TextView).setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else muted)
                         }
                         setOnClickListener {
                             selectedCategorySection = tab.first
