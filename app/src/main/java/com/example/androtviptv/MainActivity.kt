@@ -2603,7 +2603,8 @@ class MainActivity : Activity() {
                     val episodeRow = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
                         setPadding(dp(14), dp(10), dp(12), dp(10))
-                        background = roundedDrawable(panel, 12, Color.rgb(42, 50, 66))
+                        // Episode row has no surrounding frame; only its own Watch button receives focus fill.
+                        background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     }
                     episodeRow.addView(TextView(this).apply {
                         text = "${index + 1}."; textSize = 15f; setTextColor(accentBright)
