@@ -117,8 +117,14 @@ class PlayerActivity : Activity() {
     private fun createStreamMediaItem(url: String): MediaItem {
         val cleanUrl = url.substringBefore("?").lowercase()
         val builder = MediaItem.Builder().setUri(url)
-        if (cleanUrl.endsWith(".m3u8") || cleanUrl.endsWith(".m3u8/")) {
-            builder.setMimeType(MimeTypes.APPLICATION_M3U8)
+        when {
+            cleanUrl.endsWith(".m3u8") || cleanUrl.endsWith(".m3u8/") ->
+                builder.setMimeType(MimeTypes.APPLICATION_M3U8)
+            cleanUrl.endsWith(".mp3") -> builder.setMimeType(MimeTypes.AUDIO_MPEG)
+            cleanUrl.endsWith(".aac") -> builder.setMimeType(MimeTypes.AUDIO_AAC)
+            cleanUrl.endsWith(".m4a") -> builder.setMimeType(MimeTypes.AUDIO_MP4)
+            cleanUrl.endsWith(".ogg") || cleanUrl.endsWith(".opus") ->
+                builder.setMimeType(MimeTypes.AUDIO_OGG)
         }
         return builder.build()
     }
