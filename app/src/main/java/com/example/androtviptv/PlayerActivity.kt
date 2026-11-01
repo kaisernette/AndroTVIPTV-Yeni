@@ -33,6 +33,10 @@ class PlayerActivity : Activity() {
         @Volatile var pendingChannelIndex: Int = 0
         @Volatile var pendingRecentChannelNames: List<String> = emptyList()
         @Volatile var pendingRecentChannelUrls: List<String> = emptyList()
+        @Volatile var pendingEpisodeNames: List<String> = emptyList()
+        @Volatile var pendingEpisodeUrls: List<String> = emptyList()
+        @Volatile var pendingEpisodeIndex: Int = 0
+        @Volatile var pendingSeriesTitle: String = ""
     }
 
     private var player: ExoPlayer? = null
@@ -99,6 +103,11 @@ class PlayerActivity : Activity() {
     private var recentChannelRows: List<String> = emptyList()
     private var recentChannelUrls: List<String> = emptyList()
     private var overlayIsRecent = false
+    private var episodeNames: List<String> = emptyList()
+    private var episodeUrls: List<String> = emptyList()
+    private var episodeIndex = 0
+    private var seriesTitle = ""
+    private var currentContentTitle = "Oynatıcı"
     private var savedChannelRows: List<String> = emptyList()
     private var savedChannelUrls: List<String> = emptyList()
     private val playbackPrefs by lazy { getSharedPreferences("androtv_playback", Context.MODE_PRIVATE) }
@@ -136,7 +145,16 @@ class PlayerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val title = intent.getStringExtra("name") ?: "Oynatıcı"
+        currentContentTitle = title
         val url = intent.getStringExtra("url") ?: run { finish(); return }
+        episodeNames = pendingEpisodeNames
+        episodeUrls = pendingEpisodeUrls
+        episodeIndex = pendingEpisodeIndex.coerceIn(0, (episodeUrls.size - 1).coerceAtLeast(0))
+        seriesTitle = pendingSeriesTitle
+        pendingEpisodeNames = emptyList()
+        pendingEpisodeUrls = emptyList()
+        pendingEpisodeIndex = 0
+        pendingSeriesTitle = ""
         channelRows = pendingChannelNames
         channelUrls = pendingChannelUrls
         selectedChannelIndex = pendingChannelIndex.coerceIn(0, (channelUrls.size - 1).coerceAtLeast(0))
@@ -190,12 +208,19 @@ class PlayerActivity : Activity() {
                     focusedView.background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
                         cornerRadius = dp(8).toFloat()
-                        setColor(if (hasFocus) 0xFF078FF4.toInt() else Color.TRANSPARENT)
+                        setColor(if (hasFocus) playerAccentColor() else Color.TRANSPARENT)
                     }
                     focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
                 }
             }
-        }
+            (view.findViewById<View>(androidx.media3.ui.R.id.exo_progress) as? androidx.media3.ui.DefaultTimeBar)?.let { bar ->
+                bar.setPlayedColor(playerAccentColor())
+                bar.setScrubberColor(playerAccentColor())
+            }
+            if (episodeUrls.size > 1) {
+                view.findViewById<View>(androidx.media3.ui.R.id.exo_prev)?.setOnClickListener { changeEpisode(-1) }
+                view.findViewById<View>(androidx.media3.ui.R.id.exo_next)?.setOnClickListener { changeEpisode(1) }
+            }
         setContentView(root)
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
@@ -227,6 +252,12 @@ class PlayerActivity : Activity() {
                 .build().also { exo ->
                     view.player = exo
                     exo.addListener(object : Player.Listener {
+                        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                            if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
+                                val detail = if (seriesTitle.isNotBlank()) "$seriesTitle • $currentContentTitle" else currentContentTitle
+                                android.widget.Toast.makeText(this@PlayerActivity, "Duraklatıldı\n$detail", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
                                 val cleanUrl = currentStreamUrl.substringBefore("?").lowercase()
@@ -436,6 +467,44 @@ class PlayerActivity : Activity() {
             overlayIsRecent = false
         }
         playerView?.requestFocus()
+    }
+
+    private fun playerAccentColor(): Int {
+        return when (getSharedPreferences("androtv", Context.MODE_PRIVATE).getString("theme_name", "Dark Cinematic")) {
+            "Gece • Altın" -> Color.rgb(224, 184, 95)
+            "Lacivert • Turkuaz" -> Color.rgb(35, 205, 190)
+            "Koyu • Mor" -> Color.rgb(174, 115, 255)
+            else -> Color.rgb(0, 145, 255)
+        }
+    }
+
+    private fun changeEpisode(direction: Int) {
+        val nextIndex = episodeIndex + direction
+        if (nextIndex !in episodeUrls.indices) {
+            android.widget.Toast.makeText(this, if (direction < 0) "İlk bölümdesin." else "Son bölümdesin.", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        val nextUrl = episodeUrls[nextIndex]
+        if (nextUrl.isBlank()) return
+        episodeIndex = nextIndex
+        currentContentTitle = episodeNames.getOrNull(nextIndex) ?: "Bölüm ${nextIndex + 1}"
+        currentStreamUrl = nextUrl
+        originalStreamUrl = nextUrl
+        triedHlsFallback = false
+        usingHlsFallback = false
+        retryCount = 0
+        bufferingSinceMs = 0L
+        lastStablePlaybackMs = 0L
+        positionStalledSinceMs = 0L
+        lastObservedPositionMs = -1L
+        resumeKey = "position_" + nextUrl.hashCode().toString()
+        playbackPrefs.edit().remove(resumeKey).apply()
+        player?.let { exo ->
+            exo.setMediaItem(createStreamMediaItem(nextUrl))
+            exo.prepare()
+            exo.playWhenReady = true
+        }
+        android.widget.Toast.makeText(this, "Sonraki bölüm: $currentContentTitle", android.widget.Toast.LENGTH_LONG).show()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
