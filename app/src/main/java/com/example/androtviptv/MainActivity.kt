@@ -3290,7 +3290,13 @@ class MainActivity : Activity() {
             previewChannel = null
             previewUrl = ""
 
-            saveRecent(item)
+            // Episode playback should appear in the series history as its parent series,
+            // rather than being stored under the separate "Bölümler" type.
+            val historyItem = if (item.type == "Bölümler") {
+                items.firstOrNull { it.type == "Diziler" && it.seriesId == item.seriesId }
+                    ?: item.copy(type = "Diziler")
+            } else item
+            saveRecent(historyItem)
             val intent = Intent(this, PlayerActivity::class.java)
                 .putExtra("name", item.name)
                 .putExtra("url", item.url)
