@@ -1817,8 +1817,11 @@ class MainActivity : Activity() {
         val activeSourceItems = if (activeSourceId.isBlank()) items.toList()
             else items.filter { it.sourceId == activeSourceId }
         val unfilteredBase = when {
+            // An expanded content row must render its captured items directly, independent
+            // of the currently selected category filter.
+            expandedCategory != null -> expandedCategory!!.second
             sidebarMode == "search" -> activeSourceItems
-            selectedType == "Tümü" -> items.toList()
+            selectedType == "Tümü" -> activeSourceItems
             selectedType == "Favoriler" -> activeSourceItems.filter { favorites.contains(it.favoriteKey) }
             selectedType == "Son İzlenenler" -> recent.filter { activeSourceId.isBlank() || it.sourceId == activeSourceId }
             else -> activeSourceItems.filter { it.type == selectedType }
