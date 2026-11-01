@@ -2062,7 +2062,8 @@ class MainActivity : Activity() {
             sectionHeader.addView(TextView(this).apply {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             }, LinearLayout.LayoutParams(0, -2, 1f))
-            sectionHeader.addView(TextView(this).apply {
+            val sectionCountView = TextView(this).apply {
+                id = View.generateViewId()
                 text = if (showingExpandedCategory) "← Geri dön" else "${entries.size} içerik"
                 textSize = 12f; setTextColor(accent)
                 gravity = Gravity.CENTER
@@ -2074,7 +2075,8 @@ class MainActivity : Activity() {
                     else expandedCategory = groupName to entries
                     render()
                 }
-            })
+            }
+            sectionHeader.addView(sectionCountView)
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply {
                 orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
@@ -2087,7 +2089,7 @@ class MainActivity : Activity() {
             val displayedEntries = if (posterGridMode || weeklyMovieFeature) entries else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
-            displayedEntries.forEach { item ->
+            displayedEntries.forEachIndexed { itemIndex, item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(0, 0, 0, 0)
@@ -2184,25 +2186,12 @@ class MainActivity : Activity() {
                     card.addView(actions)
                 }
                 if (posterGridMode) {
+                    if (itemIndex == displayedEntries.lastIndex) card.nextFocusRightId = sectionCountView.id
                     val gridColumns = if (expandedFiveColumnGrid) 5 else 4
                     if (expandedPosterCount % gridColumns == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.TOP
-                        }
-                        if (expandedFiveColumnGrid) {
-                            expandedPosterRow?.addView(LinearLayout(this).apply {
-                                orientation = LinearLayout.HORIZONTAL
-                                gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                                addView(TextView(this@MainActivity).apply {
-                                    text = "Son Vurgu İçerik"
-                                    textSize = 10f
-                                    gravity = Gravity.CENTER
-                                    setTextColor(Color.rgb(8, 13, 22))
-                                    setPadding(dp(8), dp(4), dp(8), dp(4))
-                                    background = roundedDrawable(accent, 8)
-                                })
-                            }, LinearLayout.LayoutParams(-1, dp(26)))
                         }
                         row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
