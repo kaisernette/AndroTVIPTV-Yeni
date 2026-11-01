@@ -572,7 +572,7 @@ class MainActivity : Activity() {
         // category list is open so full category names remain readable.
         if (::sidebar.isInitialized) {
             val showReadableCategories = sidebarMode == "context" &&
-                selectedType in listOf("Canlı TV", "Filmler", "Diziler")
+                selectedType in listOf("Canlı TV", "Filmler", "Diziler", "Radyo")
             val params = sidebar.layoutParams
             val desiredWidth = dp(140)
             if (params != null && params.width != desiredWidth) {
@@ -650,7 +650,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search", "context")) {
-            listOf("⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "◉  Radyo", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -659,6 +659,7 @@ class MainActivity : Activity() {
                     (tab.contains("Geçmiş") || tab.contains("İzlediklerim")) -> "Geçmiş"
                     tab.contains("Ayarlar") -> "Ayarlar"
                     tab.contains("Filmler") -> "Filmler"
+                    tab.contains("Radyo") -> "Radyo"
                     else -> "Diziler"
                 }
                 val key = when (normalizedTab) {
@@ -723,7 +724,7 @@ class MainActivity : Activity() {
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
                         selectedType = key
-                        sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
+                        sidebarMode = if (normalizedTab in listOf("TV", "Filmler", "Diziler", "Radyo")) "context" else "main"
                         prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
                         render()
                     }
@@ -744,6 +745,7 @@ class MainActivity : Activity() {
                 Triple("▣", "TV", "Canlı TV"),
                 Triple("▧", "Filmler", "Filmler"),
                 Triple("▤", "Diziler", "Diziler"),
+                Triple("◉", "Radyo", "Radyo"),
                 Triple("♡", "Favoriler", "Favoriler"),
                 Triple("◷", "İzlediklerim", "Son İzlenenler"),
                 Triple("⚙", "Ayarlar", "Ayarlar")
@@ -784,7 +786,7 @@ class MainActivity : Activity() {
                             selectedType = key
                             selectedGroup = "Tüm kategoriler"
                             expandedCategory = null
-                            sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
+                            sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler", "Radyo")) "context" else "main"
                             prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
                         }
                     }
@@ -1203,16 +1205,17 @@ class MainActivity : Activity() {
                         val name = o.optString("name", "İsimsiz içerik")
                         val categoryId = o.optString("category_id")
                         val group = o.optString("category_name").takeIf { it.isNotBlank() } ?: categories[categoryId] ?: "Diğer"
+                        val streamKind = o.optString("stream_type", "").lowercase()
                         val type = when (action) {
-                            "get_live_streams" -> "Canlı TV"
+                            "get_live_streams" -> if (streamKind.contains("radio") || streamKind.contains("audio") || group.contains("radyo", true) || group.contains("radio", true)) "Radyo" else "Canlı TV"
                             "get_vod_streams" -> "Filmler"
                             else -> "Diziler"
                         }
-                        val ext = o.optString("container_extension", if (type == "Canlı TV") "ts" else "mp4")
+                        val ext = o.optString("container_extension", if (type == "Canlı TV") "ts" else if (type == "Radyo") "mp3" else "mp4")
                         val plot = o.optString("plot", o.optString("description", ""))
                         val actors = o.optString("cast", o.optString("actors", ""))
                         val streamUrl = when (type) {
-                            "Canlı TV" -> "$base/live/$u/$p/$id.$ext"
+                            "Canlı TV", "Radyo" -> "$base/live/$u/$p/$id.$ext"
                             "Filmler" -> "$base/movie/$u/$p/$id.$ext"
                             else -> ""
                         }
@@ -1309,6 +1312,7 @@ class MainActivity : Activity() {
     private fun classify(name: String, group: String): String {
         val s = "$name $group".lowercase()
         return when {
+            listOf("radio", "radyo", "fm", "am").any { it in s } -> "Radyo"
             listOf("series", "dizi", "tv show", "season", "sezon", "episode", "bölüm").any { it in s } -> "Diziler"
             listOf("movie", "film", "cinema", "vod", "4k film").any { it in s } -> "Filmler"
             else -> "Canlı TV"
@@ -1924,16 +1928,16 @@ class MainActivity : Activity() {
             else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
 
         // Live TV category content: compact logo/name grid; OK opens the channel fullscreen.
-        if (selectedType == "Canlı TV" && sidebarMode == "context") {
+        if (selectedType in listOf("Canlı TV", "Radyo") && sidebarMode == "context") {
             content.removeAllViews()
             content.addView(TextView(this).apply {
-                text = if (selectedGroup == "Tüm kategoriler") "Tüm Kanallar" else selectedGroup
+                text = if (selectedGroup == "Tüm kategoriler") if (selectedType == "Radyo") "Tüm Radyolar" else "Tüm Kanallar" else selectedGroup
                 textSize = 21f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 setPadding(dp(8), dp(10), dp(8), dp(12))
             })
-            val tvChannels = visible.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+            val tvChannels = visible.filter { it.type == selectedType && it.url.isNotBlank() }
             val displayedTvChannels = tvChannels.take(liveChannelsLimit)
             if (tvChannels.isEmpty()) {
                 content.addView(TextView(this).apply {
@@ -2197,7 +2201,7 @@ class MainActivity : Activity() {
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
-                        if (sidebarMode == "search" && item.type == "Canlı TV") {
+                        if (sidebarMode == "search" && item.type in listOf("Canlı TV", "Radyo")) {
                             play(item)
                         } else {
                             when (item.type) {
@@ -2227,7 +2231,7 @@ class MainActivity : Activity() {
                         }
                     }
                 }
-                val liveCard = item.type == "Canlı TV"
+                val liveCard = item.type == "Canlı TV" || item.type == "Radyo"
                 val homeCard = selectedType == "Tümü"
                 val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
                 val poster = ImageView(this).apply {
@@ -2255,7 +2259,7 @@ class MainActivity : Activity() {
                     })
                 } else {
                     card.addView(TextView(this).apply {
-                        text = if (item.type == "Canlı TV") "●  CANLI YAYIN" else item.type.uppercase()
+                        text = if (item.type == "Canlı TV") "●  CANLI YAYIN" else if (item.type == "Radyo") "●  RADYO" else item.type.uppercase()
                         textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
                     })
                 }
@@ -3420,7 +3424,7 @@ class MainActivity : Activity() {
             val intent = Intent(this, PlayerActivity::class.java)
                 .putExtra("name", item.name)
                 .putExtra("url", item.url)
-                .putExtra("isLive", item.type == "Canlı TV")
+                .putExtra("isLive", item.type == "Canlı TV" || item.type == "Radyo")
                 .putExtra("bufferMode", prefs.getString("player_buffer", "normal"))
                 .putExtra("aspectMode", prefs.getString("player_aspect", "fit"))
                 .putExtra("resumeEnabled", prefs.getBoolean("player_resume", true))
