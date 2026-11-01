@@ -734,22 +734,32 @@ class MainActivity : Activity() {
         username = edit("Kullanıcı adı", false).apply { setText(editSource?.username.orEmpty()) }
         password = edit("Şifre", true).apply { setText(editSource?.password.orEmpty()) }
         form.addView(playlistUrl, fieldParams())
-        form.addView(server, fieldParams())
+        val xtreamFieldsFrame = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(7), dp(10), dp(7))
+            background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
+        }
+        server.background = roundedDrawable(Color.TRANSPARENT, 8)
+        username.background = roundedDrawable(Color.TRANSPARENT, 8)
+        password.background = roundedDrawable(Color.TRANSPARENT, 8)
+        xtreamFieldsFrame.addView(server, fieldParams())
         val creds = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         creds.addView(username, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(0, dp(3), dp(5), dp(3)) })
         creds.addView(password, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(dp(5), dp(3), 0, dp(3)) })
-        form.addView(creds)
+        xtreamFieldsFrame.addView(creds)
+        form.addView(xtreamFieldsFrame, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(0, dp(3), 0, dp(3))
+        })
         sourceMode.setOnCheckedChangeListener { _, checked ->
             val useXtream = checked == xtream.id
             playlistUrl.visibility = if (useXtream) View.GONE else View.VISIBLE
-            server.visibility = if (useXtream) View.VISIBLE else View.GONE
-            creds.visibility = if (useXtream) View.VISIBLE else View.GONE
+            xtreamFieldsFrame.visibility = if (useXtream) View.VISIBLE else View.GONE
         }
         if (editSource?.mode == "xtream") sourceMode.check(xtream.id) else sourceMode.check(m3u.id)
         if (editSource?.mode == "xtream") {
-            playlistUrl.visibility = View.GONE; server.visibility = View.VISIBLE; creds.visibility = View.VISIBLE
+            playlistUrl.visibility = View.GONE; xtreamFieldsFrame.visibility = View.VISIBLE
         } else {
-            server.visibility = View.GONE; creds.visibility = View.GONE
+            xtreamFieldsFrame.visibility = View.GONE
         }
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END
@@ -2594,10 +2604,17 @@ class MainActivity : Activity() {
                             setPadding(0, dp(2), 0, 0)
                         })
                         sourceRow.addView(sourceInfo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                        val sourceSelect = CheckBox(this).apply {
+                            buttonTintList = android.content.res.ColorStateList.valueOf(accentBright)
+                            isFocusable = true
+                            contentDescription = "${source.name} kaynağını seç"
+                            setPadding(0, 0, dp(2), 0)
+                        }
+                        sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(38), dp(42)))
                         sourceRow.addView(makeButton("Yenile", false) {
                             if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
                         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply {
-                            setMargins(dp(4), 0, dp(4), 0)
+                            setMargins(dp(2), 0, dp(4), 0)
                         })
                         sourceRow.addView(makeButton("Düzenle", false) {
                             showConnectionDialog(source)
