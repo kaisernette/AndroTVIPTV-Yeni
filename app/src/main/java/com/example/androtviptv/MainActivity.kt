@@ -2705,6 +2705,7 @@ class MainActivity : Activity() {
         categoryScroll.visibility = View.GONE
         mainContentScroll.visibility = View.VISIBLE
         content.removeAllViews()
+        mainContentScroll.scrollTo(0, 0)
         fun heading(title: String, subtitle: String) {
             content.addView(TextView(this).apply {
                 text = title; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
@@ -2781,9 +2782,6 @@ class MainActivity : Activity() {
                 })
             }
         }
-        if (settingsPage != "main") content.addView(makeButton("← Ayarlara dön", false) {
-            settingsPage = "main"; prefs.edit().putString("last_settings_page", "main").apply(); rebuildNavigation(); render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(6), dp(6), 0, dp(8)) })
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
