@@ -848,25 +848,26 @@ class MainActivity : Activity() {
     }
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
     private fun makeFavoriteButton(item: MediaItem): Button {
-        val isFavorite = favorites.contains(item.favoriteKey)
-        val yellow = Color.rgb(255, 205, 55)
-        return makeButton(if (isFavorite) "★ Favori" else "□ Favori", false) {
+        fun updateFavoriteStyle(button: Button) {
+            val selected = favorites.contains(item.favoriteKey)
+            val yellow = Color.rgb(255, 205, 55)
+            button.text = if (selected) "★ Favori" else "□ Favori"
+            button.setTextColor(if (selected) Color.rgb(25, 25, 25) else Color.WHITE)
+            button.background = if (selected) {
+                roundedDrawable(yellow, 12)
+            } else {
+                // Unselected favorite stays transparent; focus is shown only as a slim outline.
+                roundedDrawable(Color.TRANSPARENT, 12, if (button.hasFocus()) accentBright else muted)
+            }
+        }
+        return makeButton("□ Favori", false) {
             if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
             prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
             render()
         }.apply {
-            fun updateFavoriteStyle(hasFocus: Boolean) {
-                text = if (isFavorite) "★ Favori" else "□ Favori"
-                setTextColor(if (isFavorite) Color.rgb(25, 25, 25) else Color.WHITE)
-                background = roundedDrawable(
-                    if (isFavorite) yellow else accent,
-                    12
-                )
-            }
-            updateFavoriteStyle(false)
-            setOnFocusChangeListener { view, hasFocus ->
-                updateFavoriteStyle(hasFocus)
-                // Avoid scaling inside the clipped hero container; it cut off button edges.
+            updateFavoriteStyle(this)
+            setOnFocusChangeListener { view, _ ->
+                updateFavoriteStyle(view as Button)
                 view.scaleX = 1f
                 view.scaleY = 1f
             }
@@ -2387,18 +2388,18 @@ class MainActivity : Activity() {
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
             gravity = Gravity.CENTER
-            textSize = 14f
-            minHeight = dp(56)
+            textSize = 17f
+            minHeight = dp(46)
         }
         actions.addView(watchButton,
-            LinearLayout.LayoutParams(dp(170), dp(56)).apply { setMargins(0, 8, dp(10), 0) })
+            LinearLayout.LayoutParams(dp(150), dp(48)).apply { setMargins(0, 8, dp(8), 0) })
         val favoriteButton = makeFavoriteButton(movie).apply {
             gravity = Gravity.CENTER
-            textSize = 14f
-            minHeight = dp(56)
+            textSize = 17f
+            minHeight = dp(46)
         }
         actions.addView(favoriteButton,
-            LinearLayout.LayoutParams(dp(190), dp(56)).apply { setMargins(0, 8, 0, 0) })
+            LinearLayout.LayoutParams(dp(145), dp(48)).apply { setMargins(0, 8, 0, 0) })
         copy.addView(actions)
         watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
@@ -2463,12 +2464,13 @@ class MainActivity : Activity() {
             textSize = 14f
             minHeight = dp(56)
         }
+        seriesWatchButton.textSize = 17f
         actions.addView(seriesWatchButton,
-            LinearLayout.LayoutParams(dp(170), dp(56)).apply { setMargins(0, 14, dp(10), 0) })
+            LinearLayout.LayoutParams(dp(150), dp(48)).apply { setMargins(0, 14, dp(8), 0) })
         actions.addView(makeFavoriteButton(series).apply {
-            textSize = 14f
-            minHeight = dp(56)
-        }, LinearLayout.LayoutParams(dp(190), dp(56)).apply { setMargins(0, 14, 0, 0) })
+            textSize = 17f
+            minHeight = dp(46)
+        }, LinearLayout.LayoutParams(dp(145), dp(48)).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
         seriesWatchButton.post { if (detailSeries?.favoriteKey == series.favoriteKey) seriesWatchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
