@@ -1876,8 +1876,9 @@ class MainActivity : Activity() {
                 })
             } else {
                 var channelRow: LinearLayout? = null
+                val tvGridColumns = 4 // 4 x 2 = eight equally sized channel cards on screen
                 displayedTvChannels.forEachIndexed { index, channel ->
-                    if (index % 6 == 0) {
+                    if (index % tvGridColumns == 0) {
                         channelRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.TOP
@@ -1886,12 +1887,13 @@ class MainActivity : Activity() {
                     }
                     val tile = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
-                        gravity = Gravity.CENTER
+                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                         isFocusable = true
                         isFocusableInTouchMode = true
                         isClickable = true
                         setPadding(dp(8), dp(8), dp(8), dp(8))
                         background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
+                        minimumHeight = dp(126)
                         setOnFocusChangeListener { v, hasFocus ->
                             v.background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
                             v.elevation = if (hasFocus) dp(18).toFloat() else 0f
@@ -1909,7 +1911,7 @@ class MainActivity : Activity() {
                         contentDescription = channel.name
                         setPadding(dp(6), dp(6), dp(6), dp(6))
                     }
-                    tile.addView(logo, LinearLayout.LayoutParams(-1, dp(66)))
+                    tile.addView(logo, LinearLayout.LayoutParams(-1, dp(68)))
                     if (channel.icon.startsWith("http://") || channel.icon.startsWith("https://")) {
                         loadPoster(channel.icon, logo)
                     } else {
@@ -1927,8 +1929,8 @@ class MainActivity : Activity() {
                         ellipsize = android.text.TextUtils.TruncateAt.END
                         setPadding(0, dp(5), 0, 0)
                     }, LinearLayout.LayoutParams(-1, dp(36)))
-                    channelRow?.addView(tile, LinearLayout.LayoutParams(0, dp(126), 1f).apply {
-                        setMargins(dp(4), dp(4), dp(4), dp(6))
+                    channelRow?.addView(tile, LinearLayout.LayoutParams(0, dp(132), 1f).apply {
+                        setMargins(dp(5), dp(5), dp(5), dp(10))
                     })
                 }
                 if (displayedTvChannels.size < tvChannels.size) {
