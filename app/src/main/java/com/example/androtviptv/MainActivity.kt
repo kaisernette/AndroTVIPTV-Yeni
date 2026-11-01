@@ -820,7 +820,10 @@ class MainActivity : Activity() {
 
     private fun edit(hintText: String, secret: Boolean): EditText = EditText(this).apply {
         hint = hintText; textSize = 14f; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(muted)
-        setPadding(12, 0, 12, 0); setBackgroundColor(panel)
+        setPadding(12, 0, 12, 0)
+        background = roundedDrawable(panel, 10, Color.rgb(48, 57, 73))
+        if (android.os.Build.VERSION.SDK_INT >= 24) imeHintLocales = android.os.LocaleList.getDefault()
+        if (android.os.Build.VERSION.SDK_INT >= 29) textCursorDrawable?.setTint(accent)
         if (secret) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
     }
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
@@ -1671,6 +1674,8 @@ class MainActivity : Activity() {
                 setSingleLine(true); textSize = 17f; setTextColor(Color.WHITE); setHintTextColor(muted)
                 setPadding(dp(16), 0, dp(12), 0)
                 background = roundedDrawable(Color.rgb(28, 35, 49), 14, accent)
+                if (android.os.Build.VERSION.SDK_INT >= 24) imeHintLocales = android.os.LocaleList.getDefault()
+                if (android.os.Build.VERSION.SDK_INT >= 29) textCursorDrawable?.setTint(accent)
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                 tag = "global_search_input"
                 setText(searchQuery); setSelection(text.length)
