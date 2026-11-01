@@ -398,12 +398,12 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
         }
         val quickItems = listOf(
-            Triple("◉\\nCanlı TV", Color.rgb(0, 112, 230), "Canlı TV"),
-            Triple("▣\\nFilmler", Color.rgb(196, 39, 65), "Filmler"),
-            Triple("▱\\nDiziler", Color.rgb(123, 47, 190), "Diziler"),
-            Triple("☺\\nÇocuk", Color.rgb(0, 145, 95), "çocuk"),
-            Triple("♧\\nBelgeseller", Color.rgb(190, 104, 0), "belgesel"),
-            Triple("♜\\nSpor", Color.rgb(0, 112, 135), "spor")
+            Triple("◉\nCanlı TV", Color.rgb(0, 112, 230), "Canlı TV"),
+            Triple("▣\nFilmler", Color.rgb(196, 39, 65), "Filmler"),
+            Triple("▱\nDiziler", Color.rgb(123, 47, 190), "Diziler"),
+            Triple("☺\nÇocuk", Color.rgb(0, 145, 95), "çocuk"),
+            Triple("♧\nBelgeseller", Color.rgb(190, 104, 0), "belgesel"),
+            Triple("♜\nSpor", Color.rgb(0, 112, 135), "spor")
         )
         quickItems.forEach { (label, tileColor, target) ->
             val tile = Button(this).apply {
