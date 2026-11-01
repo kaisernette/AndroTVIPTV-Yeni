@@ -1836,8 +1836,10 @@ class MainActivity : Activity() {
                                 if (hasFocus) focusColor else Color.rgb(43, 51, 68)
                             )
                             v.elevation = if (hasFocus) dp(4).toFloat() else 0f
-                            v.scaleX = if (hasFocus) 1.02f else 1f
-                            v.scaleY = if (hasFocus) 1.035f else 1f
+                            v.animate().scaleX(if (hasFocus) 1.02f else 1f)
+                                .scaleY(if (hasFocus) 1.035f else 1f)
+                                .translationY(if (hasFocus) -dp(5).toFloat() else 0f)
+                                .setDuration(140).start()
                         }
                         setOnClickListener { play(channel) }
                         contentDescription = channel.name
@@ -2046,6 +2048,7 @@ class MainActivity : Activity() {
                         v.elevation = 0f
                         v.animate().scaleX(if (hasFocus) 1.06f else 1f)
                             .scaleY(if (hasFocus) 1.06f else 1f)
+                            .translationY(if (hasFocus) -dp(5).toFloat() else 0f)
                             .setDuration(140).start()
                     }
                     setOnClickListener {
