@@ -2041,10 +2041,12 @@ class MainActivity : Activity() {
                     background = roundedDrawable(Color.TRANSPARENT, 10)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        // Cards use a theme-colored outline only; the card surface stays empty.
-                        v.background = roundedDrawable(Color.TRANSPARENT, 10, if (hasFocus) accent else null)
+                        // No focus frame: gently enlarge the focused content card.
+                        v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         v.elevation = 0f
-                        v.scaleX = 1f; v.scaleY = 1f
+                        v.animate().scaleX(if (hasFocus) 1.06f else 1f)
+                            .scaleY(if (hasFocus) 1.06f else 1f)
+                            .setDuration(140).start()
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
