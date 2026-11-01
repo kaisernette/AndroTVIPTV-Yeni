@@ -671,12 +671,7 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "search") {
-            addSidebarButton("⌕  Ara", true) {
-                searchInputFocusPending = true
-                render()
-            }
-            addSidebarButton("⌂  Ana Sayfa") { returnToMainMenu() }
-            return
+            sidebarMenuScroll.post { sidebarMenuScroll.scrollTo(0, 0) }
         }
 
         // Kategori başlığını ve sol kategori listesini göstermiyoruz.
@@ -707,25 +702,42 @@ class MainActivity : Activity() {
 
     private fun showConnectionDialog(editSource: SavedSource? = null) {
         val form = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; setPadding(18, 8, 18, 4); setBackgroundColor(bg)
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = roundedDrawable(panel, 16)
         }
+        form.addView(TextView(this).apply {
+            text = if (editSource == null) "İzleme kaynağı ekle" else "Kaynağı düzenle"
+            textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            setPadding(0, 0, 0, dp(6))
+        })
+        form.addView(TextView(this).apply {
+            text = "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle."
+            textSize = 13f; setTextColor(muted); setPadding(0, 0, 0, dp(8))
+        })
         sourceName = edit("Kaynak adı (ör. Ev Xtream)", false).apply { setText(editSource?.name.orEmpty()) }
         form.addView(sourceName, fieldParams())
         sourceMode = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
         val m3u = RadioButton(this).apply {
-            id = View.generateViewId(); text = "M3U / M3U8"; setTextColor(Color.WHITE); isChecked = true
+            id = View.generateViewId(); text = "M3U / M3U8"; setTextColor(Color.WHITE)
         }
         val xtream = RadioButton(this).apply {
             id = View.generateViewId(); text = "Xtream Codes"; setTextColor(Color.WHITE)
         }
         sourceMode.addView(m3u); sourceMode.addView(xtream); form.addView(sourceMode)
-        playlistUrl = edit("M3U / M3U8 oynatma listesi URL'si", false).apply { setText(if (editSource?.mode == "m3u") editSource.address else "") }
-        server = edit("Sunucu adresi (https://...)", false).apply { setText(if (editSource?.mode == "xtream") editSource.address else "") }
-        username = edit("Kullanıcı adı", false).apply { setText(editSource?.username.orEmpty()) }; password = edit("Şifre", true).apply { setText(editSource?.password.orEmpty()) }
-        form.addView(playlistUrl, fieldParams()); form.addView(server, fieldParams())
+        playlistUrl = edit("M3U / M3U8 oynatma listesi URL'si", false).apply {
+            setText(if (editSource?.mode == "m3u") editSource.address else "")
+        }
+        server = edit("Sunucu adresi (https://...)", false).apply {
+            setText(if (editSource?.mode == "xtream") editSource.address else "")
+        }
+        username = edit("Kullanıcı adı", false).apply { setText(editSource?.username.orEmpty()) }
+        password = edit("Şifre", true).apply { setText(editSource?.password.orEmpty()) }
+        form.addView(playlistUrl, fieldParams())
+        form.addView(server, fieldParams())
         val creds = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        creds.addView(username, LinearLayout.LayoutParams(0, 50, 1f).apply { setMargins(0, 3, 6, 3) })
-        creds.addView(password, LinearLayout.LayoutParams(0, 50, 1f).apply { setMargins(6, 3, 0, 3) })
+        creds.addView(username, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(0, dp(3), dp(5), dp(3)) })
+        creds.addView(password, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(dp(5), dp(3), 0, dp(3)) })
         form.addView(creds)
         sourceMode.setOnCheckedChangeListener { _, checked ->
             val useXtream = checked == xtream.id
@@ -733,36 +745,47 @@ class MainActivity : Activity() {
             server.visibility = if (useXtream) View.VISIBLE else View.GONE
             creds.visibility = if (useXtream) View.VISIBLE else View.GONE
         }
-        server.visibility = View.GONE; creds.visibility = View.GONE
-        if (editSource?.mode == "xtream") sourceMode.check(xtream.id)
-        val dialog = AlertDialog.Builder(this).setTitle(if (editSource == null) "İzleme kaynağı ekle" else "Kaynağı düzenle")
-            .setMessage("Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle.")
-            .setView(form).setNegativeButton("İptal", null).setPositiveButton(if (editSource == null) "BAĞLAN" else "KAYDET", null).create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val useXtream = sourceMode.checkedRadioButtonId == xtream.id
-                if (useXtream) {
-                    if (!(server.text.toString().trim().startsWith("http://") || server.text.toString().trim().startsWith("https://")) ||
-                        username.text.isNullOrBlank() || password.text.isNullOrBlank()) {
-                        Toast.makeText(this, "Sunucu, kullanıcı adı ve şifreyi doldur.", Toast.LENGTH_LONG).show()
-                        return@setOnClickListener
-                    }
-                    val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
-                    val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "xtream", server.text.toString().trim().trimEnd('/'), username.text.toString().trim(), password.text.toString())
-                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadXtream(src, editSource != null)
-                } else {
-                    val address = playlistUrl.text.toString().trim()
-                    if (!address.startsWith("http://") && !address.startsWith("https://")) {
-                        Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
-                        return@setOnClickListener
-                    }
-                    val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
-                    val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "m3u", address)
-                    saveSource(src); hideKeyboard(); dialog.dismiss(); loadM3u(src, editSource != null)
-                }
-            }
+        if (editSource?.mode == "xtream") sourceMode.check(xtream.id) else sourceMode.check(m3u.id)
+        if (editSource?.mode == "xtream") {
+            playlistUrl.visibility = View.GONE; server.visibility = View.VISIBLE; creds.visibility = View.VISIBLE
+        } else {
+            server.visibility = View.GONE; creds.visibility = View.GONE
         }
-        dialog.show()
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END
+            setPadding(0, dp(8), 0, 0)
+        }
+        actions.addView(makeButton("İptal", false) { render() },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(4), 0, dp(4), 0) })
+        actions.addView(makeButton(if (editSource == null) "Bağlan" else "Kaydet", true) {
+            val useXtream = sourceMode.checkedRadioButtonId == xtream.id
+            if (useXtream) {
+                val address = server.text.toString().trim()
+                if (!(address.startsWith("http://") || address.startsWith("https://")) ||
+                    username.text.isNullOrBlank() || password.text.isNullOrBlank()) {
+                    Toast.makeText(this, "Sunucu, kullanıcı adı ve şifreyi doldur.", Toast.LENGTH_LONG).show()
+                    return@makeButton
+                }
+                val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
+                val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "xtream",
+                    address.trimEnd('/'), username.text.toString().trim(), password.text.toString())
+                saveSource(src); hideKeyboard(); render(); loadXtream(src, editSource != null)
+            } else {
+                val address = playlistUrl.text.toString().trim()
+                if (!address.startsWith("http://") && !address.startsWith("https://")) {
+                    Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
+                    return@makeButton
+                }
+                val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
+                val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "m3u", address)
+                saveSource(src); hideKeyboard(); render(); loadM3u(src, editSource != null)
+            }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(4), 0, 0, 0) })
+        form.addView(actions)
+        content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(dp(6), dp(8), dp(6), dp(10))
+        })
+        form.post { form.requestFocus() }
     }
 
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
@@ -2762,7 +2785,6 @@ class MainActivity : Activity() {
             "themes" -> {
                 heading("Temalar", "Renk seçimi anında uygulanır.")
                 val themes = listOf(
-                    Triple("Dark Cinematic", Color.rgb(10, 13, 19), Color.rgb(0, 145, 255)),
                     Triple("Antrasit • Mavi", Color.rgb(17, 20, 25), Color.rgb(0, 166, 255)),
                     Triple("Gece • Altın", Color.rgb(15, 16, 20), Color.rgb(224, 184, 95)),
                     Triple("Lacivert • Turkuaz", Color.rgb(10, 22, 38), Color.rgb(35, 205, 190)),
@@ -2771,9 +2793,9 @@ class MainActivity : Activity() {
                 themes.forEach { theme ->
                     option(theme.first, "Zemin ve vurgu rengi") {
                         bg = theme.second
-                        panel = if (theme.first == "Dark Cinematic") Color.rgb(20, 26, 37) else Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
+                        panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
                         accent = theme.third
-                        accentBright = if (theme.first == "Dark Cinematic") Color.rgb(75, 195, 255) else theme.third
+                        accentBright = theme.third
                         prefs.edit().putString("theme_name", theme.first).apply()
                         rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel); mainContentScroll.setBackgroundColor(bg)
                         window.statusBarColor = bg; window.navigationBarColor = bg
