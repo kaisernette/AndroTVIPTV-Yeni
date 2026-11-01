@@ -2644,9 +2644,23 @@ class MainActivity : Activity() {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = android.view.Gravity.CENTER_VERTICAL
                             setPadding(dp(18), dp(14), dp(18), dp(14))
-                            background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
+                            background = roundedDrawable(panel, 14)
                             isFocusable = true
+                            isFocusableInTouchMode = true
                             isClickable = true
+                            setOnFocusChangeListener { v, hasFocus ->
+                                v.background = roundedDrawable(if (hasFocus) accent else panel, 14)
+                                val foreground = if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE
+                                (v as ViewGroup).let { card ->
+                                    (card.getChildAt(0) as? TextView)?.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else if (isHidden) Color.WHITE else accentBright)
+                                    val textColumn = card.getChildAt(1) as? LinearLayout
+                                    textColumn?.let { column ->
+                                        (column.getChildAt(0) as? TextView)?.setTextColor(foreground)
+                                        (column.getChildAt(1) as? TextView)?.setTextColor(if (hasFocus) Color.rgb(25, 38, 54) else muted)
+                                    }
+                                }
+                                v.elevation = 0f
+                            }
                             setOnClickListener {
                                 if (hiddenCategories.contains(hiddenKey)) hiddenCategories.remove(hiddenKey)
                                 else hiddenCategories.add(hiddenKey)
