@@ -292,6 +292,8 @@ class MainActivity : Activity() {
             setBackgroundColor(bg)
         }
 
+        root.clipChildren = false
+        root.clipToPadding = false
         rootLayout = root
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -330,6 +332,8 @@ class MainActivity : Activity() {
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, 0)
+            clipChildren = false
+            clipToPadding = false
         }
         root.addView(main, LinearLayout.LayoutParams(0, -1, 1f))
 
@@ -546,8 +550,18 @@ class MainActivity : Activity() {
             visibility = View.VISIBLE
         }
         main.addView(categoryScroll, LinearLayout.LayoutParams(-1, 46).apply { setMargins(0, 0, 0, 8) })
-        mainContentScroll = ScrollView(this).apply { isFillViewport = true; isFocusable = false }
-        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(18), dp(2), dp(30), dp(12)); clipToPadding = false }
+        mainContentScroll = ScrollView(this).apply {
+            isFillViewport = true
+            isFocusable = false
+            clipChildren = false
+            clipToPadding = false
+        }
+        content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(30), dp(20))
+            clipChildren = false
+            clipToPadding = false
+        }
         mainContentScroll.addView(content)
         main.addView(mainContentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
@@ -1942,6 +1956,9 @@ class MainActivity : Activity() {
                         channelRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.TOP
+                            clipChildren = false
+                            clipToPadding = false
+                            setPadding(0, dp(14), 0, dp(6))
                         }
                         content.addView(channelRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
@@ -1955,12 +1972,15 @@ class MainActivity : Activity() {
                         background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
                         minimumHeight = dp(126)
                         setOnFocusChangeListener { v, hasFocus ->
-                            v.background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
-                            v.elevation = if (hasFocus) dp(18).toFloat() else 0f
-                            v.cameraDistance = dp(1800).toFloat()
+                            v.animate().cancel()
+                            v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            v.elevation = if (hasFocus) dp(22).toFloat() else 0f
+                            v.translationZ = if (hasFocus) dp(22).toFloat() else 0f
+                            v.cameraDistance = dp(2200).toFloat()
                             v.animate().scaleX(if (hasFocus) 1.15f else 1f)
                                 .scaleY(if (hasFocus) 1.15f else 1f)
                                 .translationY(if (hasFocus) -dp(10).toFloat() else 0f)
+                                .translationZ(if (hasFocus) dp(22).toFloat() else 0f)
                                 .setDuration(180).start()
                         }
                         setOnClickListener { play(channel) }
@@ -2153,6 +2173,9 @@ class MainActivity : Activity() {
             val row = LinearLayout(this).apply {
                 orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
                 gravity = if (posterGridMode) Gravity.TOP or Gravity.START else Gravity.CENTER_VERTICAL
+                clipChildren = false
+                clipToPadding = false
+                if (posterGridMode) setPadding(0, dp(14), 0, dp(8))
             }
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
@@ -2168,13 +2191,16 @@ class MainActivity : Activity() {
                     background = roundedDrawable(Color.TRANSPARENT, 10)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        // No focus frame: gently enlarge the focused content card.
+                        // Focus lifts the card above siblings; no glow or focus border is drawn.
+                        v.animate().cancel()
                         v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                        v.elevation = if (hasFocus) dp(18).toFloat() else 0f
-                        v.cameraDistance = dp(1800).toFloat()
+                        v.elevation = if (hasFocus) dp(22).toFloat() else 0f
+                        v.translationZ = if (hasFocus) dp(22).toFloat() else 0f
+                        v.cameraDistance = dp(2200).toFloat()
                         v.animate().scaleX(if (hasFocus) 1.15f else 1f)
                             .scaleY(if (hasFocus) 1.15f else 1f)
                             .translationY(if (hasFocus) -dp(10).toFloat() else 0f)
+                            .translationZ(if (hasFocus) dp(22).toFloat() else 0f)
                             .setDuration(180).start()
                     }
                     setOnClickListener {
@@ -2264,6 +2290,8 @@ class MainActivity : Activity() {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.TOP
+                            clipChildren = false
+                            clipToPadding = false
                         }
                         row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
@@ -2293,9 +2321,10 @@ class MainActivity : Activity() {
             } else {
                 content.addView(HorizontalScrollView(this).apply {
                     isHorizontalScrollBarEnabled = false
+                    clipChildren = false
                     clipToPadding = false
                     isFillViewport = true
-                    setPadding(dp(18), 0, dp(30), 0)
+                    setPadding(dp(18), dp(14), dp(30), dp(12))
                     // Keep poster rows anchored to the left, even when there is only one item.
                     row.gravity = Gravity.START or Gravity.CENTER_VERTICAL
                     addView(row)
