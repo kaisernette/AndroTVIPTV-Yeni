@@ -307,7 +307,7 @@ class MainActivity : Activity() {
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = logo
-            textSize = 17f
+            textSize = if (prefs.getBoolean("compact_logo", true)) 17f else 21f
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             contentDescription = "KAISER TV+"
@@ -2501,8 +2501,10 @@ class MainActivity : Activity() {
                 val compactLogo = prefs.getBoolean("compact_logo", true)
                 option("Kompakt logo: ${if (compactLogo) "Açık" else "Kapalı"}",
                     "Sol menüde KaiserTV+ logosunu küçük göster.") {
-                    prefs.edit().putBoolean("compact_logo", !compactLogo).apply()
-                    Toast.makeText(this, "Logo tercihi kaydedildi. Ana ekran yenilendi.", Toast.LENGTH_SHORT).show()
+                    val nextCompact = !compactLogo
+                    prefs.edit().putBoolean("compact_logo", nextCompact).apply()
+                    (brandView.getChildAt(0) as? TextView)?.textSize = if (nextCompact) 17f else 21f
+                    Toast.makeText(this, "Logo boyutu güncellendi.", Toast.LENGTH_SHORT).show()
                     render()
                 }
                 option("Gizli kategorileri yönet", "Kategoriler sayfasından TV, film ve dizileri ayrı ayrı gizle veya göster.") {
