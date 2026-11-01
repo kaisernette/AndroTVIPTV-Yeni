@@ -231,6 +231,7 @@ class PlayerActivity : Activity() {
                     button.setOnClickListener { changeEpisode(1) }
                 }
             }
+        }
         setContentView(root)
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
