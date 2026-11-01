@@ -3311,6 +3311,8 @@ class MainActivity : Activity() {
         persistRecentHistory()
     }
 
+    private var pendingSeriesEpisodes: List<MediaItem> = emptyList()
+
     private var openingPlayer = false
 
     private fun play(item: MediaItem) {
@@ -3345,6 +3347,19 @@ class MainActivity : Activity() {
                 .putExtra("bufferMode", prefs.getString("player_buffer", "normal"))
                 .putExtra("aspectMode", prefs.getString("player_aspect", "fit"))
                 .putExtra("resumeEnabled", prefs.getBoolean("player_resume", true))
+            if (item.type == "Bölümler") {
+                // Keep episode navigation metadata in process memory, not Intent extras.
+                val episodeList = pendingSeriesEpisodes
+                PlayerActivity.pendingEpisodeNames = episodeList.map { it.name }
+                PlayerActivity.pendingEpisodeUrls = episodeList.map { it.url }
+                PlayerActivity.pendingEpisodeIndex = episodeList.indexOfFirst { it.url == item.url }.coerceAtLeast(0)
+                PlayerActivity.pendingSeriesTitle = historyItem.name
+            } else {
+                PlayerActivity.pendingEpisodeNames = emptyList()
+                PlayerActivity.pendingEpisodeUrls = emptyList()
+                PlayerActivity.pendingEpisodeIndex = 0
+                PlayerActivity.pendingSeriesTitle = ""
+            }
             if (item.type == "Canlı TV") {
                 val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
                 val recentChannels = recent.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
@@ -3407,7 +3422,10 @@ class MainActivity : Activity() {
                     AlertDialog.Builder(this).setTitle(series.name).setItems(seasonLabels.toTypedArray()) { _, which ->
                         val chosen = episodeRows[which].second
                         if (chosen.isEmpty()) { Toast.makeText(this, "Bu sezonda bölüm bulunamadı.", Toast.LENGTH_SHORT).show(); return@setItems }
-                        AlertDialog.Builder(this).setTitle(seasonLabels[which]).setItems(chosen.map { it.name }.toTypedArray()) { _, epIndex -> play(chosen[epIndex]) }.setNegativeButton("Geri", null).show()
+                        AlertDialog.Builder(this).setTitle(seasonLabels[which]).setItems(chosen.map { it.name }.toTypedArray()) { _, epIndex ->
+                            pendingSeriesEpisodes = chosen
+                            play(chosen[epIndex])
+                        }.setNegativeButton("Geri", null).show()
                     }.setNegativeButton("Kapat", null).show()
                 }
             } catch (e: Exception) { runOnUiThread { status.text = "Bölümler yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
