@@ -40,7 +40,7 @@ private data class MediaItem(
 
 class MainActivity : Activity() {
     private val posterExecutor = Executors.newFixedThreadPool(4)
-    private val posterCache = object : LruCache<String, Bitmap>(16 * 1024 * 1024) {
+    private val posterCache = object : LruCache<String, Bitmap>(10 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
@@ -3373,7 +3373,7 @@ class MainActivity : Activity() {
                 android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
                 if (bounds.outWidth > 0 && bounds.outHeight > 0) {
                     var sampleSize = 1
-                    while (bounds.outWidth / sampleSize > 480 || bounds.outHeight / sampleSize > 480) {
+                    while (bounds.outWidth / sampleSize > 360 || bounds.outHeight / sampleSize > 540) {
                         sampleSize *= 2
                     }
                     val decodeOptions = android.graphics.BitmapFactory.Options().apply {
