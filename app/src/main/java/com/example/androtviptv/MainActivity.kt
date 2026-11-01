@@ -2577,9 +2577,14 @@ class MainActivity : Activity() {
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val seriesWatchButton = makeButton("DİZİYİ İZLE", true) {
-            val firstEpisode = seriesEpisodeRows.firstOrNull()?.second?.firstOrNull()
-            if (firstEpisode != null) play(firstEpisode)
-            else Toast.makeText(this@MainActivity, "Bölümler henüz yüklenmedi.", Toast.LENGTH_SHORT).show()
+            val allEpisodes = seriesEpisodeRows.flatMap { it.second }
+            if (allEpisodes.isNotEmpty()) {
+                pendingSeriesEpisodes = allEpisodes
+                val seriesKey = series.seriesId.ifBlank { series.id }
+                val savedIndex = getSharedPreferences("androtv_playback", MODE_PRIVATE)
+                    .getInt("last_episode_$seriesKey", 0).coerceIn(0, allEpisodes.lastIndex)
+                play(allEpisodes[savedIndex])
+            } else Toast.makeText(this@MainActivity, "Bölümler henüz yüklenmedi.", Toast.LENGTH_SHORT).show()
         }.apply {
             gravity = Gravity.CENTER
             textSize = 14f
@@ -2653,9 +2658,13 @@ class MainActivity : Activity() {
                     episodeRow.addView(TextView(this).apply {
                         text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("İzle", true) { play(episode) }.apply {
+                    episodeRow.addView(makeButton("İzle", true) {
+                        pendingSeriesEpisodes = seriesEpisodeRows.flatMap { it.second }
+                        play(episode)
+                    }.apply {
                         textSize = 15f; gravity = Gravity.CENTER
                     }, LinearLayout.LayoutParams(dp(116), dp(46)).apply { setMargins(12, 0, 0, 0) })
+                    episodeRow.findViewWithTag<View>("unused_episode_marker")
                     episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
@@ -3356,11 +3365,13 @@ class MainActivity : Activity() {
                 PlayerActivity.pendingEpisodeUrls = episodeList.map { it.url }
                 PlayerActivity.pendingEpisodeIndex = episodeList.indexOfFirst { it.url == item.url }.coerceAtLeast(0)
                 PlayerActivity.pendingSeriesTitle = historyItem.name
+                PlayerActivity.pendingSeriesKey = item.seriesId.ifBlank { historyItem.seriesId.ifBlank { historyItem.id } }
             } else {
                 PlayerActivity.pendingEpisodeNames = emptyList()
                 PlayerActivity.pendingEpisodeUrls = emptyList()
                 PlayerActivity.pendingEpisodeIndex = 0
                 PlayerActivity.pendingSeriesTitle = ""
+                PlayerActivity.pendingSeriesKey = ""
             }
             if (item.type == "Canlı TV") {
                 val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
