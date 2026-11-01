@@ -1994,7 +1994,8 @@ class MainActivity : Activity() {
         // category at once can exhaust memory on older Android TV boxes. Keep the first
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
-        val groupsToRender = if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(12) else groups
+        val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
+            ?: if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(12) else groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler"
@@ -2009,7 +2010,13 @@ class MainActivity : Activity() {
                 textSize = 12f; setTextColor(accent)
                 gravity = Gravity.CENTER
                 setPadding(dp(8), 0, dp(8), 0)
-                if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
+                isFocusable = true
+                isClickable = true
+                setOnClickListener {
+                    if (showingExpandedCategory) expandedCategory = null
+                    else expandedCategory = groupName to entries
+                    render()
+                }
             })
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply {
@@ -2085,26 +2092,10 @@ class MainActivity : Activity() {
                 else poster.setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
                 if (weeklyPoster) {
-                    val metaRow = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                    }
-                    metaRow.addView(TextView(this).apply {
+                    card.addView(TextView(this).apply {
                         text = item.type.uppercase()
                         textSize = 10f; setTextColor(accent); letterSpacing = 0.03f
-                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    metaRow.addView(TextView(this).apply {
-                        text = if (favorites.contains(item.favoriteKey)) "♥" else "♡"
-                        textSize = 22f; setTextColor(if (favorites.contains(item.favoriteKey)) accent else Color.WHITE)
-                        gravity = Gravity.CENTER
-                        isFocusable = true
-                        setOnClickListener {
-                            if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-                            render()
-                        }
-                    }, LinearLayout.LayoutParams(dp(30), dp(30)))
-                    card.addView(metaRow)
+                    })
                 } else {
                     card.addView(TextView(this).apply {
                         text = if (item.type == "Canlı TV") "●  CANLI YAYIN" else item.type.uppercase()
