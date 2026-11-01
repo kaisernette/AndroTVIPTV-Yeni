@@ -1531,7 +1531,8 @@ class MainActivity : Activity() {
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
-        if (::dateClockRow.isInitialized) dateClockRow.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::dateClockRow.isInitialized) dateClockRow.visibility =
+            if (firstEntry || isLoadingSource || selectedType == "Ayarlar") View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Tümü" || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
@@ -2663,6 +2664,7 @@ class MainActivity : Activity() {
         // Settings is a dedicated full-screen workspace: hide the entire left navigation rail.
         if (::sidebar.isInitialized) sidebar.visibility = View.GONE
         mainHeader.visibility = View.GONE
+        if (::dateClockRow.isInitialized) dateClockRow.visibility = View.GONE
         status.visibility = View.GONE
         categoryScroll.visibility = View.GONE
         mainContentScroll.visibility = View.VISIBLE
