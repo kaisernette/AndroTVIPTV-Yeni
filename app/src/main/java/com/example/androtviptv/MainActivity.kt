@@ -939,15 +939,27 @@ class MainActivity : Activity() {
             minWidth = dp(112)
             minHeight = dp(44)
         }
-        sourceName.nextFocusDownId = if (editSource?.mode == "xtream") server.id else playlistUrl.id
+        // Android TV kumanda odak sırası:
+        // Kaynak adı → M3U / M3U8 → Xtream Codes → seçilen bağlantı alanı.
+        sourceMode.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+        m3u.isFocusable = true
+        m3u.isFocusableInTouchMode = true
+        xtream.isFocusable = true
+        xtream.isFocusableInTouchMode = true
+        sourceName.nextFocusDownId = m3u.id
+        m3u.nextFocusUpId = sourceName.id
+        m3u.nextFocusDownId = xtream.id
+        xtream.nextFocusUpId = m3u.id
+        xtream.nextFocusDownId = if (editSource?.mode == "xtream") server.id else playlistUrl.id
+        playlistUrl.nextFocusUpId = xtream.id
+        playlistUrl.nextFocusDownId = connectButton.id
+        server.nextFocusUpId = xtream.id
         server.nextFocusDownId = username.id
+        username.nextFocusUpId = server.id
         username.nextFocusDownId = password.id
+        password.nextFocusUpId = username.id
         password.nextFocusDownId = connectButton.id
         connectButton.nextFocusUpId = password.id
-        playlistUrl.nextFocusDownId = connectButton.id
-        sourceMode.descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
-        sourceMode.getChildAt(0)?.isFocusable = false
-        sourceMode.getChildAt(1)?.isFocusable = false
         actions.addView(connectButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply {
             setMargins(dp(4), 0, 0, 0)
         })
@@ -955,7 +967,7 @@ class MainActivity : Activity() {
         content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             setMargins(dp(6), dp(8), dp(6), dp(10))
         })
-        form.post { form.requestFocus() }
+        form.post { sourceName.requestFocus() }
     }
 
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
