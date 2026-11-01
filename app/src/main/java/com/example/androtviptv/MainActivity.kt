@@ -889,7 +889,7 @@ class MainActivity : Activity() {
         }
         actions.addView(makeButton("İptal", false) { render() },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(4), 0, dp(4), 0) })
-        val connectButton = makeSourceActionButton(if (editSource == null) "Bağlan" else "Kaydet", true) {
+        val connectButton = makeButton(if (editSource == null) "Bağlan" else "Kaydet", true) {
             val useXtream = sourceMode.checkedRadioButtonId == xtream.id
             if (useXtream) {
                 val address = server.text.toString().trim()
@@ -2853,17 +2853,17 @@ class MainActivity : Activity() {
                             }
                         }
                         sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(38), dp(42)))
-                        sourceRow.addView(makeSourceActionButton("Yenile", false) {
+                        sourceRow.addView(makeButton("Yenile", false) {
                             if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
                         }, LinearLayout.LayoutParams(dp(84), dp(42)).apply {
                             setMargins(dp(2), 0, dp(4), 0)
                         })
-                        sourceRow.addView(makeSourceActionButton("Düzenle", false) {
+                        sourceRow.addView(makeButton("Düzenle", false) {
                             showConnectionDialog(source)
                         }, LinearLayout.LayoutParams(dp(92), dp(42)).apply {
                             setMargins(dp(4), 0, dp(4), 0)
                         })
-                        sourceRow.addView(makeSourceActionButton("Sil", false) {
+                        sourceRow.addView(makeButton("Sil", false) {
                             AlertDialog.Builder(this)
                                 .setTitle("Kaynağı sil")
                                 .setMessage("${source.name} kaynağı ve bu kaynağın içerikleri silinsin mi?")
