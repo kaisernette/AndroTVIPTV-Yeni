@@ -217,20 +217,6 @@ class PlayerActivity : Activity() {
                 bar.setPlayedColor(playerAccentColor())
                 bar.setScrubberColor(playerAccentColor())
             }
-            if (episodeUrls.size > 1) {
-                view.findViewById<View>(androidx.media3.ui.R.id.exo_prev)?.let { button ->
-                    button.visibility = View.VISIBLE
-                    button.isEnabled = true
-                    button.alpha = 1f
-                    button.setOnClickListener { changeEpisode(-1) }
-                }
-                view.findViewById<View>(androidx.media3.ui.R.id.exo_next)?.let { button ->
-                    button.visibility = View.VISIBLE
-                    button.isEnabled = true
-                    button.alpha = 1f
-                    button.setOnClickListener { changeEpisode(1) }
-                }
-            }
         }
         setContentView(root)
         if (url.isBlank()) {
@@ -263,12 +249,6 @@ class PlayerActivity : Activity() {
                 .build().also { exo ->
                     view.player = exo
                     exo.addListener(object : Player.Listener {
-                        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                            if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
-                                val detail = if (seriesTitle.isNotBlank()) "$seriesTitle • $currentContentTitle" else currentContentTitle
-                                android.widget.Toast.makeText(this@PlayerActivity, "Duraklatıldı\n$detail", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        }
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
                                 val cleanUrl = currentStreamUrl.substringBefore("?").lowercase()
@@ -303,7 +283,12 @@ class PlayerActivity : Activity() {
                             restartCurrentStream("Akış hatası: ${error.errorCodeName}")
                         }
                     })
-                    exo.setMediaItem(mediaItem)
+                    if (!isLiveStream && episodeUrls.size > 1) {
+                        val seasonPlaylist = episodeUrls.map { createStreamMediaItem(it) }
+                        exo.setMediaItems(seasonPlaylist, episodeIndex, 0L)
+                    } else {
+                        exo.setMediaItem(mediaItem)
+                    }
                     val resumePosition = if (isLiveStream) 0L else playbackPrefs.getLong(resumeKey, 0L)
                     exo.prepare()
                     if (resumePosition > 5000L) exo.seekTo(resumePosition)
@@ -487,36 +472,6 @@ class PlayerActivity : Activity() {
             "Koyu • Mor" -> Color.rgb(174, 115, 255)
             else -> Color.rgb(0, 145, 255)
         }
-    }
-
-    private fun changeEpisode(direction: Int) {
-        val nextIndex = episodeIndex + direction
-        if (nextIndex !in episodeUrls.indices) {
-            android.widget.Toast.makeText(this, if (direction < 0) "İlk bölümdesin." else "Son bölümdesin.", android.widget.Toast.LENGTH_SHORT).show()
-            return
-        }
-        val nextUrl = episodeUrls[nextIndex]
-        if (nextUrl.isBlank()) return
-        episodeIndex = nextIndex
-        currentContentTitle = episodeNames.getOrNull(nextIndex) ?: "Bölüm ${nextIndex + 1}"
-        currentStreamUrl = nextUrl
-        originalStreamUrl = nextUrl
-        triedHlsFallback = false
-        usingHlsFallback = false
-        retryCount = 0
-        bufferingSinceMs = 0L
-        lastStablePlaybackMs = 0L
-        positionStalledSinceMs = 0L
-        lastObservedPositionMs = -1L
-        resumeKey = "position_" + nextUrl.hashCode().toString()
-        playbackPrefs.edit().remove(resumeKey).apply()
-        player?.let { exo ->
-            exo.setMediaItem(createStreamMediaItem(nextUrl))
-            exo.prepare()
-            exo.playWhenReady = true
-        }
-        val directionLabel = if (direction < 0) "Önceki bölüm" else "Sonraki bölüm"
-        android.widget.Toast.makeText(this, "$directionLabel: $currentContentTitle", android.widget.Toast.LENGTH_LONG).show()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
