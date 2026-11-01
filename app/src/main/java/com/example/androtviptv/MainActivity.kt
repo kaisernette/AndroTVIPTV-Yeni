@@ -2339,37 +2339,28 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply { gravity = Gravity.CENTER },
-            LinearLayout.LayoutParams(dp(132), 44).apply { setMargins(0, 8, dp(8), 0) })
-        val isFavorite = favorites.contains(movie.favoriteKey)
-        val favoriteButton = makeButton(if (isFavorite) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
+            gravity = Gravity.CENTER
+            textSize = 14f
+            minHeight = dp(48)
+        }
+        actions.addView(watchButton,
+            LinearLayout.LayoutParams(dp(170), dp(48)).apply { setMargins(0, 8, dp(10), 0) })
+        val favoriteButton = makeButton(
+            if (favorites.contains(movie.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", true
+        ) {
             if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
             prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
             render()
         }.apply {
             gravity = Gravity.CENTER
-            val yellow = Color.rgb(255, 205, 55)
-            fun updateFavoriteAppearance(hasFocus: Boolean) {
-                if (isFavorite) {
-                    // Keep the entire active button yellow even while focused.
-                    setTextColor(Color.rgb(25, 25, 25))
-                    background = roundedDrawable(yellow, 10, if (hasFocus) accentBright else yellow)
-                } else {
-                    // Transparent when inactive; focus only adds a blue outline.
-                    setTextColor(Color.WHITE)
-                    background = roundedDrawable(Color.TRANSPARENT, 10,
-                        if (hasFocus) accentBright else Color.rgb(88, 96, 110))
-                }
-            }
-            updateFavoriteAppearance(hasFocus = false)
-            setOnFocusChangeListener { v, hasFocus ->
-                updateFavoriteAppearance(hasFocus)
-                v.scaleX = if (hasFocus) 1.035f else 1f
-                v.scaleY = if (hasFocus) 1.035f else 1f
-            }
+            textSize = 14f
+            minHeight = dp(48)
         }
-        actions.addView(favoriteButton, LinearLayout.LayoutParams(dp(160), 44).apply { setMargins(0, 8, 0, 0) })
+        actions.addView(favoriteButton,
+            LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, 8, 0, 0) })
         copy.addView(actions)
+        watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
 
@@ -2423,17 +2414,27 @@ class MainActivity : Activity() {
             textSize = 13f; maxLines = 2; setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(makeButton(if (favorites.contains(series.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) {
+        val seriesWatchButton = makeButton("▶  DİZİYİ İZLE", true) {
+            val firstEpisode = seriesEpisodeRows.firstOrNull()?.second?.firstOrNull()
+            if (firstEpisode != null) play(firstEpisode)
+            else Toast.makeText(this@MainActivity, "Bölümler henüz yüklenmedi.", Toast.LENGTH_SHORT).show()
+        }.apply {
+            gravity = Gravity.CENTER
+            textSize = 14f
+            minHeight = dp(48)
+        }
+        actions.addView(seriesWatchButton,
+            LinearLayout.LayoutParams(dp(170), dp(48)).apply { setMargins(0, 14, dp(10), 0) })
+        actions.addView(makeButton(
+            if (favorites.contains(series.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", true
+        ) {
             if (!favorites.add(series.favoriteKey)) favorites.remove(series.favoriteKey)
             prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
             render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 10, 0) })
-        actions.addView(makeButton("← Geri", false) {
-            detailSeries = null
-            seriesEpisodeRows = emptyList()
-            render()
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42).apply { setMargins(0, 14, 0, 0) })
+        }.apply { textSize = 14f; minHeight = dp(48) },
+            LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
+        seriesWatchButton.post { if (detailSeries?.favoriteKey == series.favoriteKey) seriesWatchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
         content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
 
