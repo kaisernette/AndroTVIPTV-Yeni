@@ -369,7 +369,7 @@ class MainActivity : Activity() {
             textSize = 15f
             setTextColor(Color.WHITE)
             setHintTextColor(muted)
-            singleLine = true
+            isSingleLine = true
             isFocusable = true
             isFocusableInTouchMode = true
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
