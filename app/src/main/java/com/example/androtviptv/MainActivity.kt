@@ -1211,7 +1211,13 @@ class MainActivity : Activity() {
                             "get_vod_streams" -> "Filmler"
                             else -> "Diziler"
                         }
-                        val ext = o.optString("container_extension", if (type == "Canlı TV") "ts" else if (type == "Radyo") "mp3" else "mp4")
+                        val ext = o.optString("container_extension", "").ifBlank {
+                            when (type) {
+                                "Canlı TV" -> "ts"
+                                "Radyo" -> "mp3"
+                                else -> "mp4"
+                            }
+                        }
                         val plot = o.optString("plot", o.optString("description", ""))
                         val actors = o.optString("cast", o.optString("actors", ""))
                         val streamUrl = when (type) {
