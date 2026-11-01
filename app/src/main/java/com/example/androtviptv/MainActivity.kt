@@ -840,13 +840,34 @@ class MainActivity : Activity() {
             setPadding(dp(10), dp(7), dp(10), dp(7))
             background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
         }
-        server.background = roundedDrawable(Color.TRANSPARENT, 8)
-        username.background = roundedDrawable(Color.TRANSPARENT, 8)
-        password.background = roundedDrawable(Color.TRANSPARENT, 8)
-        xtreamFieldsFrame.addView(server, fieldParams())
+        fun framedInput(input: EditText): LinearLayout {
+            return LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = roundedDrawable(panel, 10, Color.rgb(48, 57, 73))
+                setPadding(dp(8), 0, dp(8), 0)
+                isFocusable = false
+                input.background = roundedDrawable(Color.TRANSPARENT, 0)
+                addView(input, LinearLayout.LayoutParams(-1, dp(48)))
+                input.setOnFocusChangeListener { _, hasFocus ->
+                    background = roundedDrawable(panel, 10, if (hasFocus) accent else Color.rgb(48, 57, 73))
+                }
+            }
+        }
+        val serverFrame = framedInput(server)
+        val usernameFrame = framedInput(username)
+        val passwordFrame = framedInput(password)
+        xtreamFieldsFrame.removeAllViews()
+        xtreamFieldsFrame.addView(serverFrame, LinearLayout.LayoutParams(-1, dp(54)).apply {
+            setMargins(0, dp(3), 0, dp(5))
+        })
         val creds = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        creds.addView(username, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(0, dp(3), dp(5), dp(3)) })
-        creds.addView(password, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(dp(5), dp(3), 0, dp(3)) })
+        creds.addView(usernameFrame, LinearLayout.LayoutParams(0, dp(54), 1f).apply {
+            setMargins(0, dp(3), dp(5), dp(3))
+        })
+        creds.addView(passwordFrame, LinearLayout.LayoutParams(0, dp(54), 1f).apply {
+            setMargins(dp(5), dp(3), 0, dp(3))
+        })
         xtreamFieldsFrame.addView(creds)
         form.addView(xtreamFieldsFrame, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             setMargins(0, dp(3), 0, dp(3))
@@ -862,13 +883,22 @@ class MainActivity : Activity() {
         } else {
             xtreamFieldsFrame.visibility = View.GONE
         }
+        sourceName.nextFocusDownId = if (editSource?.mode == "xtream") server.id else playlistUrl.id
+        server.nextFocusDownId = username.id
+        username.nextFocusDownId = password.id
+        password.nextFocusDownId = connectButton.id
+        connectButton.nextFocusUpId = password.id
+        playlistUrl.nextFocusDownId = connectButton.id
+        sourceMode.descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
+        sourceMode.getChildAt(0)?.isFocusable = false
+        sourceMode.getChildAt(1)?.isFocusable = false
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END
             setPadding(0, dp(8), 0, 0)
         }
         actions.addView(makeButton("İptal", false) { render() },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(4), 0, dp(4), 0) })
-        actions.addView(makeButton(if (editSource == null) "Bağlan" else "Kaydet", true) {
+        val connectButton = makeButton(if (editSource == null) "Bağlan" else "Kaydet", true) {
             val useXtream = sourceMode.checkedRadioButtonId == xtream.id
             if (useXtream) {
                 val address = server.text.toString().trim()
@@ -891,7 +921,14 @@ class MainActivity : Activity() {
                 val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "m3u", address)
                 saveSource(src); hideKeyboard(); render(); loadM3u(src, editSource != null)
             }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(4), 0, 0, 0) })
+        }.apply {
+            minWidth = dp(112)
+            minHeight = dp(44)
+            background = roundedDrawable(panel, 8)
+        }
+        actions.addView(connectButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply {
+            setMargins(dp(4), 0, 0, 0)
+        })
         form.addView(actions)
         content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             setMargins(dp(6), dp(8), dp(6), dp(10))
