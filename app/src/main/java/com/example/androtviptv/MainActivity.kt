@@ -887,9 +887,9 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END
             setPadding(0, dp(8), 0, 0)
         }
-        actions.addView(makeButton("İptal", false) { render() },
+        actions.addView(makeSourceActionButton("İptal", false) { render() },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(4), 0, dp(4), 0) })
-        val connectButton = makeButton(if (editSource == null) "Bağlan" else "Kaydet", true) {
+        val connectButton = makeSourceActionButton(if (editSource == null) "Bağlan" else "Kaydet", true) {
             val useXtream = sourceMode.checkedRadioButtonId == xtream.id
             if (useXtream) {
                 val address = server.text.toString().trim()
@@ -915,7 +915,6 @@ class MainActivity : Activity() {
         }.apply {
             minWidth = dp(112)
             minHeight = dp(44)
-            background = roundedDrawable(panel, 8)
         }
         sourceName.nextFocusDownId = if (editSource?.mode == "xtream") server.id else playlistUrl.id
         server.nextFocusDownId = username.id
@@ -978,6 +977,36 @@ class MainActivity : Activity() {
             }
         }
     }
+
+    private fun makeSourceActionButton(label: String, primary: Boolean, action: () -> Unit): Button =
+        Button(this).apply {
+            text = label
+            textSize = 13f
+            isAllCaps = false
+            isFocusable = true
+            isFocusableInTouchMode = true
+            minWidth = dp(76)
+            minHeight = dp(42)
+            setPadding(dp(12), 0, dp(12), 0)
+            setTextColor(Color.WHITE)
+            stateListAnimator = null
+            background = roundedDrawable(
+                if (primary) accent else panel,
+                10,
+                if (primary) accent else Color.rgb(76, 91, 112)
+            )
+            setOnFocusChangeListener { view, hasFocus ->
+                view.background = roundedDrawable(
+                    if (hasFocus || primary) accent else panel,
+                    10,
+                    if (hasFocus || primary) accent else Color.rgb(76, 91, 112)
+                )
+                (view as Button).setTextColor(
+                    if (hasFocus || primary) Color.rgb(8, 13, 22) else Color.WHITE
+                )
+            }
+            setOnClickListener { action() }
+        }
 
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
@@ -2854,17 +2883,17 @@ class MainActivity : Activity() {
                             }
                         }
                         sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(38), dp(42)))
-                        sourceRow.addView(makeButton("Yenile", false) {
+                        sourceRow.addView(makeSourceActionButton("Yenile", false) {
                             if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
-                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply {
+                        }, LinearLayout.LayoutParams(dp(84), dp(42)).apply {
                             setMargins(dp(2), 0, dp(4), 0)
                         })
-                        sourceRow.addView(makeButton("Düzenle", false) {
+                        sourceRow.addView(makeSourceActionButton("Düzenle", false) {
                             showConnectionDialog(source)
-                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply {
+                        }, LinearLayout.LayoutParams(dp(92), dp(42)).apply {
                             setMargins(dp(4), 0, dp(4), 0)
                         })
-                        sourceRow.addView(makeButton("Sil", false) {
+                        sourceRow.addView(makeSourceActionButton("Sil", false) {
                             AlertDialog.Builder(this)
                                 .setTitle("Kaynağı sil")
                                 .setMessage("${source.name} kaynağı ve bu kaynağın içerikleri silinsin mi?")
@@ -2875,7 +2904,7 @@ class MainActivity : Activity() {
                                     items.removeAll { it.sourceId == source.id }
                                     render()
                                 }.show()
-                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply {
+                        }, LinearLayout.LayoutParams(dp(68), dp(42)).apply {
                             setMargins(dp(4), 0, 0, 0)
                         })
                         content.addView(sourceRow, LinearLayout.LayoutParams(-1, dp(70)).apply {
