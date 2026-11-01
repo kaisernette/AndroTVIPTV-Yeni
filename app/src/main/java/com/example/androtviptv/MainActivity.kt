@@ -1886,12 +1886,12 @@ class MainActivity : Activity() {
         // category at once can exhaust memory on older Android TV boxes. Keep the first
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
-        val groupsToRender = if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(6) else groups
+        val groupsToRender = if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(12) else groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler"
             val sectionHeader = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, 16, 2, 8)
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, dp(4), 2, dp(6))
             }
             sectionHeader.addView(TextView(this).apply {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
@@ -1926,7 +1926,10 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)).apply { setMargins(dp(10), 0, 0, 0) })
             }
             content.addView(sectionHeader)
-            val row = LinearLayout(this).apply { orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
+            val row = LinearLayout(this).apply {
+                orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+                gravity = if (posterGridMode) Gravity.TOP or Gravity.START else Gravity.CENTER_VERTICAL
+            }
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
@@ -1938,13 +1941,12 @@ class MainActivity : Activity() {
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(0, 0, 0, 0)
-                    background = if (selectedType == "Filmler" || selectedType == "Diziler") Color.TRANSPARENT else roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
+                    background = Color.TRANSPARENT
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = if (selectedType == "Filmler" || selectedType == "Diziler") Color.TRANSPARENT else roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
-                            if (hasFocus) focusColor else Color.rgb(38, 45, 60))
-                        v.elevation = if (hasFocus) dp(4).toFloat() else 0f
-                        v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
+                        v.background = Color.TRANSPARENT
+                        v.elevation = 0f
+                        v.scaleX = if (hasFocus) 1.025f else 1f; v.scaleY = if (hasFocus) 1.025f else 1f
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
@@ -1984,7 +1986,7 @@ class MainActivity : Activity() {
                 val poster = ImageView(this).apply {
                     scaleType = if (liveCard || weeklyPoster) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
-                    background = if (selectedType == "Filmler" || selectedType == "Diziler") Color.TRANSPARENT else roundedDrawable(Color.rgb(31, 37, 50), 10)
+                    background = Color.TRANSPARENT
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
@@ -2047,7 +2049,7 @@ class MainActivity : Activity() {
                         row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
                     expandedPosterRow?.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        setMargins(dp(4), dp(3), dp(4), dp(9))
+                        setMargins(dp(6), 0, dp(6), dp(12))
                     })
                     expandedPosterCount++
                 } else {
