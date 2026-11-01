@@ -1941,10 +1941,10 @@ class MainActivity : Activity() {
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(0, 0, 0, 0)
-                    background = Color.TRANSPARENT
+                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = Color.TRANSPARENT
+                        v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         v.elevation = 0f
                         v.scaleX = if (hasFocus) 1.025f else 1f; v.scaleY = if (hasFocus) 1.025f else 1f
                     }
@@ -1986,7 +1986,7 @@ class MainActivity : Activity() {
                 val poster = ImageView(this).apply {
                     scaleType = if (liveCard || weeklyPoster) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
-                    background = Color.TRANSPARENT
+                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
