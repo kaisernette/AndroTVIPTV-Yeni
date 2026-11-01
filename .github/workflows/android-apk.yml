@@ -1,4 +1,5 @@
 name: Build Kaisertv APK
+# Rebuild after DPAD overlay behavior update
 # Rebuild after safe player focus lookup fix
 # Design-only branch build enabled
 
