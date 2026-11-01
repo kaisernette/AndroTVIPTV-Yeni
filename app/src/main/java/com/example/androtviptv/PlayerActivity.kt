@@ -37,6 +37,7 @@ class PlayerActivity : Activity() {
         @Volatile var pendingEpisodeUrls: List<String> = emptyList()
         @Volatile var pendingEpisodeIndex: Int = 0
         @Volatile var pendingSeriesTitle: String = ""
+        @Volatile var pendingSeriesKey: String = ""
     }
 
     private var player: ExoPlayer? = null
@@ -107,6 +108,7 @@ class PlayerActivity : Activity() {
     private var episodeUrls: List<String> = emptyList()
     private var episodeIndex = 0
     private var seriesTitle = ""
+    private var seriesResumeKey = ""
     private var currentContentTitle = "Oynatıcı"
     private var savedChannelRows: List<String> = emptyList()
     private var savedChannelUrls: List<String> = emptyList()
@@ -136,6 +138,10 @@ class PlayerActivity : Activity() {
         if (isLiveStream || !resumeEnabled) return
         val exo = player ?: return
         val pos = exo.currentPosition.coerceAtLeast(0L)
+        if (episodeUrls.isNotEmpty() && seriesResumeKey.isNotBlank()) {
+            episodeIndex = exo.currentMediaItemIndex.coerceIn(0, episodeUrls.lastIndex)
+            playbackPrefs.edit().putInt("last_episode_$seriesResumeKey", episodeIndex).apply()
+        }
         if (exo.duration > 0 && pos >= exo.duration - 5000L) {
             playbackPrefs.edit().remove(resumeKey).apply()
         } else if (pos > 3000L) {
@@ -151,10 +157,12 @@ class PlayerActivity : Activity() {
         episodeUrls = pendingEpisodeUrls
         episodeIndex = pendingEpisodeIndex.coerceIn(0, (episodeUrls.size - 1).coerceAtLeast(0))
         seriesTitle = pendingSeriesTitle
+        seriesResumeKey = pendingSeriesKey
         pendingEpisodeNames = emptyList()
         pendingEpisodeUrls = emptyList()
         pendingEpisodeIndex = 0
         pendingSeriesTitle = ""
+        pendingSeriesKey = ""
         channelRows = pendingChannelNames
         channelUrls = pendingChannelUrls
         selectedChannelIndex = pendingChannelIndex.coerceIn(0, (channelUrls.size - 1).coerceAtLeast(0))
@@ -249,6 +257,15 @@ class PlayerActivity : Activity() {
                 .build().also { exo ->
                     view.player = exo
                     exo.addListener(object : Player.Listener {
+                        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                            if (episodeUrls.isNotEmpty()) {
+                                episodeIndex = exo.currentMediaItemIndex.coerceIn(0, episodeUrls.lastIndex)
+                                currentContentTitle = episodeNames.getOrNull(episodeIndex) ?: "Bölüm ${episodeIndex + 1}"
+                                currentStreamUrl = episodeUrls.getOrNull(episodeIndex) ?: currentStreamUrl
+                                originalStreamUrl = currentStreamUrl
+                                resumeKey = "position_" + currentStreamUrl.hashCode().toString()
+                            }
+                        }
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
                                 val cleanUrl = currentStreamUrl.substringBefore("?").lowercase()
