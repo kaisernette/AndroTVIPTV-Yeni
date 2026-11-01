@@ -572,7 +572,19 @@ class MainActivity : Activity() {
         selectedSidebarFocusView = null
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
+            val iconRes = when {
+                label.contains("Ana Sayfa") -> R.drawable.nav_home
+                label.contains("TV") -> R.drawable.nav_tv
+                label.contains("Filmler") -> R.drawable.nav_movies
+                label.contains("Diziler") -> R.drawable.nav_series
+                label.contains("Favoriler") -> R.drawable.nav_favorites
+                label.contains("İzlediklerim") || label.contains("Geçmiş") -> R.drawable.nav_history
+                label.contains("Ayarlar") -> R.drawable.nav_settings
+                else -> 0
+            }
             val sidebarButton = makeButton(label, selected, action).apply {
+                val iconDrawable = if (iconRes != 0) getDrawable(iconRes)?.mutate() else null
+                iconDrawable?.setBounds(0, 0, dp(25), dp(25))
                 // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
@@ -580,6 +592,7 @@ class MainActivity : Activity() {
                     val button = v as Button
                     button.background = if (hasFocus) roundedDrawable(accent, 0) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     button.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
+                    iconDrawable?.setTint(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
                     button.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
                     v.elevation = 0f
                     v.scaleX = 1f
@@ -587,9 +600,12 @@ class MainActivity : Activity() {
                 }
                 textSize = 14f
                 val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
-                text = android.text.SpannableString(label).apply {
-                    setSpan(android.text.style.RelativeSizeSpan(1.48f), 0, iconEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, iconEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                text = if (iconDrawable != null) {
+                    android.text.SpannableString("  " + label.substring((iconEnd + 2).coerceAtMost(label.length))).apply {
+                        setSpan(android.text.style.ImageSpan(iconDrawable, android.text.style.ImageSpan.ALIGN_CENTER), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                } else {
+                    android.text.SpannableString(label)
                 }
                 gravity = Gravity.CENTER_VERTICAL
                 isSingleLine = true
