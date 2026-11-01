@@ -805,7 +805,7 @@ class MainActivity : Activity() {
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = roundedDrawable(panel, 16)
+            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
         form.addView(TextView(this).apply {
             text = if (editSource == null) "İzleme kaynağı ekle" else "Kaynağı düzenle"
@@ -2810,7 +2810,7 @@ class MainActivity : Activity() {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.CENTER_VERTICAL
                             setPadding(dp(12), dp(6), dp(8), dp(6))
-                            background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
+                            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         }
                         val sourceInfo = LinearLayout(this).apply {
                             orientation = LinearLayout.VERTICAL
