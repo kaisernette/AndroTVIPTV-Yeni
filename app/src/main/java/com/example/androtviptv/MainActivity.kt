@@ -859,10 +859,10 @@ class MainActivity : Activity() {
             button.text = "Favori"
             button.setTextColor(if (selected) Color.rgb(25, 25, 25) else Color.WHITE)
             button.background = if (selected) {
-                roundedDrawable(yellow, 12)
+                roundedDrawable(yellow, 0)
             } else {
-                // Unselected favorite stays transparent; focus is shown only as a slim outline.
-                roundedDrawable(Color.TRANSPARENT, 12, if (button.hasFocus()) accentBright else muted)
+                // Keep the favorite button unfilled; focus is indicated by a yellow square outline.
+                roundedDrawable(Color.TRANSPARENT, 0, if (button.hasFocus()) yellow else muted)
             }
         }
         return makeButton("Favori", false) {
@@ -1330,8 +1330,8 @@ class MainActivity : Activity() {
         val exitPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(dp(28), dp(24), dp(28), dp(24))
-            background = roundedDrawable(Color.rgb(13, 20, 33), 24, accent)
+            setPadding(dp(18), dp(14), dp(18), dp(14))
+            background = roundedDrawable(Color.rgb(13, 20, 33), 18, accent)
         }
         val brand = TextView(this).apply {
             val logo = android.text.SpannableString("▶ KAISER TV+")
@@ -1344,13 +1344,14 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setTypeface(null, android.graphics.Typeface.BOLD)
         }
-        exitPanel.addView(brand, LinearLayout.LayoutParams(-1, dp(68)))
+        brand.textSize = 21f
+        exitPanel.addView(brand, LinearLayout.LayoutParams(-1, dp(42)))
         exitPanel.addView(TextView(this).apply {
             text = "Uygulamadan çıkmak istiyor musunuz?"
-            textSize = 23f
+            textSize = 17f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
-            setPadding(0, dp(10), 0, dp(24))
+            setPadding(0, dp(4), 0, dp(12))
         }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         val exitActions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1360,22 +1361,22 @@ class MainActivity : Activity() {
         val exitButton = makeButton("Çıkış Yap", false) {
             exitDialog.dismiss()
             finish()
-        }.apply { textSize = 23f; setTypeface(null, android.graphics.Typeface.BOLD) }
+        }.apply { textSize = 17f; setTypeface(null, android.graphics.Typeface.BOLD) }
         val cancelButton = makeButton("Vazgeç", false) {
             exitDialog.dismiss()
         }.apply { textSize = 23f; setTypeface(null, android.graphics.Typeface.BOLD) }
-        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(68), 1f).apply {
+        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
             setMargins(0, 0, dp(10), 0)
         })
         exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(68), 1f).apply {
             setMargins(dp(10), 0, 0, 0)
         })
-        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(72)))
+        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(50)))
         exitDialog.setOnShowListener {
             exitDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
             exitDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             exitDialog.window?.setDimAmount(0.78f)
-            exitDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.72f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+            exitDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.56f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
             cancelButton.post { cancelButton.requestFocus() }
         }
         exitDialog.show()
@@ -2610,7 +2611,7 @@ class MainActivity : Activity() {
                     episodeRow.addView(TextView(this).apply {
                         text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("İzle", false) { play(episode) }.apply {
+                    episodeRow.addView(makeButton("İzle", true) { play(episode) }.apply {
                         textSize = 15f; gravity = Gravity.CENTER
                     }, LinearLayout.LayoutParams(dp(116), dp(46)).apply { setMargins(12, 0, 0, 0) })
                     episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
