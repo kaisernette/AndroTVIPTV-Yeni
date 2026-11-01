@@ -2481,10 +2481,60 @@ class MainActivity : Activity() {
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
+                option("◈  Görünüm ve Menü", "Menü saydamlığı ve arayüz tercihleri") { settingsPage = "appearance"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("▶  Oynatıcı", "Arabellek, ekran oranı ve kaldığın yerden devam") { settingsPage = "player"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("＋  Kaynaklar", "Kaynak ekle, kayıtlı kaynakları yenile veya sil") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("▤  Kategoriler", "Film ve dizi kategorilerini görüntüle") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("◐  Temalar", "Uygulamanın renk görünümünü değiştir") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("◷  Geçmiş", "İzlediğin dizileri ve filmleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("▤  Kategoriler", "TV, film ve dizi kategorilerini ayrı ayrı yönet") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("◐  Temalar", "Dark Cinematic ve diğer renk temaları") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("◷  Geçmiş", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
+            "appearance" -> {
+                heading("Görünüm ve Menü", "Arayüz davranışını kişiselleştir.")
+                val menuTransparent = prefs.getBoolean("transparent_menu", true)
+                option("◧  Şeffaf sol menü: ${if (menuTransparent) "Açık" else "Kapalı"}",
+                    "Menü arka planını ana ekranla bütünleştir.") {
+                    transparentMenu = !prefs.getBoolean("transparent_menu", true)
+                    prefs.edit().putBoolean("transparent_menu", transparentMenu).apply()
+                    sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
+                    render()
+                }
+                val compactLogo = prefs.getBoolean("compact_logo", true)
+                option("Kompakt logo: ${if (compactLogo) "Açık" else "Kapalı"}",
+                    "Sol menüde KaiserTV+ logosunu küçük göster.") {
+                    prefs.edit().putBoolean("compact_logo", !compactLogo).apply()
+                    Toast.makeText(this, "Logo tercihi kaydedildi. Ana ekran yenilendi.", Toast.LENGTH_SHORT).show()
+                    render()
+                }
+                option("Gizli kategorileri yönet", "Kategoriler sayfasından TV, film ve dizileri ayrı ayrı gizle veya göster.") {
+                    settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render()
+                }
+            }
+            "player" -> {
+                heading("Oynatıcı Ayarları", "Yayın performansı ve görüntü davranışı.")
+                val buffer = prefs.getString("player_buffer", "normal") ?: "normal"
+                option("Arabellek: ${when(buffer) { "low" -> "Düşük"; "high" -> "Yüksek"; else -> "Dengeli" }}",
+                    "Düşük: daha hızlı başlatma • Yüksek: daha uzun ön yükleme.") {
+                    val choices = arrayOf("Düşük", "Dengeli", "Yüksek")
+                    AlertDialog.Builder(this).setTitle("Arabellek tercihi").setSingleChoiceItems(choices,
+                        when(buffer) { "low" -> 0; "high" -> 2; else -> 1 }) { dialog, which ->
+                        prefs.edit().putString("player_buffer", listOf("low", "normal", "high")[which]).apply()
+                        dialog.dismiss(); render()
+                    }.setNegativeButton("İptal", null).show()
+                }
+                val aspect = prefs.getString("player_aspect", "fit") ?: "fit"
+                option("Görüntü oranı: ${if (aspect == "fill") "Ekranı doldur" else "Orijinali koru"}",
+                    "Yayın görüntüsünün ekrana nasıl sığacağını belirle.") {
+                    AlertDialog.Builder(this).setTitle("Görüntü oranı")
+                        .setSingleChoiceItems(arrayOf("Orijinali koru", "Ekranı doldur"), if (aspect == "fill") 1 else 0) { dialog, which ->
+                            prefs.edit().putString("player_aspect", if (which == 1) "fill" else "fit").apply()
+                            dialog.dismiss(); render()
+                        }.setNegativeButton("İptal", null).show()
+                }
+                val resume = prefs.getBoolean("player_resume", true)
+                option("Kaldığın yerden devam: ${if (resume) "Açık" else "Kapalı"}",
+                    "Film ve dizilerde son izleme konumunu hatırla.") {
+                    prefs.edit().putBoolean("player_resume", !resume).apply(); render()
+                }
             }
             "sources" -> {
                 heading("Kaynaklar", "Kaynak ekle ve kayıtlı bağlantılarını buradan yönet.")
@@ -2961,6 +3011,9 @@ class MainActivity : Activity() {
                 .putExtra("name", item.name)
                 .putExtra("url", item.url)
                 .putExtra("isLive", item.type == "Canlı TV")
+                .putExtra("bufferMode", prefs.getString("player_buffer", "normal"))
+                .putExtra("aspectMode", prefs.getString("player_aspect", "fit"))
+                .putExtra("resumeEnabled", prefs.getBoolean("player_resume", true))
             if (item.type == "Canlı TV") {
                 val channels = items.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
                 val recentChannels = recent.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
