@@ -2598,9 +2598,15 @@ class MainActivity : Activity() {
                         gravity = Gravity.CENTER
                         setTextColor(Color.WHITE)
                         setPadding(dp(5), dp(11), dp(5), dp(11))
-                        background = roundedDrawable(panel, 10, Color.rgb(48, 57, 73))
+                        background = roundedDrawable(panel, 10)
                         isFocusable = true
+                        isFocusableInTouchMode = true
                         isClickable = true
+                        setOnFocusChangeListener { v, hasFocus ->
+                            v.background = roundedDrawable(if (hasFocus) accent else panel, 10)
+                            (v as TextView).setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
+                            v.elevation = 0f
+                        }
                         setOnClickListener {
                             when (actionLabel) {
                                 "Hepsini gizle" -> sectionGroups.forEach { group ->
