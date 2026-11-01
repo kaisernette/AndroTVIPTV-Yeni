@@ -423,12 +423,12 @@ class MainActivity : Activity() {
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
                 // Flat, filled accent focus treatment from the 375 visual design.
-                background = roundedDrawable(Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
+                background = roundedDrawable(Color.TRANSPARENT, 12, Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(
                         if (hasFocus) accent else Color.TRANSPARENT,
-                        buttonRadiusDp, Color.TRANSPARENT
+                        12, Color.TRANSPARENT
                     )
                     (v as Button).setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
                     v.elevation = 0f
@@ -716,13 +716,13 @@ class MainActivity : Activity() {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
         setTextColor(if (primary) Color.rgb(12, 14, 19) else Color.WHITE)
-        background = roundedDrawable(if (primary) accent else Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
+        background = roundedDrawable(if (primary) accent else Color.TRANSPARENT, 12, Color.TRANSPARENT)
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
             v.background = roundedDrawable(
                 if (hasFocus) accent else if (primary) accent else Color.TRANSPARENT,
-                buttonRadiusDp, Color.TRANSPARENT)
-            v.setTextColor(if (hasFocus || primary) Color.rgb(12, 14, 19) else Color.WHITE)
+                12, Color.TRANSPARENT)
+            (v as Button).setTextColor(if (hasFocus || primary) Color.rgb(12, 14, 19) else Color.WHITE)
             v.elevation = 0f
             v.scaleX = 1f
             v.scaleY = 1f
