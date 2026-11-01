@@ -2529,6 +2529,7 @@ class MainActivity : Activity() {
                 option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Hakkında", "Uygulama sürümü ve teknik bilgiler") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "sources" -> {
                 heading("Kaynaklar", "Kaynak ekle ve kayıtlı bağlantılarını buradan yönet.")
@@ -2787,6 +2788,60 @@ class MainActivity : Activity() {
                     settingsPage = "themes"
                     render()
                 }
+            }
+            "about" -> {
+                content.setBackgroundColor(Color.rgb(10, 13, 19))
+                val aboutPanel = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(28), dp(24), dp(28), dp(24))
+                    background = roundedDrawable(Color.rgb(10, 13, 19), 18)
+                }
+                val logo = android.text.SpannableString("▶ KAISER TV+")
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.RelativeSizeSpan(0.72f), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                aboutPanel.addView(TextView(this).apply {
+                    text = logo
+                    textSize = 34f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    gravity = Gravity.CENTER
+                    setPadding(0, 0, 0, dp(34))
+                })
+                val packageInfo = packageManager.getPackageInfo(packageName, 0)
+                val version = packageInfo.versionName ?: "Bilinmiyor"
+                val buildDate = try {
+                    java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale("tr", "TR")).format(java.util.Date(packageInfo.lastUpdateTime))
+                } catch (_: Exception) { "Bilinmiyor" }
+                val appSize = try {
+                    val bytes = java.io.File(applicationInfo.sourceDir).length()
+                    String.format(java.util.Locale("tr", "TR"), "%.1f MB", bytes / (1024.0 * 1024.0))
+                } catch (_: Exception) { "Bilinmiyor" }
+                listOf("Sürüm" to version, "Derleme tarihi" to buildDate, "Uygulama boyutu" to appSize).forEach { item ->
+                    val infoRow = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(8), dp(12), dp(8), dp(12))
+                    }
+                    infoRow.addView(TextView(this).apply {
+                        text = item.first
+                        textSize = 17f
+                        setTextColor(muted)
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    infoRow.addView(TextView(this).apply {
+                        text = item.second
+                        textSize = 17f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.END
+                    })
+                    aboutPanel.addView(infoRow)
+                }
+                content.addView(aboutPanel, LinearLayout.LayoutParams(-1, -1).apply {
+                    setMargins(dp(8), dp(8), dp(8), dp(8))
+                })
             }
             "history" -> {
                 heading("Geçmiş", "Türü seçerek izleme geçmişini görüntüle.")
