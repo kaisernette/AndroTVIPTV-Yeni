@@ -1903,28 +1903,6 @@ class MainActivity : Activity() {
                 setPadding(dp(8), 0, dp(8), 0)
                 if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
             })
-            if (!showingExpandedCategory && entries.size > 5 && (selectedType == "Filmler" || selectedType == "Diziler")) {
-                sectionHeader.addView(TextView(this).apply {
-                    text = "Tümü"; textSize = 12f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE); gravity = Gravity.CENTER
-                    background = GradientDrawable().apply {
-                        cornerRadius = dp(10).toFloat()
-                        setColor(Color.TRANSPARENT); setStroke(dp(1), accent)
-                    }
-                    isFocusable = true
-                    setPadding(dp(16), dp(7), dp(16), dp(7))
-                    setOnFocusChangeListener { v, hasFocus ->
-                        v.background = GradientDrawable().apply {
-                            cornerRadius = dp(10).toFloat()
-                            setColor(if (hasFocus) Color.rgb(43, 49, 63) else Color.TRANSPARENT)
-                            setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) focusColor else Color.rgb(54, 64, 82))
-                        }
-                        v.elevation = if (hasFocus) dp(3).toFloat() else 0f
-                    }
-                    setOnClickListener { expandedCategory = groupName to entries; render() }
-                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)).apply { setMargins(dp(10), 0, 0, 0) })
-            }
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply {
                 orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
@@ -1984,14 +1962,14 @@ class MainActivity : Activity() {
                 val homeCard = selectedType == "Tümü"
                 val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
                 val poster = ImageView(this).apply {
-                    scaleType = if (liveCard || weeklyPoster) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+                    scaleType = if (liveCard) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
                     background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
                         if (weeklyPoster) dp(140) else -1,
-                        if (liveCard) 112 else if (weeklyPoster) dp(210) else if (showingExpandedCategory) 190 else if (homeCard) 230 else 210
+                        if (liveCard) 112 else if (weeklyPoster) dp(210) else if (posterGridMode) dp(210) else if (homeCard) 230 else 210
                     )
                 }
                 card.addView(poster)
@@ -2056,6 +2034,15 @@ class MainActivity : Activity() {
                     row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) featureCardWidth else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         // Consistent TV-friendly breathing room between poster cards.
                         setMargins(dp(5), 0, if (weeklyMovieFeature) dp(20) else dp(14), dp(10))
+                    })
+                }
+            }
+            // Keep the final row at four equal poster columns, even when it has fewer than four items.
+            if (posterGridMode && expandedPosterCount > 0 && expandedPosterCount % 4 != 0) {
+                val remainingSlots = 4 - (expandedPosterCount % 4)
+                repeat(remainingSlots) {
+                    expandedPosterRow?.addView(View(this), LinearLayout.LayoutParams(0, dp(210), 1f).apply {
+                        setMargins(dp(6), 0, dp(6), dp(12))
                     })
                 }
             }
