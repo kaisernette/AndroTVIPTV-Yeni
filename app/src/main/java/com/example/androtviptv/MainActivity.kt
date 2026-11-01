@@ -827,6 +827,32 @@ class MainActivity : Activity() {
         if (secret) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
     }
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
+    private fun makeFavoriteButton(item: MediaItem): Button {
+        val isFavorite = favorites.contains(item.favoriteKey)
+        val yellow = Color.rgb(255, 205, 55)
+        return makeButton(if (isFavorite) "★ Favori" else "□ Favori", false) {
+            if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
+            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+            render()
+        }.apply {
+            fun updateFavoriteStyle(hasFocus: Boolean) {
+                text = if (isFavorite) "★ Favori" else "□ Favori"
+                setTextColor(if (isFavorite) Color.rgb(25, 25, 25) else Color.WHITE)
+                background = roundedDrawable(
+                    if (isFavorite) yellow else Color.TRANSPARENT,
+                    12,
+                    if (isFavorite) yellow else if (hasFocus) accentBright else Color.rgb(88, 96, 110)
+                )
+            }
+            updateFavoriteStyle(false)
+            setOnFocusChangeListener { view, hasFocus ->
+                updateFavoriteStyle(hasFocus)
+                view.scaleX = if (hasFocus) 1.025f else 1f
+                view.scaleY = if (hasFocus) 1.025f else 1f
+            }
+        }
+    }
+
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
@@ -2346,13 +2372,7 @@ class MainActivity : Activity() {
         }
         actions.addView(watchButton,
             LinearLayout.LayoutParams(dp(170), dp(48)).apply { setMargins(0, 8, dp(10), 0) })
-        val favoriteButton = makeButton(
-            if (favorites.contains(movie.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", true
-        ) {
-            if (!favorites.add(movie.favoriteKey)) favorites.remove(movie.favoriteKey)
-            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-            render()
-        }.apply {
+        val favoriteButton = makeFavoriteButton(movie).apply {
             gravity = Gravity.CENTER
             textSize = 14f
             minHeight = dp(48)
@@ -2425,14 +2445,10 @@ class MainActivity : Activity() {
         }
         actions.addView(seriesWatchButton,
             LinearLayout.LayoutParams(dp(170), dp(48)).apply { setMargins(0, 14, dp(10), 0) })
-        actions.addView(makeButton(
-            if (favorites.contains(series.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", true
-        ) {
-            if (!favorites.add(series.favoriteKey)) favorites.remove(series.favoriteKey)
-            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-            render()
-        }.apply { textSize = 14f; minHeight = dp(48) },
-            LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, 14, 0, 0) })
+        actions.addView(makeFavoriteButton(series).apply {
+            textSize = 14f
+            minHeight = dp(48)
+        }, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
         seriesWatchButton.post { if (detailSeries?.favoriteKey == series.favoriteKey) seriesWatchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
@@ -2479,8 +2495,10 @@ class MainActivity : Activity() {
                     episodeRow.addView(TextView(this).apply {
                         text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("▶ İzle", true) { play(episode) },
-                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(12, 0, 0, 0) })
+                    episodeRow.addView(makeButton("▶ İzle", true) { play(episode) }.apply {
+                        textSize = 14f
+                        minHeight = dp(44)
+                    }, LinearLayout.LayoutParams(dp(116), dp(44)).apply { setMargins(12, 0, 0, 0) })
                     episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
