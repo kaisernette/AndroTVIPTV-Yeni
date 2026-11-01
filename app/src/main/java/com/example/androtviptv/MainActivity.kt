@@ -355,6 +355,26 @@ class MainActivity : Activity() {
             contentDescription = "Kaynak ekle"
             setOnClickListener { showConnectionDialog() }
         }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { setMargins(dp(8), 0, dp(4), 0) })
+        // Fixed date and live clock: remains visible while the content below scrolls.
+        val dateClockRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL or Gravity.END
+            setPadding(dp(4), 0, dp(10), dp(8))
+        }
+        dateClockRow.addView(View(this), LinearLayout.LayoutParams(0, dp(42), 1f))
+        dateClockRow.addView(TextClock(this).apply {
+            format12Hour = "d MMMM EEEE  •  h:mm a"
+            format24Hour = "d MMMM EEEE  •  HH:mm"
+            timeZone = java.util.TimeZone.getDefault().id
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            gravity = Gravity.CENTER
+            contentDescription = "Tarih ve saat"
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)))
+        main.addView(dateClockRow, 0)
+
         main.addView(mainHeader)
 
         val hero = LinearLayout(this).apply {
@@ -1990,17 +2010,6 @@ class MainActivity : Activity() {
                 setPadding(dp(8), 0, dp(8), 0)
                 if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
             })
-            if (selectedType == "Tümü" && groupName == groupsToRender.firstOrNull()?.first) {
-                sectionHeader.addView(TextView(this).apply {
-                    text = java.text.SimpleDateFormat("d MMMM EEEE", java.util.Locale("tr", "TR"))
-                        .format(java.util.Date()).replaceFirstChar { it.uppercase(java.util.Locale("tr", "TR")) }
-                    textSize = 12f
-                    setTextColor(Color.WHITE)
-                    gravity = Gravity.CENTER
-                    setPadding(dp(10), 0, dp(4), 0)
-                    contentDescription = "Bugünün tarihi"
-                })
-            }
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply {
                 orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
