@@ -2280,11 +2280,15 @@ class MainActivity : Activity() {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
                         LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
-                    actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
-                        if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                        prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-                        render()
-                    }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
+                    // Arama sonuçlarında kart üzerindeki Favori kısayolunu gösterme.
+                    // Favori işlemi film/dizi detay ekranında kullanılmaya devam eder.
+                    if (sidebarMode != "search") {
+                        actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
+                            if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
+                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            render()
+                        }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
+                    }
                     card.addView(actions)
                 }
                 if (posterGridMode) {
