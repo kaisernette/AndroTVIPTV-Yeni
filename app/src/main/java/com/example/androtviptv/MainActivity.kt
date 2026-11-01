@@ -434,17 +434,6 @@ class MainActivity : Activity() {
         dateClockRow.addView(topSearch, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
             marginEnd = dp(14)
         })
-        dateClockRow.addView(TextClock(this).apply {
-            format12Hour = "d MMMM EEEE  •  h:mm a"
-            format24Hour = "d MMMM EEEE  •  HH:mm"
-            timeZone = java.util.TimeZone.getDefault().id
-            textSize = 18f
-            setTextColor(Color.WHITE)
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            gravity = Gravity.CENTER
-            contentDescription = "Tarih ve saat"
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)))
         main.addView(dateClockRow, 0)
 
         main.addView(mainHeader)
