@@ -1889,6 +1889,7 @@ class MainActivity : Activity() {
         val groupsToRender = if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(6) else groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
+            val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler"
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, 16, 2, 8)
             }
@@ -1925,22 +1926,22 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)).apply { setMargins(dp(10), 0, 0, 0) })
             }
             content.addView(sectionHeader)
-            val row = LinearLayout(this).apply { orientation = if (showingExpandedCategory) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
+            val row = LinearLayout(this).apply { orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL }
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(140) // Kart genişliği afişle aynı
-            val displayedEntries = if (showingExpandedCategory || weeklyMovieFeature) entries else entries.take(5)
+            val displayedEntries = if (posterGridMode || weeklyMovieFeature) entries else entries.take(5)
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
             displayedEntries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 7, if (weeklyMovieFeature) 0 else 9)
-                    background = roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
+                    setPadding(0, 0, 0, 0)
+                    background = if (selectedType == "Filmler" || selectedType == "Diziler") Color.TRANSPARENT else roundedDrawable(panel, 15, Color.rgb(38, 45, 60))
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        v.background = roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
+                        v.background = if (selectedType == "Filmler" || selectedType == "Diziler") Color.TRANSPARENT else roundedDrawable(if (hasFocus) Color.rgb(27, 39, 53) else panel, 15,
                             if (hasFocus) focusColor else Color.rgb(38, 45, 60))
                         v.elevation = if (hasFocus) dp(4).toFloat() else 0f
                         v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
@@ -1983,7 +1984,7 @@ class MainActivity : Activity() {
                 val poster = ImageView(this).apply {
                     scaleType = if (liveCard || weeklyPoster) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
-                    background = roundedDrawable(Color.rgb(31, 37, 50), 10)
+                    background = if (selectedType == "Filmler" || selectedType == "Diziler") Color.TRANSPARENT else roundedDrawable(Color.rgb(31, 37, 50), 10)
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
@@ -2026,7 +2027,7 @@ class MainActivity : Activity() {
                     text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
                     minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
                 })
-                if (!weeklyPoster) {
+                if (!weeklyPoster && selectedType != "Filmler" && selectedType != "Diziler") {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
                         LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
@@ -2037,7 +2038,7 @@ class MainActivity : Activity() {
                     }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                     card.addView(actions)
                 }
-                if (showingExpandedCategory) {
+                if (posterGridMode) {
                     if (expandedPosterCount % 4 == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
@@ -2056,7 +2057,7 @@ class MainActivity : Activity() {
                     })
                 }
             }
-            if (showingExpandedCategory) {
+            if (posterGridMode) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             } else {
                 content.addView(HorizontalScrollView(this).apply {
