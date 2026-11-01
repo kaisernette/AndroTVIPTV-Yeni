@@ -42,6 +42,9 @@ class PlayerActivity : Activity() {
     private var triedHlsFallback: Boolean = false
     private var usingHlsFallback: Boolean = false
     private var isLiveStream: Boolean = false
+    private var bufferMode: String = "normal"
+    private var aspectMode: String = "fit"
+    private var resumeEnabled: Boolean = true
     private var retryCount = 0
     private var bufferingSinceMs = 0L
     private var lastStablePlaybackMs = 0L
@@ -121,7 +124,7 @@ class PlayerActivity : Activity() {
     }
 
     private fun savePlaybackPosition() {
-        if (isLiveStream) return
+        if (isLiveStream || !resumeEnabled) return
         val exo = player ?: return
         val pos = exo.currentPosition.coerceAtLeast(0L)
         if (exo.duration > 0 && pos >= exo.duration - 5000L) {
@@ -150,12 +153,16 @@ class PlayerActivity : Activity() {
         triedHlsFallback = false
         usingHlsFallback = false
         isLiveStream = intent.getBooleanExtra("isLive", false)
+        bufferMode = intent.getStringExtra("bufferMode") ?: "normal"
+        aspectMode = intent.getStringExtra("aspectMode") ?: "fit"
+        resumeEnabled = intent.getBooleanExtra("resumeEnabled", true)
         resumeKey = "position_" + url.hashCode().toString()
-        if (isLiveStream) playbackPrefs.edit().remove(resumeKey).apply()
+        if (isLiveStream || !resumeEnabled) playbackPrefs.edit().remove(resumeKey).apply()
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val view = PlayerView(this).apply {
+            resizeMode = if (aspectMode == "fill") androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
             useController = true
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
             isFocusable = true
@@ -207,8 +214,13 @@ class PlayerActivity : Activity() {
             val mediaItem = createStreamMediaItem(currentStreamUrl)
             val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
                 .setEnableDecoderFallback(true)
+            val bufferDurations = when (bufferMode) {
+                "low" -> intArrayOf(12000, 35000, 1500, 4000)
+                "high" -> intArrayOf(45000, 120000, 3000, 9000)
+                else -> intArrayOf(30000, 90000, 2500, 7000)
+            }
             val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(30000, 90000, 2500, 7000)
+                .setBufferDurationsMs(bufferDurations[0], bufferDurations[1], bufferDurations[2], bufferDurations[3])
                 .build()
             player = ExoPlayer.Builder(this, renderersFactory)
                 .setMediaSourceFactory(mediaSourceFactory)
