@@ -377,7 +377,7 @@ class MainActivity : Activity() {
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
             setPadding(dp(14), 0, dp(14), 0)
             background = GradientDrawable().apply {
-                cornerRadius = dp(18).toFloat()
+                cornerRadius = 0f
                 setColor(panel)
                 setStroke(dp(1), Color.rgb(43, 54, 72))
             }
@@ -443,7 +443,7 @@ class MainActivity : Activity() {
             setPadding(26, 18, 18, 18)
             background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(Color.rgb(33, 42, 59), Color.rgb(12, 17, 28))).apply {
-                cornerRadius = 24f; setStroke(1, Color.rgb(54, 64, 82))
+                cornerRadius = 0f; setStroke(1, Color.rgb(54, 64, 82))
             }
         }
         val heroCopy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -938,7 +938,7 @@ class MainActivity : Activity() {
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
-            cornerRadius = radiusDp * resources.displayMetrics.density
+            cornerRadius = 0f
             if (strokeColor != null) setStroke((2 * resources.displayMetrics.density).toInt().coerceAtLeast(1), strokeColor)
         }
 
@@ -1960,7 +1960,7 @@ class MainActivity : Activity() {
                         loadPoster(channel.icon, logo)
                     } else {
                         logo.setImageDrawable(GradientDrawable().apply {
-                            cornerRadius = dp(8).toFloat()
+                            cornerRadius = 0f
                             setColor(Color.rgb(31, 39, 54))
                         })
                     }
