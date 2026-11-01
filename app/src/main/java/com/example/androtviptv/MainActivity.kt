@@ -387,18 +387,34 @@ class MainActivity : Activity() {
                     setStroke(dp(if (focused) 2 else 1), if (focused) accent else Color.rgb(43, 54, 72))
                 }
             }
+            addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    searchQuery = s?.toString().orEmpty()
+                }
+                override fun afterTextChanged(s: android.text.Editable?) {}
+            })
             setOnClickListener {
                 detailMovie = null
                 detailSeries = null
                 sidebarMode = "search"
-                searchQuery = ""
                 rebuildNavigation()
                 render()
-                findViewWithTag<View>("global_search_input")?.requestFocus()
+                post {
+                    requestFocus()
+                    val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                    imm.showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                }
             }
-            setOnEditorActionListener { _, _, _ ->
-                performClick()
-                true
+            setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
+                    actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                    val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                    imm.hideSoftInputFromWindow(windowToken, 0)
+                    sidebarMode = "search"
+                    render()
+                    true
+                } else false
             }
             contentDescription = "Film, dizi veya kanal ara"
         }
@@ -1801,59 +1817,11 @@ class MainActivity : Activity() {
             return
         }
         if (sidebarMode == "search") {
-            val searchPanel = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(8), dp(8), dp(8), dp(12))
-            }
-            searchPanel.addView(TextView(this).apply {
+            content.addView(TextView(this).apply {
                 text = "Ara"; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.WHITE); setPadding(0, 0, 0, dp(10))
+                setTextColor(Color.WHITE); setPadding(dp(8), dp(8), dp(8), dp(12))
             })
-            val searchInput = EditText(this).apply {
-                hint = "Film, dizi veya kanal adı yaz…"
-                setSingleLine(true); textSize = 17f; setTextColor(Color.WHITE); setHintTextColor(muted)
-                setPadding(dp(16), 0, dp(12), 0)
-                background = roundedDrawable(Color.rgb(28, 35, 49), 14, accent)
-                if (android.os.Build.VERSION.SDK_INT >= 24) imeHintLocales = android.os.LocaleList.getDefault()
-                if (android.os.Build.VERSION.SDK_INT >= 29) textCursorDrawable?.setTint(accent)
-                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
-                tag = "global_search_input"
-                setText(searchQuery); setSelection(text.length)
-                addTextChangedListener(object : android.text.TextWatcher {
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                        searchQuery = s?.toString().orEmpty()
-                        selectedGroup = "Tüm kategoriler"
-                        // Keep this EditText attached while the user types. Re-rendering the
-                        // whole screen here detaches it and Android closes the keyboard per character.
-                        // Results refresh when the user presses the keyboard Search action.
-
-                    }
-                    override fun afterTextChanged(s: android.text.Editable?) {}
-                })
-                setOnEditorActionListener { _, actionId, _ ->
-                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
-                        actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                        imm.hideSoftInputFromWindow(windowToken, 0)
-                        render()
-                        true
-                    } else false
-                }
-            }
-            searchPanel.addView(searchInput, LinearLayout.LayoutParams(-1, dp(52)))
-            content.addView(searchPanel)
-            if (searchInputFocusPending) {
-                searchInputFocusPending = false
-                searchInput.post {
-                    if (sidebarMode == "search" && searchInput.isAttachedToWindow) {
-                        searchInput.requestFocus()
-                        searchInput.setSelection(searchInput.text.length)
-                        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                        imm.showSoftInput(searchInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                    }
-                }
-            }
+            selectedGroup = "Tüm kategoriler"
         }
         val activeSourceId = prefs.getString("last_source_id", "") ?: ""
         val activeSourceItems = if (activeSourceId.isBlank()) items.toList()
