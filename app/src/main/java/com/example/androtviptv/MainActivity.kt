@@ -2464,20 +2464,41 @@ class MainActivity : Activity() {
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(if (hasFocus) accent else panel, 16)
                     v.elevation = 0f
-                    val fg = if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE
-                    for (idx in 0 until (v as LinearLayout).childCount) {
-                        val child = v.getChildAt(idx)
-                        if (child is TextView) child.setTextColor(if (hasFocus) fg else if (idx == 0) Color.WHITE else muted)
+                    val cardRow = v as LinearLayout
+                    val iconView = cardRow.getChildAt(0) as? TextView
+                    val textColumn = cardRow.getChildAt(1) as? LinearLayout
+                    iconView?.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else accentBright)
+                    textColumn?.let { column ->
+                        (column.getChildAt(0) as? TextView)?.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
+                        (column.getChildAt(1) as? TextView)?.setTextColor(if (hasFocus) Color.rgb(25, 38, 54) else muted)
                     }
                 }
                 setOnClickListener { action() }
             }
+            val contentIcon = when (title) {
+                "Kaynak Yönetimi" -> "▤"
+                "İçerik Ayarları" -> "▦"
+                "Tema ve Görünüm" -> "◈"
+                "İzleme Geçmişi" -> "◷"
+                else -> "◆"
+            }
             card.addView(TextView(this).apply {
+                text = contentIcon
+                textSize = 34f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(accentBright)
+                gravity = Gravity.CENTER
+            }, LinearLayout.LayoutParams(dp(48), dp(48)).apply { setMargins(0, 0, 0, dp(8)) })
+            val textColumn = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+            textColumn.addView(TextView(this).apply {
                 text = title; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             })
-            card.addView(TextView(this).apply {
+            textColumn.addView(TextView(this).apply {
                 text = detail; textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
             })
+            card.addView(textColumn)
             if (settingsPage == "main") {
                 if (settingsGridRow == null || settingsGridCount % 3 == 0) {
                     settingsGridRow = LinearLayout(this).apply {
