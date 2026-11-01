@@ -537,13 +537,13 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search", "context")) {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▱  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar", "⌕  Ara").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
-                    tab.contains("Canlı TV") -> "TV"
+                    (tab.contains("Canlı TV") || tab.contains(" TV")) -> "TV"
                     tab.contains("Favoriler") -> "Favoriler"
-                    tab.contains("Geçmiş") -> "Geçmiş"
+                    (tab.contains("Geçmiş") || tab.contains("İzlediklerim")) -> "Geçmiş"
                     tab.contains("Ayarlar") -> "Ayarlar"
                     tab.contains("Filmler") -> "Filmler"
                     else -> "Diziler"
@@ -619,14 +619,14 @@ class MainActivity : Activity() {
             // In TV/Movies/Series, collapse the left rail to icons only.
             // Category filters remain in the main content area on the right.
             val compactTabs = listOf(
-                Triple("⌕", "Ara", "Ara"),
                 Triple("⌂", "Ana Sayfa", "Tümü"),
-                Triple("▣", "Canlı TV", "Canlı TV"),
-                Triple("▱", "Filmler", "Filmler"),
+                Triple("▣", "TV", "Canlı TV"),
+                Triple("▧", "Filmler", "Filmler"),
                 Triple("▤", "Diziler", "Diziler"),
                 Triple("♡", "Favoriler", "Favoriler"),
-                Triple("◷", "Geçmiş", "Son İzlenenler"),
-                Triple("⚙", "Ayarlar", "Ayarlar")
+                Triple("◷", "İzlediklerim", "Son İzlenenler"),
+                Triple("⚙", "Ayarlar", "Ayarlar"),
+                Triple("⌕", "Ara", "Ara")
             )
             compactTabs.forEach { (glyph, label, key) ->
                 val isSelected = when (key) {
@@ -2614,6 +2614,9 @@ class MainActivity : Activity() {
                             setOnCheckedChangeListener { _, checked ->
                                 if (checked) {
                                     prefs.edit().putString("last_source_id", source.id).apply()
+                                    // Display only the content belonging to the selected source.
+                                    items.removeAll { it.sourceId != source.id }
+                                    saveCachedItems()
                                     if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
                                     render()
                                 } else if (prefs.getString("last_source_id", "") == source.id) {
