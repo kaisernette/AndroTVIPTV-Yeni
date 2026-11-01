@@ -79,7 +79,7 @@ class MainActivity : Activity() {
     private var accent = Color.rgb(0, 166, 255)
     private var accentBright = Color.rgb(72, 190, 255)
     // Focus styling is independent from the selectable app theme.
-    private val focusColor = Color.rgb(137, 214, 255)
+    private val focusColor = Color.rgb(112, 205, 255)
     private var muted = Color.rgb(190, 198, 210)
     // Sidebar transparency is independent from the selected color theme.
     private var transparentMenu = true
@@ -88,14 +88,25 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
+        // Apply Dark Cinematic once as the new demo baseline; later manual theme choices are preserved.
+        if (!prefs.getBoolean("dark_cinematic_applied", false)) {
+            prefs.edit().putString("theme_name", "Dark Cinematic").putBoolean("dark_cinematic_applied", true).apply()
+        }
         // Restore the selected theme before constructing any views.
-        when (prefs.getString("theme_name", "Antrasit • Mavi")) {
+        when (prefs.getString("theme_name", "Dark Cinematic")) {
+            "Dark Cinematic" -> {
+                bg = Color.rgb(10, 13, 19)
+                panel = Color.rgb(20, 26, 37)
+                accent = Color.rgb(0, 145, 255)
+                accentBright = Color.rgb(75, 195, 255)
+                muted = Color.rgb(174, 187, 204)
+            }
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
             "Lacivert • Turkuaz" -> { bg = Color.rgb(10, 22, 38); accent = Color.rgb(35, 205, 190); accentBright = accent }
             "Koyu • Mor" -> { bg = Color.rgb(20, 16, 29); accent = Color.rgb(174, 115, 255); accentBright = accent }
             else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
         }
-        panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
+        panel = if (prefs.getString("theme_name", "Dark Cinematic") == "Dark Cinematic") Color.rgb(20, 26, 37) else Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
         try {
@@ -2690,6 +2701,7 @@ class MainActivity : Activity() {
             "themes" -> {
                 heading("Temalar", "Renk seçimi anında uygulanır.")
                 val themes = listOf(
+                    Triple("Dark Cinematic", Color.rgb(10, 13, 19), Color.rgb(0, 145, 255)),
                     Triple("Antrasit • Mavi", Color.rgb(17, 20, 25), Color.rgb(0, 166, 255)),
                     Triple("Gece • Altın", Color.rgb(15, 16, 20), Color.rgb(224, 184, 95)),
                     Triple("Lacivert • Turkuaz", Color.rgb(10, 22, 38), Color.rgb(35, 205, 190)),
@@ -2698,8 +2710,9 @@ class MainActivity : Activity() {
                 themes.forEach { theme ->
                     option(theme.first, "Zemin ve vurgu rengi") {
                         bg = theme.second
-                        panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
-                        accent = theme.third; accentBright = theme.third
+                        panel = if (theme.first == "Dark Cinematic") Color.rgb(20, 26, 37) else Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
+                        accent = theme.third
+                        accentBright = if (theme.first == "Dark Cinematic") Color.rgb(75, 195, 255) else theme.third
                         prefs.edit().putString("theme_name", theme.first).apply()
                         rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel); mainContentScroll.setBackgroundColor(bg)
                         window.statusBarColor = bg; window.navigationBarColor = bg
