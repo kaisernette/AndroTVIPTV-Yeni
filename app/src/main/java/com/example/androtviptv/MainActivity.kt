@@ -836,13 +836,19 @@ class MainActivity : Activity() {
     }
 
     private fun focusGlowDrawable(radiusDp: Int): android.graphics.drawable.LayerDrawable {
-        val outer = roundedDrawable(
-            Color.TRANSPARENT,
-            radiusDp,
-            Color.argb(95, Color.red(accent), Color.green(accent), Color.blue(accent)),
-            dp(8)
-        )
-        val inner = roundedDrawable(Color.TRANSPARENT, radiusDp, accent, dp(2))
+        val glowColor = Color.argb(95, Color.red(accent), Color.green(accent), Color.blue(accent))
+        val outer = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(Color.TRANSPARENT)
+            cornerRadius = radiusDp * resources.displayMetrics.density
+            setStroke(dp(8), glowColor)
+        }
+        val inner = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(Color.TRANSPARENT)
+            cornerRadius = radiusDp * resources.displayMetrics.density
+            setStroke(dp(2), accent)
+        }
         return android.graphics.drawable.LayerDrawable(arrayOf(outer, inner)).apply {
             setLayerInset(1, dp(3), dp(3), dp(3), dp(3))
         }
