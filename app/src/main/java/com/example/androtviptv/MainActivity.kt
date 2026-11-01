@@ -839,16 +839,16 @@ class MainActivity : Activity() {
                 text = if (isFavorite) "★ Favori" else "□ Favori"
                 setTextColor(if (isFavorite) Color.rgb(25, 25, 25) else Color.WHITE)
                 background = roundedDrawable(
-                    if (isFavorite) yellow else Color.TRANSPARENT,
-                    12,
-                    if (isFavorite) yellow else if (hasFocus) accentBright else Color.rgb(88, 96, 110)
+                    if (isFavorite) yellow else accent,
+                    12
                 )
             }
             updateFavoriteStyle(false)
             setOnFocusChangeListener { view, hasFocus ->
                 updateFavoriteStyle(hasFocus)
-                view.scaleX = if (hasFocus) 1.025f else 1f
-                view.scaleY = if (hasFocus) 1.025f else 1f
+                // Avoid scaling inside the clipped hero container; it cut off button edges.
+                view.scaleX = 1f
+                view.scaleY = 1f
             }
         }
     }
@@ -2350,7 +2350,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
             // Keep text and buttons clear of the TV's right-edge system overlay.
-            setPadding(dp(18), dp(18), dp(64), dp(18))
+            setPadding(dp(18), dp(18), dp(64), dp(26))
         }
         copy.addView(TextView(this).apply {
             text = "FİLM  •  ${movie.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -2379,17 +2379,17 @@ class MainActivity : Activity() {
         val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
             gravity = Gravity.CENTER
             textSize = 14f
-            minHeight = dp(48)
+            minHeight = dp(56)
         }
         actions.addView(watchButton,
-            LinearLayout.LayoutParams(dp(170), dp(48)).apply { setMargins(0, 8, dp(10), 0) })
+            LinearLayout.LayoutParams(dp(170), dp(56)).apply { setMargins(0, 8, dp(10), 0) })
         val favoriteButton = makeFavoriteButton(movie).apply {
             gravity = Gravity.CENTER
             textSize = 14f
-            minHeight = dp(48)
+            minHeight = dp(56)
         }
         actions.addView(favoriteButton,
-            LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, 8, 0, 0) })
+            LinearLayout.LayoutParams(dp(190), dp(56)).apply { setMargins(0, 8, 0, 0) })
         copy.addView(actions)
         watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
@@ -2429,7 +2429,7 @@ class MainActivity : Activity() {
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            setPadding(24, 22, 24, 22)
+            setPadding(24, 22, 24, 26)
         }
         copy.addView(TextView(this).apply {
             text = "DİZİ  •  ${series.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -2452,14 +2452,14 @@ class MainActivity : Activity() {
         }.apply {
             gravity = Gravity.CENTER
             textSize = 14f
-            minHeight = dp(48)
+            minHeight = dp(56)
         }
         actions.addView(seriesWatchButton,
-            LinearLayout.LayoutParams(dp(170), dp(48)).apply { setMargins(0, 14, dp(10), 0) })
+            LinearLayout.LayoutParams(dp(170), dp(56)).apply { setMargins(0, 14, dp(10), 0) })
         actions.addView(makeFavoriteButton(series).apply {
             textSize = 14f
-            minHeight = dp(48)
-        }, LinearLayout.LayoutParams(dp(190), dp(48)).apply { setMargins(0, 14, 0, 0) })
+            minHeight = dp(56)
+        }, LinearLayout.LayoutParams(dp(190), dp(56)).apply { setMargins(0, 14, 0, 0) })
         copy.addView(actions)
         seriesWatchButton.post { if (detailSeries?.favoriteKey == series.favoriteKey) seriesWatchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
