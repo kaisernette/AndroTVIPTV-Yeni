@@ -753,6 +753,23 @@ class MainActivity : Activity() {
                 savedSources.add(SavedSource(o.optString("id"), o.optString("name"), o.optString("mode"), o.optString("address"), o.optString("username"), o.optString("password")))
             }
         } catch (_: Exception) { }
+
+        // First launch: install the public mock Xtream profile so the demo opens
+        // without asking for server details. Keep any user-configured sources intact.
+        if (savedSources.isEmpty()) {
+            val demoSource = SavedSource(
+                "kaisertv-demo-222",
+                "KaiserTV+ Demo",
+                "xtream",
+                "https://xtream-codes-mock-server.vercel.app",
+                "test_user",
+                "test_pass"
+            )
+            saveSource(demoSource)
+            loadXtream(demoSource, true)
+            return
+        }
+
         if (savedSources.isNotEmpty()) {
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
