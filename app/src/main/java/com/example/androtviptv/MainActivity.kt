@@ -2664,7 +2664,6 @@ class MainActivity : Activity() {
                     }.apply {
                         textSize = 15f; gravity = Gravity.CENTER
                     }, LinearLayout.LayoutParams(dp(116), dp(46)).apply { setMargins(12, 0, 0, 0) })
-                    episodeRow.findViewWithTag<View>("unused_episode_marker")
                     episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
