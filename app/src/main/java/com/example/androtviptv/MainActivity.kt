@@ -835,25 +835,6 @@ class MainActivity : Activity() {
         form.post { form.requestFocus() }
     }
 
-    private fun focusGlowDrawable(radiusDp: Int): android.graphics.drawable.LayerDrawable {
-        val glowColor = Color.argb(95, Color.red(accent), Color.green(accent), Color.blue(accent))
-        val outer = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            setColor(Color.TRANSPARENT)
-            cornerRadius = radiusDp * resources.displayMetrics.density
-            setStroke(dp(8), glowColor)
-        }
-        val inner = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            setColor(Color.TRANSPARENT)
-            cornerRadius = radiusDp * resources.displayMetrics.density
-            setStroke(dp(2), accent)
-        }
-        return android.graphics.drawable.LayerDrawable(arrayOf(outer, inner)).apply {
-            setLayerInset(1, dp(3), dp(3), dp(3), dp(3))
-        }
-    }
-
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
@@ -1895,12 +1876,13 @@ class MainActivity : Activity() {
                         setPadding(dp(8), dp(8), dp(8), dp(8))
                         background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
                         setOnFocusChangeListener { v, hasFocus ->
-                            v.background = if (hasFocus) focusGlowDrawable(12) else roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
-                            v.elevation = if (hasFocus) dp(8).toFloat() else 0f
-                            v.animate().scaleX(if (hasFocus) 1.02f else 1f)
-                                .scaleY(if (hasFocus) 1.035f else 1f)
-                                .translationY(if (hasFocus) -dp(5).toFloat() else 0f)
-                                .setDuration(140).start()
+                            v.background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
+                            v.elevation = if (hasFocus) dp(18).toFloat() else 0f
+                            v.cameraDistance = dp(1800).toFloat()
+                            v.animate().scaleX(if (hasFocus) 1.15f else 1f)
+                                .scaleY(if (hasFocus) 1.15f else 1f)
+                                .translationY(if (hasFocus) -dp(10).toFloat() else 0f)
+                                .setDuration(180).start()
                         }
                         setOnClickListener { play(channel) }
                         contentDescription = channel.name
@@ -2105,12 +2087,13 @@ class MainActivity : Activity() {
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
                         // No focus frame: gently enlarge the focused content card.
-                        v.background = if (hasFocus) focusGlowDrawable(10) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                        v.elevation = if (hasFocus) dp(8).toFloat() else 0f
-                        v.animate().scaleX(if (hasFocus) 1.06f else 1f)
-                            .scaleY(if (hasFocus) 1.06f else 1f)
-                            .translationY(if (hasFocus) -dp(5).toFloat() else 0f)
-                            .setDuration(140).start()
+                        v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        v.elevation = if (hasFocus) dp(18).toFloat() else 0f
+                        v.cameraDistance = dp(1800).toFloat()
+                        v.animate().scaleX(if (hasFocus) 1.15f else 1f)
+                            .scaleY(if (hasFocus) 1.15f else 1f)
+                            .translationY(if (hasFocus) -dp(10).toFloat() else 0f)
+                            .setDuration(180).start()
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
