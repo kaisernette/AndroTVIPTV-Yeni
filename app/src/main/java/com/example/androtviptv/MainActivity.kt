@@ -412,6 +412,7 @@ class MainActivity : Activity() {
                     val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
                     imm.hideSoftInputFromWindow(windowToken, 0)
                     sidebarMode = "search"
+                    focusFirstContentOnRender = true
                     render()
                     true
                 } else false
@@ -674,7 +675,8 @@ class MainActivity : Activity() {
                             detailSeries = null
                             detailMovie = null
                             sidebarMode = "search"
-                            searchInputFocusPending = true
+                            searchInputFocusPending = false
+                            focusFirstContentOnRender = true
                             searchQuery = ""
                             selectedType = "Tümü"
                             selectedGroup = "Tüm kategoriler"
