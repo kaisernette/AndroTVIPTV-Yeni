@@ -1,7 +1,6 @@
 package com.example.androtviptv
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
 import android.os.Bundle
 import android.os.Handler
