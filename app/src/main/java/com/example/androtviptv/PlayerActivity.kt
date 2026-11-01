@@ -218,8 +218,18 @@ class PlayerActivity : Activity() {
                 bar.setScrubberColor(playerAccentColor())
             }
             if (episodeUrls.size > 1) {
-                view.findViewById<View>(androidx.media3.ui.R.id.exo_prev)?.setOnClickListener { changeEpisode(-1) }
-                view.findViewById<View>(androidx.media3.ui.R.id.exo_next)?.setOnClickListener { changeEpisode(1) }
+                view.findViewById<View>(androidx.media3.ui.R.id.exo_prev)?.let { button ->
+                    button.visibility = View.VISIBLE
+                    button.isEnabled = true
+                    button.alpha = 1f
+                    button.setOnClickListener { changeEpisode(-1) }
+                }
+                view.findViewById<View>(androidx.media3.ui.R.id.exo_next)?.let { button ->
+                    button.visibility = View.VISIBLE
+                    button.isEnabled = true
+                    button.alpha = 1f
+                    button.setOnClickListener { changeEpisode(1) }
+                }
             }
         setContentView(root)
         if (url.isBlank()) {
@@ -504,7 +514,8 @@ class PlayerActivity : Activity() {
             exo.prepare()
             exo.playWhenReady = true
         }
-        android.widget.Toast.makeText(this, "Sonraki bölüm: $currentContentTitle", android.widget.Toast.LENGTH_LONG).show()
+        val directionLabel = if (direction < 0) "Önceki bölüm" else "Sonraki bölüm"
+        android.widget.Toast.makeText(this, "$directionLabel: $currentContentTitle", android.widget.Toast.LENGTH_LONG).show()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
