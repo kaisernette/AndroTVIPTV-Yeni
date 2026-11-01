@@ -939,15 +939,27 @@ class MainActivity : Activity() {
             minWidth = dp(112)
             minHeight = dp(44)
         }
-        sourceName.nextFocusDownId = if (editSource?.mode == "xtream") server.id else playlistUrl.id
+        // Android TV kumanda odak sırası:
+        // Kaynak adı → M3U / M3U8 → Xtream Codes → seçilen bağlantı alanı.
+        sourceMode.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+        m3u.isFocusable = true
+        m3u.isFocusableInTouchMode = true
+        xtream.isFocusable = true
+        xtream.isFocusableInTouchMode = true
+        sourceName.nextFocusDownId = m3u.id
+        m3u.nextFocusUpId = sourceName.id
+        m3u.nextFocusDownId = xtream.id
+        xtream.nextFocusUpId = m3u.id
+        xtream.nextFocusDownId = if (editSource?.mode == "xtream") server.id else playlistUrl.id
+        playlistUrl.nextFocusUpId = xtream.id
+        playlistUrl.nextFocusDownId = connectButton.id
+        server.nextFocusUpId = xtream.id
         server.nextFocusDownId = username.id
+        username.nextFocusUpId = server.id
         username.nextFocusDownId = password.id
+        password.nextFocusUpId = username.id
         password.nextFocusDownId = connectButton.id
         connectButton.nextFocusUpId = password.id
-        playlistUrl.nextFocusDownId = connectButton.id
-        sourceMode.descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
-        sourceMode.getChildAt(0)?.isFocusable = false
-        sourceMode.getChildAt(1)?.isFocusable = false
         actions.addView(connectButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply {
             setMargins(dp(4), 0, 0, 0)
         })
@@ -955,7 +967,7 @@ class MainActivity : Activity() {
         content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             setMargins(dp(6), dp(8), dp(6), dp(10))
         })
-        form.post { form.requestFocus() }
+        form.post { sourceName.requestFocus() }
     }
 
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
@@ -2268,11 +2280,15 @@ class MainActivity : Activity() {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
                         LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
-                    actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
-                        if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                        prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
-                        render()
-                    }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
+                    // Arama sonuçlarında kart üzerindeki Favori kısayolunu gösterme.
+                    // Favori işlemi film/dizi detay ekranında kullanılmaya devam eder.
+                    if (sidebarMode != "search") {
+                        actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
+                            if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
+                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            render()
+                        }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
+                    }
                     card.addView(actions)
                 }
                 if (posterGridMode) {
