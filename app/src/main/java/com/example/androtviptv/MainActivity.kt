@@ -1333,16 +1333,20 @@ class MainActivity : Activity() {
             background = roundedDrawable(Color.rgb(13, 20, 33), 24, accent)
         }
         val brand = TextView(this).apply {
-            text = "▶ KAISER TV+"
-            textSize = 30f
+            val logo = android.text.SpannableString("▶ KAISER TV+")
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            text = logo
+            textSize = 28f
             gravity = Gravity.CENTER
-            setTypeface(null, android.graphics.Typeface.BOLD_ITALIC)
-            setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD)
         }
-        exitPanel.addView(brand, LinearLayout.LayoutParams(-1, dp(62)))
+        exitPanel.addView(brand, LinearLayout.LayoutParams(-1, dp(68)))
         exitPanel.addView(TextView(this).apply {
             text = "Uygulamadan çıkmak istiyor musunuz?"
-            textSize = 22f
+            textSize = 23f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             setPadding(0, dp(10), 0, dp(24))
@@ -1351,23 +1355,21 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        val exitDialog = AlertDialog.Builder(this)
-            .setView(exitPanel)
-            .create()
-        val exitButton = makeButton("⇥  Çıkış Yap", false) {
+        val exitDialog = AlertDialog.Builder(this).setView(exitPanel).create()
+        val exitButton = makeButton("Çıkış Yap", false) {
             exitDialog.dismiss()
             finish()
-        }
-        val cancelButton = makeButton("✕  Vazgeç", false) {
+        }.apply { textSize = 23f; setTypeface(null, android.graphics.Typeface.BOLD) }
+        val cancelButton = makeButton("Vazgeç", false) {
             exitDialog.dismiss()
-        }
-        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(58), 1f).apply {
+        }.apply { textSize = 23f; setTypeface(null, android.graphics.Typeface.BOLD) }
+        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(68), 1f).apply {
             setMargins(0, 0, dp(10), 0)
         })
-        exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(58), 1f).apply {
+        exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(68), 1f).apply {
             setMargins(dp(10), 0, 0, 0)
         })
-        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(64)))
+        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(72)))
         exitDialog.setOnShowListener {
             exitDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
             exitDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
