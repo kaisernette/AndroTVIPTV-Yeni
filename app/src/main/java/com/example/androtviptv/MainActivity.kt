@@ -282,7 +282,7 @@ class MainActivity : Activity() {
             setPadding(8, 12, 8, 10)
             background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(184), -1).apply { setMargins(0, 0, dp(8), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(160), -1).apply { setMargins(0, 0, dp(8), 0) })
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -296,10 +296,10 @@ class MainActivity : Activity() {
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = logo
-            textSize = 23f
+            textSize = 17f
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            contentDescription = "KIP+"
+            contentDescription = "KAISER TV+"
         }, LinearLayout.LayoutParams(-1, dp(54)))
         sidebar.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -1306,11 +1306,11 @@ class MainActivity : Activity() {
         val firstEntry = items.isEmpty() && !isLoadingSource
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
-        if (::heroPanel.isInitialized) heroPanel.visibility = if (!firstEntry && !isLoadingSource && selectedType == "Tümü" && sidebarMode == "main") View.VISIBLE else View.GONE
-        if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = if (!firstEntry && !isLoadingSource && selectedType == "Tümü" && sidebarMode == "main") View.VISIBLE else View.GONE
+        if (::heroPanel.isInitialized) heroPanel.visibility = View.GONE
+        if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
-        if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
+        if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Tümü" || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
             mainContentScroll.visibility = View.VISIBLE
