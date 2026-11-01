@@ -824,113 +824,7 @@ class MainActivity : Activity() {
         background = roundedDrawable(panel, 10, Color.rgb(48, 57, 73))
         if (android.os.Build.VERSION.SDK_INT >= 24) imeHintLocales = android.os.LocaleList.getDefault()
         if (android.os.Build.VERSION.SDK_INT >= 29) textCursorDrawable?.setTint(accent)
-        showSoftInputOnFocus = false
         if (secret) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        installKaiserKeyboard(this, if (secret) "Tamam" else "Tamam")
-    }
-
-    private fun installKaiserKeyboard(target: EditText, actionLabel: String = "Tamam") {
-        target.showSoftInputOnFocus = false
-        var keyboardPopup: android.widget.PopupWindow? = null
-        fun openKeyboard() {
-            if (keyboardPopup?.isShowing == true) return
-            val density = resources.displayMetrics.density
-            fun d(v: Int) = (v * density).toInt()
-            val locale = java.util.Locale.getDefault()
-            val turkish = locale.language.equals("tr", true)
-            var shifted = false
-            val keyboard = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(d(8), d(8), d(8), d(8))
-                setBackgroundColor(Color.rgb(20, 25, 36))
-                elevation = d(12).toFloat()
-            }
-            val popup = android.widget.PopupWindow(keyboard, -1, d(270), true).apply {
-                isOutsideTouchable = true
-                inputMethodMode = android.widget.PopupWindow.INPUT_METHOD_NOT_NEEDED
-                softInputMode = android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
-                setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.rgb(20, 25, 36)))
-            }
-            keyboardPopup = popup
-            fun insert(value: String) {
-                val start = target.selectionStart.coerceAtLeast(0)
-                val end = target.selectionEnd.coerceAtLeast(start)
-                target.text.replace(start, end, value)
-                target.setSelection((start + value.length).coerceAtMost(target.text.length))
-                target.requestFocus()
-            }
-            fun key(label: String, value: String = label, weight: Float = 1f, special: Boolean = false, action: (() -> Unit)? = null): Button {
-                return Button(this).apply {
-                    text = label
-                    textSize = if (label.length > 3) 12f else 17f
-                    isAllCaps = false
-                    isFocusable = true
-                    isFocusableInTouchMode = true
-                    setPadding(d(2), 0, d(2), 0)
-                    setTextColor(Color.WHITE)
-                    background = roundedDrawable(if (special) Color.rgb(48, 58, 77) else Color.rgb(31, 39, 54), 8, Color.rgb(63, 75, 96))
-                    stateListAnimator = null
-                    setOnFocusChangeListener { v, focused ->
-                        v.background = roundedDrawable(if (focused) accent else if (special) Color.rgb(48, 58, 77) else Color.rgb(31, 39, 54), 8)
-                        (v as Button).setTextColor(if (focused) Color.rgb(8, 13, 22) else Color.WHITE)
-                    }
-                    setOnClickListener { action?.invoke() ?: insert(if (shifted) value.uppercase(locale) else value) }
-                    tag = weight
-                }
-            }
-            fun row(keys: List<Triple<String, String, Float>>) {
-                val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-                keys.forEach { (label, value, weight) ->
-                    val b = key(label, value)
-                    line.addView(b, LinearLayout.LayoutParams(0, d(39), weight).apply { setMargins(d(2), d(2), d(2), d(2)) })
-                }
-                keyboard.addView(line)
-            }
-            val first = if (turkish) "qwertyuiopğü" else when (locale.language) {
-                "de" -> "qwertzuiopü"
-                "fr" -> "azertyuiop"
-                "es" -> "qwertyuiop"
-                else -> "qwertyuiop"
-            }
-            val second = if (turkish) "asdfghjklşi" else when (locale.language) {
-                "de" -> "asdfghjklöä"
-                "fr" -> "qsdfghjklm"
-                else -> "asdfghjkl"
-            }
-            val third = if (turkish) "zxcvbnmöç" else "zxcvbnm"
-            row(first.map { Triple(it.toString(), it.toString(), 1f) })
-            row(second.map { Triple(it.toString(), it.toString(), 1f) })
-            val thirdLine = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            val shift = key("⇧", special = true) { shifted = !shifted }
-            thirdLine.addView(shift, LinearLayout.LayoutParams(0, d(40), 1.2f).apply { setMargins(d(2), d(2), d(2), d(2)) })
-            third.forEach { ch -> thirdLine.addView(key(ch.toString(), ch.toString()), LinearLayout.LayoutParams(0, d(40), 1f).apply { setMargins(d(2), d(2), d(2), d(2)) }) }
-            thirdLine.addView(key("⌫", special = true) {
-                val start = target.selectionStart.coerceAtLeast(0)
-                val end = target.selectionEnd.coerceAtLeast(0)
-                if (start != end) target.text.delete(start, end)
-                else if (start > 0) target.text.delete(start - 1, start)
-                target.setSelection(target.selectionStart.coerceAtLeast(0))
-                target.requestFocus()
-            }, LinearLayout.LayoutParams(0, d(40), 1.2f).apply { setMargins(d(2), d(2), d(2), d(2)) })
-            keyboard.addView(thirdLine)
-            val bottom = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            fun bottomKey(label: String, weight: Float, value: String = label, action: (() -> Unit)? = null) {
-                bottom.addView(key(label, value, special = true, action = action), LinearLayout.LayoutParams(0, d(42), weight).apply { setMargins(d(2), d(2), d(2), d(2)) })
-            }
-            bottomKey("123", 1.1f) { insert("123") }
-            bottomKey(locale.displayLanguage.uppercase(locale).take(3), 1f)
-            bottomKey("Boşluk", 3.2f, " ")
-            bottomKey(actionLabel, 1.5f) {
-                popup.dismiss()
-                target.clearFocus()
-                if (target.tag == "global_search_input") render()
-            }
-            keyboard.addView(bottom)
-            popup.showAtLocation(window.decorView, android.view.Gravity.BOTTOM, 0, d(0))
-            keyboard.post { keyboard.getChildAt(0)?.let { (it as? ViewGroup)?.getChildAt(0)?.requestFocus() } }
-        }
-        target.setOnFocusChangeListener { _, focused -> if (focused) target.post { openKeyboard() } else keyboardPopup?.dismiss() }
-        target.setOnClickListener { openKeyboard() }
     }
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
@@ -1782,7 +1676,6 @@ class MainActivity : Activity() {
                 background = roundedDrawable(Color.rgb(28, 35, 49), 14, accent)
                 if (android.os.Build.VERSION.SDK_INT >= 24) imeHintLocales = android.os.LocaleList.getDefault()
                 if (android.os.Build.VERSION.SDK_INT >= 29) textCursorDrawable?.setTint(accent)
-                showSoftInputOnFocus = false
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                 tag = "global_search_input"
                 setText(searchQuery); setSelection(text.length)
@@ -1801,12 +1694,13 @@ class MainActivity : Activity() {
                 setOnEditorActionListener { _, actionId, _ ->
                     if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
                         actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                        imm.hideSoftInputFromWindow(windowToken, 0)
                         render()
                         true
                     } else false
                 }
             }
-            installKaiserKeyboard(searchInput, "Ara")
             searchPanel.addView(searchInput, LinearLayout.LayoutParams(-1, dp(52)))
             content.addView(searchPanel)
             if (searchInputFocusPending) {
