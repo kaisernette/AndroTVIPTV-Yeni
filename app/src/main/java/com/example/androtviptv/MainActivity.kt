@@ -2436,6 +2436,8 @@ class MainActivity : Activity() {
     }
 
     private fun renderSettingsScreen() {
+        // Settings is a dedicated full-screen workspace: hide the entire left navigation rail.
+        if (::sidebar.isInitialized) sidebar.visibility = View.GONE
         mainHeader.visibility = View.GONE
         status.visibility = View.GONE
         categoryScroll.visibility = View.GONE
