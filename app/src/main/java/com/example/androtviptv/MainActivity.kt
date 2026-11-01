@@ -1326,12 +1326,24 @@ class MainActivity : Activity() {
             return
         }
 
-        AlertDialog.Builder(this)
+        val exitDialog = AlertDialog.Builder(this)
             .setTitle("Kaisertv'den çıkılsın mı?")
             .setMessage("Uygulamadan çıkmak istediğine emin misin?")
             .setNegativeButton("Uygulamaya dön", null)
             .setPositiveButton("Çıkış yap") { _, _ -> finish() }
-            .show()
+            .create()
+        exitDialog.setOnShowListener {
+            val dialogColor = Color.rgb(17, 23, 34)
+            exitDialog.window?.setBackgroundDrawable(roundedDrawable(dialogColor, 20, accent))
+            exitDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            exitDialog.window?.setDimAmount(0.72f)
+            exitDialog.window?.setLayout(dp(420), ViewGroup.LayoutParams.WRAP_CONTENT)
+            exitDialog.findViewById<TextView>(android.R.id.alertTitle)?.setTextColor(Color.WHITE)
+            exitDialog.findViewById<TextView>(android.R.id.message)?.setTextColor(muted)
+            exitDialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Color.WHITE)
+            exitDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(accentBright)
+        }
+        exitDialog.show()
     }
 
     private fun showItemDetails(item: MediaItem) {
