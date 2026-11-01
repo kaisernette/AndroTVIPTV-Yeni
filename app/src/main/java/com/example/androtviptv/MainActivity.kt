@@ -2556,9 +2556,15 @@ class MainActivity : Activity() {
             }
             "sources" -> {
                 heading("Kaynaklar", "Kaynak ekle ve kayıtlı bağlantılarını buradan yönet.")
-                option("＋  Yeni kaynak ekle", "M3U/M3U8 veya Xtream Codes") { showConnectionDialog() }
+                // Keep the source-entry form fixed inside the Sources page; do not show a duplicate launch card.
+                showConnectionDialog()
                 if (savedSources.isEmpty()) {
-                    option("Henüz kaynak eklenmedi", "Yeni kaynak ekle düğmesini kullan.") { showConnectionDialog() }
+                    content.addView(TextView(this).apply {
+                        text = "Henüz kayıtlı kaynak yok."
+                        textSize = 14f
+                        setTextColor(muted)
+                        setPadding(dp(8), dp(12), dp(8), dp(12))
+                    })
                 } else {
                     savedSources.toList().forEach { source ->
                         val sourceRow = LinearLayout(this).apply {
