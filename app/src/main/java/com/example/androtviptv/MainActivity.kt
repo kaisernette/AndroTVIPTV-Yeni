@@ -121,11 +121,9 @@ class MainActivity : Activity() {
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         loadCachedItems()
-        // Restore the last section instead of overwriting it with Live TV on every launch.
-        val allowedSections = setOf("Tümü", "Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler", "Ayarlar")
-        selectedType = prefs.getString("last_section", "Canlı TV")
-            ?.takeIf { it in allowedSections } ?: "Canlı TV"
-        selectedGroup = prefs.getString("last_group", "Tüm kategoriler") ?: "Tüm kategoriler"
+        // Start on Home every time; the user's last section remains saved for history only.
+        selectedType = "Tümü"
+        selectedGroup = "Tüm kategoriler"
         buildUi()
         showPreviousCrashIfAny()
         loadSavedSources()
@@ -191,6 +189,9 @@ class MainActivity : Activity() {
     private var searchQuery = ""
     private var searchInputFocusPending = false
     private var focusFirstContentOnRender = false
+    private var selectedSidebarFocusView: View? = null
+    private var firstRightContentFocusView: View? = null
+    private var initialSidebarFocusPending = true
     private var isLoadingSource = false
     private var loadProgress = 0
     private var hasLoadedSource = false
@@ -568,9 +569,10 @@ class MainActivity : Activity() {
             }
         }
         navBar.removeAllViews()
+        selectedSidebarFocusView = null
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
-            navBar.addView(makeButton(label, selected, action).apply {
+            val sidebarButton = makeButton(label, selected, action).apply {
                 // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
@@ -598,7 +600,10 @@ class MainActivity : Activity() {
                 minimumWidth = 0
                 setPadding(dp(10), 0, dp(8), 0)
                 minHeight = dp(42)
-            }, LinearLayout.LayoutParams(-1, dp(46)).apply { setMargins(0, dp(3), 0, dp(3)) })
+                id = View.generateViewId()
+            }
+            navBar.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(46)).apply { setMargins(0, dp(3), 0, dp(3)) })
+            if (selected) selectedSidebarFocusView = sidebarButton
         }
 
         fun returnToMainMenu() {
@@ -2244,21 +2249,33 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
         }
-        if (focusFirstContentOnRender) {
-            focusFirstContentOnRender = false
-            content.post {
-                fun firstFocusable(view: View): View? {
-                    if (view.visibility != View.VISIBLE || !view.isEnabled) return null
-                    if (view.isFocusable && view.isShown) return view
-                    if (view is ViewGroup) {
-                        for (index in 0 until view.childCount) {
-                            val found = firstFocusable(view.getChildAt(index))
-                            if (found != null) return found
-                        }
+        content.post {
+            fun firstFocusable(view: View): View? {
+                if (view.visibility != View.VISIBLE || !view.isEnabled) return null
+                if (view.isFocusable && view.isShown) return view
+                if (view is ViewGroup) {
+                    for (index in 0 until view.childCount) {
+                        val found = firstFocusable(view.getChildAt(index))
+                        if (found != null) return found
                     }
-                    return null
                 }
-                firstFocusable(content)?.requestFocus()
+                return null
+            }
+            val firstContent = firstFocusable(content)
+            firstRightContentFocusView = firstContent
+            if (firstContent != null && firstContent.id == View.NO_ID) firstContent.id = View.generateViewId()
+            selectedSidebarFocusView?.let { navButton ->
+                if (firstContent != null) navButton.nextFocusRightId = firstContent.id
+            }
+            if (firstContent != null) {
+                selectedSidebarFocusView?.let { navButton -> firstContent.nextFocusLeftId = navButton.id }
+            }
+            if (initialSidebarFocusPending && navBar.visibility == View.VISIBLE && selectedSidebarFocusView != null) {
+                initialSidebarFocusPending = false
+                selectedSidebarFocusView?.requestFocus()
+            } else if (focusFirstContentOnRender) {
+                focusFirstContentOnRender = false
+                firstContent?.requestFocus()
             }
         }
     }
