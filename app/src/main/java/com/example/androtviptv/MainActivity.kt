@@ -63,6 +63,7 @@ class MainActivity : Activity() {
     private var detailMovie: MediaItem? = null
     private var seriesEpisodeRows: List<Pair<String, List<MediaItem>>> = emptyList()
     private var seriesEpisodesLoading = false
+    private var selectedEpisodeSeason = ""
     private var seriesEpisodesError = ""
     private lateinit var status: TextView
     private lateinit var playlistUrl: EditText
@@ -1812,12 +1813,15 @@ class MainActivity : Activity() {
                 }
             }
         }
+        val activeSourceId = prefs.getString("last_source_id", "") ?: ""
+        val activeSourceItems = if (activeSourceId.isBlank()) items.toList()
+            else items.filter { it.sourceId == activeSourceId }
         val unfilteredBase = when {
-            sidebarMode == "search" -> items.toList()
+            sidebarMode == "search" -> activeSourceItems
             selectedType == "Tümü" -> items.toList()
-            selectedType == "Favoriler" -> items.filter { favorites.contains(it.favoriteKey) }
-            selectedType == "Son İzlenenler" -> recent.toList()
-            else -> items.filter { it.type == selectedType }
+            selectedType == "Favoriler" -> activeSourceItems.filter { favorites.contains(it.favoriteKey) }
+            selectedType == "Son İzlenenler" -> recent.filter { activeSourceId.isBlank() || it.sourceId == activeSourceId }
+            else -> activeSourceItems.filter { it.type == selectedType }
         }
         val query = if (sidebarMode == "search") searchQuery.trim() else ""
         val categoryVisibleBase = if (sidebarMode == "search") unfilteredBase else unfilteredBase.filter { item -> !hiddenCategories.contains(item.type + "|" + item.group.ifBlank { "Diğer" }) }
@@ -2020,8 +2024,8 @@ class MainActivity : Activity() {
                 return ranked
             }
             listOf(
-                "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(items.filter { it.type == "Filmler" }, trendingMovies).take(24),
-                "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(items.filter { it.type == "Diziler" }, trendingSeries).take(24),
+                "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(activeSourceItems.filter { it.type == "Filmler" }, trendingMovies).take(24),
+                "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(activeSourceItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
             ).filter { it.second.isNotEmpty() }
         } else if (selectedType == "Filmler" || selectedType == "Diziler") {
             // Trend rows are shown on the home screen only; category screens list categories directly.
@@ -2048,6 +2052,7 @@ class MainActivity : Activity() {
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler"
+            val expandedFiveColumnGrid = showingExpandedCategory
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, dp(4), 2, dp(6))
             }
@@ -2163,7 +2168,7 @@ class MainActivity : Activity() {
                     text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
                     minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
                 })
-                if (!weeklyPoster && selectedType != "Filmler" && selectedType != "Diziler" &&
+                if (!showingExpandedCategory && !weeklyPoster && selectedType != "Filmler" && selectedType != "Diziler" &&
                     selectedType != "Favoriler" && selectedType != "Son İzlenenler") {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
@@ -2176,15 +2181,30 @@ class MainActivity : Activity() {
                     card.addView(actions)
                 }
                 if (posterGridMode) {
-                    if (expandedPosterCount % 4 == 0) {
+                    val gridColumns = if (expandedFiveColumnGrid) 5 else 4
+                    if (expandedPosterCount % gridColumns == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.TOP
                         }
+                        if (expandedFiveColumnGrid) {
+                            expandedPosterRow?.addView(LinearLayout(this).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                                addView(TextView(this@MainActivity).apply {
+                                    text = "Son Vurgu İçerik"
+                                    textSize = 10f
+                                    gravity = Gravity.CENTER
+                                    setTextColor(Color.rgb(8, 13, 22))
+                                    setPadding(dp(8), dp(4), dp(8), dp(4))
+                                    background = roundedDrawable(accent, 8)
+                                })
+                            }, LinearLayout.LayoutParams(-1, dp(26)))
+                        }
                         row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
                     expandedPosterRow?.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        setMargins(dp(6), 0, dp(6), dp(12))
+                        setMargins(dp(3), 0, dp(3), dp(12))
                     })
                     expandedPosterCount++
                 } else {
@@ -2195,8 +2215,9 @@ class MainActivity : Activity() {
                 }
             }
             // Keep the final row at four equal poster columns, even when it has fewer than four items.
-            if (posterGridMode && expandedPosterCount > 0 && expandedPosterCount % 4 != 0) {
-                val remainingSlots = 4 - (expandedPosterCount % 4)
+            val finalGridColumns = if (expandedFiveColumnGrid) 5 else 4
+            if (posterGridMode && expandedPosterCount > 0 && expandedPosterCount % finalGridColumns != 0) {
+                val remainingSlots = finalGridColumns - (expandedPosterCount % finalGridColumns)
                 repeat(remainingSlots) {
                     expandedPosterRow?.addView(View(this), LinearLayout.LayoutParams(0, dp(210), 1f).apply {
                         setMargins(dp(6), 0, dp(6), dp(12))
@@ -2565,13 +2586,27 @@ class MainActivity : Activity() {
             seriesEpisodeRows.isEmpty() -> episodesPanel.addView(TextView(this).apply {
                 text = "Bu dizi için bölüm bulunamadı."; textSize = 15f; setTextColor(muted); setPadding(4, 12, 4, 12)
             })
-            else -> seriesEpisodeRows.forEach { (season, episodes) ->
-                episodesPanel.addView(TextView(this).apply {
-                    text = "Sezon $season"; textSize = 18f
-                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accentBright)
-                    setPadding(0, dp(12), 0, dp(8))
-                })
-                episodes.forEachIndexed { index, episode ->
+            else -> {
+                val seasons = seriesEpisodeRows.map { it.first }
+                if (selectedEpisodeSeason !in seasons) selectedEpisodeSeason = seasons.firstOrNull().orEmpty()
+                val seasonSelector = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                seasons.forEach { season ->
+                    seasonSelector.addView(makeButton("Sezon $season", season == selectedEpisodeSeason) {
+                        selectedEpisodeSeason = season
+                        renderSeriesDetail(series)
+                    }.apply { textSize = 15f }, LinearLayout.LayoutParams(dp(132), dp(46)).apply {
+                        setMargins(0, dp(4), dp(8), dp(8))
+                    })
+                }
+                episodesPanel.addView(HorizontalScrollView(this).apply {
+                    isHorizontalScrollBarEnabled = false
+                    addView(seasonSelector)
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                val selectedEpisodes = seriesEpisodeRows.firstOrNull { it.first == selectedEpisodeSeason }?.second.orEmpty()
+                selectedEpisodes.forEachIndexed { index, episode ->
                     val episodeRow = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
                         setPadding(dp(14), dp(10), dp(12), dp(10))
@@ -2583,10 +2618,9 @@ class MainActivity : Activity() {
                     episodeRow.addView(TextView(this).apply {
                         text = episode.name; textSize = 15f; maxLines = 2; setTextColor(Color.WHITE)
                     }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    episodeRow.addView(makeButton("▶ İzle", true) { play(episode) }.apply {
-                        textSize = 14f
-                        minHeight = dp(44)
-                    }, LinearLayout.LayoutParams(dp(116), dp(44)).apply { setMargins(12, 0, 0, 0) })
+                    episodeRow.addView(makeButton("İzle", false) { play(episode) }.apply {
+                        textSize = 15f; gravity = Gravity.CENTER
+                    }, LinearLayout.LayoutParams(dp(116), dp(46)).apply { setMargins(12, 0, 0, 0) })
                     episodesPanel.addView(episodeRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(8)) })
                 }
             }
