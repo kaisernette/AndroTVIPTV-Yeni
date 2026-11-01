@@ -51,6 +51,7 @@ class MainActivity : Activity() {
     private val recent = mutableListOf<MediaItem>()
     private var selectedGroup = "Tüm kategoriler"
     private var selectedCategorySection = "Canlı TV"
+    private var categoryFocusRestoreKey: String? = null
     // Render live channels in small batches to avoid first-open freezes on Android TV.
     private var liveChannelsLimit = 72
     private var expandedCategory: Pair<String, List<MediaItem>>? = null
@@ -515,10 +516,13 @@ class MainActivity : Activity() {
                 background = roundedDrawable(if (selected) accent else Color.TRANSPARENT, 10)
                 setTextColor(if (selected) Color.rgb(8, 13, 22) else Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
-                    v.background = roundedDrawable(if (selected || hasFocus) accent else Color.TRANSPARENT, 10)
-                    (v as Button).setTextColor(if (selected || hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
-                    (v as Button).setShadowLayer(if (selected || hasFocus) dp(9).toFloat() else 0f, 0f, 0f, accent)
-                    v.elevation = if (selected || hasFocus) dp(5).toFloat() else 0f
+                    val button = v as Button
+                    button.background = if (selected) roundedDrawable(accent, 10)
+                        else if (hasFocus) roundedDrawable(panel, 10).apply { setStroke(dp(2), accent) }
+                        else roundedDrawable(Color.TRANSPARENT, 10)
+                    button.setTextColor(if (selected) Color.rgb(8, 13, 22) else Color.WHITE)
+                    button.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+                    v.elevation = 0f
                     v.scaleX = 1f
                     v.scaleY = 1f
                 }
@@ -2729,10 +2733,18 @@ class MainActivity : Activity() {
                         setPadding(dp(8), dp(12), dp(8), dp(12))
                         background = roundedDrawable(if (selected) accent else panel, 12)
                         isFocusable = true
+                        isFocusableInTouchMode = true
                         isClickable = true
+                        setOnFocusChangeListener { v, hasFocus ->
+                            v.background = if (selected) roundedDrawable(accent, 12)
+                                else if (hasFocus) roundedDrawable(panel, 12).apply { setStroke(dp(2), accent) }
+                                else roundedDrawable(panel, 12)
+                            (v as TextView).setTextColor(if (selected) Color.WHITE else if (hasFocus) accentBright else muted)
+                        }
                         setOnClickListener {
                             selectedCategorySection = tab.first
                             render()
+                            content.post { categoryTabs.getChildAt(tabInfo.indexOf(tab))?.requestFocus() }
                         }
                     }
                     categoryTabs.addView(tabButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
@@ -2824,6 +2836,7 @@ class MainActivity : Activity() {
                             setOnClickListener {
                                 if (hiddenCategories.contains(hiddenKey)) hiddenCategories.remove(hiddenKey)
                                 else hiddenCategories.add(hiddenKey)
+                                categoryFocusRestoreKey = hiddenKey
                                 prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply()
                                 render()
                             }
@@ -2854,6 +2867,9 @@ class MainActivity : Activity() {
                         content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                             setMargins(dp(6), dp(5), dp(6), dp(7))
                         })
+                        if (categoryFocusRestoreKey == hiddenKey) {
+                            row.post { row.requestFocus(); categoryFocusRestoreKey = null }
+                        }
                     }
                 } else {
                     content.addView(TextView(this).apply {
