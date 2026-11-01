@@ -887,7 +887,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END
             setPadding(0, dp(8), 0, 0)
         }
-        actions.addView(makeSourceActionButton("İptal", false) { render() },
+        actions.addView(makeButton("İptal", false) { render() },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(4), 0, dp(4), 0) })
         val connectButton = makeSourceActionButton(if (editSource == null) "Bağlan" else "Kaydet", true) {
             val useXtream = sourceMode.checkedRadioButtonId == xtream.id
@@ -977,36 +977,6 @@ class MainActivity : Activity() {
             }
         }
     }
-
-    private fun makeSourceActionButton(label: String, primary: Boolean, action: () -> Unit): Button =
-        Button(this).apply {
-            text = label
-            textSize = 13f
-            isAllCaps = false
-            isFocusable = true
-            isFocusableInTouchMode = true
-            minWidth = dp(76)
-            minHeight = dp(42)
-            setPadding(dp(12), 0, dp(12), 0)
-            setTextColor(Color.WHITE)
-            stateListAnimator = null
-            background = roundedDrawable(
-                if (primary) accent else panel,
-                10,
-                if (primary) accent else Color.rgb(76, 91, 112)
-            )
-            setOnFocusChangeListener { view, hasFocus ->
-                view.background = roundedDrawable(
-                    if (hasFocus || primary) accent else panel,
-                    10,
-                    if (hasFocus || primary) accent else Color.rgb(76, 91, 112)
-                )
-                (view as Button).setTextColor(
-                    if (hasFocus || primary) Color.rgb(8, 13, 22) else Color.WHITE
-                )
-            }
-            setOnClickListener { action() }
-        }
 
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
