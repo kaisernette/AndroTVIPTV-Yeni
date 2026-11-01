@@ -2152,6 +2152,7 @@ class MainActivity : Activity() {
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler"
             val expandedFiveColumnGrid = showingExpandedCategory
+            val sixColumnMediaGrid = !showingExpandedCategory && selectedType in listOf("Filmler", "Diziler")
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, dp(4), 2, dp(6))
             }
@@ -2161,11 +2162,21 @@ class MainActivity : Activity() {
             val sectionCountView = TextView(this).apply {
                 id = View.generateViewId()
                 text = if (showingExpandedCategory) "← Geri dön" else "${entries.size} içerik"
-                textSize = 12f; setTextColor(accent)
+                textSize = 12f; setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
                 setPadding(dp(8), 0, dp(8), 0)
                 isFocusable = true
                 isClickable = true
+                setOnFocusChangeListener { v, hasFocus ->
+                    (v as TextView).setTextColor(if (hasFocus) accent else Color.WHITE)
+                }
+                setOnHoverListener { v, event ->
+                    when (event.action) {
+                        android.view.MotionEvent.ACTION_HOVER_ENTER -> (v as TextView).setTextColor(accent)
+                        android.view.MotionEvent.ACTION_HOVER_EXIT -> (v as TextView).setTextColor(if (v.hasFocus()) accent else Color.WHITE)
+                    }
+                    true
+                }
                 setOnClickListener {
                     if (showingExpandedCategory) expandedCategory = null
                     else expandedCategory = groupName to entries
@@ -2293,7 +2304,11 @@ class MainActivity : Activity() {
                 }
                 if (posterGridMode) {
                     if (itemIndex == displayedEntries.lastIndex) card.nextFocusRightId = sectionCountView.id
-                    val gridColumns = if (expandedFiveColumnGrid) 5 else 4
+                    val gridColumns = when {
+                        sixColumnMediaGrid -> 6
+                        expandedFiveColumnGrid -> 5
+                        else -> 4
+                    }
                     if (expandedPosterCount % gridColumns == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
@@ -2315,7 +2330,11 @@ class MainActivity : Activity() {
                 }
             }
             // Keep the final row at four equal poster columns, even when it has fewer than four items.
-            val finalGridColumns = if (expandedFiveColumnGrid) 5 else 4
+            val finalGridColumns = when {
+                sixColumnMediaGrid -> 6
+                expandedFiveColumnGrid -> 5
+                else -> 4
+            }
             if (posterGridMode && expandedPosterCount > 0 && expandedPosterCount % finalGridColumns != 0) {
                 val remainingSlots = finalGridColumns - (expandedPosterCount % finalGridColumns)
                 repeat(remainingSlots) {
