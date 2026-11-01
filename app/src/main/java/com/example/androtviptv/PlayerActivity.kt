@@ -274,27 +274,40 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && channelOverlay != null) {
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    highlightedChannelIndex = (highlightedChannelIndex +
-                        if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
-                        .coerceIn(0, channelUrls.lastIndex)
-                    refreshChannelHighlight()
-                    return true
+        if (event.action == KeyEvent.ACTION_DOWN && isLiveStream && channelUrls.isNotEmpty()) {
+            if (channelOverlay != null) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        highlightedChannelIndex = (highlightedChannelIndex +
+                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
+                            .coerceIn(0, channelUrls.lastIndex)
+                        refreshChannelHighlight()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        tuneChannel(highlightedChannelIndex)
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+                    KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                        hideChannelOverlay()
+                        return true
+                    }
                 }
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    tuneChannel(highlightedChannelIndex)
-                    return true
-                }
-                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                    hideChannelOverlay()
-                    return true
+            } else if (playerView?.isControllerFullyVisible == false) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        showChannelOverlay()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        showRecentOverlay()
+                        return true
+                    }
                 }
             }
         }
-        // Live-TV DPAD keys are left to Android focus navigation so they move
-        // between the visible player controls instead of changing channels.
+        // When the controller is visible, DPAD navigation stays with the player controls.
         return super.dispatchKeyEvent(event)
     }
 
@@ -322,7 +335,7 @@ class PlayerActivity : Activity() {
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(14), dp(14), dp(14))
-            background = GradientDrawable().apply { setColor(0xD91A2030.toInt()); cornerRadius = dp(16).toFloat(); setStroke(dp(1), 0xAADEB55B.toInt()) }
+            background = GradientDrawable().apply { setColor(0xE6111722.toInt()); cornerRadius = dp(16).toFloat(); setStroke(dp(1), 0xFF477DCE.toInt()) }
             elevation = dp(12).toFloat()
         }
         panel.addView(TextView(this).apply { text = "CANLI KANALLAR"; textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); setPadding(dp(4), dp(2), dp(4), dp(10)) })
@@ -359,9 +372,9 @@ class PlayerActivity : Activity() {
     }
 
     private fun channelRowBackground(highlighted: Boolean) = GradientDrawable().apply {
-        setColor(if (highlighted) 0xAADEB55B.toInt() else 0x33000000)
+        setColor(if (highlighted) 0xAA315C9A.toInt() else 0x33232D3B)
         cornerRadius = dp(8).toFloat()
-        if (highlighted) setStroke(dp(1), 0xFFDEB55B.toInt())
+        if (highlighted) setStroke(dp(1), 0xFF75A9F5.toInt())
     }
 
     private fun restartCurrentStream(reason: String) {
