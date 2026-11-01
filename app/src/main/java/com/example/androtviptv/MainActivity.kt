@@ -154,6 +154,8 @@ class MainActivity : Activity() {
     private lateinit var navBar: LinearLayout
     private lateinit var sidebarMenuScroll: ScrollView
     private lateinit var brandView: LinearLayout
+    private lateinit var heroPanel: LinearLayout
+    private lateinit var quickAccessScroll: HorizontalScrollView
     private lateinit var sidebar: LinearLayout
     private lateinit var rootLayout: LinearLayout
     private lateinit var mainContentScroll: ScrollView
@@ -280,7 +282,7 @@ class MainActivity : Activity() {
             setPadding(8, 12, 8, 10)
             background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(140), -1).apply { setMargins(0, 0, dp(8), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(184), -1).apply { setMargins(0, 0, dp(8), 0) })
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -288,10 +290,11 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, 0)
         }
         brandView.addView(TextView(this).apply {
-            val logo = android.text.SpannableString("▶ KIP+")
+            val logo = android.text.SpannableString("▶ KAISER TV+")
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 5, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 170, 0)), 5, 6, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = logo
             textSize = 23f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -381,8 +384,63 @@ class MainActivity : Activity() {
             setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
         }, FrameLayout.LayoutParams(-1, -1))
         hero.addView(heroArt, LinearLayout.LayoutParams(164, 150).apply { setMargins(16, 0, 0, 0) })
-        main.addView(hero, LinearLayout.LayoutParams(-1, 190).apply { setMargins(0, 0, 0, 10) })
-        hero.visibility = View.GONE
+        heroPanel = hero
+        main.addView(hero, LinearLayout.LayoutParams(-1, 220).apply { setMargins(0, 0, 0, 10) })
+        hero.visibility = View.VISIBLE
+
+        quickAccessScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            clipToPadding = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
+        val quickAccess = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val quickItems = listOf(
+            Triple("◉\\nCanlı TV", Color.rgb(0, 112, 230), "Canlı TV"),
+            Triple("▣\\nFilmler", Color.rgb(196, 39, 65), "Filmler"),
+            Triple("▱\\nDiziler", Color.rgb(123, 47, 190), "Diziler"),
+            Triple("☺\\nÇocuk", Color.rgb(0, 145, 95), "çocuk"),
+            Triple("♧\\nBelgeseller", Color.rgb(190, 104, 0), "belgesel"),
+            Triple("♜\\nSpor", Color.rgb(0, 112, 135), "spor")
+        )
+        quickItems.forEach { (label, tileColor, target) ->
+            val tile = Button(this).apply {
+                text = label
+                textSize = 13f
+                isAllCaps = false
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding(dp(10), dp(4), dp(10), dp(4))
+                background = roundedDrawable(tileColor, 14, tileColor)
+                stateListAnimator = null
+                isFocusable = true
+                setOnFocusChangeListener { v, focused ->
+                    v.background = roundedDrawable(tileColor, 14, if (focused) focusColor else tileColor)
+                    v.elevation = if (focused) dp(5).toFloat() else 0f
+                    v.scaleX = if (focused) 1.03f else 1f
+                    v.scaleY = if (focused) 1.03f else 1f
+                }
+                setOnClickListener {
+                    detailMovie = null; detailSeries = null
+                    if (target in listOf("Canlı TV", "Filmler", "Diziler")) {
+                        selectedType = target
+                        selectedGroup = "Tüm kategoriler"
+                        sidebarMode = if (target == "Canlı TV" || target == "Filmler" || target == "Diziler") "context" else "main"
+                        searchQuery = ""
+                    } else {
+                        selectedType = "Tümü"
+                        sidebarMode = "search"
+                        searchQuery = target
+                    }
+                    rebuildNavigation(); render()
+                }
+            }
+            quickAccess.addView(tile, LinearLayout.LayoutParams(dp(142), dp(82)).apply { setMargins(0, 0, dp(9), 0) })
+        }
+        quickAccessScroll.addView(quickAccess)
+        main.addView(quickAccessScroll, LinearLayout.LayoutParams(-1, dp(92)).apply { setMargins(0, 0, 0, dp(6)) })
 
         status = TextView(this).apply {
             text = "Kaisertv hazır. Kaynak ekleyerek içeriklerini yükleyebilirsin."
@@ -474,7 +532,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▰  Filmler", "▤  Diziler", "♥  Favoriler", "◴  Geçmiş", "⚙  Ayarlar").forEach { tab ->
+            listOf("🔍  Ara", "🏠  Ana Sayfa", "📺  Canlı TV", "🎬  Filmler", "📚  Diziler", "❤️  Favoriler", "🕘  Geçmiş", "⚙️  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -1247,7 +1305,9 @@ class MainActivity : Activity() {
         val detailMode = detailSeries != null || detailMovie != null
         val firstEntry = items.isEmpty() && !isLoadingSource
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
-        if (::brandView.isInitialized) brandView.visibility = View.GONE
+        if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::heroPanel.isInitialized) heroPanel.visibility = if (!firstEntry && !isLoadingSource && selectedType == "Tümü" && sidebarMode == "main") View.VISIBLE else View.GONE
+        if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = if (!firstEntry && !isLoadingSource && selectedType == "Tümü" && sidebarMode == "main") View.VISIBLE else View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
