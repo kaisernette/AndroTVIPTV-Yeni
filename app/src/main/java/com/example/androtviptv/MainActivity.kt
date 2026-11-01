@@ -1326,22 +1326,54 @@ class MainActivity : Activity() {
             return
         }
 
+        val exitPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(28), dp(24), dp(28), dp(24))
+            background = roundedDrawable(Color.rgb(13, 20, 33), 24, accent)
+        }
+        val brand = TextView(this).apply {
+            text = "▶ KAISER TV+"
+            textSize = 30f
+            gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD_ITALIC)
+            setTextColor(Color.WHITE)
+        }
+        exitPanel.addView(brand, LinearLayout.LayoutParams(-1, dp(62)))
+        exitPanel.addView(TextView(this).apply {
+            text = "Uygulamadan çıkmak istiyor musunuz?"
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setPadding(0, dp(10), 0, dp(24))
+        }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        val exitActions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
         val exitDialog = AlertDialog.Builder(this)
-            .setTitle("Kaisertv'den çıkılsın mı?")
-            .setMessage("Uygulamadan çıkmak istediğine emin misin?")
-            .setNegativeButton("Uygulamaya dön", null)
-            .setPositiveButton("Çıkış yap") { _, _ -> finish() }
+            .setView(exitPanel)
             .create()
+        val exitButton = makeButton("⇥  Çıkış Yap", false) {
+            exitDialog.dismiss()
+            finish()
+        }
+        val cancelButton = makeButton("✕  Vazgeç", false) {
+            exitDialog.dismiss()
+        }
+        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(58), 1f).apply {
+            setMargins(0, 0, dp(10), 0)
+        })
+        exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(58), 1f).apply {
+            setMargins(dp(10), 0, 0, 0)
+        })
+        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(64)))
         exitDialog.setOnShowListener {
-            val dialogColor = Color.rgb(17, 23, 34)
-            exitDialog.window?.setBackgroundDrawable(roundedDrawable(dialogColor, 20, accent))
+            exitDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
             exitDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            exitDialog.window?.setDimAmount(0.72f)
-            exitDialog.window?.setLayout(dp(420), ViewGroup.LayoutParams.WRAP_CONTENT)
-            exitDialog.findViewById<TextView>(android.R.id.alertTitle)?.setTextColor(Color.WHITE)
-            exitDialog.findViewById<TextView>(android.R.id.message)?.setTextColor(muted)
-            exitDialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Color.WHITE)
-            exitDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(accentBright)
+            exitDialog.window?.setDimAmount(0.78f)
+            exitDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.72f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+            cancelButton.post { cancelButton.requestFocus() }
         }
         exitDialog.show()
     }
