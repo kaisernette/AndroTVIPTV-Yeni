@@ -701,7 +701,6 @@ class MainActivity : Activity() {
                         prefs.edit().putString("last_section", "Ayarlar").apply()
                         selectedGroup = "Tüm kategoriler"
                         sidebarMode = "settings"
-                        rebuildNavigation()
                         render()
                     }
                 } else {
@@ -730,7 +729,6 @@ class MainActivity : Activity() {
                         selectedType = key
                         sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
                         prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
-                        rebuildNavigation()
                         render()
                     }
                 }
@@ -1433,7 +1431,6 @@ class MainActivity : Activity() {
                 selectedType = "Tümü"
                 selectedGroup = "Tüm kategoriler"
                 prefs.edit().putString("last_section", "Tümü").apply()
-                rebuildNavigation()
                 render()
                 return
             }
@@ -1448,7 +1445,6 @@ class MainActivity : Activity() {
                 selectedType = "Tümü"
                 selectedGroup = "Tüm kategoriler"
                 prefs.edit().putString("last_section", "Tümü").apply()
-                rebuildNavigation()
                 render()
             } catch (ignored: Exception) {
                 android.util.Log.e("KaiserTV", "Fallback navigation failed", ignored)
