@@ -467,7 +467,7 @@ class MainActivity : Activity() {
         }
         heroCopy.addView(heroSubtitle)
         heroCopy.addView(makeButton("İÇERİKLERİ KEŞFET  →", true) {
-            selectedType = "Tümü"; selectedGroup = "Tüm kategoriler"; rebuildNavigation(); render()
+            selectedType = "Tümü"; selectedGroup = "Tüm kategoriler"; render()
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 13, 0, 0) })
         hero.addView(heroCopy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
@@ -530,7 +530,7 @@ class MainActivity : Activity() {
                         sidebarMode = "search"
                         searchQuery = target
                     }
-                    rebuildNavigation(); render()
+                    render()
                 }
             }
             quickAccess.addView(tile, LinearLayout.LayoutParams(dp(142), dp(82)).apply { setMargins(0, 0, dp(9), 0) })
@@ -649,7 +649,6 @@ class MainActivity : Activity() {
             sidebarMode = "main"
             searchQuery = ""
             prefs.edit().putString("last_section", "Tümü").apply()
-            rebuildNavigation()
             render()
         }
 
@@ -691,7 +690,6 @@ class MainActivity : Activity() {
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
                         sidebarMode = "main"
-                        rebuildNavigation()
                         render()
                     }
                 } else if (normalizedTab == "Ayarlar") {
@@ -796,7 +794,6 @@ class MainActivity : Activity() {
                             prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
                         }
                     }
-                    rebuildNavigation()
                     render()
                 }
             }
@@ -1046,34 +1043,35 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) { }
 
-        // First launch: install the public mock Xtream profile so the demo opens
-        // without asking for server details. Keep any user-configured sources intact.
-        if (savedSources.isEmpty()) {
-            val demoSource = SavedSource(
-                "kaisertv-demo-222",
-                "KaiserTV+ Demo",
-                "xtream",
-                "https://xtream-codes-mock-server.vercel.app",
-                "test_user",
-                "test_pass"
-            )
-            saveSource(demoSource)
-            loadXtream(demoSource, true)
-            return
+        // Keep a built-in mock source available for the demo. If this is the
+        // first version that registers it, make it the initial source once;
+        // existing user sources remain saved and can still be selected later.
+        val demoSource = SavedSource(
+            "kaisertv-demo-222",
+            "KaiserTV+ Demo",
+            "xtream",
+            "https://xtream-codes-mock-server.vercel.app",
+            "test_user",
+            "test_pass"
+        )
+        val demoWasAlreadySaved = savedSources.any { it.id == demoSource.id }
+        if (!demoWasAlreadySaved) {
+            savedSources.add(demoSource)
+            persistSources()
+            prefs.edit().putString("last_source_id", demoSource.id).apply()
         }
 
         if (savedSources.isNotEmpty()) {
             val lastId = prefs.getString("last_source_id", "") ?: ""
             val last = savedSources.firstOrNull { it.id == lastId }
 
-            // A live-only cache is incomplete: the Movies and Series tabs and
-            // the home screen cannot render their rows from it. Reuse the last
-            // saved source (or the most recently saved source as a fallback) to
-            // repair the cache, while a complete cache opens instantly.
+            // Validate the cache against the selected source, not against items
+            // belonging to any other saved source.
             val sourceToRestore = last ?: savedSources.lastOrNull()
-            val cacheHasLiveChannels = items.any { it.type == "Canlı TV" && it.url.isNotBlank() }
-            val cacheHasMovies = items.any { it.type == "Filmler" }
-            val cacheHasSeries = items.any { it.type == "Diziler" }
+            val restoredSourceItems = items.filter { it.sourceId == sourceToRestore?.id }
+            val cacheHasLiveChannels = restoredSourceItems.any { it.type == "Canlı TV" && it.url.isNotBlank() }
+            val cacheHasMovies = restoredSourceItems.any { it.type == "Filmler" }
+            val cacheHasSeries = restoredSourceItems.any { it.type == "Diziler" }
             // A cache missing any major Xtream section must not be treated as complete.
             // In particular, otherwise TV can open into an empty "Tüm Kanallar" screen.
             val cacheNeedsRepair = sourceToRestore?.mode == "xtream" &&
@@ -3348,7 +3346,7 @@ class MainActivity : Activity() {
                 android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
                 if (bounds.outWidth > 0 && bounds.outHeight > 0) {
                     var sampleSize = 1
-                    while (bounds.outWidth / sampleSize > 800 || bounds.outHeight / sampleSize > 800) {
+                    while (bounds.outWidth / sampleSize > 480 || bounds.outHeight / sampleSize > 480) {
                         sampleSize *= 2
                     }
                     val decodeOptions = android.graphics.BitmapFactory.Options().apply {
