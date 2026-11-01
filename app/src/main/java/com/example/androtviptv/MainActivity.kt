@@ -369,6 +369,13 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
             setPadding(dp(4), 0, dp(10), dp(8))
+            // Keep the fixed search/date header visually above every scrolling poster,
+            // including cards temporarily raised by their focus animation.
+            setBackgroundColor(bg)
+            clipChildren = true
+            clipToPadding = true
+            elevation = dp(48).toFloat()
+            translationZ = dp(48).toFloat()
         }
         val topSearch = EditText(this).apply {
             hint = "Film, dizi veya kanal ara..."
