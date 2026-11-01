@@ -537,7 +537,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search", "context")) {
-            listOf("⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar", "⌕  Ara").forEach { tab ->
+            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -552,6 +552,14 @@ class MainActivity : Activity() {
                     "TV" -> "Canlı TV"
                     "Ana Sayfa" -> "Tümü"
                     else -> normalizedTab
+                }
+                if (normalizedTab == "Ayarlar") {
+                    navBar.addView(View(this).apply {
+                        setBackgroundColor(Color.rgb(76, 87, 105))
+                        isFocusable = false
+                    }, LinearLayout.LayoutParams(-1, dp(1)).apply {
+                        setMargins(dp(10), dp(10), dp(10), dp(10))
+                    })
                 }
                 if (normalizedTab == "Geçmiş") {
                     addSidebarButton(tab, selectedType == "Son İzlenenler") {
@@ -619,16 +627,20 @@ class MainActivity : Activity() {
             // In TV/Movies/Series, collapse the left rail to icons only.
             // Category filters remain in the main content area on the right.
             val compactTabs = listOf(
+                Triple("⌕", "Ara", "Ara"),
                 Triple("⌂", "Ana Sayfa", "Tümü"),
                 Triple("▣", "TV", "Canlı TV"),
                 Triple("▧", "Filmler", "Filmler"),
                 Triple("▤", "Diziler", "Diziler"),
                 Triple("♡", "Favoriler", "Favoriler"),
                 Triple("◷", "İzlediklerim", "Son İzlenenler"),
-                Triple("⚙", "Ayarlar", "Ayarlar"),
-                Triple("⌕", "Ara", "Ara")
+                Triple("⚙", "Ayarlar", "Ayarlar")
             )
             compactTabs.forEach { (glyph, label, key) ->
+                if (key == "Ayarlar") {
+                    navBar.addView(View(this).apply { setBackgroundColor(Color.rgb(76, 87, 105)); isFocusable = false },
+                        LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(10), dp(10), dp(10)) })
+                }
                 val isSelected = when (key) {
                     "Ara" -> false
                     "Tümü" -> selectedType == "Tümü"
