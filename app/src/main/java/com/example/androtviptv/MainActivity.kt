@@ -2813,7 +2813,7 @@ class MainActivity : Activity() {
                             // Transparent source container with a visible outline.
                             background = roundedDrawable(
                                 Color.TRANSPARENT,
-                                14,
+                                0,
                                 Color.rgb(48, 57, 73)
                             )
                         }
