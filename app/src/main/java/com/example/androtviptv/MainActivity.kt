@@ -553,8 +553,10 @@ class MainActivity : Activity() {
         mainContentScroll = ScrollView(this).apply {
             isFillViewport = true
             isFocusable = false
-            clipChildren = false
-            clipToPadding = false
+            // Keep scrolling posters inside the content viewport. Cards may still
+            // scale within the viewport, but must never draw over the fixed header.
+            clipChildren = true
+            clipToPadding = true
         }
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
