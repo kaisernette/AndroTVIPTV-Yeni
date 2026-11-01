@@ -1,4 +1,5 @@
 name: Build Kaisertv APK
+# Design-only branch build enabled
 
 on:
   workflow_dispatch:
