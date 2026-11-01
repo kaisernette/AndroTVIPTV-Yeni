@@ -2810,7 +2810,12 @@ class MainActivity : Activity() {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.CENTER_VERTICAL
                             setPadding(dp(12), dp(6), dp(8), dp(6))
-                            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            // Transparent source container with a visible outline.
+                            background = roundedDrawable(
+                                Color.TRANSPARENT,
+                                14,
+                                Color.rgb(48, 57, 73)
+                            )
                         }
                         val sourceInfo = LinearLayout(this).apply {
                             orientation = LinearLayout.VERTICAL
