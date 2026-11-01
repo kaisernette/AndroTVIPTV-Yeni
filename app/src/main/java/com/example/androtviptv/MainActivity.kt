@@ -188,6 +188,7 @@ class MainActivity : Activity() {
     private val hiddenCategories = mutableSetOf<String>()
     private var searchQuery = ""
     private var searchInputFocusPending = false
+    private var focusFirstContentOnRender = false
     private var isLoadingSource = false
     private var loadProgress = 0
     private var hasLoadedSource = false
@@ -629,6 +630,7 @@ class MainActivity : Activity() {
                         seriesEpisodeRows = emptyList()
                         seriesEpisodesLoading = false
                         seriesEpisodesError = ""
+                        focusFirstContentOnRender = true
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
                         selectedType = key
@@ -2159,6 +2161,23 @@ class MainActivity : Activity() {
                     row.gravity = Gravity.START or Gravity.CENTER_VERTICAL
                     addView(row)
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }
+        }
+        if (focusFirstContentOnRender) {
+            focusFirstContentOnRender = false
+            content.post {
+                fun firstFocusable(view: View): View? {
+                    if (view.visibility != View.VISIBLE || !view.isEnabled) return null
+                    if (view.isFocusable && view.isShown) return view
+                    if (view is ViewGroup) {
+                        for (index in 0 until view.childCount) {
+                            val found = firstFocusable(view.getChildAt(index))
+                            if (found != null) return found
+                        }
+                    }
+                    return null
+                }
+                firstFocusable(content)?.requestFocus()
             }
         }
     }
