@@ -883,15 +883,6 @@ class MainActivity : Activity() {
         } else {
             xtreamFieldsFrame.visibility = View.GONE
         }
-        sourceName.nextFocusDownId = if (editSource?.mode == "xtream") server.id else playlistUrl.id
-        server.nextFocusDownId = username.id
-        username.nextFocusDownId = password.id
-        password.nextFocusDownId = connectButton.id
-        connectButton.nextFocusUpId = password.id
-        playlistUrl.nextFocusDownId = connectButton.id
-        sourceMode.descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
-        sourceMode.getChildAt(0)?.isFocusable = false
-        sourceMode.getChildAt(1)?.isFocusable = false
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END
             setPadding(0, dp(8), 0, 0)
@@ -926,6 +917,15 @@ class MainActivity : Activity() {
             minHeight = dp(44)
             background = roundedDrawable(panel, 8)
         }
+        sourceName.nextFocusDownId = if (editSource?.mode == "xtream") server.id else playlistUrl.id
+        server.nextFocusDownId = username.id
+        username.nextFocusDownId = password.id
+        password.nextFocusDownId = connectButton.id
+        connectButton.nextFocusUpId = password.id
+        playlistUrl.nextFocusDownId = connectButton.id
+        sourceMode.descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
+        sourceMode.getChildAt(0)?.isFocusable = false
+        sourceMode.getChildAt(1)?.isFocusable = false
         actions.addView(connectButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply {
             setMargins(dp(4), 0, 0, 0)
         })
