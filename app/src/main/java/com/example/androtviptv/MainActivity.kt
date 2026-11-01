@@ -1990,6 +1990,17 @@ class MainActivity : Activity() {
                 setPadding(dp(8), 0, dp(8), 0)
                 if (showingExpandedCategory) setOnClickListener { expandedCategory = null; render() }
             })
+            if (selectedType == "Tümü" && groupName == groupsToRender.firstOrNull()?.first) {
+                sectionHeader.addView(TextView(this).apply {
+                    text = java.text.SimpleDateFormat("d MMMM EEEE", java.util.Locale("tr", "TR"))
+                        .format(java.util.Date()).replaceFirstChar { it.uppercase(java.util.Locale("tr", "TR")) }
+                    textSize = 12f
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                    setPadding(dp(10), 0, dp(4), 0)
+                    contentDescription = "Bugünün tarihi"
+                })
+            }
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply {
                 orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
