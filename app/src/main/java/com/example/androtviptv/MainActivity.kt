@@ -422,19 +422,15 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             navBar.addView(makeButton(label, selected, action).apply {
-                // Selected state and remote focus are visually distinct; focus always uses ice blue.
-                background = roundedDrawable(if (selected) Color.rgb(30, 43, 58) else Color.TRANSPARENT, 10,
-                    if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT)
+                // Flat, filled accent focus treatment from the 375 visual design.
+                background = roundedDrawable(Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(
-                        if (hasFocus) Color.rgb(27, 39, 53) else if (selected) Color.rgb(30, 43, 58) else Color.TRANSPARENT,
-                        10,
-                        if (hasFocus) focusColor else if (selected) Color.rgb(63, 83, 103) else Color.TRANSPARENT
+                        if (hasFocus) accent else Color.TRANSPARENT,
+                        buttonRadiusDp, Color.TRANSPARENT
                     )
-                    (v as Button).setTextColor(Color.WHITE)
-                    // Keep sidebar buttons at a fixed size on every screen.
-                    // Scaling/elevation can leave vertical focus trails on some Android TV renderers.
+                    (v as Button).setTextColor(if (hasFocus) Color.rgb(12, 14, 19) else Color.WHITE)
                     v.elevation = 0f
                     v.scaleX = 1f
                     v.scaleY = 1f
@@ -720,15 +716,16 @@ class MainActivity : Activity() {
         text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
         setTextColor(if (primary) Color.rgb(12, 14, 19) else Color.WHITE)
-        background = roundedDrawable(if (primary) accent else panel, 12,
-            if (primary) accentBright else Color.rgb(44, 52, 68))
+        background = roundedDrawable(if (primary) accent else Color.TRANSPARENT, buttonRadiusDp, Color.TRANSPARENT)
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
             v.background = roundedDrawable(
-                if (primary) accent else if (hasFocus) Color.rgb(27, 39, 53) else panel,
-                12, if (hasFocus) focusColor else if (primary) accentBright else Color.rgb(44, 52, 68))
-            v.elevation = if (hasFocus) dp(4).toFloat() else 0f
-            v.scaleX = if (hasFocus) 1.02f else 1f; v.scaleY = if (hasFocus) 1.02f else 1f
+                if (hasFocus) accent else if (primary) accent else Color.TRANSPARENT,
+                buttonRadiusDp, Color.TRANSPARENT)
+            v.setTextColor(if (hasFocus || primary) Color.rgb(12, 14, 19) else Color.WHITE)
+            v.elevation = 0f
+            v.scaleX = 1f
+            v.scaleY = 1f
         }
         setOnClickListener { action() }
     }
