@@ -2386,24 +2386,24 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
+        val watchButton = makeButton("FİLMİ İZLE", true) { play(movie) }.apply {
             gravity = Gravity.CENTER
-            textSize = 17f
-            minHeight = dp(46)
+            textSize = 15f
+            minHeight = dp(42)
         }
         actions.addView(watchButton,
-            LinearLayout.LayoutParams(dp(150), dp(48)).apply { setMargins(0, 8, dp(8), 0) })
+            LinearLayout.LayoutParams(dp(128), dp(42)).apply { setMargins(0, 6, dp(8), 0) })
         val favoriteButton = makeFavoriteButton(movie).apply {
             gravity = Gravity.CENTER
             textSize = 17f
             minHeight = dp(46)
         }
         actions.addView(favoriteButton,
-            LinearLayout.LayoutParams(dp(145), dp(48)).apply { setMargins(0, 8, 0, 0) })
+            LinearLayout.LayoutParams(dp(120), dp(42)).apply { setMargins(0, 6, 0, 0) })
         copy.addView(actions)
         watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(340)).apply { setMargins(0, 0, 0, dp(18)) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(390)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val infoTitle = TextView(this).apply {
             text = "FİLM HAKKINDA"; textSize = 20f
@@ -2439,7 +2439,7 @@ class MainActivity : Activity() {
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            setPadding(24, 22, 24, 26)
+            setPadding(dp(18), dp(18), dp(48), dp(42))
         }
         copy.addView(TextView(this).apply {
             text = "DİZİ  •  ${series.group.ifBlank { "DİĞER" }.uppercase()}"
@@ -2455,7 +2455,7 @@ class MainActivity : Activity() {
             textSize = 13f; maxLines = 2; setTextColor(Color.rgb(226, 230, 238))
         })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val seriesWatchButton = makeButton("▶  DİZİYİ İZLE", true) {
+        val seriesWatchButton = makeButton("DİZİYİ İZLE", true) {
             val firstEpisode = seriesEpisodeRows.firstOrNull()?.second?.firstOrNull()
             if (firstEpisode != null) play(firstEpisode)
             else Toast.makeText(this@MainActivity, "Bölümler henüz yüklenmedi.", Toast.LENGTH_SHORT).show()
@@ -2466,15 +2466,15 @@ class MainActivity : Activity() {
         }
         seriesWatchButton.textSize = 17f
         actions.addView(seriesWatchButton,
-            LinearLayout.LayoutParams(dp(150), dp(48)).apply { setMargins(0, 14, dp(8), 0) })
+            LinearLayout.LayoutParams(dp(128), dp(42)).apply { setMargins(0, 8, dp(8), 0) })
         actions.addView(makeFavoriteButton(series).apply {
             textSize = 17f
             minHeight = dp(46)
-        }, LinearLayout.LayoutParams(dp(145), dp(48)).apply { setMargins(0, 14, 0, 0) })
+        }, LinearLayout.LayoutParams(dp(120), dp(42)).apply { setMargins(0, 8, 0, 0) })
         copy.addView(actions)
         seriesWatchButton.post { if (detailSeries?.favoriteKey == series.favoriteKey) seriesWatchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(300)).apply { setMargins(0, 0, 0, dp(18)) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(350)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val episodesPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
