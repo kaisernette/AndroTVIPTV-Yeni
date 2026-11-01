@@ -191,8 +191,9 @@ class PlayerActivity : Activity() {
             }
             if (isLiveStream) {
                 view.showController()
-                val initialControl = view.findViewById<View>(androidx.media3.ui.R.id.exo_pause)
-                    ?: view.findViewById(androidx.media3.ui.R.id.exo_play)
+                val initialControl: View? =
+                    view.findViewById<View>(androidx.media3.ui.R.id.exo_pause)
+                        ?: view.findViewById<View>(androidx.media3.ui.R.id.exo_play)
                 initialControl?.requestFocus()
             }
         }
