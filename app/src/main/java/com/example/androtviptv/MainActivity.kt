@@ -497,7 +497,8 @@ class MainActivity : Activity() {
                 setOnFocusChangeListener { v, hasFocus ->
                     v.background = roundedDrawable(if (selected || hasFocus) accent else Color.TRANSPARENT, 10)
                     (v as Button).setTextColor(if (selected || hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
-                    v.elevation = 0f
+                    (v as Button).setShadowLayer(if (selected || hasFocus) dp(9).toFloat() else 0f, 0f, 0f, accent)
+                    v.elevation = if (selected || hasFocus) dp(5).toFloat() else 0f
                     v.scaleX = 1f
                     v.scaleY = 1f
                 }
@@ -536,7 +537,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search", "context")) {
-            listOf("🔍  Ara", "🏠  Ana Sayfa", "📺  Canlı TV", "🎬  Filmler", "📚  Diziler", "❤️  Favoriler", "🕘  Geçmiş", "⚙️  Ayarlar").forEach { tab ->
+            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  Canlı TV", "▱  Filmler", "▤  Diziler", "♡  Favoriler", "◷  Geçmiş", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -621,10 +622,10 @@ class MainActivity : Activity() {
                 Triple("⌕", "Ara", "Ara"),
                 Triple("⌂", "Ana Sayfa", "Tümü"),
                 Triple("▣", "Canlı TV", "Canlı TV"),
-                Triple("▰", "Filmler", "Filmler"),
+                Triple("▱", "Filmler", "Filmler"),
                 Triple("▤", "Diziler", "Diziler"),
-                Triple("♥", "Favoriler", "Favoriler"),
-                Triple("◴", "Geçmiş", "Son İzlenenler"),
+                Triple("♡", "Favoriler", "Favoriler"),
+                Triple("◷", "Geçmiş", "Son İzlenenler"),
                 Triple("⚙", "Ayarlar", "Ayarlar")
             )
             compactTabs.forEach { (glyph, label, key) ->
@@ -2607,8 +2608,18 @@ class MainActivity : Activity() {
                         val sourceSelect = CheckBox(this).apply {
                             buttonTintList = android.content.res.ColorStateList.valueOf(accentBright)
                             isFocusable = true
-                            contentDescription = "${source.name} kaynağını seç"
+                            contentDescription = "${source.name} kaynağının içeriklerini göster"
                             setPadding(0, 0, dp(2), 0)
+                            isChecked = prefs.getString("last_source_id", "") == source.id
+                            setOnCheckedChangeListener { _, checked ->
+                                if (checked) {
+                                    prefs.edit().putString("last_source_id", source.id).apply()
+                                    if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
+                                    render()
+                                } else if (prefs.getString("last_source_id", "") == source.id) {
+                                    isChecked = true
+                                }
+                            }
                         }
                         sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(38), dp(42)))
                         sourceRow.addView(makeButton("Yenile", false) {
