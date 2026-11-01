@@ -81,8 +81,6 @@ class MainActivity : Activity() {
     private var panel = Color.rgb(25, 30, 38)
     private var accent = Color.rgb(0, 166, 255)
     private var accentBright = Color.rgb(72, 190, 255)
-    // Focus styling is independent from the selectable app theme.
-    private val focusColor = Color.rgb(112, 205, 255)
     private var muted = Color.rgb(190, 198, 210)
     // Sidebar transparency is independent from the selected color theme.
     private var transparentMenu = true
@@ -171,12 +169,6 @@ class MainActivity : Activity() {
     private lateinit var sidebar: LinearLayout
     private lateinit var rootLayout: LinearLayout
     private lateinit var mainContentScroll: ScrollView
-    private fun kaiserLogoView(): ImageView = ImageView(this).apply {
-        setImageResource(R.drawable.kaisertv_app_icon)
-        scaleType = ImageView.ScaleType.FIT_CENTER
-        setBackgroundColor(Color.BLACK)
-        contentDescription = "KaiserTV+"
-    }
 
     private var previewPlayer: ExoPlayer? = null
     private var previewView: PlayerView? = null
@@ -573,8 +565,6 @@ class MainActivity : Activity() {
         // Keep the main navigation icon-only, but expand the sidebar when a
         // category list is open so full category names remain readable.
         if (::sidebar.isInitialized) {
-            val showReadableCategories = sidebarMode == "context" &&
-                selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
             val desiredWidth = dp(140)
             if (params != null && params.width != desiredWidth) {
