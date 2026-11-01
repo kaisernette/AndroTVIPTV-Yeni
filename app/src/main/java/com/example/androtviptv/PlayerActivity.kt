@@ -190,8 +190,7 @@ class PlayerActivity : Activity() {
                     focusedView.background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
                         cornerRadius = dp(8).toFloat()
-                        setColor(if (hasFocus) 0x3329B6F6 else Color.TRANSPARENT)
-                        if (hasFocus) setStroke(dp(2), 0xFF29B6F6.toInt())
+                        setColor(if (hasFocus) 0xFF078FF4.toInt() else Color.TRANSPARENT)
                     }
                     focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
                 }
