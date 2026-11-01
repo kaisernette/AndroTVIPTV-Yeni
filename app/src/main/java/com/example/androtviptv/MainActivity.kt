@@ -2114,7 +2114,8 @@ class MainActivity : Activity() {
                     text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
                     minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
                 })
-                if (!weeklyPoster && selectedType != "Filmler" && selectedType != "Diziler") {
+                if (!weeklyPoster && selectedType != "Filmler" && selectedType != "Diziler" &&
+                    selectedType != "Favoriler" && selectedType != "Son İzlenenler") {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
                         LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
