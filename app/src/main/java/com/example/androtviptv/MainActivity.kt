@@ -1312,7 +1312,7 @@ class MainActivity : Activity() {
     private fun classify(name: String, group: String): String {
         val s = "$name $group".lowercase()
         return when {
-            listOf("radio", "radyo", "fm", "am").any { it in s } -> "Radyo"
+            listOf("radio", "radyo").any { it in s } || Regex("\\b(fm|am)\\b").containsMatchIn(s) -> "Radyo"
             listOf("series", "dizi", "tv show", "season", "sezon", "episode", "bölüm").any { it in s } -> "Diziler"
             listOf("movie", "film", "cinema", "vod", "4k film").any { it in s } -> "Filmler"
             else -> "Canlı TV"
@@ -2201,7 +2201,7 @@ class MainActivity : Activity() {
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
-                        if (sidebarMode == "search" && item.type in listOf("Canlı TV", "Radyo")) {
+                        if (item.type == "Radyo" || (sidebarMode == "search" && item.type == "Canlı TV")) {
                             play(item)
                         } else {
                             when (item.type) {
