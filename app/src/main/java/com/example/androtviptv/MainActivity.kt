@@ -2452,24 +2452,51 @@ class MainActivity : Activity() {
                 text = subtitle; textSize = 14f; setTextColor(muted); setPadding(dp(8), 0, dp(8), dp(16))
             })
         }
+        var settingsGridRow: LinearLayout? = null
+        var settingsGridCount = 0
         fun option(title: String, detail: String, action: () -> Unit) {
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL; setPadding(dp(18), dp(14), dp(18), dp(14))
-                background = roundedDrawable(panel, 14)
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(18), dp(16), dp(18), dp(16))
+                background = roundedDrawable(panel, 16)
                 isFocusable = true; isFocusableInTouchMode = true; isClickable = true
                 setOnFocusChangeListener { v, hasFocus ->
-                    v.background = roundedDrawable(if (hasFocus) accent else panel, 14)
+                    v.background = roundedDrawable(if (hasFocus) accent else panel, 16)
                     v.elevation = 0f
+                    val fg = if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE
+                    for (idx in 0 until (v as LinearLayout).childCount) {
+                        val child = v.getChildAt(idx)
+                        if (child is TextView) child.setTextColor(if (hasFocus) fg else if (idx == 0) Color.WHITE else muted)
+                    }
                 }
                 setOnClickListener { action() }
             }
-            row.addView(TextView(this).apply {
-                text = title; textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            card.addView(TextView(this).apply {
+                text = title; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             })
-            row.addView(TextView(this).apply { text = detail; textSize = 13f; setTextColor(muted); setPadding(0, dp(5), 0, 0) })
-            content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(dp(6), dp(5), dp(6), dp(7))
+            card.addView(TextView(this).apply {
+                text = detail; textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
             })
+            if (settingsPage == "main") {
+                if (settingsGridRow == null || settingsGridCount % 3 == 0) {
+                    settingsGridRow = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.TOP
+                    }
+                    content.addView(settingsGridRow, LinearLayout.LayoutParams(-1, dp(142)).apply {
+                        setMargins(dp(6), dp(7), dp(6), dp(7))
+                    })
+                }
+                settingsGridRow?.addView(card, LinearLayout.LayoutParams(0, -1, 1f).apply {
+                    setMargins(dp(5), 0, dp(5), 0)
+                })
+                settingsGridCount++
+            } else {
+                content.addView(card, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(6), dp(5), dp(6), dp(7))
+                })
+            }
         }
         if (settingsPage != "main") content.addView(makeButton("← Ayarlara dön", false) {
             settingsPage = "main"; prefs.edit().putString("last_settings_page", "main").apply(); rebuildNavigation(); render()
@@ -2477,10 +2504,10 @@ class MainActivity : Activity() {
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
-                option("＋  Kaynaklar", "Kaynak ekle, kayıtlı kaynakları yenile veya sil") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("▤  Kategoriler", "TV, film ve dizi kategorilerini ayrı ayrı yönet") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("◐  Temalar", "Dark Cinematic ve diğer renk temaları") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("◷  Geçmiş", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Kaynak Yönetimi", "M3U / Xtream kaynak ekle, düzenle") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "sources" -> {
                 heading("Kaynaklar", "Kaynak ekle ve kayıtlı bağlantılarını buradan yönet.")
