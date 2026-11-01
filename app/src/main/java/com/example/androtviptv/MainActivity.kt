@@ -364,7 +364,46 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
             setPadding(dp(4), 0, dp(10), dp(8))
         }
-        dateClockRow.addView(View(this), LinearLayout.LayoutParams(0, dp(42), 1f))
+        val topSearch = EditText(this).apply {
+            hint = "Film, dizi veya kanal ara..."
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            setHintTextColor(muted)
+            singleLine = true
+            isFocusable = true
+            isFocusableInTouchMode = true
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+            setPadding(dp(14), 0, dp(14), 0)
+            background = GradientDrawable().apply {
+                cornerRadius = dp(18).toFloat()
+                setColor(panel)
+                setStroke(dp(1), Color.rgb(43, 54, 72))
+            }
+            setOnFocusChangeListener { v, focused ->
+                v.background = GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setColor(panel)
+                    setStroke(dp(if (focused) 2 else 1), if (focused) accent else Color.rgb(43, 54, 72))
+                }
+            }
+            setOnClickListener {
+                detailMovie = null
+                detailSeries = null
+                sidebarMode = "search"
+                searchQuery = ""
+                rebuildNavigation()
+                render()
+                findViewWithTag<View>("global_search_input")?.requestFocus()
+            }
+            setOnEditorActionListener { _, _, _ ->
+                performClick()
+                true
+            }
+            contentDescription = "Film, dizi veya kanal ara"
+        }
+        dateClockRow.addView(topSearch, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
+            marginEnd = dp(14)
+        })
         dateClockRow.addView(TextClock(this).apply {
             format12Hour = "d MMMM EEEE  •  h:mm a"
             format24Hour = "d MMMM EEEE  •  HH:mm"
@@ -561,7 +600,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search", "context")) {
-            listOf("⌕  Ara", "⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
