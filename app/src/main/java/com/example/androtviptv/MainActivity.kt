@@ -2151,8 +2151,7 @@ class MainActivity : Activity() {
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler"
-            val expandedFiveColumnGrid = showingExpandedCategory
-            val sixColumnMediaGrid = !showingExpandedCategory && selectedType in listOf("Filmler", "Diziler")
+            val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, dp(4), 2, dp(6))
             }
@@ -2304,11 +2303,7 @@ class MainActivity : Activity() {
                 }
                 if (posterGridMode) {
                     if (itemIndex == displayedEntries.lastIndex) card.nextFocusRightId = sectionCountView.id
-                    val gridColumns = when {
-                        sixColumnMediaGrid -> 6
-                        expandedFiveColumnGrid -> 5
-                        else -> 4
-                    }
+                    val gridColumns = if (fiveColumnMediaGrid) 5 else 4
                     if (expandedPosterCount % gridColumns == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
@@ -2329,12 +2324,8 @@ class MainActivity : Activity() {
                     })
                 }
             }
-            // Keep the final row at four equal poster columns, even when it has fewer than four items.
-            val finalGridColumns = when {
-                sixColumnMediaGrid -> 6
-                expandedFiveColumnGrid -> 5
-                else -> 4
-            }
+            // Keep the final poster row aligned to the same five-column grid.
+            val finalGridColumns = if (fiveColumnMediaGrid) 5 else 4
             if (posterGridMode && expandedPosterCount > 0 && expandedPosterCount % finalGridColumns != 0) {
                 val remainingSlots = finalGridColumns - (expandedPosterCount % finalGridColumns)
                 repeat(remainingSlots) {
