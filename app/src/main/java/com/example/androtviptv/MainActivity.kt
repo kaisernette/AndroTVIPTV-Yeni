@@ -825,6 +825,16 @@ class MainActivity : Activity() {
                         }
                     }
                     if (categoryIndex == 0) firstCategoryFocusView = button
+                    // Explicit category-column navigation avoids Android TV focus
+                    // jumping into poster cards based on their measured geometry.
+                    if (button.id == View.NO_ID) button.id = View.generateViewId()
+                    if (categoryIndex > 0) {
+                        val previous = categoryPanel.getChildAt(categoryPanel.childCount - 1)
+                        if (previous != null && previous.isFocusable) {
+                            button.nextFocusUpId = previous.id
+                            previous.nextFocusDownId = button.id
+                        }
+                    }
                     categoryPanel.addView(button, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(0, dp(2), 0, dp(2))
                     })
@@ -2622,7 +2632,10 @@ class MainActivity : Activity() {
             if (firstContent != null && firstContent.id == View.NO_ID) firstContent.id = View.generateViewId()
             selectedSidebarFocusView?.let { navButton ->
                 val rightTarget = firstCategory ?: firstContent
-                if (rightTarget != null) navButton.nextFocusRightId = rightTarget.id
+                if (rightTarget != null) {
+                    navButton.nextFocusRightId = rightTarget.id
+                    rightTarget.nextFocusLeftId = navButton.id
+                }
             }
             if (firstContent != null) {
                 firstCategory?.let { category ->
