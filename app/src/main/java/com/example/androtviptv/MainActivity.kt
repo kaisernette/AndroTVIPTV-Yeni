@@ -678,25 +678,15 @@ class MainActivity : Activity() {
                 } else {
                     addSidebarButton(tab, selectedType == key && normalizedTab != "Ara") {
                         if (normalizedTab == "Ara") {
-                            val searchField = EditText(this).apply {
-                                hint = "Film, dizi veya kanal ara..."
-                                setSingleLine(true)
-                                setText(searchQuery)
-                            }
-                            AlertDialog.Builder(this)
-                                .setTitle("Ara")
-                                .setView(searchField)
-                                .setNegativeButton("Vazgeç", null)
-                                .setPositiveButton("Ara") { _, _ ->
-                                    searchQuery = searchField.text.toString()
-                                    detailSeries = null
-                                    detailMovie = null
-                                    sidebarMode = "search"
-                                    focusFirstContentOnRender = true
-                                    selectedType = "Tümü"
-                                    selectedGroup = "Tüm kategoriler"
-                                    render()
-                                }.show()
+                            detailSeries = null
+                            detailMovie = null
+                            sidebarMode = "search"
+                            searchInputFocusPending = true
+                            searchQuery = ""
+                            selectedType = "Tümü"
+                            selectedGroup = "Tüm kategoriler"
+                            expandedCategory = null
+                            render()
                             return@addSidebarButton
                         }
                         detailSeries = null
@@ -753,6 +743,9 @@ class MainActivity : Activity() {
                             searchInputFocusPending = true
                             searchQuery = ""
                             selectedType = "Tümü"
+                            selectedGroup = "Tüm kategoriler"
+                            expandedCategory = null
+                            render()
                         }
                         "Tümü" -> returnToMainMenu()
                         "Son İzlenenler" -> {
@@ -1644,6 +1637,33 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun readSearchHistory(): List<String> {
+        return try {
+            val array = JSONArray(prefs.getString("search_history", "[]") ?: "[]")
+            (0 until array.length()).mapNotNull { array.optString(it).takeIf { value -> value.isNotBlank() } }
+                .distinct().take(12)
+        } catch (_: Exception) { emptyList() }
+    }
+
+    private fun submitSearchQuery(rawQuery: String) {
+        val term = rawQuery.trim()
+        searchQuery = term
+        if (term.isNotBlank()) {
+            val updated = (listOf(term) + readSearchHistory().filterNot { it.equals(term, ignoreCase = true) }).take(12)
+            val array = JSONArray()
+            updated.forEach { array.put(it) }
+            prefs.edit().putString("search_history", array.toString()).apply()
+        }
+        detailSeries = null
+        detailMovie = null
+        sidebarMode = "search"
+        selectedType = "Tümü"
+        selectedGroup = "Tüm kategoriler"
+        expandedCategory = null
+        searchInputFocusPending = true
+        render()
+    }
+
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
         content.removeAllViews()
@@ -1952,11 +1972,88 @@ class MainActivity : Activity() {
             return
         }
         if (sidebarMode == "search") {
-            content.addView(TextView(this).apply {
-                text = "Ara"; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.WHITE); setPadding(dp(8), dp(8), dp(8), dp(12))
-            })
             selectedGroup = "Tüm kategoriler"
+            val searchPanel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(8), dp(6), dp(8), dp(14))
+            }
+            searchPanel.addView(TextView(this).apply {
+                text = "Ara"; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE); setPadding(0, 0, 0, dp(12))
+            })
+            val searchRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val searchField = EditText(this).apply {
+                hint = "Film, dizi veya kanal ara..."
+                setSingleLine(true)
+                textSize = 17f
+                setTextColor(Color.WHITE)
+                setHintTextColor(muted)
+                setPadding(dp(16), 0, dp(12), 0)
+                background = roundedDrawable(panel, 12, accent)
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+                inputType = android.text.InputType.TYPE_CLASS_TEXT
+                setText(searchQuery)
+                setSelection(text.length)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                setOnEditorActionListener { _, actionId, _ ->
+                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
+                        actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                        submitSearchQuery(text.toString())
+                        true
+                    } else false
+                }
+            }
+            searchRow.addView(searchField, LinearLayout.LayoutParams(0, dp(54), 1f))
+            searchRow.addView(makeButton("ARA", true) {
+                submitSearchQuery(searchField.text.toString())
+            }, LinearLayout.LayoutParams(dp(92), dp(54)).apply { setMargins(dp(10), 0, 0, 0) })
+            searchPanel.addView(searchRow)
+            content.addView(searchPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            if (searchInputFocusPending) {
+                searchInputFocusPending = false
+                searchField.post {
+                    searchField.requestFocus()
+                    searchField.setSelection(searchField.text.length)
+                }
+            }
+            if (searchQuery.isBlank()) {
+                val history = readSearchHistory()
+                val historyHeader = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(8), dp(8), dp(8), dp(8))
+                }
+                historyHeader.addView(TextView(this).apply {
+                    text = "Arama geçmişi"; textSize = 18f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                if (history.isNotEmpty()) historyHeader.addView(makeButton("Geçmişi sil", false) {
+                    prefs.edit().remove("search_history").apply()
+                    render()
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)))
+                content.addView(historyHeader)
+                if (history.isEmpty()) {
+                    content.addView(TextView(this).apply {
+                        text = "Aradığın film, dizi veya kanal adını yaz."
+                        textSize = 14f; setTextColor(muted); setPadding(dp(8), dp(8), dp(8), dp(8))
+                    })
+                } else {
+                    history.forEach { term ->
+                        content.addView(makeButton("◷   $term", false) {
+                            searchQuery = term
+                            searchInputFocusPending = true
+                            render()
+                        }, LinearLayout.LayoutParams(-1, dp(46)).apply {
+                            setMargins(dp(8), dp(3), dp(8), dp(3))
+                        })
+                    }
+                }
+            }
         }
         val activeSourceId = prefs.getString("last_source_id", "") ?: ""
         val activeSourceItems = if (activeSourceId.isBlank()) items.toList()
@@ -2085,7 +2182,7 @@ class MainActivity : Activity() {
             }
             return
         }
-        if (visible.isEmpty()) {
+        if (visible.isEmpty() && !(sidebarMode == "search" && query.isBlank())) {
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
                 setPadding(24, 24, 24, 24); background = roundedDrawable(panel, 18, Color.rgb(42, 49, 64))
@@ -2146,7 +2243,7 @@ class MainActivity : Activity() {
                 }
             }
         }
-        if (sidebarMode != "search") rebuildNavigation()
+        rebuildNavigation()
         val groups: List<Pair<String, List<MediaItem>>> = if (expandedCategory != null) {
             listOf(expandedCategory!!)
         } else if (selectedType == "Canlı TV") {
