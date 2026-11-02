@@ -56,7 +56,6 @@ class PlayerActivity : Activity() {
     private var lastObservedPositionMs = -1L
     private var positionStalledSinceMs = 0L
     private var reconnectPending = false
-    private var lastBackPressAt = 0L
     private var idleSinceMs = 0L
     private val playbackHandler = Handler(Looper.getMainLooper())
     private val playbackWatchdog = object : Runnable {
@@ -341,10 +340,6 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && (event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_ESCAPE)) {
-            handlePlayerBack()
-            return true
-        }
         if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isNotEmpty()) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
@@ -380,30 +375,6 @@ class PlayerActivity : Activity() {
         return super.dispatchKeyEvent(event)
     }
 
-    @Suppress("DEPRECATION")
-    override fun onBackPressed() { handlePlayerBack() }
-
-    private fun handlePlayerBack() {
-        val now = android.os.SystemClock.elapsedRealtime()
-        if (now - lastBackPressAt <= 2000L) {
-            lastBackPressAt = 0L
-            val dialog = AlertDialog.Builder(this)
-                .setTitle("KAISER TV+")
-                .setMessage("Uygulamadan çıkmak istiyor musunuz?")
-                .setNegativeButton("Vazgeç", null)
-                .setPositiveButton("Çıkış Yap") { _, _ -> finishAffinity() }
-                .create()
-            dialog.setOnShowListener {
-                dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
-                dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(playerAccentColor())
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Color.WHITE)
-            }
-            dialog.show()
-        } else {
-            lastBackPressAt = now
-            android.widget.Toast.makeText(this, "Çıkış menüsünü açmak için Geri tuşuna tekrar basın.", android.widget.Toast.LENGTH_SHORT).show()
-        }
-    }
     private fun showRecentOverlay() {
         if (recentChannelUrls.isEmpty()) {
             android.widget.Toast.makeText(this, "Henüz son izlenen kanal yok.", android.widget.Toast.LENGTH_SHORT).show()
@@ -428,7 +399,7 @@ class PlayerActivity : Activity() {
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(14), dp(14), dp(14))
-            background = GradientDrawable().apply { setColor(0xD91A2030.toInt()); cornerRadius = 0f; setStroke(dp(1), playerAccentColor()) }
+            background = GradientDrawable().apply { setColor(0xD91A2030.toInt()); cornerRadius = 0f; setStroke(dp(1), 0xAADEB55B.toInt()) }
             elevation = dp(12).toFloat()
         }
         panel.addView(TextView(this).apply { text = "CANLI KANALLAR"; textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); setPadding(dp(4), dp(2), dp(4), dp(10)) })
@@ -465,9 +436,9 @@ class PlayerActivity : Activity() {
     }
 
     private fun channelRowBackground(highlighted: Boolean) = GradientDrawable().apply {
-        setColor(if (highlighted) playerAccentColor() else 0x33000000)
+        setColor(if (highlighted) 0xAADEB55B.toInt() else 0x33000000)
         cornerRadius = 0f
-        if (highlighted) setStroke(dp(1), playerAccentColor())
+        if (highlighted) setStroke(dp(1), 0xFFDEB55B.toInt())
     }
 
     private fun restartCurrentStream(reason: String) {

@@ -197,7 +197,6 @@ class MainActivity : Activity() {
     private var initialSidebarFocusPending = true
     private var isLoadingSource = false
     private var loadProgress = 0
-    private var lastBackPressAt = 0L
     private var hasLoadedSource = false
 
     private fun isDescendantView(parent: ViewGroup, view: View): Boolean {
@@ -325,7 +324,7 @@ class MainActivity : Activity() {
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = logo
-            textSize = if (prefs.getBoolean("compact_logo", true)) 15f else 18f
+            textSize = if (prefs.getBoolean("compact_logo", true)) 17f else 21f
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             contentDescription = "KAISER TV+"
@@ -1509,14 +1508,6 @@ class MainActivity : Activity() {
             return
         }
 
-        val now = android.os.SystemClock.elapsedRealtime()
-        if (now - lastBackPressAt > 2000L) {
-            lastBackPressAt = now
-            Toast.makeText(this, "Çıkış menüsünü açmak için Geri tuşuna tekrar basın.", Toast.LENGTH_SHORT).show()
-            return
-        }
-        lastBackPressAt = 0L
-
         val exitPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -2435,8 +2426,8 @@ class MainActivity : Activity() {
                             play(item)
                         } else {
                             when (item.type) {
-                                "Diziler" -> if (item.url.isNotBlank()) play(item) else loadSeriesEpisodes(item)
-                                "Filmler" -> play(item)
+                                "Diziler" -> showSeriesDetail(item)
+                                "Filmler" -> showMovieDetail(item)
                                 else -> showItemDetails(item)
                             }
                         }
