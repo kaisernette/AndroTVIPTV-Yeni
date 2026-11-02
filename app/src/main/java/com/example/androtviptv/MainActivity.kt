@@ -809,10 +809,10 @@ class MainActivity : Activity() {
                         minHeight = dp(42)
                         isFocusable = true
                         isClickable = true
-                        background = if (selected) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
-                            v.background = if (hasFocus || selected) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                            (v as TextView).setTextColor(if (hasFocus || selected) Color.WHITE else muted)
+                            v.background = if (hasFocus) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            (v as TextView).setTextColor(if (hasFocus) Color.WHITE else if (selected) accent else muted)
                             if (hasFocus) {
                                 categoryListScroll.post {
                                     val rect = android.graphics.Rect(0, 0, v.width, v.height)
@@ -2528,7 +2528,7 @@ class MainActivity : Activity() {
                     })
                 }
             }
-            if (posterGridMode) {
+            if (posterGridMode && entries.size > finalGridColumns && !showingExpandedCategory) {
                 val allItemsTile = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
