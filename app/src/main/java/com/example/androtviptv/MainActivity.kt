@@ -466,7 +466,7 @@ class MainActivity : Activity() {
         // category list is open so full category names remain readable.
         if (::sidebar.isInitialized) {
             val params = sidebar.layoutParams
-            val desiredWidth = dp(180)
+            val desiredWidth = dp(if (sidebarMode == "search") 76 else 180)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -636,11 +636,13 @@ class MainActivity : Activity() {
         }
 
         if (sidebarMode == "search") {
-            addSidebarButton("⌕  Ara", true) {
+            // Search uses only the compact icon rail. The category/navigation
+            // column is intentionally absent so the search field owns the right pane.
+            addSidebarButton("⌕", true) {
                 searchInputFocusPending = true
                 render()
             }
-            addSidebarButton("⌂  Ana Sayfa") { returnToMainMenu() }
+            addSidebarButton("⌂") { returnToMainMenu() }
             return
         }
 
@@ -1945,7 +1947,11 @@ class MainActivity : Activity() {
             emptyList()
         } else if (sidebarMode == "search") {
             if (query.isBlank()) emptyList()
-            else visible.take(240).groupBy { it.type }.map { (type, entries) -> "$type • Arama sonuçları" to entries }
+            else listOf("Canlı TV", "Filmler", "Diziler").mapNotNull { type ->
+                visible.filter { it.type == type }.take(80)
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { entries -> "$type • Arama sonuçları" to entries }
+            }
         } else if (selectedType == "Tümü") {
             // Weekly Turkey streaming chart, 19–26 Oct 2026. Existing playlist items are
             // prioritized by title; titles missing from the user's source are not fabricated.
