@@ -2363,27 +2363,14 @@ class MainActivity : Activity() {
             }, LinearLayout.LayoutParams(0, -2, 1f))
             val sectionCountView = TextView(this).apply {
                 id = View.generateViewId()
-                text = if (showingExpandedCategory) "← Geri dön" else "${entries.size} içerik"
+                text = "← Geri dön"
                 textSize = 12f; setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
                 setPadding(dp(8), 0, dp(8), 0)
+                visibility = if (showingExpandedCategory) View.VISIBLE else View.GONE
                 isFocusable = true
                 isClickable = true
-                setOnFocusChangeListener { v, hasFocus ->
-                    (v as TextView).setTextColor(if (hasFocus) accent else Color.WHITE)
-                }
-                setOnHoverListener { v, event ->
-                    when (event.action) {
-                        android.view.MotionEvent.ACTION_HOVER_ENTER -> (v as TextView).setTextColor(accent)
-                        android.view.MotionEvent.ACTION_HOVER_EXIT -> (v as TextView).setTextColor(if (v.hasFocus()) accent else Color.WHITE)
-                    }
-                    true
-                }
-                setOnClickListener {
-                    if (showingExpandedCategory) expandedCategory = null
-                    else expandedCategory = groupName to entries
-                    render()
-                }
+                setOnClickListener { expandedCategory = null; render() }
             }
             sectionHeader.addView(sectionCountView)
             content.addView(sectionHeader)
@@ -2521,7 +2508,7 @@ class MainActivity : Activity() {
                     })
                     expandedPosterCount++
                 } else {
-                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) featureCardWidth else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) dp(112) else if (weeklyMovieFeature) featureCardWidth else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         // Consistent TV-friendly breathing room between poster cards.
                         setMargins(dp(5), 0, if (weeklyMovieFeature) dp(20) else dp(14), dp(10))
                     })
