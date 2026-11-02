@@ -2631,12 +2631,15 @@ class MainActivity : Activity() {
                     firstContent.nextFocusLeftId = category.id
                 } ?: selectedSidebarFocusView?.let { navButton -> firstContent.nextFocusLeftId = navButton.id }
             }
-            if (initialSidebarFocusPending && navBar.visibility == View.VISIBLE && selectedSidebarFocusView != null) {
+            if (focusFirstCategoryOnRender && firstCategory != null) {
+                // Entering TV/Movies/Series should land on the first category,
+                // making its blue focus background immediately visible.
+                focusFirstCategoryOnRender = false
+                initialSidebarFocusPending = false
+                firstCategory.requestFocus()
+            } else if (initialSidebarFocusPending && navBar.visibility == View.VISIBLE && selectedSidebarFocusView != null) {
                 initialSidebarFocusPending = false
                 selectedSidebarFocusView?.requestFocus()
-            } else if (focusFirstCategoryOnRender) {
-                focusFirstCategoryOnRender = false
-                firstCategory?.requestFocus()
             } else if (focusFirstContentOnRender) {
                 focusFirstContentOnRender = false
                 firstContent?.requestFocus()
