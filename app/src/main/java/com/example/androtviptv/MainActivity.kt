@@ -2080,7 +2080,7 @@ class MainActivity : Activity() {
             // An expanded content row must render its captured items directly, independent
             // of the currently selected category filter.
             expandedCategory != null -> expandedCategory!!.second
-            sidebarMode == "search" -> activeSourceItems
+            sidebarMode == "search" -> items.toList()
             selectedType == "Tümü" -> activeSourceItems
             selectedType == "Favoriler" -> activeSourceItems.filter { favorites.contains(it.favoriteKey) }
             selectedType == "Son İzlenenler" -> recent.filter { activeSourceId.isBlank() || it.sourceId == activeSourceId }
