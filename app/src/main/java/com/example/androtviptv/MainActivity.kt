@@ -649,7 +649,7 @@ class MainActivity : Activity() {
         }
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
-        if (sidebarMode in listOf("main", "settings", "search", "context")) {
+        if (sidebarMode in listOf("main", "settings", "search")) {
             listOf("⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab.endsWith("Ara") -> "Ara"
@@ -732,7 +732,7 @@ class MainActivity : Activity() {
                     // Visually separate the primary navigation from the utility items.
                 }
             }
-            if (sidebarMode in listOf("main", "context")) return
+            if (sidebarMode == "main") return
         }
 
         if (sidebarMode == "context") {
