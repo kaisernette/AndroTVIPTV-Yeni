@@ -2563,6 +2563,32 @@ class MainActivity : Activity() {
             if (posterGridMode) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             } else {
+                val allItemsTile = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    contentDescription = "Tüm içerikleri göster"
+                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    setOnFocusChangeListener { v, hasFocus ->
+                        v.animate().cancel()
+                        v.animate().scaleX(if (hasFocus) 1.08f else 1f).scaleY(if (hasFocus) 1.08f else 1f).setDuration(140).start()
+                    }
+                    val iconGrid = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER }
+                    repeat(2) {
+                        val iconRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+                        repeat(2) {
+                            iconRow.addView(View(this@MainActivity).apply { background = roundedDrawable(accent, 2) }, LinearLayout.LayoutParams(dp(9), dp(9)).apply { setMargins(dp(2), dp(2), dp(2), dp(2)) })
+                        }
+                        iconGrid.addView(iconRow)
+                    }
+                    addView(iconGrid, LinearLayout.LayoutParams(dp(34), dp(34)))
+                    setOnClickListener {
+                        expandedCategory = groupName to entries
+                        render()
+                    }
+                }
+                row.addView(allItemsTile, LinearLayout.LayoutParams(dp(76), dp(112)).apply { setMargins(dp(4), 0, dp(12), dp(10)) })
                 content.addView(HorizontalScrollView(this).apply {
                     isHorizontalScrollBarEnabled = false
                     clipChildren = false
