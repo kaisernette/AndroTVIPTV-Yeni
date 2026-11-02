@@ -804,14 +804,12 @@ class MainActivity : Activity() {
                         minHeight = dp(42)
                         isFocusable = true
                         isClickable = true
-                        val activeCategory = expandedCategory?.first == name ||
-                            (selectedType == "Canlı TV" && selectedGroup == name)
+                        val activeCategory = expandedCategory?.first == name || selectedGroup == name
                         background = if (activeCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
                             // Keep the active TV category marked while channel cards have focus.
                             // Focus on another category moves the blue tile to that category.
-                            val isActiveCategory = expandedCategory?.first == name ||
-                                (selectedType == "Canlı TV" && selectedGroup == name)
+                            val isActiveCategory = expandedCategory?.first == name || selectedGroup == name
                             v.background = if (hasFocus || isActiveCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                             (v as TextView).setTextColor(if (hasFocus || isActiveCategory) Color.WHITE else muted)
                             if (hasFocus) {
