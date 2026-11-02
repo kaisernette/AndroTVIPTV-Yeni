@@ -811,19 +811,16 @@ class MainActivity : Activity() {
                         setOnFocusChangeListener { v, hasFocus ->
                             // Keep the active TV category marked while channel cards have focus.
                             // Focus on another category moves the blue tile to that category.
-                            if (hasFocus) {
-                                // The focused category becomes the active category.
-                                // This also clears the previous category's stale blue tile.
-                                selectedGroup = name
-                            }
-                            val isActiveCategory = hasFocus || expandedCategory?.first == name || selectedGroup == name
-                            v.background = if (isActiveCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                            (v as TextView).setTextColor(if (isActiveCategory) Color.WHITE else muted)
+                            // Focus is visual state only; never change selectedGroup here.
+                            // Content changes only after the user clicks a category.
+                            val activeCategory = expandedCategory?.first == name
+                            val showBlue = hasFocus || activeCategory
+                            v.background = if (showBlue) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            (v as TextView).setTextColor(if (showBlue) Color.WHITE else muted)
                             for (i in 0 until categoryPanel.childCount) {
                                 val sibling = categoryPanel.getChildAt(i) as? TextView ?: continue
                                 if (sibling !== v) {
-                                    val siblingActive = sibling.text.toString() == selectedGroup ||
-                                        expandedCategory?.first == sibling.text.toString()
+                                    val siblingActive = expandedCategory?.first == sibling.text.toString()
                                     sibling.background = if (siblingActive) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                                     sibling.setTextColor(if (siblingActive) Color.WHITE else muted)
                                 }
