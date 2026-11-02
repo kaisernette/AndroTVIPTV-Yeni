@@ -198,6 +198,7 @@ class MainActivity : Activity() {
     private var isLoadingSource = false
     private var loadProgress = 0
     private var lastBackPressAt = 0L
+    private var lastBackPressAt = 0L
     private var hasLoadedSource = false
 
     private fun isDescendantView(parent: ViewGroup, view: View): Boolean {
@@ -1451,6 +1452,14 @@ class MainActivity : Activity() {
     }
 
     private fun handleSafeBack() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastBackPressAt <= 2000L) {
+            lastBackPressAt = 0L
+            showExitConfirmation()
+            return
+        }
+        lastBackPressAt = now
+        Toast.makeText(this, "Çıkış menüsünü açmak için Geri tuşuna tekrar basın.", Toast.LENGTH_SHORT).show()
         // Handle Android system/remote back in one place and keep the activity alive.
         try {
             if (selectedType == "Ayarlar" && sidebarMode == "settings" && settingsPage != "main") {
