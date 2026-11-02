@@ -325,7 +325,7 @@ class MainActivity : Activity() {
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = logo
-            textSize = if (prefs.getBoolean("compact_logo", true)) 15f else 18f
+            textSize = if (prefs.getBoolean("compact_logo", true)) 17f else 21f
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             contentDescription = "KAISER TV+"
@@ -1451,36 +1451,1309 @@ class MainActivity : Activity() {
     }
 
     private fun handleSafeBack() {
-        val now = android.os.SystemClock.elapsedRealtime()
-        if (now - lastBackPressAt <= 2000L) {
-            lastBackPressAt = 0L
-            showExitConfirmation()
-        } else {
-            lastBackPressAt = now
-            Toast.makeText(this, "Çıkış menüsünü açmak için Geri tuşuna tekrar basın.", Toast.LENGTH_SHORT).show()
+        // Handle Android system/remote back in one place and keep the activity alive.
+        try {
+            if (selectedType == "Ayarlar" && sidebarMode == "settings" && settingsPage != "main") {
+                settingsPage = "main"
+                prefs.edit().putString("last_settings_page", "main").apply()
+                rebuildNavigation()
+                render()
+                return
+            }
+
+            if (detailSeries != null || detailMovie != null) {
+                detailSeries = null
+                detailMovie = null
+                seriesEpisodeRows = emptyList()
+                seriesEpisodesLoading = false
+                seriesEpisodesError = ""
+                render()
+                return
+            }
+
+            if (expandedCategory != null) {
+                expandedCategory = null
+                render()
+                return
+            }
+
+            if (sidebarMode != "main" || selectedGroup != "Tüm kategoriler" || selectedType != "Tümü") {
+                detailSeries = null
+                detailMovie = null
+                seriesEpisodeRows = emptyList()
+                seriesEpisodesLoading = false
+                seriesEpisodesError = ""
+                sidebarMode = "main"
+                searchQuery = ""
+                selectedType = "Tümü"
+                selectedGroup = "Tüm kategoriler"
+                prefs.edit().putString("last_section", "Tümü").apply()
+                render()
+                return
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("KaiserTV", "Back navigation failed", e)
+            // Keep the current activity alive even if rebuilding a section fails.
+            try {
+                detailSeries = null
+                detailMovie = null
+                sidebarMode = "main"
+                searchQuery = ""
+                selectedType = "Tümü"
+                selectedGroup = "Tüm kategoriler"
+                prefs.edit().putString("last_section", "Tümü").apply()
+                render()
+            } catch (ignored: Exception) {
+                android.util.Log.e("KaiserTV", "Fallback navigation failed", ignored)
+            }
+            return
+        }
+
+        val exitPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(18), dp(14), dp(18), dp(14))
+            background = roundedDrawable(Color.rgb(13, 20, 33), 18, accent)
+        }
+        val brand = TextView(this).apply {
+            val logo = android.text.SpannableString("▶ KAISER TV+")
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            text = logo
+            textSize = 28f
+            gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+        brand.textSize = 21f
+        exitPanel.addView(brand, LinearLayout.LayoutParams(-1, dp(42)))
+        exitPanel.addView(TextView(this).apply {
+            text = "Uygulamadan çıkmak istiyor musunuz?"
+            textSize = 17f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setPadding(0, dp(4), 0, dp(12))
+        }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        val exitActions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        val exitDialog = AlertDialog.Builder(this).setView(exitPanel).create()
+        val exitButton = makeButton("Çıkış Yap", false) {
+            exitDialog.dismiss()
+            finish()
+        }.apply { textSize = 17f; setTypeface(null, android.graphics.Typeface.BOLD) }
+        val cancelButton = makeButton("Vazgeç", false) {
+            exitDialog.dismiss()
+        }.apply { textSize = 23f; setTypeface(null, android.graphics.Typeface.BOLD) }
+        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+            setMargins(0, 0, dp(10), 0)
+        })
+        exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(68), 1f).apply {
+            setMargins(dp(10), 0, 0, 0)
+        })
+        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(50)))
+        exitDialog.setOnShowListener {
+            exitDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            exitDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            exitDialog.window?.setDimAmount(0.78f)
+            exitDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.56f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+            cancelButton.post { cancelButton.requestFocus() }
+        }
+        exitDialog.show()
+    }
+
+    private fun showItemDetails(item: MediaItem) {
+        val body = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(18, 18, 18, 18); background = roundedDrawable(panel, 18, Color.rgb(45, 54, 71)) }
+        val poster = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; background = roundedDrawable(Color.rgb(31, 37, 50), 12) }
+        body.addView(poster, LinearLayout.LayoutParams(150, 220).apply { setMargins(0, 0, 18, 0) })
+        if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
+        val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        info.addView(TextView(this).apply { text = item.name; textSize = 22f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
+        info.addView(TextView(this).apply { text = item.type + "  •  " + item.group.ifBlank { "Diğer" }; textSize = 13f; setTextColor(accent); setPadding(0, 8, 0, 8) })
+        val metaScroll = ScrollView(this)
+        val meta = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        fun field(label: String, value: String, fallback: String = ""): TextView {
+            meta.addView(TextView(this).apply { text = label; textSize = 12f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accent); setPadding(0, 4, 0, 3) })
+            return TextView(this).apply { text = value.ifBlank { fallback }; textSize = 14f; setTextColor(muted); setPadding(0, 0, 0, 8) }.also { meta.addView(it) }
+        }
+        val ratingView = field("PUAN", item.rating, "Bilgi yükleniyor…")
+        val dateView = field("YAYIN TARİHİ", item.releaseDate, "")
+        val genreView = field("TÜR", item.genre, "")
+        val plotView = field("KONU", item.plot, if (item.sourceId.isNotBlank()) "Bilgiler yükleniyor…" else "Bu kaynak konu bilgisi sağlamıyor.")
+        val actorsView = field("OYUNCULAR", item.actors, if (item.sourceId.isNotBlank()) "Bilgiler yükleniyor…" else "Oyuncu bilgisi bulunmuyor.")
+        metaScroll.addView(meta)
+        info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
+        info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
+        info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
+        body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog
+        dialog.show()
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.78f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        if (item.type == "Filmler" || item.type == "Diziler") {
+            val source = savedSources.firstOrNull { it.id == item.sourceId && it.mode == "xtream" }
+            if (source != null) thread {
+                try {
+                    val u = URLEncoder.encode(source.username, "UTF-8")
+                    val p = URLEncoder.encode(source.password, "UTF-8")
+                    val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p"
+                    val action = if (item.type == "Diziler") "get_series_info&series_id=" else "get_vod_info&vod_id="
+                    val root = JSONObject(request("$api&action=$action${URLEncoder.encode(item.id, "UTF-8")}"))
+                    val detail = root.optJSONObject("info") ?: root.optJSONObject("movie_data") ?: root
+                    fun pick(vararg keys: String): String {
+                        for (key in keys) {
+                            val value = detail.opt(key)
+                            if (value != null && value != JSONObject.NULL) {
+                                val text = if (value is String) value else value.toString()
+                                if (text.isNotBlank() && text != "0" && text != "null") return text
+                            }
+                        }
+                        return ""
+                    }
+                    val plot = pick("plot", "description", "overview")
+                    val actors = pick("cast", "actors")
+                    val rating = pick("rating", "rating_5based", "vote_average")
+                    val date = pick("releasedate", "releaseDate", "release_date", "year")
+                    val genre = pick("genre", "genres")
+                    runOnUiThread {
+                        plotView.text = plot.ifBlank { "Konu bilgisi kaynakta bulunmuyor." }
+                        actorsView.text = actors.ifBlank { "Oyuncu bilgisi kaynakta bulunmuyor." }
+                        ratingView.text = rating.ifBlank { "Puan bilgisi bulunmuyor." }
+                        dateView.text = date
+                        genreView.text = genre
+                        val updated = item.copy(plot = plot, actors = actors, rating = rating, releaseDate = date, genre = genre)
+                        val index = items.indexOfFirst { it.id == item.id && it.type == item.type && it.sourceId == item.sourceId }
+                        if (index >= 0) items[index] = updated
+                        saveCachedItems()
+                    }
+                } catch (_: Exception) {
+                    runOnUiThread {
+                        if (plotView.text.toString() == "Bilgiler yükleniyor…") plotView.text = "Konu bilgisi alınamadı."
+                        if (actorsView.text.toString() == "Bilgiler yükleniyor…") actorsView.text = "Oyuncu bilgisi alınamadı."
+                        if (ratingView.text.toString() == "Bilgi yükleniyor…") ratingView.text = "Puan bilgisi alınamadı."
+                    }
+                }
+            }
         }
     }
 
-    private fun showExitConfirmation() {
-        val panelView = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(18), dp(16), dp(18), dp(16)); background = roundedDrawable(Color.rgb(13, 20, 33), 18, accent) }
-        panelView.addView(TextView(this).apply { text = "KAISER TV+"; textSize = 21f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD) }, LinearLayout.LayoutParams(-1, dp(42)))
-        panelView.addView(TextView(this).apply { text = "Uygulamadan çıkmak istiyor musunuz?"; textSize = 17f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); setPadding(0, dp(4), 0, dp(12)) })
-        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        val dialog = AlertDialog.Builder(this).setView(panelView).create()
-        val exit = makeButton("Çıkış Yap", false) { dialog.dismiss(); finishAffinity() }
-        val cancel = makeButton("Vazgeç", false) { dialog.dismiss() }.apply { textSize = 23f; setTypeface(null, android.graphics.Typeface.BOLD) }
-        actions.addView(exit, LinearLayout.LayoutParams(0, dp(50), 1f).apply { setMargins(0, 0, dp(10), 0) })
-        actions.addView(cancel, LinearLayout.LayoutParams(0, dp(50), 1f).apply { setMargins(dp(10), 0, 0, 0) })
-        panelView.addView(actions)
-        dialog.setOnShowListener {
-            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-            dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            dialog.window?.setDimAmount(0.78f)
-            dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.56f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
-            cancel.post { cancel.requestFocus() }
-        }
-        dialog.show()
+    private fun readSearchHistory(): List<String> {
+        return try {
+            val array = JSONArray(prefs.getString("search_history", "[]") ?: "[]")
+            (0 until array.length()).mapNotNull { array.optString(it).takeIf { value -> value.isNotBlank() } }
+                .distinct().take(12)
+        } catch (_: Exception) { emptyList() }
     }
+
+    private fun submitSearchQuery(rawQuery: String) {
+        val term = rawQuery.trim()
+        searchQuery = term
+        if (term.isNotBlank()) {
+            val updated = (listOf(term) + readSearchHistory().filterNot { it.equals(term, ignoreCase = true) }).take(12)
+            val array = JSONArray()
+            updated.forEach { array.put(it) }
+            prefs.edit().putString("search_history", array.toString()).apply()
+        }
+        detailSeries = null
+        detailMovie = null
+        sidebarMode = "search"
+        selectedType = "Tümü"
+        selectedGroup = "Tüm kategoriler"
+        expandedCategory = null
+        searchInputFocusPending = true
+        render()
+    }
+
+    private fun render() {
+        if (!::content.isInitialized || !::categoryBar.isInitialized) return
+        content.removeAllViews()
+        if (::mainContentScroll.isInitialized && selectedType in listOf("Filmler", "Diziler")) {
+            mainContentScroll.post { mainContentScroll.scrollTo(0, 0) }
+        }
+        val detailMode = detailSeries != null || detailMovie != null
+        val firstEntry = items.isEmpty() && !isLoadingSource
+        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::heroPanel.isInitialized) heroPanel.visibility = View.GONE
+        if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
+        if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
+        if (::dateClockRow.isInitialized) dateClockRow.visibility =
+            if (firstEntry || isLoadingSource || selectedType == "Ayarlar") View.GONE else View.VISIBLE
+        if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Tümü" || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
+        if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
+        if (firstEntry) {
+            mainContentScroll.visibility = View.VISIBLE
+            val welcome = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(24), dp(24), dp(24), dp(24))
+            }
+            val welcomeLogo = TextView(this).apply {
+                val logo = android.text.SpannableString("▶ KaiserIPTV+")
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 8, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 12, 13, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                text = logo
+                textSize = 38f; gravity = Gravity.CENTER
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, dp(16), 0, dp(20))
+                setShadowLayer(dp(8).toFloat(), 0f, 0f, Color.rgb(0, 80, 190))
+            }
+            welcome.addView(welcomeLogo, LinearLayout.LayoutParams(-1, dp(110)))
+            welcome.addView(TextView(this).apply {
+                text = "İzleme kaynağını ekleyerek başla"
+                textSize = 16f; setTextColor(muted); gravity = Gravity.CENTER
+                setPadding(0, dp(8), 0, dp(18))
+            })
+            val inlineForm = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(8), dp(4), dp(8), dp(4))
+            }
+            sourceName = edit("Kaynak adı girin", false)
+            sourceName.hint = "Kaynak adı girin"
+            inlineForm.addView(TextView(this).apply {
+                text = "Kaynak adı (ör. Ev Xtream)"
+                textSize = 13f; setTextColor(muted)
+                setPadding(0, dp(4), 0, dp(3))
+            })
+            sourceName.id = View.generateViewId()
+            sourceName.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
+            inlineForm.addView(sourceName, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                setMargins(0, 0, 0, dp(6))
+            })
+            sourceMode = RadioGroup(this).apply {
+                id = View.generateViewId()
+                orientation = RadioGroup.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val inlineM3u = RadioButton(this).apply {
+                id = View.generateViewId(); text = "M3U / M3U8"
+                setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent)
+                isChecked = true
+            }
+            val inlineXtream = RadioButton(this).apply {
+                id = View.generateViewId(); text = "Xtream Codes"
+                setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent)
+            }
+            inlineM3u.id = View.generateViewId()
+            inlineXtream.id = View.generateViewId()
+            sourceMode.addView(inlineM3u)
+            sourceMode.addView(inlineXtream)
+            inlineForm.addView(sourceMode, LinearLayout.LayoutParams(-1, dp(42)))
+            playlistUrl = edit("URL adresini girin", false).apply {
+                id = View.generateViewId()
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
+            }
+            server = edit("Sunucu adresi (https://...)", false).apply {
+                id = View.generateViewId()
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
+            }
+            username = edit("Kullanıcı adı", false).apply {
+                id = View.generateViewId()
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
+            }
+            password = edit("Şifre", true).apply {
+                id = View.generateViewId()
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+            }
+            val playlistLabel = TextView(this).apply {
+                text = "M3U / M3U8 oynatma listesi URL'si"
+                textSize = 13f; setTextColor(muted)
+                setPadding(0, dp(4), 0, dp(3))
+            }
+            inlineForm.addView(playlistLabel)
+            inlineForm.addView(playlistUrl, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                setMargins(0, 0, 0, dp(6))
+            })
+            inlineForm.addView(server, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                setMargins(0, 0, 0, dp(6))
+            })
+            val inlineCredentials = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
+            inlineCredentials.addView(username, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                setMargins(0, 0, dp(4), 0)
+            })
+            inlineCredentials.addView(password, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                setMargins(dp(4), 0, 0, 0)
+            })
+            inlineForm.addView(inlineCredentials)
+            fun updateInlineFields() {
+                val useXtream = sourceMode.checkedRadioButtonId == inlineXtream.id
+                playlistLabel.visibility = if (useXtream) View.GONE else View.VISIBLE
+                playlistUrl.visibility = if (useXtream) View.GONE else View.VISIBLE
+                server.visibility = if (useXtream) View.VISIBLE else View.GONE
+                inlineCredentials.visibility = if (useXtream) View.VISIBLE else View.GONE
+            }
+            sourceMode.setOnCheckedChangeListener { _, _ -> updateInlineFields() }
+            updateInlineFields()
+
+            // Keep keyboard Enter and TV-remote Down navigation in the same visual order.
+            fun focusNextOnDown(view: View, next: () -> View) {
+                view.setOnKeyListener { _, keyCode, event ->
+                    if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN &&
+                        event.action == android.view.KeyEvent.ACTION_DOWN) {
+                        next().requestFocus()
+                        true
+                    } else false
+                }
+            }
+            sourceName.setOnEditorActionListener { _, actionId, event ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT ||
+                    (event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER &&
+                     event.action == android.view.KeyEvent.ACTION_DOWN)) {
+                    (if (sourceMode.checkedRadioButtonId == inlineXtream.id) inlineXtream else inlineM3u).requestFocus()
+                    true
+                } else false
+            }
+            focusNextOnDown(sourceName) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) inlineXtream else inlineM3u }
+            focusNextOnDown(inlineM3u) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) server else playlistUrl }
+            focusNextOnDown(inlineXtream) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) server else playlistUrl }
+            focusNextOnDown(playlistUrl) { playlistUrl.focusSearch(View.FOCUS_DOWN) ?: playlistUrl }
+            server.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) { username.requestFocus(); true } else false
+            }
+            username.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) { password.requestFocus(); true } else false
+            }
+            focusNextOnDown(server) { username }
+            focusNextOnDown(username) { password }
+            inlineForm.addView(makeButton("＋ KAYNAK EKLE", true) {
+                val useXtream = sourceMode.checkedRadioButtonId == inlineXtream.id
+                if (useXtream) {
+                    val serverAddress = server.text.toString().trim()
+                    if (!(serverAddress.startsWith("http://") || serverAddress.startsWith("https://")) ||
+                        username.text.isNullOrBlank() || password.text.isNullOrBlank()) {
+                        Toast.makeText(this, "Sunucu, kullanıcı adı ve şifreyi doldur.", Toast.LENGTH_LONG).show()
+                        return@makeButton
+                    }
+                    val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
+                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "xtream",
+                        serverAddress.trimEnd('/'), username.text.toString().trim(), password.text.toString())
+                    saveSource(src)
+                    hideKeyboard()
+                    loadXtream(src, false)
+                } else {
+                    val address = playlistUrl.text.toString().trim()
+                    if (!address.startsWith("http://") && !address.startsWith("https://")) {
+                        Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
+                        return@makeButton
+                    }
+                    val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
+                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "m3u", address)
+                    saveSource(src)
+                    hideKeyboard()
+                    loadM3u(src, false)
+                }
+            }, LinearLayout.LayoutParams(dp(280), dp(52)).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                setMargins(0, dp(18), 0, 0)
+            })
+            welcome.addView(inlineForm, LinearLayout.LayoutParams(dp(520), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(0, dp(10), 0, 0)
+            })
+            content.addView(welcome, LinearLayout.LayoutParams(-1, -1))
+            sidebarMenuScroll.visibility = View.GONE
+            return
+        } else {
+            sidebarMenuScroll.visibility = View.VISIBLE
+        }
+        if (isLoadingSource) {
+            val loadingPanel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(24), dp(24), dp(24), dp(24))
+            }
+            val logoLine = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+            logoLine.addView(TextView(this).apply {
+                text = "▶"
+                textSize = 30f
+                setTextColor(Color.rgb(0, 190, 255))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setShadowLayer(dp(12).toFloat(), 0f, 0f, Color.rgb(0, 120, 255))
+            })
+            logoLine.addView(TextView(this).apply {
+                text = "Kaiser"
+                textSize = 34f
+                setTextColor(Color.WHITE)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setShadowLayer(dp(5).toFloat(), 0f, dp(1).toFloat(), Color.rgb(35, 80, 145))
+            })
+            logoLine.addView(TextView(this).apply {
+                val brand = android.text.SpannableString("IPTV+")
+                brand.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 170, 255)), 0, 4, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                brand.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 4, 5, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                text = brand
+                textSize = 34f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setShadowLayer(dp(7).toFloat(), 0f, 0f, Color.rgb(0, 100, 255))
+            })
+            loadingPanel.addView(logoLine)
+            loadingPanel.addView(TextView(this).apply {
+                text = status.text.toString().ifBlank { "Kaynak yükleniyor…" }
+                textSize = 18f; setTextColor(muted); gravity = Gravity.CENTER
+                setPadding(0, dp(18), 0, 0)
+            })
+            // Tek bir geniş, çerçevesiz görsel alanı; görseller sağdan sola otomatik akar.
+            val visualViewport = FrameLayout(this).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(440), dp(145)).apply {
+                    setMargins(0, dp(26), 0, 0)
+                }
+                clipChildren = true
+                clipToPadding = true
+            }
+            // Sadece görseller/karakterler geçiş yapar; metin etiketi gösterilmez.
+            val visualItems = listOf(
+                "🎬" to Color.rgb(35, 105, 190),
+                "📺" to Color.rgb(145, 75, 175),
+                "🎞️" to Color.rgb(35, 150, 125),
+                "⚽" to Color.rgb(70, 165, 95),
+                "🏆" to Color.rgb(215, 155, 35),
+                "🦸" to Color.rgb(70, 130, 240),
+                "🥷" to Color.rgb(135, 90, 210),
+                "🐼" to Color.rgb(65, 175, 135),
+                "🐉" to Color.rgb(225, 95, 70),
+                "🎮" to Color.rgb(70, 180, 220)
+            )
+            val slide = FrameLayout(this).apply {
+                layoutParams = FrameLayout.LayoutParams(-1, -1)
+            }
+            val visual = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+            val visualSymbol = TextView(this).apply {
+                text = visualItems[0].first
+                textSize = 82f
+                gravity = Gravity.CENTER
+                setShadowLayer(dp(18).toFloat(), 0f, 0f, visualItems[0].second)
+            }
+            visual.addView(visualSymbol, LinearLayout.LayoutParams(-1, -1))
+            slide.addView(visual, FrameLayout.LayoutParams(-1, -1))
+            visualViewport.addView(slide)
+            loadingPanel.addView(visualViewport)
+            var visualIndex = 0
+            val slideRunnable = object : Runnable {
+                override fun run() {
+                    if (!visualViewport.isAttachedToWindow) return
+                    val nextIndex = (visualIndex + 1) % visualItems.size
+                    val width = visualViewport.width.toFloat().coerceAtLeast(dp(440).toFloat())
+                    visual.animate().translationX(-width).alpha(0f).setDuration(420L).withEndAction {
+                        visualIndex = nextIndex
+                        visualSymbol.text = visualItems[visualIndex].first
+                        visualSymbol.setShadowLayer(dp(18).toFloat(), 0f, 0f, visualItems[visualIndex].second)
+                        visual.translationX = width
+                        visual.alpha = 0f
+                        visual.animate().translationX(0f).alpha(1f).setDuration(420L).start()
+                    }.start()
+                    visualViewport.postDelayed(this, 1900L)
+                }
+            }
+            visualViewport.postDelayed(slideRunnable, 1300L)
+            content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
+            return
+        }
+        if (selectedType == "Ayarlar") { renderSettingsScreen(); return }
+        if (detailSeries != null) {
+            renderSeriesDetail(detailSeries!!)
+            return
+        }
+        if (detailMovie != null) {
+            stopChannelPreview()
+            renderMovieDetail(detailMovie!!)
+            return
+        }
+        if (sidebarMode == "search") {
+            selectedGroup = "Tüm kategoriler"
+            val searchPanel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(8), dp(6), dp(8), dp(14))
+            }
+            searchPanel.addView(TextView(this).apply {
+                text = "Ara"; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE); setPadding(0, 0, 0, dp(12))
+            })
+            val searchRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val searchField = EditText(this).apply {
+                hint = "Film, dizi veya kanal ara..."
+                setSingleLine(true)
+                textSize = 17f
+                setTextColor(Color.WHITE)
+                setHintTextColor(muted)
+                setPadding(dp(16), 0, dp(12), 0)
+                background = roundedDrawable(panel, 12, accent)
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+                inputType = android.text.InputType.TYPE_CLASS_TEXT
+                setText(searchQuery)
+                setSelection(text.length)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                setOnEditorActionListener { _, actionId, _ ->
+                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
+                        actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                        submitSearchQuery(text.toString())
+                        true
+                    } else false
+                }
+            }
+            searchRow.addView(searchField, LinearLayout.LayoutParams(0, dp(54), 1f))
+            searchRow.addView(makeButton("ARA", true) {
+                submitSearchQuery(searchField.text.toString())
+            }, LinearLayout.LayoutParams(dp(92), dp(54)).apply { setMargins(dp(10), 0, 0, 0) })
+            searchPanel.addView(searchRow)
+            content.addView(searchPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            if (searchInputFocusPending) {
+                searchInputFocusPending = false
+                searchField.post {
+                    searchField.requestFocus()
+                    searchField.setSelection(searchField.text.length)
+                }
+            }
+            if (searchQuery.isBlank()) {
+                val history = readSearchHistory()
+                val historyHeader = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(8), dp(8), dp(8), dp(8))
+                }
+                historyHeader.addView(TextView(this).apply {
+                    text = "Arama geçmişi"; textSize = 18f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                if (history.isNotEmpty()) historyHeader.addView(makeButton(
+                    if (selectedSearchHistory.isEmpty()) "Geçmişi sil" else "Seçileni sil (" + selectedSearchHistory.size + ")", false
+                ) {
+                    val remaining = if (selectedSearchHistory.isEmpty()) emptyList()
+                        else history.filterNot { selectedSearchHistory.contains(it) }
+                    val array = JSONArray()
+                    remaining.forEach { array.put(it) }
+                    if (remaining.isEmpty()) prefs.edit().remove("search_history").apply()
+                    else prefs.edit().putString("search_history", array.toString()).apply()
+                    selectedSearchHistory.clear()
+                    render()
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)))
+                content.addView(historyHeader)
+                if (history.isEmpty()) {
+                    selectedSearchHistory.clear()
+                    content.addView(TextView(this).apply {
+                        text = "Aradığın film, dizi veya kanal adını yaz."
+                        textSize = 14f; setTextColor(muted); setPadding(dp(8), dp(8), dp(8), dp(8))
+                    })
+                } else {
+                    selectedSearchHistory.retainAll(history.toSet())
+                    var historyRow: LinearLayout? = null
+                    history.forEachIndexed { index, term ->
+                        if (index % 8 == 0) {
+                            historyRow = LinearLayout(this).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.CENTER_VERTICAL
+                            }
+                            content.addView(historyRow, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                                setMargins(dp(4), dp(3), dp(4), dp(3))
+                            })
+                        }
+                        val historyButton = makeButton(
+                            (if (selectedSearchHistory.contains(term)) "✓ " else "◷ ") + term,
+                            selectedSearchHistory.contains(term)
+                        ) {
+                            if (!selectedSearchHistory.add(term)) selectedSearchHistory.remove(term)
+                            render()
+                        }.apply {
+                            textSize = 10f
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            minWidth = 0
+                            minimumWidth = 0
+                            setPadding(dp(2), 0, dp(2), 0)
+                            // History entries are plain text chips: transparent, borderless.
+                            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            setTextColor(if (selectedSearchHistory.contains(term)) accentBright else muted)
+                            setOnFocusChangeListener { view, hasFocus ->
+                                view.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                                (view as TextView).setTextColor(
+                                    if (hasFocus || selectedSearchHistory.contains(term)) accentBright else muted
+                                )
+                                view.scaleX = if (hasFocus) 1.04f else 1f
+                                view.scaleY = if (hasFocus) 1.04f else 1f
+                            }
+                            setOnLongClickListener {
+                                searchQuery = term
+                                selectedSearchHistory.clear()
+                                searchInputFocusPending = true
+                                render()
+                                true
+                            }
+                        }
+                        historyRow?.addView(historyButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                            setMargins(dp(2), 0, dp(2), 0)
+                        })
+                    }
+                }
+            }
+        }
+        val activeSourceId = prefs.getString("last_source_id", "") ?: ""
+        val activeSourceItems = if (activeSourceId.isBlank()) items.toList()
+            else items.filter { it.sourceId == activeSourceId }
+        val unfilteredBase = when {
+            // An expanded content row must render its captured items directly, independent
+            // of the currently selected category filter.
+            expandedCategory != null -> expandedCategory!!.second
+            sidebarMode == "search" -> activeSourceItems
+            selectedType == "Tümü" -> activeSourceItems
+            selectedType == "Favoriler" -> activeSourceItems.filter { favorites.contains(it.favoriteKey) }
+            selectedType == "Son İzlenenler" -> recent.filter { activeSourceId.isBlank() || it.sourceId == activeSourceId }
+            else -> activeSourceItems.filter { it.type == selectedType }
+        }
+        val query = if (sidebarMode == "search") searchQuery.trim() else ""
+        val categoryVisibleBase = if (sidebarMode == "search") unfilteredBase else unfilteredBase.filter { item -> !hiddenCategories.contains(item.type + "|" + item.group.ifBlank { "Diğer" }) }
+        val baseVisible = if (query.isBlank()) categoryVisibleBase else categoryVisibleBase.filter {
+            it.name.contains(query, ignoreCase = true) ||
+            it.group.contains(query, ignoreCase = true) ||
+            it.type.contains(query, ignoreCase = true)
+        }
+        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+        categoryBar.removeAllViews()
+        groupsAvailable.take(40).forEach { group ->
+            categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
+                selectedGroup = group
+                render()
+            }.apply {
+                textSize = 11f; minWidth = 0; minimumWidth = 0
+                setPadding(12, 0, 12, 0)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
+        }
+        val visible = if (selectedGroup == "Tüm kategoriler" || sidebarMode == "search") baseVisible
+            else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
+
+        // Live TV category content: compact logo/name grid; OK opens the channel fullscreen.
+        if (selectedType == "Canlı TV" && sidebarMode == "context") {
+            content.removeAllViews()
+            content.addView(TextView(this).apply {
+                text = if (selectedGroup == "Tüm kategoriler") "Tüm Kanallar" else selectedGroup
+                textSize = 21f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                setPadding(dp(8), dp(10), dp(8), dp(12))
+            })
+            val tvChannels = visible.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+            val displayedTvChannels = tvChannels.take(liveChannelsLimit)
+            if (tvChannels.isEmpty()) {
+                content.addView(TextView(this).apply {
+                    text = "Bu kategoride kanal bulunamadı."
+                    textSize = 15f; setTextColor(muted); setPadding(dp(8), dp(12), dp(8), dp(12))
+                })
+            } else {
+                var channelRow: LinearLayout? = null
+                val tvGridColumns = 4 // 4 x 2 = eight equally sized channel cards on screen
+                displayedTvChannels.forEachIndexed { index, channel ->
+                    if (index % tvGridColumns == 0) {
+                        channelRow = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.TOP
+                            clipChildren = false
+                            clipToPadding = false
+                            setPadding(0, dp(14), 0, dp(6))
+                        }
+                        content.addView(channelRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    }
+                    val tile = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                        setPadding(dp(8), dp(8), dp(8), dp(8))
+                        background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
+                        minimumHeight = dp(126)
+                        setOnFocusChangeListener { v, hasFocus ->
+                            v.animate().cancel()
+                            v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            v.elevation = if (hasFocus) dp(22).toFloat() else 0f
+                            v.translationZ = if (hasFocus) dp(22).toFloat() else 0f
+                            v.cameraDistance = dp(2200).toFloat()
+                            v.animate().scaleX(if (hasFocus) 1.15f else 1f)
+                                .scaleY(if (hasFocus) 1.15f else 1f)
+                                .translationY(if (hasFocus) -dp(10).toFloat() else 0f)
+                                .translationZ(if (hasFocus) dp(22).toFloat() else 0f)
+                                .setDuration(180).start()
+                        }
+                        setOnClickListener { play(channel) }
+                        contentDescription = channel.name
+                    }
+                    val logo = ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        contentDescription = channel.name
+                        setPadding(dp(6), dp(6), dp(6), dp(6))
+                    }
+                    tile.addView(logo, LinearLayout.LayoutParams(-1, dp(68)))
+                    if (channel.icon.startsWith("http://") || channel.icon.startsWith("https://")) {
+                        loadPoster(channel.icon, logo)
+                    } else {
+                        logo.setImageDrawable(GradientDrawable().apply {
+                            cornerRadius = 0f
+                            setColor(Color.rgb(31, 39, 54))
+                        })
+                    }
+                    tile.addView(TextView(this).apply {
+                        text = channel.name
+                        textSize = 12f
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                        maxLines = 2
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        setPadding(0, dp(5), 0, 0)
+                    }, LinearLayout.LayoutParams(-1, dp(36)))
+                    channelRow?.addView(tile, LinearLayout.LayoutParams(0, dp(132), 1f).apply {
+                        setMargins(dp(5), dp(5), dp(5), dp(10))
+                    })
+                }
+                if (displayedTvChannels.size < tvChannels.size) {
+                    content.addView(makeButton("Daha fazla kanal göster  (${displayedTvChannels.size}/${tvChannels.size})", false) {
+                        liveChannelsLimit = (liveChannelsLimit + 72).coerceAtMost(tvChannels.size)
+                        render()
+                    }, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                        setMargins(dp(8), dp(10), dp(8), dp(18))
+                    })
+                }
+            }
+            return
+        }
+        if (visible.isEmpty() && !(sidebarMode == "search" && query.isBlank())) {
+            val empty = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
+                setPadding(24, 24, 24, 24); background = roundedDrawable(panel, 18, Color.rgb(42, 49, 64))
+            }
+            empty.addView(TextView(this).apply {
+                text = when {
+                    sidebarMode == "search" && query.isBlank() -> "Tüm kaynaklarda ara"
+                    sidebarMode == "search" -> "Arama sonucu bulunamadı"
+                    selectedType == "Favoriler" -> "Henüz favori eklemedin"
+                    selectedType == "Son İzlenenler" -> "İzleme geçmişin burada görünecek"
+                    else -> "Kütüphanen seni bekliyor"
+                }
+                textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            })
+            empty.addView(TextView(this).apply {
+                text = when {
+                    sidebarMode == "search" && query.isBlank() -> "Film, dizi veya kanal adını yaz. Bütün kayıtlı kaynaklar taranır."
+                    sidebarMode == "search" -> "Başka bir kelime deneyebilir veya yazımı kontrol edebilirsin."
+                    selectedType == "Favoriler" -> "Bir içerikte yıldız düğmesine basarak favorilerine ekle."
+                    selectedType == "Son İzlenenler" -> "Bir içerik oynattığında burada kolayca devam edebilirsin."
+                    items.isEmpty() -> "Başlamak için kendi M3U/M3U8 veya Xtream kaynağını ekle."
+                    else -> "Bu bölümde şu anda gösterilecek içerik yok."
+                }
+                textSize = 14f; setTextColor(muted); setPadding(0, 7, 0, 14)
+            })
+            if (items.isEmpty()) empty.addView(makeButton("KAYNAK EKLE  →", true) { showConnectionDialog() },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
+            content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
+            return
+        }
+        if (::heroTitle.isInitialized) {
+            heroTitle.text = when {
+                selectedType == "Canlı TV" -> "Canlı yayın zamanı"
+                selectedType == "Filmler" -> "Film gecesi başlasın"
+                selectedType == "Diziler" -> "Bir sonraki bölüm seni bekliyor"
+                selectedType == "Favoriler" -> "Favorilerin burada"
+                selectedType == "Son İzlenenler" -> "Kaldığın yerden devam et"
+                else -> "Kütüphaneni keşfet"
+            }
+            heroSubtitle.text = if (items.isEmpty()) "Kaynağını ekle, içeriklerini keşfet." else "${items.size} içerik kütüphanende hazır."
+            if (::heroArt.isInitialized) {
+                heroArt.removeAllViews()
+                val featured = baseVisible.firstOrNull { it.icon.startsWith("http://") || it.icon.startsWith("https://") }
+                if (featured != null) {
+                    val image = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; contentDescription = featured.name }
+                    heroArt.addView(image, FrameLayout.LayoutParams(-1, -1))
+                    loadPoster(featured.icon, image)
+                    heroArt.addView(TextView(this).apply {
+                        text = featured.name; textSize = 11f; setTextColor(Color.WHITE)
+                        gravity = Gravity.BOTTOM; setPadding(8, 24, 8, 8)
+                        background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.TRANSPARENT, 0xDD070A11.toInt()))
+                    }, FrameLayout.LayoutParams(-1, -1))
+                } else {
+                    heroArt.addView(TextView(this).apply {
+                        text = "K"; textSize = 88f; setTextColor(accent)
+                        setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+                    }, FrameLayout.LayoutParams(-1, -1))
+                }
+            }
+        }
+        rebuildNavigation()
+        val groups: List<Pair<String, List<MediaItem>>> = if (expandedCategory != null) {
+            listOf(expandedCategory!!)
+        } else if (selectedType == "Canlı TV") {
+            emptyList()
+        } else if (sidebarMode == "search") {
+            if (query.isBlank()) emptyList()
+            else visible.take(240).groupBy { it.type }.map { (type, entries) -> "$type • Arama sonuçları" to entries }
+        } else if (selectedType == "Tümü") {
+            // Weekly Turkey streaming chart, 19–26 Oct 2026. Existing playlist items are
+            // prioritized by title; titles missing from the user's source are not fabricated.
+            val trendingMovies = listOf(
+                "gençlik", "organize işler: sazan sarmalı", "harry potter ve ateş kadehi",
+                "iyi ki aldatılmışım", "sevimli hayalet casper",
+                "harry potter ve ölüm yadigârları", "hizmetçi", "addams ailesi", "aşk hipotezi"
+            )
+            val trendingSeries = listOf(
+                "organize işler: karun hazinesi", "off campus", "game of thrones", "from",
+                "mezarlık", "çekiç ve gül", "tulsa king", "prens", "sex education", "konuşanlar"
+            )
+            fun rankedByTrend(source: List<MediaItem>, terms: List<String>): List<MediaItem> {
+                val remaining = source.toMutableList()
+                val ranked = mutableListOf<MediaItem>()
+                terms.forEach { term ->
+                    val match = remaining.firstOrNull { it.name.lowercase().contains(term) }
+                    if (match != null) {
+                        ranked.add(match)
+                        remaining.remove(match)
+                    }
+                }
+                ranked.addAll(remaining)
+                return ranked
+            }
+            listOf(
+                "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(activeSourceItems.filter { it.type == "Filmler" }, trendingMovies).take(24),
+                "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(activeSourceItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
+            ).filter { it.second.isNotEmpty() }
+        } else if (selectedType == "Filmler" || selectedType == "Diziler") {
+            // Trend rows are shown on the home screen only; category screens list categories directly.
+            val source = visible.filter { it.type == selectedType }
+            source.groupBy { it.group.ifBlank { "Diğer" } }.map { it.key to it.value }
+                .filter { it.second.isNotEmpty() }
+        } else if (selectedType == "Son İzlenenler") {
+            listOf("Diziler" to visible.filter { it.type == "Diziler" },
+                "Filmler" to visible.filter { it.type == "Filmler" },
+                "Canlı TV" to visible.filter { it.type == "Canlı TV" })
+                .filter { it.second.isNotEmpty() }
+        } else {
+            visible.groupBy {
+                if (selectedType == "Favoriler") it.type
+                else it.group.ifBlank { "Diğer" }
+            }.map { it.key to it.value }
+        }
+        // Xtream sources can contain hundreds of categories. Building poster cards for every
+        // category at once can exhaust memory on older Android TV boxes. Keep the first
+        // 12 category rows on screen; every category remains accessible from the sidebar
+        // and selecting one shows that category's items.
+        val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
+            ?: if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(12) else groups
+        groupsToRender.forEach { (groupName, entries) ->
+            val showingExpandedCategory = expandedCategory?.first == groupName
+            val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler"
+            val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")
+            val sectionHeader = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, dp(4), 2, dp(6))
+            }
+            sectionHeader.addView(TextView(this).apply {
+                text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            val sectionCountView = TextView(this).apply {
+                id = View.generateViewId()
+                text = if (showingExpandedCategory) "← Geri dön" else "${entries.size} içerik"
+                textSize = 12f; setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding(dp(8), 0, dp(8), 0)
+                isFocusable = true
+                isClickable = true
+                setOnFocusChangeListener { v, hasFocus ->
+                    (v as TextView).setTextColor(if (hasFocus) accent else Color.WHITE)
+                }
+                setOnHoverListener { v, event ->
+                    when (event.action) {
+                        android.view.MotionEvent.ACTION_HOVER_ENTER -> (v as TextView).setTextColor(accent)
+                        android.view.MotionEvent.ACTION_HOVER_EXIT -> (v as TextView).setTextColor(if (v.hasFocus()) accent else Color.WHITE)
+                    }
+                    true
+                }
+                setOnClickListener {
+                    if (showingExpandedCategory) expandedCategory = null
+                    else expandedCategory = groupName to entries
+                    render()
+                }
+            }
+            sectionHeader.addView(sectionCountView)
+            content.addView(sectionHeader)
+            val row = LinearLayout(this).apply {
+                orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+                gravity = if (posterGridMode) Gravity.TOP or Gravity.START else Gravity.CENTER_VERTICAL
+                clipChildren = false
+                clipToPadding = false
+                if (posterGridMode) setPadding(0, dp(14), 0, dp(8))
+            }
+            val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
+            // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
+            // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
+            val featureCardWidth = dp(140) // Kart genişliği afişle aynı
+            val displayedEntries = if (posterGridMode || weeklyMovieFeature) entries else entries.take(5)
+            var expandedPosterRow: LinearLayout? = null
+            var expandedPosterCount = 0
+            displayedEntries.forEachIndexed { itemIndex, item ->
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(0, 0, 0, 0)
+                    background = roundedDrawable(Color.TRANSPARENT, 10)
+                    isFocusable = true; isFocusableInTouchMode = true
+                    setOnFocusChangeListener { v, hasFocus ->
+                        // Focus lifts the card above siblings; no glow or focus border is drawn.
+                        v.animate().cancel()
+                        v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        v.elevation = if (hasFocus) dp(22).toFloat() else 0f
+                        v.translationZ = if (hasFocus) dp(22).toFloat() else 0f
+                        v.cameraDistance = dp(2200).toFloat()
+                        v.animate().scaleX(if (hasFocus) 1.15f else 1f)
+                            .scaleY(if (hasFocus) 1.15f else 1f)
+                            .translationY(if (hasFocus) -dp(10).toFloat() else 0f)
+                            .translationZ(if (hasFocus) dp(22).toFloat() else 0f)
+                            .setDuration(180).start()
+                    }
+                    setOnClickListener {
+                        // Search results for live channels should start playback immediately.
+                        if (sidebarMode == "search" && item.type == "Canlı TV") {
+                            play(item)
+                        } else {
+                            when (item.type) {
+                                "Diziler" -> if (item.url.isNotBlank()) play(item) else loadSeriesEpisodes(item)
+                                "Filmler" -> play(item)
+                                else -> showItemDetails(item)
+                            }
+                        }
+                    }
+                    setOnLongClickListener {
+                        // Long-press a live-channel search result to toggle its favorite state.
+                        if (sidebarMode == "search" && item.type == "Canlı TV") {
+                            val added = if (favorites.contains(item.favoriteKey)) {
+                                favorites.remove(item.favoriteKey)
+                                false
+                            } else {
+                                favorites.add(item.favoriteKey)
+                                true
+                            }
+                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            Toast.makeText(this@MainActivity,
+                                if (added) "${item.name} favorilere eklendi" else "${item.name} favorilerden çıkarıldı",
+                                Toast.LENGTH_SHORT).show()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                }
+                val liveCard = item.type == "Canlı TV"
+                val homeCard = selectedType == "Tümü"
+                val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
+                val poster = ImageView(this).apply {
+                    scaleType = if (liveCard) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+                    contentDescription = item.name
+                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
+                    // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
+                    layoutParams = LinearLayout.LayoutParams(
+                        if (weeklyPoster) dp(140) else -1,
+                        if (liveCard) 112 else if (weeklyPoster) dp(210) else if (posterGridMode) dp(210) else if (homeCard) 230 else 210
+                    )
+                }
+                card.addView(poster)
+                if (focusFirstContentOnRender && item == displayedEntries.firstOrNull()) {
+                    card.post { if (card.isAttachedToWindow) card.requestFocus() }
+                }
+                if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
+                else poster.setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
+                if (weeklyPoster) {
+                    card.addView(TextView(this).apply {
+                        text = item.type.uppercase()
+                        textSize = 10f; setTextColor(accent); letterSpacing = 0.03f
+                    })
+                } else {
+                    card.addView(TextView(this).apply {
+                        text = if (item.type == "Canlı TV") "●  CANLI YAYIN" else item.type.uppercase()
+                        textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
+                    })
+                }
+                card.addView(TextView(this).apply {
+                    text = item.name; textSize = 14f; setTextColor(Color.WHITE); maxLines = 2
+                    minHeight = 40; setPadding(if (weeklyPoster) 0 else 3, 0, if (weeklyPoster) 0 else 3, 0)
+                })
+                if (!showingExpandedCategory && !weeklyPoster && selectedType != "Filmler" && selectedType != "Diziler" &&
+                    selectedType != "Favoriler" && selectedType != "Son İzlenenler") {
+                    val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                    if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
+                        LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
+                    // Arama sonuçlarında kart üzerindeki Favori kısayolunu gösterme.
+                    // Favori işlemi film/dizi detay ekranında kullanılmaya devam eder.
+                    if (sidebarMode != "search") {
+                        actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
+                            if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
+                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            render()
+                        }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
+                    }
+                    card.addView(actions)
+                }
+                if (posterGridMode) {
+                    if (itemIndex == displayedEntries.lastIndex) card.nextFocusRightId = sectionCountView.id
+                    val gridColumns = if (fiveColumnMediaGrid) 5 else 4
+                    if (expandedPosterCount % gridColumns == 0) {
+                        expandedPosterRow = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.TOP
+                            clipChildren = false
+                            clipToPadding = false
+                        }
+                        row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    }
+                    expandedPosterRow?.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        setMargins(dp(3), 0, dp(3), dp(12))
+                    })
+                    expandedPosterCount++
+                } else {
+                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) 190 else if (weeklyMovieFeature) featureCardWidth else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        // Consistent TV-friendly breathing room between poster cards.
+                        setMargins(dp(5), 0, if (weeklyMovieFeature) dp(20) else dp(14), dp(10))
+                    })
+                }
+            }
+            // Keep the final poster row aligned to the same five-column grid.
+            val finalGridColumns = if (fiveColumnMediaGrid) 5 else 4
+            if (posterGridMode && expandedPosterCount > 0 && expandedPosterCount % finalGridColumns != 0) {
+                val remainingSlots = finalGridColumns - (expandedPosterCount % finalGridColumns)
+                repeat(remainingSlots) {
+                    expandedPosterRow?.addView(View(this), LinearLayout.LayoutParams(0, dp(210), 1f).apply {
+                        setMargins(dp(6), 0, dp(6), dp(12))
+                    })
+                }
+            }
+            if (posterGridMode) {
+                content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            } else {
+                content.addView(HorizontalScrollView(this).apply {
+                    isHorizontalScrollBarEnabled = false
+                    clipChildren = false
+                    clipToPadding = false
+                    isFillViewport = true
+                    setPadding(dp(18), dp(14), dp(30), dp(12))
+                    // Keep poster rows anchored to the left, even when there is only one item.
+                    row.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                    addView(row)
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }
+        }
+        content.post {
+            fun firstFocusable(view: View): View? {
+                if (view.visibility != View.VISIBLE || !view.isEnabled) return null
+                if (view.isFocusable && view.isShown) return view
+                if (view is ViewGroup) {
+                    for (index in 0 until view.childCount) {
+                        val found = firstFocusable(view.getChildAt(index))
+                        if (found != null) return found
+                    }
+                }
+                return null
+            }
+            val firstContent = firstFocusable(content)
+            firstRightContentFocusView = firstContent
+            if (firstContent != null && firstContent.id == View.NO_ID) firstContent.id = View.generateViewId()
+            selectedSidebarFocusView?.let { navButton ->
+                if (firstContent != null) navButton.nextFocusRightId = firstContent.id
+            }
+            if (firstContent != null) {
+                selectedSidebarFocusView?.let { navButton -> firstContent.nextFocusLeftId = navButton.id }
+            }
+            if (initialSidebarFocusPending && navBar.visibility == View.VISIBLE && selectedSidebarFocusView != null) {
+                initialSidebarFocusPending = false
+                selectedSidebarFocusView?.requestFocus()
+            } else if (focusFirstContentOnRender) {
+                focusFirstContentOnRender = false
+                firstContent?.requestFocus()
+            }
+        }
+    }
+
+    private fun showSeriesDetail(series: MediaItem) {
+        detailSeries = series
+        seriesEpisodeRows = emptyList()
+        seriesEpisodesLoading = true
+        seriesEpisodesError = ""
+        render()
+
+        val source = savedSources.firstOrNull { it.id == series.sourceId && it.mode == "xtream" }
+        if (source == null) {
+            seriesEpisodesLoading = false
+            seriesEpisodesError = "Bölümleri göstermek için bu dizinin Xtream kaynağına bağlan."
+            render()
+            return
+        }
+
+        thread {
+            try {
+                val u = URLEncoder.encode(source.username, "UTF-8")
+                val p = URLEncoder.encode(source.password, "UTF-8")
+                val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p&action=get_series_info&series_id=${URLEncoder.encode(series.seriesId.ifBlank { series.id }, "UTF-8")}"
+                val data = JSONObject(request(api))
+                val episodes = data.optJSONObject("episodes") ?: JSONObject()
+                val rows = mutableListOf<Pair<String, List<MediaItem>>>()
+                val keys = episodes.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val arr = episodes.optJSONArray(key) ?: continue
+                    val seasonItems = mutableListOf<MediaItem>()
+                    for (i in 0 until arr.length()) {
+                        val ep = arr.optJSONObject(i) ?: continue
+                        val id = ep.optString("id", ep.optString("episode_id", ""))
+                        if (id.isBlank()) continue
+                        val ext = ep.optString("container_extension", "mp4")
+                        val name = ep.optString("title", ep.optString("name", "Bölüm ${i + 1}"))
+                        val stream = "${source.address.trimEnd('/')}/series/$u/$p/$id.$ext"
+                        seasonItems.add(MediaItem(id, name, stream, "${series.name} • Sezon $key", "Bölümler", "", ext, series.seriesId, source.id))
+                    }
+                    if (seasonItems.isNotEmpty()) rows.add(Pair(key, seasonItems))
+                }
+                val sortedRows = rows.sortedWith(compareBy { it.first.toIntOrNull() ?: Int.MAX_VALUE })
+                runOnUiThread {
+                    if (detailSeries?.favoriteKey != series.favoriteKey) return@runOnUiThread
+                    seriesEpisodeRows = sortedRows
+                    seriesEpisodesLoading = false
+                    if (sortedRows.isEmpty()) seriesEpisodesError = "Bu dizi için bölüm bulunamadı."
+                    render()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    if (detailSeries?.favoriteKey != series.favoriteKey) return@runOnUiThread
+                    seriesEpisodesLoading = false
+                    seriesEpisodesError = "Bölümler yüklenemedi. Kaynağı kontrol edip yeniden dene."
+                    render()
+                }
+            }
+        }
+    }
+
+    private fun renderChannelPreviewScreen() {
+        val title = TextView(this).apply {
+            text = "CANLI TV ÖNİZLEME  •  OK: TAM EKRAN"
+            textSize = 20f
+            setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(dp(8), dp(10), dp(8), dp(10))
+        }
+        content.addView(title)
+        val frame = FrameLayout(this).apply {
+            background = roundedDrawable(Color.BLACK, 16, Color.rgb(48, 58, 76))
+            clipToOutline = true
+            isFocusable = true
+            isFocusableInTouchMode = true
+            contentDescription = "Canlı TV önizlemesi"
+            setOnFocusChangeListener { v, hasFocus ->
+                v.background = roundedDrawable(
+                    Color.BLACK, 16,
+                    if (hasFocus) accentBright else Color.rgb(48, 58, 76)
+                )
+            }
+        }
+        previewView = PlayerView(this).apply {
+            useController = false
+            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+            setShutterBackgroundColor(Color.BLACK)
+        }
+        frame.addView(previewView, FrameLayout.LayoutParams(-1, -1))
+        content.addView(frame, LinearLayout.LayoutParams(-1, dp(330)).apply {
+            setMargins(dp(8), dp(8), dp(8), dp(8))
+        })
+        content.addView(TextView(this).apply {
+            text = "OK: Tam ekran izle  •  Tam ekranda ↑/↓ kanal değiştir, ← kanal listesi, → son izlenenler"
+            textSize = 14f
+            setTextColor(muted)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+        })
+        if (previewPlayer != null) previewView?.player = previewPlayer
+    }
+
+    private fun startChannelPreview(channel: MediaItem) {
+        previewChannel = channel
+        if (channel.url.isBlank() || previewUrl == channel.url) return
+        previewUrl = channel.url
+        try {
+            if (previewPlayer == null) {
+                previewPlayer = ExoPlayer.Builder(this).build().apply {
+                    volume = 0f
+                    repeatMode = Player.REPEAT_MODE_OFF
+                    playWhenReady = true
+                }
+            }
+            previewView?.player = previewPlayer
+            previewPlayer?.setMediaItem(PlayerMediaItem.fromUri(channel.url))
+            previewPlayer?.prepare()
+            previewPlayer?.playWhenReady = true
+        } catch (_: Exception) {
+            previewUrl = ""
+        }
+    }
+
+    private fun stopChannelPreview() {
+        previewPlayer?.pause()
+        previewView?.player = null
+        previewView = null
+        previewChannel = null
+        previewUrl = ""
+    }
+
+    private fun showMovieDetail(movie: MediaItem) {
+        detailSeries = null
+        detailMovie = movie
+        render()
+        if (movie.sourceId.isBlank() || (movie.plot.isNotBlank() && movie.rating.isNotBlank())) return
+        val source = savedSources.firstOrNull { it.id == movie.sourceId && it.mode == "xtream" } ?: return
+        thread {
+            try {
+                val u = URLEncoder.encode(source.username, "UTF-8")
+                val p = URLEncoder.encode(source.password, "UTF-8")
+                val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p&action=get_vod_info&vod_id=${URLEncoder.encode(movie.id, "UTF-8")}"
+                val root = JSONObject(request(api))
+                val info = root.optJSONObject("info") ?: root.optJSONObject("movie_data") ?: root
+                fun pick(vararg keys: String): String {
+                    for (key in keys) {
+                        val value = info.opt(key)
+                        if (value != null && value != JSONObject.NULL) {
+                            val valueText = if (value is String) value else value.toString()
+                            if (valueText.isNotBlank() && valueText != "0" && valueText != "null") return valueText
+                        }
+                    }
+                    return ""
+                }
+                val updated = movie.copy(
+                    plot = pick("plot", "description", "overview").ifBlank { movie.plot },
+                    rating = pick("rating", "vote_average", "rating_5based").ifBlank { movie.rating },
+                    releaseDate = pick("releasedate", "release_date", "releaseDate", "year").ifBlank { movie.releaseDate },
+                    genre = pick("genre", "genres").ifBlank { movie.genre },
+                    actors = pick("cast", "actors").ifBlank { movie.actors }
+                )
+                runOnUiThread {
+                    // Ignore late metadata responses if the user has already returned to the movie list.
+                    if (detailMovie?.favoriteKey != movie.favoriteKey) return@runOnUiThread
+                    val index = items.indexOfFirst { it.id == movie.id && it.type == movie.type && it.sourceId == movie.sourceId }
+                    if (index >= 0) items[index] = updated
+                    detailMovie = updated
+                    saveCachedItems()
+                    render()
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
     private fun renderMovieDetail(movie: MediaItem) {
         val hero = FrameLayout(this).apply {
             background = roundedDrawable(Color.rgb(24, 31, 45), 18, Color.rgb(50, 60, 78))
@@ -2455,15 +3728,16 @@ class MainActivity : Activity() {
                 }
                 runOnUiThread {
                     status.text = "Dizi bölümleri hazır."
-                    val orderedEpisodes = episodeRows
-                        .sortedWith(compareBy { it.first.toIntOrNull() ?: Int.MAX_VALUE })
-                        .flatMap { it.second }
-                    if (orderedEpisodes.isEmpty()) {
-                        AlertDialog.Builder(this).setTitle(series.name).setMessage("Bu dizi için bölüm bulunamadı.").setPositiveButton("Tamam", null).show()
-                        return@runOnUiThread
-                    }
-                    pendingSeriesEpisodes = orderedEpisodes
-                    play(orderedEpisodes.first())
+                    if (episodeRows.isEmpty()) { AlertDialog.Builder(this).setTitle(series.name).setMessage("Bu dizi için bölüm bulunamadı.").setPositiveButton("Tamam", null).show(); return@runOnUiThread }
+                    val seasonLabels = episodeRows.map { pair -> "Sezon ${pair.first}" }
+                    AlertDialog.Builder(this).setTitle(series.name).setItems(seasonLabels.toTypedArray()) { _, which ->
+                        val chosen = episodeRows[which].second
+                        if (chosen.isEmpty()) { Toast.makeText(this, "Bu sezonda bölüm bulunamadı.", Toast.LENGTH_SHORT).show(); return@setItems }
+                        AlertDialog.Builder(this).setTitle(seasonLabels[which]).setItems(chosen.map { it.name }.toTypedArray()) { _, epIndex ->
+                            pendingSeriesEpisodes = chosen
+                            play(chosen[epIndex])
+                        }.setNegativeButton("Geri", null).show()
+                    }.setNegativeButton("Kapat", null).show()
                 }
             } catch (e: Exception) { runOnUiThread { status.text = "Bölümler yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
         }
