@@ -2082,11 +2082,7 @@ class MainActivity : Activity() {
                             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                             setTextColor(if (selectedSearchHistory.contains(term)) accentBright else muted)
                             setOnFocusChangeListener { view, hasFocus ->
-                                view.background = if (hasFocus) GradientDrawable().apply {
-                                    cornerRadius = 0f
-                                    setColor(panel)
-                                    setStroke(dp(2), accentBright)
-                                } else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                                view.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                                 (view as TextView).setTextColor(
                                     if (hasFocus || selectedSearchHistory.contains(term)) accentBright else muted
                                 )
