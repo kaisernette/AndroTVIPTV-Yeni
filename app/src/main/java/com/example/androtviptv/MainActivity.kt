@@ -2078,6 +2078,17 @@ class MainActivity : Activity() {
                             minWidth = 0
                             minimumWidth = 0
                             setPadding(dp(2), 0, dp(2), 0)
+                            // History entries are plain text chips: transparent, borderless.
+                            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            setTextColor(if (selectedSearchHistory.contains(term)) accentBright else muted)
+                            setOnFocusChangeListener { view, hasFocus ->
+                                view.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                                (view as TextView).setTextColor(
+                                    if (hasFocus || selectedSearchHistory.contains(term)) accentBright else muted
+                                )
+                                view.scaleX = if (hasFocus) 1.04f else 1f
+                                view.scaleY = if (hasFocus) 1.04f else 1f
+                            }
                             setOnLongClickListener {
                                 searchQuery = term
                                 selectedSearchHistory.clear()
