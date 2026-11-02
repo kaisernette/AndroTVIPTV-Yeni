@@ -2353,8 +2353,9 @@ class MainActivity : Activity() {
             ?: if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(12) else groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
-            val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler"
+            val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
             val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")
+            val liveTvEightColumnGrid = selectedType == "Canlı TV"
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, dp(4), 2, dp(6))
             }
@@ -2450,7 +2451,7 @@ class MainActivity : Activity() {
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
                         if (weeklyPoster) dp(140) else -1,
-                        if (liveCard) 112 else if (weeklyPoster) dp(210) else if (posterGridMode) dp(210) else if (homeCard) 230 else 210
+                        if (liveCard) dp(88) else if (weeklyPoster) dp(210) else if (posterGridMode) dp(210) else if (homeCard) 230 else 210
                     )
                 }
                 card.addView(poster)
@@ -2493,7 +2494,7 @@ class MainActivity : Activity() {
                 }
                 if (posterGridMode) {
                     if (itemIndex == displayedEntries.lastIndex) card.nextFocusRightId = sectionCountView.id
-                    val gridColumns = if (fiveColumnMediaGrid) 5 else 4
+                    val gridColumns = if (liveTvEightColumnGrid) 8 else if (fiveColumnMediaGrid) 5 else 4
                     if (expandedPosterCount % gridColumns == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
@@ -2515,13 +2516,48 @@ class MainActivity : Activity() {
                 }
             }
             // Keep the final poster row aligned to the same five-column grid.
-            val finalGridColumns = if (fiveColumnMediaGrid) 5 else 4
+            val finalGridColumns = if (liveTvEightColumnGrid) 8 else if (fiveColumnMediaGrid) 5 else 4
             if (posterGridMode && expandedPosterCount > 0 && expandedPosterCount % finalGridColumns != 0) {
                 val remainingSlots = finalGridColumns - (expandedPosterCount % finalGridColumns)
                 repeat(remainingSlots) {
-                    expandedPosterRow?.addView(View(this), LinearLayout.LayoutParams(0, dp(210), 1f).apply {
+                    expandedPosterRow?.addView(View(this), LinearLayout.LayoutParams(0, if (liveTvEightColumnGrid) dp(120) else dp(210), 1f).apply {
                         setMargins(dp(6), 0, dp(6), dp(12))
                     })
+                }
+            }
+            if (posterGridMode) {
+                val allItemsTile = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    contentDescription = if (showingExpandedCategory) "Kategoriyi kapat" else "Tüm içerikleri göster"
+                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    setOnFocusChangeListener { v, hasFocus ->
+                        v.animate().cancel()
+                        v.animate().scaleX(if (hasFocus) 1.08f else 1f).scaleY(if (hasFocus) 1.08f else 1f).setDuration(140).start()
+                    }
+                    val iconGrid = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER }
+                    repeat(2) {
+                        val iconRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+                        repeat(2) {
+                            iconRow.addView(View(this@MainActivity).apply { background = roundedDrawable(accent, 2) }, LinearLayout.LayoutParams(dp(9), dp(9)).apply { setMargins(dp(2), dp(2), dp(2), dp(2)) })
+                        }
+                        iconGrid.addView(iconRow)
+                    }
+                    addView(iconGrid, LinearLayout.LayoutParams(dp(34), dp(34)))
+                    setOnClickListener {
+                        if (showingExpandedCategory) expandedCategory = null else expandedCategory = groupName to entries
+                        render()
+                    }
+                }
+                val targetRow = expandedPosterRow ?: LinearLayout(this).also { row.addView(it) }
+                if (expandedPosterCount > 0 && expandedPosterCount % finalGridColumns == 0) {
+                    val nextRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP; clipChildren = false; clipToPadding = false }
+                    row.addView(nextRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    nextRow.addView(allItemsTile, LinearLayout.LayoutParams(0, if (liveTvEightColumnGrid) dp(120) else dp(210), 1f).apply { setMargins(dp(3), 0, dp(3), dp(12)) })
+                } else {
+                    targetRow.addView(allItemsTile, LinearLayout.LayoutParams(0, if (liveTvEightColumnGrid) dp(120) else dp(210), 1f).apply { setMargins(dp(3), 0, dp(3), dp(12)) })
                 }
             }
             if (posterGridMode) {
