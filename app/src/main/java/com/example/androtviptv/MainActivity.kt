@@ -1444,12 +1444,17 @@ class MainActivity : Activity() {
         handleSafeBack()
     }
 
-    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
-        if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        // Android TV remotes may deliver Back as BACK, ESCAPE, or the B button.
+        // Handle on key-up so one press cannot trigger two navigation steps.
+        if (event.action == android.view.KeyEvent.ACTION_UP &&
+            (event.keyCode == android.view.KeyEvent.KEYCODE_BACK ||
+             event.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE ||
+             event.keyCode == android.view.KeyEvent.KEYCODE_BUTTON_B)) {
             handleSafeBack()
             return true
         }
-        return super.onKeyDown(keyCode, event)
+        return super.dispatchKeyEvent(event)
     }
 
     private fun handleSafeBack() {
