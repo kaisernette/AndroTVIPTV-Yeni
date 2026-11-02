@@ -122,6 +122,7 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
+        loadSearchHistory()
         loadCachedItems()
         // Start on Home every time; the user's last section remains saved for history only.
         selectedType = "Tümü"
@@ -129,6 +130,39 @@ class MainActivity : Activity() {
         buildUi()
         showPreviousCrashIfAny()
         loadSavedSources()
+    }
+
+    private fun loadSearchHistory() {
+        searchHistory.clear()
+        try {
+            val saved = JSONArray(prefs.getString("search_history", "[]") ?: "[]")
+            for (i in 0 until saved.length()) {
+                val term = saved.optString(i).trim()
+                if (term.isNotBlank() && term !in searchHistory) searchHistory.add(term)
+            }
+        } catch (_: Exception) { }
+    }
+
+    private fun saveSearchHistory(query: String) {
+        val term = query.trim()
+        if (term.isBlank()) return
+        searchHistory.remove(term)
+        searchHistory.add(0, term)
+        while (searchHistory.size > 12) searchHistory.removeAt(searchHistory.lastIndex)
+        val saved = JSONArray()
+        searchHistory.forEach { saved.put(it) }
+        prefs.edit().putString("search_history", saved.toString()).apply()
+    }
+
+    private fun submitSearch(query: String) {
+        searchQuery = query.trim()
+        if (searchQuery.isNotBlank()) saveSearchHistory(searchQuery)
+        selectedGroup = "Tüm kategoriler"
+        expandedCategory = null
+        searchInputFocusPending = false
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        currentFocus?.let { imm.hideSoftInputFromWindow(it.windowToken, 0) }
+        render()
     }
 
     private fun installCrashLogger() {
@@ -190,6 +224,7 @@ class MainActivity : Activity() {
     private val hiddenCategories = mutableSetOf<String>()
     private var searchQuery = ""
     private var searchInputFocusPending = false
+    private val searchHistory = mutableListOf<String>()
     private var focusFirstContentOnRender = false
     private var selectedSidebarFocusView: View? = null
     private var firstRightContentFocusView: View? = null
@@ -678,25 +713,19 @@ class MainActivity : Activity() {
                 } else {
                     addSidebarButton(tab, selectedType == key && normalizedTab != "Ara") {
                         if (normalizedTab == "Ara") {
-                            val searchField = EditText(this).apply {
-                                hint = "Film, dizi veya kanal ara..."
-                                setSingleLine(true)
-                                setText(searchQuery)
-                            }
-                            AlertDialog.Builder(this)
-                                .setTitle("Ara")
-                                .setView(searchField)
-                                .setNegativeButton("Vazgeç", null)
-                                .setPositiveButton("Ara") { _, _ ->
-                                    searchQuery = searchField.text.toString()
-                                    detailSeries = null
-                                    detailMovie = null
-                                    sidebarMode = "search"
-                                    focusFirstContentOnRender = true
-                                    selectedType = "Tümü"
-                                    selectedGroup = "Tüm kategoriler"
-                                    render()
-                                }.show()
+                            detailSeries = null
+                            detailMovie = null
+                            sidebarMode = "search"
+                            searchInputFocusPending = true
+                            searchQuery = ""
+                            selectedType = "Tümü"
+                            selectedGroup = "Tüm kategoriler"
+                            expandedCategory = null
+                            rebuildNavigation()
+                            selectedGroup = "Tüm kategoriler"
+                            expandedCategory = null
+                            rebuildNavigation()
+                            render()
                             return@addSidebarButton
                         }
                         detailSeries = null
@@ -1952,11 +1981,94 @@ class MainActivity : Activity() {
             return
         }
         if (sidebarMode == "search") {
+            // Search is a dedicated single-pane screen: the category column is hidden
+            // by rebuildNavigation(), leaving the entire right side for search.
+            categoryScroll.visibility = View.GONE
+            content.setPadding(dp(18), dp(12), dp(30), dp(20))
             content.addView(TextView(this).apply {
                 text = "Ara"; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.WHITE); setPadding(dp(8), dp(8), dp(8), dp(12))
+                setTextColor(Color.WHITE); setPadding(dp(8), dp(4), dp(8), dp(12))
             })
-            selectedGroup = "Tüm kategoriler"
+            val searchRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val searchInput = EditText(this).apply {
+                hint = "TV, film veya dizi ara..."
+                setSingleLine(true)
+                textSize = 18f
+                setTextColor(Color.WHITE)
+                setHintTextColor(muted)
+                setPadding(dp(16), 0, dp(14), 0)
+                background = roundedDrawable(panel, 12, accent)
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+                inputType = android.text.InputType.TYPE_CLASS_TEXT
+                isFocusable = true
+                isFocusableInTouchMode = true
+                tag = "global_search_input"
+                setText(searchQuery)
+                setSelection(text.length)
+                setOnEditorActionListener { _, actionId, _ ->
+                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
+                        actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                        submitSearch(text.toString())
+                        true
+                    } else false
+                }
+            }
+            searchRow.addView(searchInput, LinearLayout.LayoutParams(0, dp(54), 1f))
+            searchRow.addView(makeButton("ARA", true) {
+                submitSearch(searchInput.text.toString())
+            }, LinearLayout.LayoutParams(dp(104), dp(54)).apply { setMargins(dp(10), 0, 0, 0) })
+            content.addView(searchRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            if (searchQuery.isBlank()) {
+                if (searchHistory.isNotEmpty()) {
+                    content.addView(TextView(this).apply {
+                        text = "ARAMA GEÇMİŞİ"
+                        textSize = 14f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(muted)
+                        setPadding(dp(8), dp(20), dp(8), dp(8))
+                    })
+                    searchHistory.toList().forEach { term ->
+                        content.addView(makeButton("⌕   $term", false) {
+                            searchQuery = term
+                            saveSearchHistory(term)
+                            searchInputFocusPending = false
+                            render()
+                        }, LinearLayout.LayoutParams(-1, dp(46)).apply {
+                            setMargins(0, dp(3), 0, dp(3))
+                        })
+                    }
+                    content.addView(makeButton("Arama geçmişini sil", false) {
+                        searchHistory.clear()
+                        prefs.edit().remove("search_history").apply()
+                        render()
+                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply {
+                        setMargins(dp(4), dp(12), 0, 0)
+                    })
+                } else {
+                    content.addView(TextView(this).apply {
+                        text = "Aramak istediğin içeriğin adını yaz."
+                        textSize = 15f
+                        setTextColor(muted)
+                        setPadding(dp(8), dp(18), dp(8), dp(8))
+                    })
+                }
+            }
+            if (searchInputFocusPending) {
+                searchInputFocusPending = false
+                searchInput.post {
+                    if (sidebarMode == "search" && searchInput.isAttachedToWindow) {
+                        searchInput.requestFocus()
+                        searchInput.setSelection(searchInput.text.length)
+                        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT)
+                    }
+                }
+            }
+        } else {
+            content.setPadding(dp(18), dp(18), dp(30), dp(20))
         }
         val activeSourceId = prefs.getString("last_source_id", "") ?: ""
         val activeSourceItems = if (activeSourceId.isBlank()) items.toList()
@@ -2153,7 +2265,11 @@ class MainActivity : Activity() {
             emptyList()
         } else if (sidebarMode == "search") {
             if (query.isBlank()) emptyList()
-            else visible.take(240).groupBy { it.type }.map { (type, entries) -> "$type • Arama sonuçları" to entries }
+            else listOf("Canlı TV", "Filmler", "Diziler").mapNotNull { type ->
+                visible.filter { it.type == type }.take(80)
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { entries -> "$type • Arama sonuçları" to entries }
+            }
         } else if (selectedType == "Tümü") {
             // Weekly Turkey streaming chart, 19–26 Oct 2026. Existing playlist items are
             // prioritized by title; titles missing from the user's source are not fabricated.
