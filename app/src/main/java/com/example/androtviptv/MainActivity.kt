@@ -2455,16 +2455,15 @@ class MainActivity : Activity() {
                 }
                 runOnUiThread {
                     status.text = "Dizi bölümleri hazır."
-                    if (episodeRows.isEmpty()) { AlertDialog.Builder(this).setTitle(series.name).setMessage("Bu dizi için bölüm bulunamadı.").setPositiveButton("Tamam", null).show(); return@runOnUiThread }
-                    val seasonLabels = episodeRows.map { pair -> "Sezon ${pair.first}" }
-                    AlertDialog.Builder(this).setTitle(series.name).setItems(seasonLabels.toTypedArray()) { _, which ->
-                        val chosen = episodeRows[which].second
-                        if (chosen.isEmpty()) { Toast.makeText(this, "Bu sezonda bölüm bulunamadı.", Toast.LENGTH_SHORT).show(); return@setItems }
-                        AlertDialog.Builder(this).setTitle(seasonLabels[which]).setItems(chosen.map { it.name }.toTypedArray()) { _, epIndex ->
-                            pendingSeriesEpisodes = chosen
-                            play(chosen[epIndex])
-                        }.setNegativeButton("Geri", null).show()
-                    }.setNegativeButton("Kapat", null).show()
+                    val orderedEpisodes = episodeRows
+                        .sortedWith(compareBy { it.first.toIntOrNull() ?: Int.MAX_VALUE })
+                        .flatMap { it.second }
+                    if (orderedEpisodes.isEmpty()) {
+                        AlertDialog.Builder(this).setTitle(series.name).setMessage("Bu dizi için bölüm bulunamadı.").setPositiveButton("Tamam", null).show()
+                        return@runOnUiThread
+                    }
+                    pendingSeriesEpisodes = orderedEpisodes
+                    play(orderedEpisodes.first())
                 }
             } catch (e: Exception) { runOnUiThread { status.text = "Bölümler yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
         }
