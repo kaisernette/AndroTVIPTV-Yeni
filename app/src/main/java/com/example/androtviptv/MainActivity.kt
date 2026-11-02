@@ -326,7 +326,7 @@ class MainActivity : Activity() {
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = logo
-            textSize = if (prefs.getBoolean("compact_logo", true)) 17f else 21f
+            textSize = if (prefs.getBoolean("compact_logo", true)) 15f else 18f
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             contentDescription = "KAISER TV+"
