@@ -780,7 +780,13 @@ class MainActivity : Activity() {
                 }
             }
             if (::categoryPanel.isInitialized && selectedType in listOf("Filmler", "Diziler", "Canlı TV")) {
-                val categoryItems = items.filter { it.type == selectedType && (selectedType != "Canlı TV" || it.url.isNotBlank()) }
+                // Apply the same hidden-category rules to the sidebar category column
+                // as the content grid, so hidden TV/movie/series groups disappear everywhere.
+                val categoryItems = items.filter {
+                    it.type == selectedType &&
+                    (selectedType != "Canlı TV" || it.url.isNotBlank()) &&
+                    !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
+                }
                 val grouped = categoryItems.groupBy { it.group.ifBlank { "Diğer" } }.toList()
                 val selectedName = expandedCategory?.first ?: grouped.firstOrNull()?.first
                 if (expandedCategory == null && selectedName != null && selectedType != "Canlı TV") {
