@@ -782,6 +782,9 @@ class MainActivity : Activity() {
                             searchInputFocusPending = true
                             searchQuery = ""
                             selectedType = "Tümü"
+                            selectedGroup = "Tüm kategoriler"
+                            expandedCategory = null
+                            rebuildNavigation()
                         }
                         "Tümü" -> returnToMainMenu()
                         "Son İzlenenler" -> {
