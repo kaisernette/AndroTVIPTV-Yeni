@@ -824,21 +824,25 @@ class MainActivity : Activity() {
                             render()
                         }
                     }
-                    if (categoryIndex == 0) firstCategoryFocusView = button
-                    // Explicit category-column navigation avoids Android TV focus
-                    // jumping into poster cards based on their measured geometry.
+                    // Stable IDs and explicit D-pad links for the category column.
                     if (button.id == View.NO_ID) button.id = View.generateViewId()
-                    if (categoryIndex > 0) {
-                        val previous = categoryPanel.getChildAt(categoryPanel.childCount - 1)
-                        if (previous != null && previous.isFocusable) {
-                            button.nextFocusUpId = previous.id
-                            previous.nextFocusDownId = button.id
+                    button.nextFocusLeftId = selectedSidebarFocusView?.id ?: View.NO_ID
+                    if (categoryIndex == 0) {
+                        firstCategoryFocusView = button
+                        selectedSidebarFocusView?.let { navButton ->
+                            button.nextFocusLeftId = navButton.id
+                            navButton.nextFocusRightId = button.id
+                        }
+                    } else {
+                        val previousCategory = categoryPanel.getChildAt(categoryPanel.childCount - 1)
+                        if (previousCategory != null && previousCategory.isFocusable) {
+                            button.nextFocusUpId = previousCategory.id
+                            previousCategory.nextFocusDownId = button.id
                         }
                     }
                     categoryPanel.addView(button, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(0, dp(2), 0, dp(2))
                     })
-                    if (selected && button.id == View.NO_ID) button.id = View.generateViewId()
                 }
                 if (selectedType == "Canlı TV") {
                     categoryPanel.addView(TextView(this).apply {
