@@ -189,6 +189,7 @@ class MainActivity : Activity() {
     private var historyType = "Canlı TV"
     private val hiddenCategories = mutableSetOf<String>()
     private var searchQuery = ""
+    private val selectedSearchHistory = mutableSetOf<String>()
     private var searchInputFocusPending = false
     private var focusFirstContentOnRender = false
     private var selectedSidebarFocusView: View? = null
@@ -2032,24 +2033,61 @@ class MainActivity : Activity() {
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(Color.WHITE)
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                if (history.isNotEmpty()) historyHeader.addView(makeButton("Geçmişi sil", false) {
-                    prefs.edit().remove("search_history").apply()
+                if (history.isNotEmpty()) historyHeader.addView(makeButton(
+                    if (selectedSearchHistory.isEmpty()) "Geçmişi sil" else "Seçileni sil (" + selectedSearchHistory.size + ")", false
+                ) {
+                    val remaining = if (selectedSearchHistory.isEmpty()) emptyList()
+                        else history.filterNot { selectedSearchHistory.contains(it) }
+                    val array = JSONArray()
+                    remaining.forEach { array.put(it) }
+                    if (remaining.isEmpty()) prefs.edit().remove("search_history").apply()
+                    else prefs.edit().putString("search_history", array.toString()).apply()
+                    selectedSearchHistory.clear()
                     render()
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)))
                 content.addView(historyHeader)
                 if (history.isEmpty()) {
+                    selectedSearchHistory.clear()
                     content.addView(TextView(this).apply {
                         text = "Aradığın film, dizi veya kanal adını yaz."
                         textSize = 14f; setTextColor(muted); setPadding(dp(8), dp(8), dp(8), dp(8))
                     })
                 } else {
-                    history.forEach { term ->
-                        content.addView(makeButton("◷   $term", false) {
-                            searchQuery = term
-                            searchInputFocusPending = true
+                    selectedSearchHistory.retainAll(history.toSet())
+                    var historyRow: LinearLayout? = null
+                    history.forEachIndexed { index, term ->
+                        if (index % 8 == 0) {
+                            historyRow = LinearLayout(this).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.CENTER_VERTICAL
+                            }
+                            content.addView(historyRow, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                                setMargins(dp(4), dp(3), dp(4), dp(3))
+                            })
+                        }
+                        val historyButton = makeButton(
+                            (if (selectedSearchHistory.contains(term)) "✓ " else "◷ ") + term,
+                            selectedSearchHistory.contains(term)
+                        ) {
+                            if (!selectedSearchHistory.add(term)) selectedSearchHistory.remove(term)
                             render()
-                        }, LinearLayout.LayoutParams(-1, dp(46)).apply {
-                            setMargins(dp(8), dp(3), dp(8), dp(3))
+                        }.apply {
+                            textSize = 10f
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            minWidth = 0
+                            minimumWidth = 0
+                            setPadding(dp(2), 0, dp(2), 0)
+                            setOnLongClickListener {
+                                searchQuery = term
+                                selectedSearchHistory.clear()
+                                searchInputFocusPending = true
+                                render()
+                                true
+                            }
+                        }
+                        historyRow?.addView(historyButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                            setMargins(dp(2), 0, dp(2), 0)
                         })
                     }
                 }
