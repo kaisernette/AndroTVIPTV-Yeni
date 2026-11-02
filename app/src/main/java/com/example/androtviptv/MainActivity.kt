@@ -784,14 +784,9 @@ class MainActivity : Activity() {
                     !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
                 }
                 val grouped = categoryItems.groupBy { it.group.ifBlank { "Diğer" } }.toList()
+                // Keep category navigation separate from the content grid.
+                // The first category receives focus, but opens only after explicit selection.
                 val selectedName = expandedCategory?.first ?: grouped.firstOrNull()?.first
-                if (expandedCategory == null && selectedName != null && selectedType != "Canlı TV") {
-                    val firstGroup = grouped.firstOrNull { it.first == selectedName }
-                    if (firstGroup != null) {
-                        expandedCategory = firstGroup.first to firstGroup.second
-                        selectedGroup = firstGroup.first
-                    }
-                }
                 categoryPanel.addView(TextView(this).apply {
                     text = if (selectedType == "Canlı TV") "KATEGORİLER" else "KATEGORİLER"
                     textSize = 11f; setTypeface(null, android.graphics.Typeface.BOLD)
@@ -2376,7 +2371,7 @@ class MainActivity : Activity() {
                 textSize = 12f; setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
                 setPadding(dp(8), 0, dp(8), 0)
-                visibility = if (showingExpandedCategory) View.VISIBLE else View.GONE
+                visibility = View.GONE
                 isFocusable = true
                 isClickable = true
                 setOnClickListener { expandedCategory = null; render() }
