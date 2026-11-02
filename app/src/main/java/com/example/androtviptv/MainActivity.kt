@@ -192,6 +192,8 @@ class MainActivity : Activity() {
     private val selectedSearchHistory = mutableSetOf<String>()
     private var searchInputFocusPending = false
     private var focusFirstContentOnRender = false
+    private var focusFirstCategoryOnRender = false
+    private var firstCategoryFocusView: View? = null
     private var selectedSidebarFocusView: View? = null
     private var firstRightContentFocusView: View? = null
     private var initialSidebarFocusPending = true
@@ -324,12 +326,12 @@ class MainActivity : Activity() {
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = logo
-            textSize = if (prefs.getBoolean("compact_logo", true)) 17f else 21f
+            textSize = if (prefs.getBoolean("compact_logo", true)) 13f else 17f
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             contentDescription = "KAISER TV+"
-        }, LinearLayout.LayoutParams(-1, dp(54)))
-        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
+        }, LinearLayout.LayoutParams(-1, dp(42)))
+        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(60)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
@@ -695,7 +697,7 @@ class MainActivity : Activity() {
                         seriesEpisodeRows = emptyList()
                         seriesEpisodesLoading = false
                         seriesEpisodesError = ""
-                        focusFirstContentOnRender = true
+                        focusFirstCategoryOnRender = true
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
                         selectedType = key
@@ -795,7 +797,7 @@ class MainActivity : Activity() {
                     textSize = 11f; setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(muted); setPadding(dp(8), 0, 0, dp(10))
                 })
-                grouped.forEach { (name, entries) ->
+                grouped.forEachIndexed { categoryIndex, (name, entries) ->
                     val selected = name == (expandedCategory?.first ?: selectedGroup)
                     val button = TextView(this).apply {
                         text = name
@@ -827,6 +829,7 @@ class MainActivity : Activity() {
                             render()
                         }
                     }
+                    if (categoryIndex == 0) firstCategoryFocusView = button
                     categoryPanel.addView(button, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(0, dp(2), 0, dp(2))
                     })
@@ -2614,17 +2617,26 @@ class MainActivity : Activity() {
                 return null
             }
             val firstContent = firstFocusable(content)
+            val firstCategory = firstCategoryFocusView?.takeIf { it.isShown && it.isFocusable }
             firstRightContentFocusView = firstContent
             if (firstContent != null && firstContent.id == View.NO_ID) firstContent.id = View.generateViewId()
             selectedSidebarFocusView?.let { navButton ->
-                if (firstContent != null) navButton.nextFocusRightId = firstContent.id
+                val rightTarget = firstCategory ?: firstContent
+                if (rightTarget != null) navButton.nextFocusRightId = rightTarget.id
             }
             if (firstContent != null) {
-                selectedSidebarFocusView?.let { navButton -> firstContent.nextFocusLeftId = navButton.id }
+                firstCategory?.let { category ->
+                    if (category.id == View.NO_ID) category.id = View.generateViewId()
+                    category.nextFocusRightId = firstContent.id
+                    firstContent.nextFocusLeftId = category.id
+                } ?: selectedSidebarFocusView?.let { navButton -> firstContent.nextFocusLeftId = navButton.id }
             }
             if (initialSidebarFocusPending && navBar.visibility == View.VISIBLE && selectedSidebarFocusView != null) {
                 initialSidebarFocusPending = false
                 selectedSidebarFocusView?.requestFocus()
+            } else if (focusFirstCategoryOnRender) {
+                focusFirstCategoryOnRender = false
+                firstCategory?.requestFocus()
             } else if (focusFirstContentOnRender) {
                 focusFirstContentOnRender = false
                 firstContent?.requestFocus()
