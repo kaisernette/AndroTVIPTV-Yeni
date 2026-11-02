@@ -548,7 +548,7 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             val iconRes = when {
-                label == "Ara" || label == "⌕" -> android.R.drawable.ic_menu_search
+                label == "Ara" || label == "⌕" -> R.drawable.nav_search
                 label.contains("Ana Sayfa") || label == "⌂" -> R.drawable.nav_home
                 label.contains("TV") || label == "▣" -> R.drawable.nav_tv
                 label.contains("Filmler") || label == "▧" -> R.drawable.nav_movies
@@ -651,6 +651,7 @@ class MainActivity : Activity() {
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
                         sidebarMode = "main"
+                        rebuildNavigation()
                         render()
                     }
                 } else if (normalizedTab == "Ayarlar") {
@@ -699,6 +700,7 @@ class MainActivity : Activity() {
                         selectedType = key
                         sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
                         prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
+                        rebuildNavigation()
                         render()
                     }
                 }
@@ -747,6 +749,7 @@ class MainActivity : Activity() {
                             selectedType = key
                             sidebarMode = "main"
                             prefs.edit().putString("last_section", key).apply()
+                            rebuildNavigation()
                         }
                         "Ayarlar" -> {
                             selectedType = key
@@ -760,6 +763,7 @@ class MainActivity : Activity() {
                             expandedCategory = null
                             sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
                             prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
+                            if (key in listOf("Favoriler", "Son İzlenenler")) rebuildNavigation()
                         }
                     }
                     render()
