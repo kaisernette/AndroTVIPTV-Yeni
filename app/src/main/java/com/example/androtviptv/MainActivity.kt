@@ -392,64 +392,8 @@ class MainActivity : Activity() {
             elevation = dp(48).toFloat()
             translationZ = dp(48).toFloat()
         }
-        val topSearch = EditText(this).apply {
-            hint = "Film, dizi veya kanal ara..."
-            textSize = 15f
-            setTextColor(Color.WHITE)
-            setHintTextColor(muted)
-            isSingleLine = true
-            isFocusable = true
-            isFocusableInTouchMode = true
-            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
-            setPadding(dp(14), 0, dp(14), 0)
-            background = GradientDrawable().apply {
-                cornerRadius = 0f
-                setColor(panel)
-                setStroke(dp(1), Color.rgb(43, 54, 72))
-            }
-            setOnFocusChangeListener { v, focused ->
-                v.background = GradientDrawable().apply {
-                    cornerRadius = dp(18).toFloat()
-                    setColor(panel)
-                    setStroke(dp(if (focused) 2 else 1), if (focused) accent else Color.rgb(43, 54, 72))
-                }
-            }
-            addTextChangedListener(object : android.text.TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    searchQuery = s?.toString().orEmpty()
-                }
-                override fun afterTextChanged(s: android.text.Editable?) {}
-            })
-            setOnClickListener {
-                detailMovie = null
-                detailSeries = null
-                sidebarMode = "search"
-                rebuildNavigation()
-                render()
-                post {
-                    requestFocus()
-                    val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                    imm.showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                }
-            }
-            setOnEditorActionListener { _, actionId, _ ->
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
-                    actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                    val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                    imm.hideSoftInputFromWindow(windowToken, 0)
-                    sidebarMode = "search"
-                    focusFirstContentOnRender = true
-                    render()
-                    true
-                } else false
-            }
-            contentDescription = "Film, dizi veya kanal ara"
-        }
-        dateClockRow.addView(topSearch, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
-            marginEnd = dp(14)
-        })
-        main.addView(dateClockRow, 0)
+        // Top search bar removed; search is opened from the navigation icon.
+        main.addView(dateClockRow, 0, LinearLayout.LayoutParams(-1, 0))
 
         main.addView(mainHeader)
 
@@ -604,18 +548,19 @@ class MainActivity : Activity() {
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
             val iconRes = when {
-                label.contains("Ana Sayfa") -> R.drawable.nav_home
-                label.contains("TV") -> R.drawable.nav_tv
-                label.contains("Filmler") -> R.drawable.nav_movies
-                label.contains("Diziler") -> R.drawable.nav_series
-                label.contains("Favoriler") -> R.drawable.nav_favorites
-                label.contains("İzlediklerim") || label.contains("Geçmiş") -> R.drawable.nav_history
-                label.contains("Ayarlar") -> R.drawable.nav_settings
+                label == "Ara" || label == "⌕" -> android.R.drawable.ic_menu_search
+                label.contains("Ana Sayfa") || label == "⌂" -> R.drawable.nav_home
+                label.contains("TV") || label == "▣" -> R.drawable.nav_tv
+                label.contains("Filmler") || label == "▧" -> R.drawable.nav_movies
+                label.contains("Diziler") || label == "▤" -> R.drawable.nav_series
+                label.contains("Favoriler") || label == "♡" -> R.drawable.nav_favorites
+                label.contains("İzlediklerim") || label.contains("Geçmiş") || label == "◷" -> R.drawable.nav_history
+                label.contains("Ayarlar") || label == "⚙" -> R.drawable.nav_settings
                 else -> 0
             }
             val sidebarButton = makeButton(label, selected, action).apply {
                 val iconDrawable = if (iconRes != 0) getDrawable(iconRes)?.mutate() else null
-                iconDrawable?.setBounds(0, 0, dp(25), dp(25))
+                iconDrawable?.setBounds(0, 0, dp(29), dp(29))
                 // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
@@ -632,20 +577,20 @@ class MainActivity : Activity() {
                 textSize = 14f
                 val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
                 text = if (iconDrawable != null) {
-                    android.text.SpannableString("  " + label.substring((iconEnd + 2).coerceAtMost(label.length))).apply {
+                    android.text.SpannableString(" ").apply {
                         setSpan(android.text.style.ImageSpan(iconDrawable, android.text.style.ImageSpan.ALIGN_CENTER), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     }
                 } else {
                     android.text.SpannableString(label)
                 }
-                gravity = Gravity.CENTER_VERTICAL
+                gravity = Gravity.CENTER
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 contentDescription = label
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(dp(10), 0, dp(8), 0)
+                setPadding(0, 0, 0, 0)
                 minHeight = dp(42)
                 id = View.generateViewId()
             }
@@ -669,8 +614,9 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
+            listOf("Ara", "⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
+                    tab == "Ara" -> "Ara"
                     tab.endsWith("Ara") -> "Ara"
                     tab.contains("Ana Sayfa") -> "Ana Sayfa"
                     (tab.contains("Canlı TV") || tab.contains(" TV")) -> "TV"
@@ -721,16 +667,25 @@ class MainActivity : Activity() {
                 } else {
                     addSidebarButton(tab, selectedType == key && normalizedTab != "Ara") {
                         if (normalizedTab == "Ara") {
-                            detailSeries = null
-                            detailMovie = null
-                            sidebarMode = "search"
-                            searchInputFocusPending = false
-                            focusFirstContentOnRender = true
-                            searchQuery = ""
-                            selectedType = "Tümü"
-                            selectedGroup = "Tüm kategoriler"
-                            rebuildNavigation()
-                            render()
+                            val searchField = EditText(this).apply {
+                                hint = "Film, dizi veya kanal ara..."
+                                setSingleLine(true)
+                                setText(searchQuery)
+                            }
+                            AlertDialog.Builder(this)
+                                .setTitle("Ara")
+                                .setView(searchField)
+                                .setNegativeButton("Vazgeç", null)
+                                .setPositiveButton("Ara") { _, _ ->
+                                    searchQuery = searchField.text.toString()
+                                    detailSeries = null
+                                    detailMovie = null
+                                    sidebarMode = "search"
+                                    focusFirstContentOnRender = true
+                                    selectedType = "Tümü"
+                                    selectedGroup = "Tüm kategoriler"
+                                    render()
+                                }.show()
                             return@addSidebarButton
                         }
                         detailSeries = null
