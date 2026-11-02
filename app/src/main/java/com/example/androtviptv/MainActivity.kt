@@ -56,7 +56,7 @@ class MainActivity : Activity() {
     private var liveChannelsLimit = 72
     private var expandedCategory: Pair<String, List<MediaItem>>? = null
     private lateinit var categoryPanel: LinearLayout
-    private lateinit var categoryScroll: ScrollView
+    private lateinit var categoryListScroll: ScrollView
     private lateinit var categoryBar: LinearLayout
     private lateinit var categoryScroll: HorizontalScrollView
     private lateinit var mainHeader: LinearLayout
@@ -341,7 +341,7 @@ class MainActivity : Activity() {
             setPadding(dp(8), dp(78), dp(4), dp(8))
             clipChildren = false
         }
-        categoryScroll = ScrollView(this).apply {
+        categoryListScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             isFillViewport = false
@@ -350,7 +350,7 @@ class MainActivity : Activity() {
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             addView(categoryPanel, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        sidebar.addView(categoryScroll, LinearLayout.LayoutParams(dp(190), -1))
+        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(190), -1))
         rebuildNavigation()
 
         val main = LinearLayout(this).apply {
@@ -550,9 +550,9 @@ class MainActivity : Activity() {
         }
         navBar.removeAllViews()
         if (::categoryPanel.isInitialized) {
-            categoryScroll.visibility = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) View.VISIBLE else View.GONE
+            categoryListScroll.visibility = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) View.VISIBLE else View.GONE
             categoryPanel.removeAllViews()
-            categoryScroll.scrollTo(0, 0)
+            categoryListScroll.scrollTo(0, 0)
         }
         selectedSidebarFocusView = null
 
@@ -812,11 +812,11 @@ class MainActivity : Activity() {
                             v.background = if (hasFocus || selected) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                             (v as TextView).setTextColor(if (hasFocus || selected) Color.WHITE else muted)
                             if (hasFocus) {
-                                categoryScroll.post {
+                                categoryListScroll.post {
                                     val rect = android.graphics.Rect(0, 0, v.width, v.height)
                                     v.getDrawingRect(rect)
-                                    categoryScroll.offsetDescendantRectToMyCoords(v, rect)
-                                    categoryScroll.requestChildRectangleOnScreen(v, rect, true)
+                                    categoryListScroll.offsetDescendantRectToMyCoords(v, rect)
+                                    categoryListScroll.requestChildRectangleOnScreen(v, rect, true)
                                 }
                             }
                         }
