@@ -39,7 +39,7 @@ private data class MediaItem(
 }
 
 class MainActivity : Activity() {
-    private val posterExecutor = Executors.newFixedThreadPool(4)
+    private val posterExecutor = Executors.newFixedThreadPool(3)
     private val posterCache = object : LruCache<String, Bitmap>(10 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
@@ -55,6 +55,7 @@ class MainActivity : Activity() {
     // Render live channels in small batches to avoid first-open freezes on Android TV.
     private var liveChannelsLimit = 72
     private var expandedCategory: Pair<String, List<MediaItem>>? = null
+    private lateinit var categoryPanel: LinearLayout
     private lateinit var categoryBar: LinearLayout
     private lateinit var categoryScroll: HorizontalScrollView
     private lateinit var mainHeader: LinearLayout
@@ -296,11 +297,18 @@ class MainActivity : Activity() {
         root.clipToPadding = false
         rootLayout = root
         sidebar = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(8, 12, 8, 10)
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(6, 12, 6, 10)
             background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
+            clipChildren = false
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(160), -1).apply { setMargins(0, 0, dp(8), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(270), -1).apply { setMargins(0, 0, dp(8), 0) })
+
+        val primaryMenuColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(dp(66), -1)
+        }
+        sidebar.addView(primaryMenuColumn)
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -319,14 +327,21 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             contentDescription = "KAISER TV+"
         }, LinearLayout.LayoutParams(-1, dp(54)))
-        sidebar.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
+        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             addView(navBar)
         }
-        sidebar.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        primaryMenuColumn.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        categoryPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            setPadding(dp(8), dp(78), dp(4), dp(8))
+            clipChildren = false
+        }
+        sidebar.addView(categoryPanel, LinearLayout.LayoutParams(dp(190), -1))
         rebuildNavigation()
 
         val main = LinearLayout(this).apply {
@@ -574,13 +589,17 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = dp(140)
+            val desiredWidth = dp(if (showReadableCategories) 270 else 76)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
             }
         }
         navBar.removeAllViews()
+        if (::categoryPanel.isInitialized) {
+            categoryPanel.visibility = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) View.VISIBLE else View.GONE
+            categoryPanel.removeAllViews()
+        }
         selectedSidebarFocusView = null
 
         fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
@@ -789,6 +808,58 @@ class MainActivity : Activity() {
                         }
                     }
                     render()
+                }
+            }
+            if (::categoryPanel.isInitialized && selectedType in listOf("Filmler", "Diziler", "Canlı TV")) {
+                val categoryItems = items.filter { it.type == selectedType && (selectedType != "Canlı TV" || it.url.isNotBlank()) }
+                val grouped = categoryItems.groupBy { it.group.ifBlank { "Diğer" } }.toList()
+                val selectedName = expandedCategory?.first ?: grouped.firstOrNull()?.first
+                if (expandedCategory == null && selectedName != null && selectedType != "Canlı TV") {
+                    val firstGroup = grouped.firstOrNull { it.first == selectedName }
+                    if (firstGroup != null) {
+                        expandedCategory = firstGroup.first to firstGroup.second
+                        selectedGroup = firstGroup.first
+                    }
+                }
+                categoryPanel.addView(TextView(this).apply {
+                    text = if (selectedType == "Canlı TV") "KATEGORİLER" else "KATEGORİLER"
+                    textSize = 11f; setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(muted); setPadding(dp(8), 0, 0, dp(10))
+                })
+                grouped.forEach { (name, entries) ->
+                    val selected = name == (expandedCategory?.first ?: selectedGroup)
+                    val button = TextView(this).apply {
+                        text = name
+                        textSize = 13f
+                        maxLines = 2
+                        setTextColor(if (selected) Color.WHITE else muted)
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(10), dp(8), dp(6), dp(8))
+                        minHeight = dp(42)
+                        isFocusable = true
+                        isClickable = true
+                        background = if (selected) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        setOnFocusChangeListener { v, hasFocus ->
+                            v.background = if (hasFocus || selected) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            (v as TextView).setTextColor(if (hasFocus || selected) Color.WHITE else muted)
+                        }
+                        setOnClickListener {
+                            selectedGroup = name
+                            expandedCategory = name to entries
+                            focusFirstContentOnRender = true
+                            render()
+                        }
+                    }
+                    categoryPanel.addView(button, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(0, dp(2), 0, dp(2))
+                    })
+                    if (selected && button.id == View.NO_ID) button.id = View.generateViewId()
+                }
+                if (selectedType == "Canlı TV") {
+                    categoryPanel.addView(TextView(this).apply {
+                        text = "Kanal listesi"
+                        textSize = 12f; setTextColor(muted); setPadding(dp(8), dp(10), 0, 0)
+                    })
                 }
             }
             return
@@ -1230,7 +1301,7 @@ class MainActivity : Activity() {
                         }
                         loaded.add(MediaItem(
                             id, name, streamUrl, group, type,
-                            o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("stream_icon", "")),
+                            o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("cover_big", o.optString("stream_icon", ""))),
                             ext, if (type == "Diziler") id else "", source.id, plot, actors,
                             o.optString("rating", o.optString("vote_average", "")),
                             o.optString("releaseDate", o.optString("year", "")),
@@ -1593,6 +1664,9 @@ class MainActivity : Activity() {
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
         content.removeAllViews()
+        if (::mainContentScroll.isInitialized && selectedType in listOf("Filmler", "Diziler")) {
+            mainContentScroll.post { mainContentScroll.scrollTo(0, 0) }
+        }
         val detailMode = detailSeries != null || detailMovie != null
         val firstEntry = items.isEmpty() && !isLoadingSource
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
@@ -3337,10 +3411,12 @@ class MainActivity : Activity() {
                 // Fetch artwork only once, then decode the same byte array at a reduced size.
                 // This avoids two sequential network requests per poster and shares concurrent requests.
                 val conn = (URL(address).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 8000
-                    readTimeout = 8000
+                    connectTimeout = 12000
+                    readTimeout = 12000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "KaiserTv+/Android")
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36")
+                    setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+                    setRequestProperty("Connection", "keep-alive")
                     useCaches = true
                 }
                 val bytes = try {
