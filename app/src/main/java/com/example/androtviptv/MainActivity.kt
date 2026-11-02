@@ -793,7 +793,8 @@ class MainActivity : Activity() {
                     setTextColor(muted); setPadding(dp(8), 0, 0, dp(10))
                 })
                 grouped.forEachIndexed { categoryIndex, (name, entries) ->
-                    val selected = name == (expandedCategory?.first ?: selectedGroup)
+                    val selected = name == (expandedCategory?.first ?: selectedGroup) ||
+                        (selectedType == "Canlı TV" && selectedGroup == "Tüm kategoriler" && categoryIndex == 0)
                     val button = TextView(this).apply {
                         text = name
                         textSize = 13f
@@ -804,12 +805,14 @@ class MainActivity : Activity() {
                         minHeight = dp(42)
                         isFocusable = true
                         isClickable = true
-                        val activeCategory = expandedCategory?.first == name || selectedGroup == name
+                        val activeCategory = expandedCategory?.first == name || selectedGroup == name ||
+                            (selectedType == "Canlı TV" && selectedGroup == "Tüm kategoriler" && categoryIndex == 0)
                         background = if (activeCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
                             // Keep the active TV category marked while channel cards have focus.
                             // Focus on another category moves the blue tile to that category.
-                            val isActiveCategory = expandedCategory?.first == name || selectedGroup == name
+                            val isActiveCategory = expandedCategory?.first == name || selectedGroup == name ||
+                                (selectedType == "Canlı TV" && selectedGroup == "Tüm kategoriler" && categoryIndex == 0)
                             v.background = if (hasFocus || isActiveCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                             (v as TextView).setTextColor(if (hasFocus || isActiveCategory) Color.WHITE else muted)
                             if (hasFocus) {
@@ -2515,6 +2518,7 @@ class MainActivity : Activity() {
                 }
                 if (posterGridMode) {
                     if (itemIndex == displayedEntries.lastIndex) card.nextFocusRightId = sectionCountView.id
+                    // Live TV uses a fixed eight-card row, matching the requested TV layout.
                     val gridColumns = if (liveTvEightColumnGrid) 8 else if (fiveColumnMediaGrid) 5 else 4
                     if (expandedPosterCount % gridColumns == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
