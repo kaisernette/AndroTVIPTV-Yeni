@@ -804,13 +804,16 @@ class MainActivity : Activity() {
                         minHeight = dp(42)
                         isFocusable = true
                         isClickable = true
-                        background = if (expandedCategory?.first == name) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        val activeCategory = expandedCategory?.first == name ||
+                            (selectedType == "Canlı TV" && selectedGroup == name)
+                        background = if (activeCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
-                            // Keep the active category marked while its content is focused.
-                            // Other categories receive the blue tile only while D-pad focus is on them.
-                            val activeCategory = expandedCategory?.first == name
-                            v.background = if (hasFocus || activeCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                            (v as TextView).setTextColor(if (hasFocus || activeCategory) Color.WHITE else muted)
+                            // Keep the active TV category marked while channel cards have focus.
+                            // Focus on another category moves the blue tile to that category.
+                            val isActiveCategory = expandedCategory?.first == name ||
+                                (selectedType == "Canlı TV" && selectedGroup == name)
+                            v.background = if (hasFocus || isActiveCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            (v as TextView).setTextColor(if (hasFocus || isActiveCategory) Color.WHITE else muted)
                             if (hasFocus) {
                                 categoryListScroll.post {
                                     val rect = android.graphics.Rect(0, 0, v.width, v.height)
