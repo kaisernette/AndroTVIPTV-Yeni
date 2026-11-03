@@ -38,6 +38,74 @@ private data class MediaItem(
     val favoriteKey: String get() = "$type:$id:$url"
 }
 
+private class WrappingRowLayout(context: Context) : ViewGroup(context) {
+    private val lineTops = mutableListOf<Int>()
+    private val childLefts = mutableListOf<Int>()
+    private val childTops = mutableListOf<Int>()
+    private val lineHeights = mutableListOf<Int>()
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        val available = (width - paddingLeft - paddingRight).coerceAtLeast(0)
+        lineTops.clear(); childLefts.clear(); childTops.clear(); lineHeights.clear()
+        var x = paddingLeft
+        var y = paddingTop
+        var lineHeight = 0
+        var maxRight = paddingLeft
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            if (child.visibility == GONE) {
+                childLefts.add(x); childTops.add(y)
+                continue
+            }
+            val lp = child.layoutParams as MarginLayoutParams
+            val childWidthSpec = getChildMeasureSpec(widthMeasureSpec,
+                paddingLeft + paddingRight + lp.leftMargin + lp.rightMargin, lp.width)
+            val childHeightSpec = getChildMeasureSpec(heightMeasureSpec,
+                paddingTop + paddingBottom + lp.topMargin + lp.bottomMargin, lp.height)
+            child.measure(childWidthSpec, childHeightSpec)
+            val outerWidth = lp.leftMargin + child.measuredWidth + lp.rightMargin
+            val outerHeight = lp.topMargin + child.measuredHeight + lp.bottomMargin
+            if (x > paddingLeft && x + outerWidth > paddingLeft + available) {
+                y += lineHeight
+                x = paddingLeft
+                lineHeight = 0
+            }
+            childLefts[i] = x + lp.leftMargin
+            childTops[i] = y + lp.topMargin
+            x += outerWidth
+            lineHeight = maxOf(lineHeight, outerHeight)
+            maxRight = maxOf(maxRight, x)
+        }
+        val desiredHeight = y + lineHeight + paddingBottom
+        setMeasuredDimension(
+            resolveSize(maxRight + paddingRight, widthMeasureSpec),
+            resolveSize(desiredHeight, heightMeasureSpec)
+        )
+    }
+
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            if (child.visibility == GONE) continue
+            val x = childLefts.getOrElse(i) { paddingLeft }
+            val y = childTops.getOrElse(i) { paddingTop }
+            child.layout(x, y, x + child.measuredWidth, y + child.measuredHeight)
+        }
+    }
+
+    override fun generateDefaultLayoutParams(): LayoutParams =
+        MarginLayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
+
+    override fun generateLayoutParams(attrs: android.util.AttributeSet?): LayoutParams =
+        MarginLayoutParams(context, attrs)
+
+    override fun generateLayoutParams(p: LayoutParams?): LayoutParams =
+        MarginLayoutParams(p)
+
+    override fun checkLayoutParams(p: LayoutParams?): Boolean = p is MarginLayoutParams
+}
+
 class MainActivity : Activity() {
     private val posterExecutor = Executors.newFixedThreadPool(3)
     private val posterCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
@@ -2246,10 +2314,8 @@ class MainActivity : Activity() {
                     })
                 } else {
                     selectedSearchHistory.retainAll(history.toSet())
-                    selectedSearchHistory.retainAll(history.toSet())
-                    val historyRow = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                    val historyFlow = WrappingRowLayout(this).apply {
+                        setPadding(dp(4), dp(2), dp(4), dp(2))
                     }
                     history.forEach { term ->
                         val historyButton = makeButton(
@@ -2283,21 +2349,13 @@ class MainActivity : Activity() {
                                 true
                             }
                         }
-                        historyRow.addView(historyButton, LinearLayout.LayoutParams(
+                        historyFlow.addView(historyButton, ViewGroup.MarginLayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)
-                        ).apply { setMargins(0, 0, dp(8), 0) })
+                        ).apply { setMargins(0, 0, dp(8), dp(6)) })
                     }
-                    val historyScroll = android.widget.HorizontalScrollView(this).apply {
-                        isHorizontalScrollBarEnabled = false
-                        clipToPadding = false
-                        setPadding(dp(4), dp(2), dp(4), dp(2))
-                        addView(historyRow, android.widget.HorizontalScrollView.LayoutParams(
-                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT
-                        ))
-                    }
-                    content.addView(historyScroll, LinearLayout.LayoutParams(-1, dp(52)).apply {
-                        setMargins(dp(4), dp(3), dp(4), dp(3))
-                    })
+                    content.addView(historyFlow, LinearLayout.LayoutParams(
+                        -1, ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply { setMargins(dp(4), dp(3), dp(4), dp(3)) })
                 }
             }
         }
