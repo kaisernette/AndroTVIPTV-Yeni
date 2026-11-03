@@ -1079,7 +1079,7 @@ class MainActivity : Activity() {
                 roundedDrawable(yellow, 0)
             } else {
                 // Match the neutral dark style of the Back action; yellow is reserved for selected favorites.
-                roundedDrawable(panel, 0, muted)
+                roundedDrawable(panel, 0)
             }
         }
         return makeButton("Favori", false) {
@@ -2586,7 +2586,7 @@ class MainActivity : Activity() {
                             play(item)
                         } else {
                             when (item.type) {
-                                "Diziler" -> showPosterFullscreen(item)
+                                "Diziler" -> showSeriesDetail(item)
                                 "Filmler" -> showMovieDetail(item)
                                 else -> showItemDetails(item)
                             }
