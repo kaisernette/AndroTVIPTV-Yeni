@@ -3124,33 +3124,39 @@ class MainActivity : Activity() {
         val buttonHeight = dp(50)
         val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
             gravity = Gravity.CENTER
-            textSize = 14f
+            textSize = 13f
+            maxLines = 1
+            minHeight = buttonHeight
+        }
+        val trailerButton = makeButton("▷  FRAGMAN", false) {
+            val query = java.net.URLEncoder.encode(movie.name + " fragman", "UTF-8")
+            val trailerIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.youtube.com/results?search_query=$query"))
+            runCatching { startActivity(trailerIntent) }.onFailure {
+                Toast.makeText(this@MainActivity, "Fragman açılamadı.", Toast.LENGTH_SHORT).show()
+            }
+        }.apply {
+            gravity = Gravity.CENTER
+            textSize = 13f
             maxLines = 1
             minHeight = buttonHeight
         }
         val favoriteButton = makeFavoriteButton(movie).apply {
             gravity = Gravity.CENTER
-            textSize = 14f
+            textSize = 13f
             maxLines = 1
             minHeight = buttonHeight
         }
-        val backButton = makeButton("←  GERİ", false) {
-            detailMovie = null
-            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-            render()
-        }.apply {
+        val restartButton = makeButton("↺  BAŞTAN İZLE", false) { play(movie, startOver = true) }.apply {
             gravity = Gravity.CENTER
-            textSize = 14f
+            textSize = 13f
             maxLines = 1
             minHeight = buttonHeight
         }
-        actions.addView(watchButton, LinearLayout.LayoutParams(0, buttonHeight, 1f).apply {
-            setMargins(0, 0, dp(8), 0)
-        })
-        actions.addView(favoriteButton, LinearLayout.LayoutParams(0, buttonHeight, 1f).apply {
-            setMargins(0, 0, dp(8), 0)
-        })
-        actions.addView(backButton, LinearLayout.LayoutParams(0, buttonHeight, 1f))
+        listOf(watchButton, trailerButton, favoriteButton, restartButton).forEachIndexed { index, button ->
+            actions.addView(button, LinearLayout.LayoutParams(0, buttonHeight, 1f).apply {
+                if (index < 3) setMargins(0, 0, dp(7), 0)
+            })
+        }
         infoColumn.addView(actions, LinearLayout.LayoutParams(-1, buttonHeight + dp(12)))
         layout.addView(infoColumn, LinearLayout.LayoutParams(0, -1, 1f))
         content.addView(layout, LinearLayout.LayoutParams(-1, detailHeight))
@@ -4096,7 +4102,7 @@ class MainActivity : Activity() {
     private var openingPlayer = false
     private var fullscreenPoster: MediaItem? = null
 
-    private fun play(item: MediaItem) {
+    private fun play(item: MediaItem, startOver: Boolean = false) {
         if (openingPlayer) return
         if (item.type == "Diziler" && item.url.isBlank()) { loadSeriesEpisodes(item); return }
         if (item.url.isBlank()) {
@@ -4128,6 +4134,7 @@ class MainActivity : Activity() {
                 .putExtra("bufferMode", prefs.getString("player_buffer", "normal"))
                 .putExtra("aspectMode", prefs.getString("player_aspect", "fit"))
                 .putExtra("resumeEnabled", prefs.getBoolean("player_resume", true))
+                .putExtra("startOver", startOver)
             if (item.type == "Bölümler") {
                 // Keep episode navigation metadata in process memory, not Intent extras.
                 val episodeList = pendingSeriesEpisodes
