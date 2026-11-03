@@ -50,6 +50,7 @@ class PlayerActivity : Activity() {
     private var bufferMode: String = "normal"
     private var aspectMode: String = "fit"
     private var resumeEnabled: Boolean = true
+    private var startOverRequested: Boolean = false
     private var retryCount = 0
     private var bufferingSinceMs = 0L
     private var lastStablePlaybackMs = 0L
@@ -191,8 +192,9 @@ class PlayerActivity : Activity() {
         bufferMode = intent.getStringExtra("bufferMode") ?: "normal"
         aspectMode = intent.getStringExtra("aspectMode") ?: "fit"
         resumeEnabled = intent.getBooleanExtra("resumeEnabled", true)
+        startOverRequested = intent.getBooleanExtra("startOver", false)
         resumeKey = "position_" + url.hashCode().toString()
-        if (isLiveStream || !resumeEnabled) playbackPrefs.edit().remove(resumeKey).apply()
+        if (isLiveStream || !resumeEnabled || startOverRequested) playbackPrefs.edit().remove(resumeKey).apply()
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
@@ -324,7 +326,7 @@ class PlayerActivity : Activity() {
                     } else {
                         exo.setMediaItem(mediaItem)
                     }
-                    val resumePosition = if (isLiveStream) 0L else playbackPrefs.getLong(resumeKey, 0L)
+                    val resumePosition = if (isLiveStream || startOverRequested) 0L else playbackPrefs.getLong(resumeKey, 0L)
                     exo.prepare()
                     if (resumePosition > 5000L) exo.seekTo(resumePosition)
                     exo.playWhenReady = true
