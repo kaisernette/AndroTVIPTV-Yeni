@@ -50,6 +50,7 @@ class MainActivity : Activity() {
     private val favorites = mutableSetOf<String>()
     private val recent = mutableListOf<MediaItem>()
     private var selectedGroup = "Tüm kategoriler"
+    private var focusedCategoryName: String? = null
     private var selectedCategorySection = "Canlı TV"
     private var categoryFocusRestoreKey: String? = null
     // Render live channels in small batches to avoid first-open freezes on Android TV.
@@ -699,6 +700,7 @@ class MainActivity : Activity() {
                         seriesEpisodesError = ""
                         focusFirstCategoryOnRender = true
                         selectedGroup = "Tüm kategoriler"
+                        focusedCategoryName = null
                         expandedCategory = null
                         selectedType = key
                         sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
@@ -766,6 +768,7 @@ class MainActivity : Activity() {
                         else -> {
                             selectedType = key
                             selectedGroup = "Tüm kategoriler"
+                            focusedCategoryName = null
                             expandedCategory = null
                             sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
                             prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
@@ -778,7 +781,7 @@ class MainActivity : Activity() {
             if (::categoryPanel.isInitialized && selectedType in listOf("Filmler", "Diziler", "Canlı TV")) {
                 // Apply the same hidden-category rules to the sidebar category column
                 // as the content grid, so hidden TV/movie/series groups disappear everywhere.
-                val categoryItems = items.filter {
+                val categoryItems = activeSourceItems.filter {
                     it.type == selectedType &&
                     (selectedType != "Canlı TV" || it.url.isNotBlank()) &&
                     !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
@@ -809,20 +812,14 @@ class MainActivity : Activity() {
                             (selectedType == "Canlı TV" && selectedGroup == "Tüm kategoriler" && categoryIndex == 0)
                         background = if (activeCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
-                            // Keep the active TV category marked while channel cards have focus.
-                            // Focus on another category moves the blue tile to that category.
-                            // Focus is visual state only; never change selectedGroup here.
-                            // Content changes only after the user clicks a category.
-                            val activeCategory = expandedCategory?.first == name
-                            val showBlue = hasFocus || activeCategory
-                            v.background = if (showBlue) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                            (v as TextView).setTextColor(if (showBlue) Color.WHITE else muted)
+                            if (hasFocus) focusedCategoryName = name
+                            val highlighted = focusedCategoryName ?: expandedCategory?.first ?: selectedGroup
                             for (i in 0 until categoryPanel.childCount) {
                                 val sibling = categoryPanel.getChildAt(i) as? TextView ?: continue
-                                if (sibling !== v) {
-                                    val siblingActive = expandedCategory?.first == sibling.text.toString()
-                                    sibling.background = if (siblingActive) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                                    sibling.setTextColor(if (siblingActive) Color.WHITE else muted)
+                                if (grouped.any { it.first == sibling.text.toString() }) {
+                                    val active = sibling.text.toString() == highlighted
+                                    sibling.background = if (active) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                                    sibling.setTextColor(if (active) Color.WHITE else muted)
                                 }
                             }
                             if (hasFocus) {
