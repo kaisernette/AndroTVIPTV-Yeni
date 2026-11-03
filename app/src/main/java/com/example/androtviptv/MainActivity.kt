@@ -564,10 +564,14 @@ class MainActivity : Activity() {
             categoryPanel.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         }
         navBar.removeAllViews()
+        // Re-enable descendant focus immediately after old children are detached.
+        // Leaving FOCUS_BLOCK_DESCENDANTS active prevents the remote from entering the sidebar.
+        navBar.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
         firstCategoryFocusView = null
         if (::categoryPanel.isInitialized) {
             categoryListScroll.visibility = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) View.VISIBLE else View.GONE
             categoryPanel.removeAllViews()
+            categoryPanel.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             categoryListScroll.scrollTo(0, 0)
         }
         selectedSidebarFocusView = null
