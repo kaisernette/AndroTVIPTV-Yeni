@@ -3134,61 +3134,44 @@ class MainActivity : Activity() {
     }
 
     private fun showSeriesDropdown(
-        anchor: View,
+        panel: LinearLayout,
         options: List<String>,
         selectedIndex: Int,
         onSelected: (Int) -> Unit
     ) {
-        if (options.isEmpty()) return
-        val rows = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = roundedDrawable(panel, 12, muted)
-            setPadding(dp(7), dp(7), dp(7), dp(7))
+        panel.removeAllViews()
+        if (options.isEmpty()) {
+            panel.visibility = View.GONE
+            return
         }
-        val scroll = ScrollView(this).apply {
-            isVerticalScrollBarEnabled = true
-            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-        }
-        lateinit var popup: android.widget.PopupWindow
         options.forEachIndexed { index, label ->
             val option = TextView(this).apply {
                 text = label
-                textSize = 15f
+                textSize = 14f
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(15), 0, dp(15), 0)
+                setPadding(dp(14), 0, dp(14), 0)
                 isFocusable = true
                 isFocusableInTouchMode = true
                 isClickable = true
                 setTextColor(Color.WHITE)
-                background = roundedDrawable(if (index == selectedIndex) accent else panel, 8)
+                background = roundedDrawable(if (index == selectedIndex) accent else panelColor, 8)
                 setOnFocusChangeListener { view, focused ->
-                    view.background = roundedDrawable(if (focused || index == selectedIndex) accent else panel, 8)
+                    view.background = roundedDrawable(if (focused || index == selectedIndex) accent else panelColor, 8)
                 }
                 setOnClickListener {
-                    popup.dismiss()
+                    panel.visibility = View.GONE
                     onSelected(index)
                 }
             }
-            rows.addView(option, LinearLayout.LayoutParams(-1, dp(46)).apply {
+            panel.addView(option, LinearLayout.LayoutParams(-1, dp(44)).apply {
                 if (index > 0) topMargin = dp(4)
             })
         }
-        scroll.addView(rows, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-        popup = android.widget.PopupWindow(
-            scroll,
-            maxOf(anchor.width, dp(210)),
-            minOf(dp(320), (resources.displayMetrics.heightPixels * 0.55f).toInt()),
-            true
-        ).apply {
-            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
-            isOutsideTouchable = true
-            isTouchable = true
-            elevation = dp(12).toFloat()
-            inputMethodMode = android.widget.PopupWindow.INPUT_METHOD_NOT_NEEDED
+        panel.visibility = View.VISIBLE
+        panel.post {
+            val target = panel.getChildAt(selectedIndex.coerceIn(0, options.lastIndex))
+            target?.requestFocus()
         }
-        popup.showAsDropDown(anchor, 0, dp(6))
-        val focusIndex = selectedIndex.coerceIn(0, options.lastIndex)
-        rows.getChildAt(focusIndex)?.post { rows.getChildAt(focusIndex)?.requestFocus() }
     }
     private fun renderSeriesDetail(series: MediaItem) {
         content.setPadding(0, 0, 0, 0)
@@ -3296,6 +3279,12 @@ class MainActivity : Activity() {
             }
         }.apply { gravity = Gravity.CENTER; textSize = 14f; maxLines = 1; minHeight = buttonHeight }
 
+        val seasonDropdown = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            background = roundedDrawable(panel, 10, muted)
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+        }
         val episodeTitle = TextView(this).apply {
             textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -3369,11 +3358,15 @@ class MainActivity : Activity() {
         seasonButton = makeButton("▱  SEZON ${selectedEpisodeSeason.ifBlank { seasons.firstOrNull().orEmpty() }}  ▾", false) {
             if (seasons.isNotEmpty()) {
                 val current = seasons.indexOf(selectedEpisodeSeason).coerceAtLeast(0)
-                showSeriesDropdown(seasonButton, seasons.map { "Sezon $it" }, current) { which ->
+                if (seasonDropdown.visibility == View.VISIBLE) {
+                    seasonDropdown.visibility = View.GONE
+                } else {
+                    showSeriesDropdown(seasonDropdown, seasons.map { "Sezon $it" }, current) { which ->
                     selectedEpisodeSeason = seasons[which]
                     selectedEpisodeIndex = seriesEpisodeRows.take(which).sumOf { it.second.size }
                     seasonButton.text = "▱  SEZON ${seasons[which]}  ▾"
                     refreshEpisodeCards()
+                    }
                 }
             }
         }.apply { gravity = Gravity.CENTER; textSize = 14f; maxLines = 1; minHeight = buttonHeight }
@@ -3387,6 +3380,9 @@ class MainActivity : Activity() {
             })
         }
         right.addView(actions, LinearLayout.LayoutParams(-1, buttonHeight + dp(12)))
+        right.addView(seasonDropdown, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            bottomMargin = dp(6)
+        })
         right.addView(episodeTitle, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         right.addView(episodeScroll, LinearLayout.LayoutParams(-1, dp(96)))
         refreshEpisodeCards()
