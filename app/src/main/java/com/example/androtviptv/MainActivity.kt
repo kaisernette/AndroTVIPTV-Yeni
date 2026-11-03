@@ -3157,6 +3157,62 @@ class MainActivity : Activity() {
         watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
     }
 
+    private fun showSeriesDropdown(
+        anchor: View,
+        options: List<String>,
+        selectedIndex: Int,
+        onSelected: (Int) -> Unit
+    ) {
+        if (options.isEmpty()) return
+        val rows = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = roundedDrawable(panel, 12, muted)
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+        }
+        val scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = true
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+        }
+        options.forEachIndexed { index, label ->
+            val option = TextView(this).apply {
+                text = label
+                textSize = 15f
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(15), 0, dp(15), 0)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                isClickable = true
+                setTextColor(Color.WHITE)
+                background = roundedDrawable(if (index == selectedIndex) accent else panel, 8)
+                setOnFocusChangeListener { view, focused ->
+                    view.background = roundedDrawable(if (focused || index == selectedIndex) accent else panel, 8)
+                }
+                setOnClickListener {
+                    popup.dismiss()
+                    onSelected(index)
+                }
+            }
+            rows.addView(option, LinearLayout.LayoutParams(-1, dp(46)).apply {
+                if (index > 0) topMargin = dp(4)
+            })
+        }
+        scroll.addView(rows, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        val popup = android.widget.PopupWindow(
+            scroll,
+            maxOf(anchor.width, dp(210)),
+            minOf(dp(320), (resources.displayMetrics.heightPixels * 0.55f).toInt()),
+            true
+        ).apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            isOutsideTouchable = true
+            isTouchable = true
+            elevation = dp(12).toFloat()
+            inputMethodMode = android.widget.PopupWindow.INPUT_METHOD_NOT_NEEDED
+        }
+        popup.showAsDropDown(anchor, 0, dp(6))
+        val focusIndex = selectedIndex.coerceIn(0, options.lastIndex)
+        rows.getChildAt(focusIndex)?.post { rows.getChildAt(focusIndex)?.requestFocus() }
+    }
     private fun renderSeriesDetail(series: MediaItem) {
         content.setPadding(0, 0, 0, 0)
         val screenWidth = resources.displayMetrics.widthPixels
@@ -3271,15 +3327,10 @@ class MainActivity : Activity() {
                     cursor += row.second.size
                 }
                 val selectedIndex = seasons.indexOf(selectedEpisodeSeason).takeIf { it >= 0 } ?: savedSeasonIndex
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Sezon seç")
-                    .setSingleChoiceItems(seasons.map { "Sezon $it" }.toTypedArray(), selectedIndex) { dialog, which ->
-                        selectedEpisodeSeason = seasons[which]
-                        selectedEpisodeIndex = seriesEpisodeRows.take(which).sumOf { it.second.size }
-                        dialog.dismiss()
-                    }
-                    .setNegativeButton("Kapat", null)
-                    .show()
+                showSeriesDropdown(seasonButton, seasons.map { "Sezon $it" }, selectedIndex) { which ->
+                    selectedEpisodeSeason = seasons[which]
+                    selectedEpisodeIndex = seriesEpisodeRows.take(which).sumOf { it.second.size }
+                }
             }
         }.apply { gravity = Gravity.CENTER; textSize = 14f; maxLines = 1; minHeight = buttonHeight }
 
@@ -3292,14 +3343,11 @@ class MainActivity : Activity() {
                 val rowStart = seriesEpisodeRows.take(rowIndex).sumOf { it.second.size }
                 val currentGlobal = if (selectedEpisodeIndex in allEpisodes.indices) selectedEpisodeIndex else savedIndex
                 val checked = (currentGlobal - rowStart).coerceIn(0, (selectedRow.second.size - 1).coerceAtLeast(0))
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Bölüm seç - Sezon " + selectedRow.first)
-                    .setSingleChoiceItems(selectedRow.second.mapIndexed { index, ep -> (index + 1).toString() + ". " + ep.name }.toTypedArray(), checked) { dialog, which ->
-                        selectedEpisodeIndex = rowStart + which
-                        dialog.dismiss()
-                    }
-                    .setNegativeButton("Kapat", null)
-                    .show()
+                showSeriesDropdown(
+                    episodeButton,
+                    selectedRow.second.mapIndexed { index, ep -> (index + 1).toString() + ". " + ep.name },
+                    checked
+                ) { which -> selectedEpisodeIndex = rowStart + which }
             }
         }.apply { gravity = Gravity.CENTER; textSize = 14f; maxLines = 1; minHeight = buttonHeight }
 
