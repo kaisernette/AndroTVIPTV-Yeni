@@ -1560,6 +1560,11 @@ class MainActivity : Activity() {
                 return
             }
 
+            if (fullscreenPoster != null) {
+                closePosterFullscreen()
+                return
+            }
+
             if (detailSeries != null || detailMovie != null) {
                 detailSeries = null
                 detailMovie = null
@@ -1818,14 +1823,23 @@ class MainActivity : Activity() {
         }
         val detailMode = detailSeries != null || detailMovie != null
         val firstEntry = items.isEmpty() && !isLoadingSource
-        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
-        if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
+        if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
+        if (::rootLayout.isInitialized) {
+            rootLayout.setPadding(if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(14),
+                if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(12))
+        }
+        window.decorView.systemUiVisibility = if (detailMode) (
+            View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        ) else View.SYSTEM_UI_FLAG_VISIBLE
         if (::heroPanel.isInitialized) heroPanel.visibility = View.GONE
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
-            if (firstEntry || isLoadingSource || selectedType == "Ayarlar") View.GONE else View.VISIBLE
+            if (firstEntry || isLoadingSource || detailMode || selectedType == "Ayarlar") View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Tümü" || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
@@ -2565,8 +2579,7 @@ class MainActivity : Activity() {
                             play(item)
                         } else {
                             when (item.type) {
-                                "Diziler" -> showSeriesDetail(item)
-                                "Filmler" -> showMovieDetail(item)
+                                "Diziler", "Filmler" -> showPosterFullscreen(item)
                                 else -> showItemDetails(item)
                             }
                         }
@@ -2885,6 +2898,65 @@ class MainActivity : Activity() {
         previewUrl = ""
     }
 
+    private fun showPosterFullscreen(item: MediaItem) {
+        fullscreenPoster = item
+        val frame = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }
+        val poster = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = item.name
+            setBackgroundColor(Color.BLACK)
+        }
+        frame.addView(poster, FrameLayout.LayoutParams(-1, -1))
+        if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
+        frame.addView(View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0x99000000.toInt(), 0x00000000, 0xEE000000.toInt()))
+        }, FrameLayout.LayoutParams(-1, -1))
+        val backButton = makeButton("‹  GERİ", false) { closePosterFullscreen() }.apply {
+            textSize = 15f
+            background = roundedDrawable(Color.argb(150, 10, 14, 22), 10, Color.rgb(75, 86, 105))
+        }
+        frame.addView(backButton, FrameLayout.LayoutParams(dp(112), dp(48), Gravity.TOP or Gravity.START).apply {
+            setMargins(dp(24), dp(22), 0, 0)
+        })
+        val footer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.BOTTOM
+            setPadding(dp(30), dp(24), dp(30), dp(28))
+        }
+        footer.addView(TextView(this).apply {
+            text = item.name
+            textSize = 24f
+            maxLines = 2
+            setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        })
+        footer.addView(makeButton("DETAYLAR", true) {
+            closePosterFullscreen()
+            if (item.type == "Filmler") showMovieDetail(item) else showSeriesDetail(item)
+        }, LinearLayout.LayoutParams(dp(150), dp(46)).apply { setMargins(0, dp(12), 0, 0) })
+        frame.addView(footer, FrameLayout.LayoutParams(-1, dp(170), Gravity.BOTTOM))
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        )
+        setContentView(frame)
+        backButton.requestFocus()
+    }
+
+    private fun closePosterFullscreen() {
+        if (fullscreenPoster == null) return
+        fullscreenPoster = null
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+        setContentView(rootLayout)
+        render()
+    }
+
     private fun showMovieDetail(movie: MediaItem) {
         detailSeries = null
         detailMovie = movie
@@ -2991,7 +3063,7 @@ class MainActivity : Activity() {
         copy.addView(actions)
         watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(390)).apply { setMargins(0, 0, 0, dp(18)) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, if (detailMovie?.favoriteKey == movie.favoriteKey) resources.displayMetrics.heightPixels - dp(24) else dp(390)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val infoTitle = TextView(this).apply {
             text = "FİLM HAKKINDA"; textSize = 20f
@@ -3067,7 +3139,7 @@ class MainActivity : Activity() {
         copy.addView(actions)
         seriesWatchButton.post { if (detailSeries?.favoriteKey == series.favoriteKey) seriesWatchButton.requestFocus() }
         hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(350)).apply { setMargins(0, 0, 0, dp(18)) })
+        content.addView(hero, LinearLayout.LayoutParams(-1, resources.displayMetrics.heightPixels - dp(24)).apply { setMargins(0, 0, 0, dp(18)) })
 
         val episodesPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -3849,6 +3921,7 @@ class MainActivity : Activity() {
     private var pendingSeriesEpisodes: List<MediaItem> = emptyList()
 
     private var openingPlayer = false
+    private var fullscreenPoster: MediaItem? = null
 
     private fun play(item: MediaItem) {
         if (openingPlayer) return
