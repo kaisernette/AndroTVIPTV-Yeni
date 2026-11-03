@@ -589,7 +589,7 @@ class MainActivity : Activity() {
                 else -> 0
             }
             val sidebarButton = makeButton(label, selected, action).apply {
-                val iconDrawable = if (iconRes != 0 && label != "▣") getDrawable(iconRes)?.mutate() else null
+                val iconDrawable = if (iconRes != 0 && label != "▣" && !label.contains("TV")) getDrawable(iconRes)?.mutate() else null
                 iconDrawable?.setBounds(0, 0, dp(29), dp(29))
                 // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
@@ -604,19 +604,19 @@ class MainActivity : Activity() {
                     v.scaleX = 1f
                     v.scaleY = 1f
                 }
-                textSize = if (label == "▣") 18f else 14f
+                textSize = if (label == "▣" || label.contains("TV")) 18f else 14f
                 val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
                 text = if (iconDrawable != null) {
                     android.text.SpannableString(" ").apply {
                         setSpan(android.text.style.ImageSpan(iconDrawable, android.text.style.ImageSpan.ALIGN_CENTER), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     }
                 } else {
-                    android.text.SpannableString(if (label == "▣") "TV" else label)
+                    android.text.SpannableString(if (label == "▣" || label.contains("TV")) "TV" else label)
                 }
                 gravity = Gravity.CENTER
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                contentDescription = if (label == "▣") "TV" else label
+                contentDescription = if (label == "▣" || label.contains("TV")) "TV" else label
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
@@ -644,7 +644,7 @@ class MainActivity : Activity() {
 
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("Ara", "⌂  Ana Sayfa", "▣  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
+            listOf("Ara", "⌂  Ana Sayfa", "TV  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab == "Ara" -> "Ara"
                     tab.endsWith("Ara") -> "Ara"
