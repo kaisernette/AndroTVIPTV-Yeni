@@ -3922,7 +3922,13 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         openingPlayer = false
+    }
+
+    override fun onPause() {
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        super.onPause()
     }
 
     private fun loadSeriesEpisodes(series: MediaItem) {
