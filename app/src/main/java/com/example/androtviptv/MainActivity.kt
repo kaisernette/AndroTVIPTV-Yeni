@@ -2784,7 +2784,14 @@ class MainActivity : Activity() {
                         val ext = ep.optString("container_extension", "mp4")
                         val name = ep.optString("title", ep.optString("name", "Bölüm ${i + 1}"))
                         val stream = "${source.address.trimEnd('/')}/series/$u/$p/$id.$ext"
-                        seasonItems.add(MediaItem(id, name, stream, "${series.name} • Sezon $key", "Bölümler", "", ext, series.seriesId, source.id))
+                        val episodeInfo = ep.optJSONObject("info")
+                        val episodeImage = sequenceOf(
+                            episodeInfo?.optString("movie_image", "").orEmpty(),
+                            episodeInfo?.optString("cover_big", "").orEmpty(),
+                            episodeInfo?.optString("cover", "").orEmpty(),
+                            ep.optString("movie_image", "")
+                        ).firstOrNull { it.startsWith("http://") || it.startsWith("https://") }.orEmpty()
+                        seasonItems.add(MediaItem(id, name, stream, "${series.name} • Sezon $key", "Bölümler", episodeImage, ext, series.seriesId, source.id))
                     }
                     if (seasonItems.isNotEmpty()) rows.add(Pair(key, seasonItems))
                 }
@@ -3311,11 +3318,11 @@ class MainActivity : Activity() {
             row.second.forEachIndexed { index, episode ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
+                    gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                     isFocusable = true
                     isFocusableInTouchMode = true
                     isClickable = true
-                    setPadding(dp(8), dp(6), dp(8), dp(6))
+                    setPadding(dp(5), dp(5), dp(5), dp(5))
                     background = roundedDrawable(panel, 9, muted)
                     setOnFocusChangeListener { view, focused ->
                         view.background = roundedDrawable(if (focused) accent else panel, 9, if (focused) accent else muted)
@@ -3326,12 +3333,22 @@ class MainActivity : Activity() {
                         play(episode)
                     }
                 }
-                card.addView(TextView(this).apply {
-                    text = "▶"
-                    textSize = 16f
-                    setTextColor(accentBright)
-                    gravity = Gravity.CENTER
-                })
+                val episodePoster = ImageView(this).apply {
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    background = GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(Color.rgb(37, 48, 68), Color.rgb(19, 25, 37))
+                    ).apply { cornerRadius = dp(6).toFloat() }
+                }
+                card.addView(episodePoster, LinearLayout.LayoutParams(-1, dp(76)))
+                if (episode.icon.startsWith("http://") || episode.icon.startsWith("https://")) {
+                    loadPoster(episode.icon, episodePoster)
+                } else {
+                    episodePoster.setImageDrawable(GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(Color.rgb(37, 48, 68), Color.rgb(19, 25, 37))
+                    ))
+                }
                 card.addView(TextView(this).apply {
                     text = "${index + 1}. Bölüm"
                     textSize = 13f
@@ -3339,16 +3356,17 @@ class MainActivity : Activity() {
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
                     maxLines = 1
+                    setPadding(0, dp(5), 0, dp(2))
                 })
                 card.addView(TextView(this).apply {
                     text = episode.name
-                    textSize = 11f
+                    textSize = 10f
                     setTextColor(muted)
                     gravity = Gravity.CENTER
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
                 })
-                episodeRow.addView(card, LinearLayout.LayoutParams(dp(140), dp(88)).apply {
+                episodeRow.addView(card, LinearLayout.LayoutParams(dp(156), dp(124)).apply {
                     if (index > 0) setMargins(dp(8), 0, 0, 0)
                 })
             }
