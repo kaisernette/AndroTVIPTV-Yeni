@@ -2,7 +2,13 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <application android:theme="@android:style/Theme.Material.NoActionBar" android:label="Kaisertv" android:usesCleartextTraffic="true" android:supportsRtl="true">
+    <application
+        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:label="Kaisertv"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true"
+        android:supportsRtl="true">
         <activity android:name=".PlayerActivity" android:screenOrientation="landscape" android:exported="false" />
         <activity android:name=".MainActivity" android:screenOrientation="landscape" android:exported="true">
             <intent-filter>
