@@ -825,12 +825,9 @@ class MainActivity : Activity() {
                                     sibling.setTextColor(if (active) Color.WHITE else muted)
                                 }
                             }
-                            // Explicitly preserve vertical D-pad navigation inside the category column.
-                            val position = grouped.indexOfFirst { it.first == name }
-                            if (position >= 0) {
-                                if (position > 0) v.nextFocusUpId = categoryPanel.getChildAt(position).id
-                                if (position + 1 < grouped.size) v.nextFocusDownId = categoryPanel.getChildAt(position + 2).id
-                            }
+                            // D-pad links are assigned after each category view is attached.
+                            // Do not inspect categoryPanel children from focus callbacks: render()
+                            // may be removing them and trigger focus loss while the list is empty.
                             if (hasFocus) {
                                 categoryListScroll.post {
                                     val rect = android.graphics.Rect(0, 0, v.width, v.height)
