@@ -888,6 +888,7 @@ class MainActivity : Activity() {
                     })
                 }
             }
+            navBar.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             return
         }
 
@@ -919,6 +920,7 @@ class MainActivity : Activity() {
                 }
             }
         }
+        navBar.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
     }
 
     private fun showConnectionDialog(editSource: SavedSource? = null) {
