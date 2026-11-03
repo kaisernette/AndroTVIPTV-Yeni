@@ -3173,6 +3173,7 @@ class MainActivity : Activity() {
             isVerticalScrollBarEnabled = true
             overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
         }
+        lateinit var popup: android.widget.PopupWindow
         options.forEachIndexed { index, label ->
             val option = TextView(this).apply {
                 text = label
@@ -3197,7 +3198,7 @@ class MainActivity : Activity() {
             })
         }
         scroll.addView(rows, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-        val popup = android.widget.PopupWindow(
+        popup = android.widget.PopupWindow(
             scroll,
             maxOf(anchor.width, dp(210)),
             minOf(dp(320), (resources.displayMetrics.heightPixels * 0.55f).toInt()),
@@ -3305,6 +3306,8 @@ class MainActivity : Activity() {
             weightSum = 4f; setPadding(0, dp(12), 0, 0)
         }
         val buttonHeight = dp(50)
+        lateinit var seasonButton: Button
+        lateinit var episodeButton: Button
         val playButton = makeButton("▶  İZLE", true) {
             if (allEpisodes.isEmpty()) {
                 Toast.makeText(this@MainActivity, "Bölümler henüz yüklenmedi.", Toast.LENGTH_SHORT).show()
@@ -3315,7 +3318,7 @@ class MainActivity : Activity() {
             }
         }.apply { gravity = Gravity.CENTER; textSize = 14f; maxLines = 1; minHeight = buttonHeight }
 
-        val seasonButton = makeButton("▱  SEZON", false) {
+        seasonButton = makeButton("▱  SEZON", false) {
             val seasons = seriesEpisodeRows.map { it.first }
             if (seasons.isEmpty()) {
                 Toast.makeText(this@MainActivity, "Sezon bilgisi bulunamadı.", Toast.LENGTH_SHORT).show()
@@ -3334,7 +3337,7 @@ class MainActivity : Activity() {
             }
         }.apply { gravity = Gravity.CENTER; textSize = 14f; maxLines = 1; minHeight = buttonHeight }
 
-        val episodeButton = makeButton("☷  BÖLÜM", false) {
+        episodeButton = makeButton("☷  BÖLÜM", false) {
             val rowIndex = seriesEpisodeRows.indexOfFirst { it.first == selectedEpisodeSeason }.let { if (it >= 0) it else 0 }
             val selectedRow = seriesEpisodeRows.getOrNull(rowIndex)
             if (selectedRow == null) {
