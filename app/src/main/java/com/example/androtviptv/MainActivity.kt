@@ -1078,8 +1078,8 @@ class MainActivity : Activity() {
             button.background = if (selected) {
                 roundedDrawable(yellow, 0)
             } else {
-                // Keep the favorite button unfilled; focus is indicated by a yellow square outline.
-                roundedDrawable(Color.TRANSPARENT, 0, if (button.hasFocus()) yellow else muted)
+                // Match the neutral dark style of the Back action; yellow is reserved for selected favorites.
+                roundedDrawable(panel, 0, muted)
             }
         }
         return makeButton("Favori", false) {
@@ -3324,7 +3324,7 @@ class MainActivity : Activity() {
                 cursor += row.second.size
             }
             selectedEpisodeSeason = savedRow.first
-            if (selectedEpisodeIndex !in allEpisodes.indices) selectedEpisodeIndex = savedIndex
+            selectedEpisodeIndex = savedIndex
         } else if (selectedEpisodeSeason.isBlank()) {
             selectedEpisodeSeason = seriesEpisodeRows.firstOrNull()?.first.orEmpty()
         }
