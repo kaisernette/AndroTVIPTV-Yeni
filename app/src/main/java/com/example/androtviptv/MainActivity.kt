@@ -553,6 +553,16 @@ class MainActivity : Activity() {
                 sidebar.layoutParams = params
             }
         }
+        // Drop focus from old navigation children before detaching them. On Android TV,
+        // removeAllViews() can synchronously dispatch focus-loss callbacks while rebuilding.
+        if (::navBar.isInitialized) {
+            navBar.findFocus()?.clearFocus()
+            navBar.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        }
+        if (::categoryPanel.isInitialized) {
+            categoryPanel.findFocus()?.clearFocus()
+            categoryPanel.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        }
         navBar.removeAllViews()
         firstCategoryFocusView = null
         if (::categoryPanel.isInitialized) {
@@ -828,12 +838,17 @@ class MainActivity : Activity() {
                             // D-pad links are assigned after each category view is attached.
                             // Do not inspect categoryPanel children from focus callbacks: render()
                             // may be removing them and trigger focus loss while the list is empty.
-                            if (hasFocus) {
+                            if (hasFocus && v.isAttachedToWindow && categoryListScroll.isAttachedToWindow) {
                                 categoryListScroll.post {
+                                    // Ignore stale callbacks from category views detached by a render.
+                                    if (!v.isAttachedToWindow || !categoryListScroll.isAttachedToWindow ||
+                                        v.parent == null || v.id == View.NO_ID) return@post
                                     val rect = android.graphics.Rect(0, 0, v.width, v.height)
                                     v.getDrawingRect(rect)
-                                    categoryListScroll.offsetDescendantRectToMyCoords(v, rect)
-                                    categoryListScroll.requestChildRectangleOnScreen(v, rect, true)
+                                    runCatching {
+                                        categoryListScroll.offsetDescendantRectToMyCoords(v, rect)
+                                        categoryListScroll.requestChildRectangleOnScreen(v, rect, true)
+                                    }
                                 }
                             }
                         }
@@ -855,7 +870,8 @@ class MainActivity : Activity() {
                         }
                     } else {
                         val previousCategory = categoryPanel.getChildAt(categoryPanel.childCount - 1)
-                        if (previousCategory != null && previousCategory.isFocusable) {
+                        if (previousCategory != null && previousCategory.isFocusable &&
+                            previousCategory.id != View.NO_ID && button.id != View.NO_ID) {
                             button.nextFocusUpId = previousCategory.id
                             previousCategory.nextFocusDownId = button.id
                         }
@@ -864,6 +880,7 @@ class MainActivity : Activity() {
                         setMargins(0, dp(2), 0, dp(2))
                     })
                 }
+                categoryPanel.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
                 if (selectedType == "Canlı TV") {
                     categoryPanel.addView(TextView(this).apply {
                         text = "Kanal listesi"
