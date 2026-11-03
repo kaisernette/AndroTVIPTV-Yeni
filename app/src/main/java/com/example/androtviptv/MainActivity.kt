@@ -40,7 +40,7 @@ private data class MediaItem(
 
 class MainActivity : Activity() {
     private val posterExecutor = Executors.newFixedThreadPool(3)
-    private val posterCache = object : LruCache<String, Bitmap>(10 * 1024 * 1024) {
+    private val posterCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
@@ -3715,7 +3715,7 @@ class MainActivity : Activity() {
         return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
     }
 
-    private fun trimPosterDiskCache(maxBytes: Long = 150L * 1024L * 1024L) {
+    private fun trimPosterDiskCache(maxBytes: Long = 300L * 1024L * 1024L) {
         try {
             val directory = java.io.File(filesDir, "poster_cache")
             val files = directory.listFiles()?.filter { it.isFile } ?: return
