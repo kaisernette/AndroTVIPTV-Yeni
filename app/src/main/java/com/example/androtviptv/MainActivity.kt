@@ -589,7 +589,7 @@ class MainActivity : Activity() {
                 else -> 0
             }
             val sidebarButton = makeButton(label, selected, action).apply {
-                val iconDrawable = if (iconRes != 0) getDrawable(iconRes)?.mutate() else null
+                val iconDrawable = if (iconRes != 0 && label != "▣") getDrawable(iconRes)?.mutate() else null
                 iconDrawable?.setBounds(0, 0, dp(29), dp(29))
                 // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
@@ -604,19 +604,19 @@ class MainActivity : Activity() {
                     v.scaleX = 1f
                     v.scaleY = 1f
                 }
-                textSize = 14f
+                textSize = if (label == "▣") 18f else 14f
                 val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
                 text = if (iconDrawable != null) {
                     android.text.SpannableString(" ").apply {
                         setSpan(android.text.style.ImageSpan(iconDrawable, android.text.style.ImageSpan.ALIGN_CENTER), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     }
                 } else {
-                    android.text.SpannableString(label)
+                    android.text.SpannableString(if (label == "▣") "TV" else label)
                 }
                 gravity = Gravity.CENTER
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                contentDescription = label
+                contentDescription = if (label == "▣") "TV" else label
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
