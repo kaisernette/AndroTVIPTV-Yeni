@@ -800,8 +800,7 @@ class MainActivity : Activity() {
                     setTextColor(muted); setPadding(dp(8), 0, 0, dp(10))
                 })
                 grouped.forEachIndexed { categoryIndex, (name, entries) ->
-                    val selected = name == (expandedCategory?.first ?: selectedGroup) ||
-                        (selectedType == "Canlı TV" && selectedGroup == "Tüm kategoriler" && categoryIndex == 0)
+                    val selected = name == (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                     val button = TextView(this).apply {
                         text = name
                         textSize = 13f
@@ -812,8 +811,7 @@ class MainActivity : Activity() {
                         minHeight = dp(42)
                         isFocusable = true
                         isClickable = true
-                        val activeCategory = expandedCategory?.first == name || selectedGroup == name ||
-                            (selectedType == "Canlı TV" && selectedGroup == "Tüm kategoriler" && categoryIndex == 0)
+                        val activeCategory = name == (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                         background = if (activeCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
                             if (hasFocus) focusedCategoryName = name
@@ -825,6 +823,12 @@ class MainActivity : Activity() {
                                     sibling.background = if (active) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                                     sibling.setTextColor(if (active) Color.WHITE else muted)
                                 }
+                            }
+                            // Explicitly preserve vertical D-pad navigation inside the category column.
+                            val position = grouped.indexOfFirst { it.first == name }
+                            if (position >= 0) {
+                                if (position > 0) v.nextFocusUpId = categoryPanel.getChildAt(position).id
+                                if (position + 1 < grouped.size) v.nextFocusDownId = categoryPanel.getChildAt(position + 2).id
                             }
                             if (hasFocus) {
                                 categoryListScroll.post {
