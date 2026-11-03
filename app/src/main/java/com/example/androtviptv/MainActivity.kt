@@ -243,12 +243,6 @@ class MainActivity : Activity() {
     private lateinit var sidebar: LinearLayout
     private lateinit var rootLayout: LinearLayout
     private lateinit var mainContentScroll: ScrollView
-    private fun kaiserLogoView(): ImageView = ImageView(this).apply {
-        setImageResource(R.drawable.kaisertv_app_icon)
-        scaleType = ImageView.ScaleType.FIT_CENTER
-        setBackgroundColor(Color.BLACK)
-        contentDescription = "KaiserTV+"
-    }
 
     private var previewPlayer: ExoPlayer? = null
     private var previewView: PlayerView? = null
@@ -1660,11 +1654,6 @@ class MainActivity : Activity() {
             }
 
             if (detailSeries != null || detailMovie != null) {
-                detailSeries = null
-                detailMovie = null
-                seriesEpisodeRows = emptyList()
-                seriesEpisodesLoading = false
-                seriesEpisodesError = ""
                 render()
                 return
             }
@@ -2888,45 +2877,6 @@ class MainActivity : Activity() {
         content.addView(title)
         val frame = FrameLayout(this).apply {
             background = roundedDrawable(Color.BLACK, 16, Color.rgb(48, 58, 76))
-            clipToOutline = true
-            isFocusable = true
-            isFocusableInTouchMode = true
-            contentDescription = "Canlı TV önizlemesi"
-            setOnFocusChangeListener { v, hasFocus ->
-                v.background = roundedDrawable(
-                    Color.BLACK, 16,
-                    if (hasFocus) accentBright else Color.rgb(48, 58, 76)
-                )
-            }
-        }
-        previewView = PlayerView(this).apply {
-            useController = false
-            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
-            setShutterBackgroundColor(Color.BLACK)
-        }
-        frame.addView(previewView, FrameLayout.LayoutParams(-1, -1))
-        content.addView(frame, LinearLayout.LayoutParams(-1, dp(330)).apply {
-            setMargins(dp(8), dp(8), dp(8), dp(8))
-        })
-        content.addView(TextView(this).apply {
-            text = "OK: Tam ekran izle  •  Tam ekranda ↑/↓ kanal değiştir, ← kanal listesi, → son izlenenler"
-            textSize = 14f
-            setTextColor(muted)
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-        })
-        if (previewPlayer != null) previewView?.player = previewPlayer
-    }
-
-    private fun startChannelPreview(channel: MediaItem) {
-        previewChannel = channel
-        if (channel.url.isBlank() || previewUrl == channel.url) return
-        previewUrl = channel.url
-        try {
-            if (previewPlayer == null) {
-                previewPlayer = ExoPlayer.Builder(this).build().apply {
-                    volume = 0f
-                    repeatMode = Player.REPEAT_MODE_OFF
-                    playWhenReady = true
                 }
             }
             previewView?.player = previewPlayer
@@ -2996,56 +2946,6 @@ class MainActivity : Activity() {
         setContentView(frame)
         backButton.requestFocus()
     }
-
-    private fun closePosterFullscreen() {
-        if (fullscreenPoster == null) return
-        fullscreenPoster = null
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-        setContentView(rootLayout)
-        render()
-    }
-
-    private fun showMovieDetail(movie: MediaItem) {
-        detailSeries = null
-        detailMovie = movie
-        render()
-        if (movie.sourceId.isBlank() || (movie.plot.isNotBlank() && movie.rating.isNotBlank())) return
-        val source = savedSources.firstOrNull { it.id == movie.sourceId && it.mode == "xtream" } ?: return
-        thread {
-            try {
-                val u = URLEncoder.encode(source.username, "UTF-8")
-                val p = URLEncoder.encode(source.password, "UTF-8")
-                val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p&action=get_vod_info&vod_id=${URLEncoder.encode(movie.id, "UTF-8")}"
-                val root = JSONObject(request(api))
-                val info = root.optJSONObject("info") ?: root.optJSONObject("movie_data") ?: root
-                fun pick(vararg keys: String): String {
-                    for (key in keys) {
-                        val value = info.opt(key)
-                        if (value != null && value != JSONObject.NULL) {
-                            val valueText = if (value is String) value else value.toString()
-                            if (valueText.isNotBlank() && valueText != "0" && valueText != "null") return valueText
-                        }
-                    }
-                    return ""
-                }
-                val updated = movie.copy(
-                    plot = pick("plot", "description", "overview").ifBlank { movie.plot },
-                    rating = pick("rating", "vote_average", "rating_5based").ifBlank { movie.rating },
-                    releaseDate = pick("releasedate", "release_date", "releaseDate", "year").ifBlank { movie.releaseDate },
-                    genre = pick("genre", "genres").ifBlank { movie.genre },
-                    actors = pick("cast", "actors").ifBlank { movie.actors }
-                )
-                runOnUiThread {
-                    // Ignore late metadata responses if the user has already returned to the movie list.
-                    if (detailMovie?.favoriteKey != movie.favoriteKey) return@runOnUiThread
-                    val index = items.indexOfFirst { it.id == movie.id && it.type == movie.type && it.sourceId == movie.sourceId }
-                    if (index >= 0) items[index] = updated
-                    detailMovie = updated
-                    saveCachedItems()
-                    render()
-                }
-            } catch (_: Exception) { }
-        }
     }
 
     private fun renderMovieDetail(movie: MediaItem) {
@@ -3097,14 +2997,6 @@ class MainActivity : Activity() {
         }
         info.addView(TextView(this).apply {
             text = "FİLM"
-            textSize = 13f
-            letterSpacing = 0.14f
-            setTextColor(accentBright)
-        })
-        info.addView(TextView(this).apply {
-            text = movie.name
-            textSize = 27f
-            maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
@@ -4304,7 +4196,6 @@ class MainActivity : Activity() {
                         val epName = ep.optString("title", ep.optString("name", "Bölüm ${i + 1}"))
                         val stream = "$xtreamBase/series/$u/$p/$id.$ext"
                         rows.add(MediaItem(id, epName, stream, "${series.name} • Sezon $key", "Bölümler", ep.optString("info").takeIf { it.startsWith("http") } ?: "", ext))
-                    }
                     episodeRows.add(Pair(key, rows))
                 }
                 runOnUiThread {
