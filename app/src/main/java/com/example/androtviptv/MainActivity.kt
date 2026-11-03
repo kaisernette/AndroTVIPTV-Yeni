@@ -2328,9 +2328,9 @@ class MainActivity : Activity() {
                             textSize = 12f
                             maxLines = 1
                             ellipsize = android.text.TextUtils.TruncateAt.END
-                            minWidth = dp(112)
-                            minimumWidth = dp(112)
-                            setPadding(dp(12), 0, dp(12), 0)
+                            minWidth = 0
+                            minimumWidth = 0
+                            setPadding(dp(4), 0, dp(4), 0)
                             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                             setTextColor(if (selectedSearchHistory.contains(term)) accentBright else muted)
                             setOnFocusChangeListener { view, hasFocus ->
@@ -2351,7 +2351,7 @@ class MainActivity : Activity() {
                         }
                         historyFlow.addView(historyButton, ViewGroup.MarginLayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)
-                        ).apply { setMargins(0, 0, dp(8), dp(6)) })
+                        ).apply { setMargins(0, 0, dp(4), dp(4)) })
                     }
                     content.addView(historyFlow, LinearLayout.LayoutParams(
                         -1, ViewGroup.LayoutParams.WRAP_CONTENT
