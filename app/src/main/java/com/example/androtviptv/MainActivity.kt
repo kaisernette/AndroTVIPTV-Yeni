@@ -3312,7 +3312,6 @@ class MainActivity : Activity() {
             episodeRow.removeAllViews()
             val row = seriesEpisodeRows.firstOrNull { it.first == selectedEpisodeSeason }
                 ?: seriesEpisodeRows.firstOrNull()
-            episodeTitle.text = row?.let { "BÖLÜMLER • SEZON ${it.first}" } ?: "BÖLÜMLER"
             if (row == null) return
             val offset = seriesEpisodeRows.takeWhile { it.first != row.first }.sumOf { it.second.size }
             row.second.forEachIndexed { index, episode ->
@@ -3340,7 +3339,7 @@ class MainActivity : Activity() {
                         intArrayOf(Color.rgb(37, 48, 68), Color.rgb(19, 25, 37))
                     ).apply { cornerRadius = dp(6).toFloat() }
                 }
-                card.addView(episodePoster, LinearLayout.LayoutParams(-1, dp(76)))
+                card.addView(episodePoster, LinearLayout.LayoutParams(-1, dp(62)))
                 if (episode.icon.startsWith("http://") || episode.icon.startsWith("https://")) {
                     loadPoster(episode.icon, episodePoster)
                 } else {
@@ -3351,23 +3350,23 @@ class MainActivity : Activity() {
                 }
                 card.addView(TextView(this).apply {
                     text = "${index + 1}. Bölüm"
-                    textSize = 13f
+                    textSize = 12f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
                     maxLines = 1
-                    setPadding(0, dp(5), 0, dp(2))
+                    setPadding(0, dp(4), 0, dp(1))
                 })
                 card.addView(TextView(this).apply {
                     text = episode.name
-                    textSize = 10f
+                    textSize = 9f
                     setTextColor(muted)
                     gravity = Gravity.CENTER
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
                 })
-                episodeRow.addView(card, LinearLayout.LayoutParams(dp(156), dp(124)).apply {
-                    if (index > 0) setMargins(dp(8), 0, 0, 0)
+                episodeRow.addView(card, LinearLayout.LayoutParams(dp(140), dp(108)).apply {
+                    if (index > 0) setMargins(dp(6), 0, 0, 0)
                 })
             }
         }
@@ -3401,8 +3400,7 @@ class MainActivity : Activity() {
         right.addView(seasonDropdown, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             bottomMargin = dp(6)
         })
-        right.addView(episodeTitle, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-        right.addView(episodeScroll, LinearLayout.LayoutParams(-1, dp(96)))
+        right.addView(episodeScroll, LinearLayout.LayoutParams(-1, dp(116)))
         refreshEpisodeCards()
         root.addView(right, LinearLayout.LayoutParams(0, -1, 1f))
         content.addView(root, LinearLayout.LayoutParams(-1, detailHeight))
