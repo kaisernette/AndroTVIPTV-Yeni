@@ -553,6 +553,7 @@ class MainActivity : Activity() {
             }
         }
         navBar.removeAllViews()
+        firstCategoryFocusView = null
         if (::categoryPanel.isInitialized) {
             categoryListScroll.visibility = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) View.VISIBLE else View.GONE
             categoryPanel.removeAllViews()
@@ -766,6 +767,7 @@ class MainActivity : Activity() {
                             prefs.edit().putString("last_section", key).apply()
                         }
                         else -> {
+                            focusFirstCategoryOnRender = true
                             selectedType = key
                             selectedGroup = "Tüm kategoriler"
                             focusedCategoryName = null
@@ -815,7 +817,7 @@ class MainActivity : Activity() {
                         background = if (activeCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
                             if (hasFocus) focusedCategoryName = name
-                            val highlighted = focusedCategoryName ?: expandedCategory?.first ?: selectedGroup
+                            val highlighted = if (hasFocus) name else (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                             for (i in 0 until categoryPanel.childCount) {
                                 val sibling = categoryPanel.getChildAt(i) as? TextView ?: continue
                                 if (grouped.any { it.first == sibling.text.toString() }) {
