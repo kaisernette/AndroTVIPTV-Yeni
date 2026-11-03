@@ -1232,119 +1232,180 @@ class MainActivity : Activity() {
 
     private fun loadXtream(source: SavedSource, append: Boolean) {
         val base = source.address.trimEnd('/')
-        val user = source.username; val pass = source.password
+        val user = source.username
+        val pass = source.password
         if (!(base.startsWith("http://") || base.startsWith("https://")) || user.isBlank() || pass.isBlank()) {
-            status.text = "Sunucu, kullanıcı adı ve şifre alanlarını doldur."; return
+            status.text = "Sunucu, kullanıcı adı ve şifre alanlarını doldur."
+            return
         }
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
         loadProgress = 0
         status.text = "${source.name}: TV, filmler ve diziler yükleniyor…"
         render()
-        thread {
+        thread(name = "kaiser-xtream-load") {
             try {
-                val u = URLEncoder.encode(user, "UTF-8"); val p = URLEncoder.encode(pass, "UTF-8")
+                val u = URLEncoder.encode(user, "UTF-8")
+                val p = URLEncoder.encode(pass, "UTF-8")
                 val api = "$base/player_api.php?username=$u&password=$p"
                 val root = JSONObject(request(api))
                 val userInfo = root.optJSONObject("user_info")
-                if (userInfo != null && userInfo.optString("auth", "1") == "0") throw Exception("Giriş bilgileri kabul edilmedi.")
+                if (userInfo != null && userInfo.optString("auth", "1") == "0") {
+                    throw Exception("Giriş bilgileri kabul edilmedi.")
+                }
+
                 val loaded = mutableListOf<MediaItem>()
+                val failedParts = mutableListOf<String>()
 
-                // TV cihazlarında aynı anda altı büyük JSON yanıtını bellekte tutma.
-                // Kategorileri ve içerik listelerini sırayla alıp her yanıtı hemen işle.
-                fun categoryMap(action: String): Map<String, String> {
-                    val arr = JSONArray(request("$api&action=$action"))
-                    val result = mutableMapOf<String, String>()
-                    for (i in 0 until arr.length()) {
-                        val item = arr.optJSONObject(i) ?: continue
-                        val id = item.optString("category_id")
-                        val name = item.optString("category_name")
-                        if (id.isNotBlank() && name.isNotBlank()) result[id] = name
+                // Category endpoints are useful for readable names, but a category
+                // endpoint failure must not prevent the actual media lists loading.
+                fun categoryMap(action: String, label: String): Map<String, String> {
+                    return try {
+                        val arr = JSONArray(request("$api&action=$action"))
+                        buildMap {
+                            for (i in 0 until arr.length()) {
+                                val item = arr.optJSONObject(i) ?: continue
+                                val id = item.optString("category_id")
+                                val name = item.optString("category_name")
+                                if (id.isNotBlank() && name.isNotBlank()) put(id, name)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        failedParts.add("$label kategorileri")
+                        android.util.Log.w("KaiserTV", "$label category list failed", e)
+                        emptyMap()
                     }
-                    return result
                 }
 
-                runOnUiThread { loadProgress = 10; status.text = "${source.name}: TV kategorileri alınıyor…"; render() }
-                val liveCategories = categoryMap("get_live_categories")
-                runOnUiThread { loadProgress = 20; status.text = "${source.name}: film kategorileri alınıyor…"; render() }
-                val vodCategories = categoryMap("get_vod_categories")
-                runOnUiThread { loadProgress = 30; status.text = "${source.name}: dizi kategorileri alınıyor…"; render() }
-                val seriesCategories = categoryMap("get_series_categories")
-                runOnUiThread { loadProgress = 40; status.text = "${source.name}: içerik listeleri alınıyor…"; render() }
-
-                listOf("get_live_streams", "get_vod_streams", "get_series").forEachIndexed { actionIndex, action ->
-                    runOnUiThread {
-                        status.text = "${source.name}: " + when (action) {
-                            "get_live_streams" -> "Canlı TV kanalları alınıyor…"
-                            "get_vod_streams" -> "Filmler alınıyor…"
-                            else -> "Diziler alınıyor…"
-                        }
-                    }
-                    val response = request("$api&action=$action")
-                    val arr = try { JSONArray(response) } catch (e: Exception) {
-                        throw Exception("Sunucudan geçersiz liste geldi ($action)")
-                    }
-                    val categories = when (action) {
-                        "get_live_streams" -> liveCategories
-                        "get_vod_streams" -> vodCategories
-                        else -> seriesCategories
-                    }
-                    val count = arr.length()
-                    for (i in 0 until count) {
-                        val o = arr.optJSONObject(i) ?: continue
-                        val id = o.optString(if (action == "get_series") "series_id" else "stream_id", "")
-                        if (id.isBlank()) continue
-                        val name = o.optString("name", "İsimsiz içerik")
-                        val categoryId = o.optString("category_id")
-                        val group = o.optString("category_name").takeIf { it.isNotBlank() } ?: categories[categoryId] ?: "Diğer"
-                        val type = when (action) {
-                            "get_live_streams" -> "Canlı TV"
-                            "get_vod_streams" -> "Filmler"
-                            else -> "Diziler"
-                        }
-                        val ext = o.optString("container_extension", if (type == "Canlı TV") "ts" else "mp4")
-                        val plot = o.optString("plot", o.optString("description", ""))
-                        val actors = o.optString("cast", o.optString("actors", ""))
-                        val streamUrl = when (type) {
-                            "Canlı TV" -> "$base/live/$u/$p/$id.$ext"
-                            "Filmler" -> "$base/movie/$u/$p/$id.$ext"
-                            else -> ""
-                        }
-                        loaded.add(MediaItem(
-                            id, name, streamUrl, group, type,
-                            o.optString(if (type == "Filmler") "stream_icon" else "cover", o.optString("cover_big", o.optString("stream_icon", ""))),
-                            ext, if (type == "Diziler") id else "", source.id, plot, actors,
-                            o.optString("rating", o.optString("vote_average", "")),
-                            o.optString("releaseDate", o.optString("year", "")),
-                            o.optString("genre", "")
-                        ))
-                        if (i % 100 == 0) {
-                            val baseProgress = 40 + actionIndex * 20
-                            val within = if (arr.length() == 0) 20 else (i * 20 / arr.length())
-                            runOnUiThread { loadProgress = (baseProgress + within).coerceIn(1, 99); status.text = "${source.name}: $type yükleniyor… %$loadProgress"; if (i % 500 == 0 || i == 0) render() }
-                        }
-                    }
-                }
                 runOnUiThread {
-                    items.removeAll { it.sourceId == source.id }; items.addAll(loaded)
+                    loadProgress = 10
+                    status.text = "${source.name}: kategori bilgileri alınıyor…"
+                }
+                val liveCategories = categoryMap("get_live_categories", "TV")
+                val vodCategories = categoryMap("get_vod_categories", "Film")
+                val seriesCategories = categoryMap("get_series_categories", "Dizi")
+                val actions = listOf(
+                    Triple("get_live_streams", "Canlı TV", liveCategories),
+                    Triple("get_vod_streams", "Filmler", vodCategories),
+                    Triple("get_series", "Diziler", seriesCategories)
+                )
+
+                actions.forEachIndexed { actionIndex, (action, type, categories) ->
+                    runOnUiThread {
+                        loadProgress = 40 + actionIndex * 18
+                        status.text = "${source.name}: $type yükleniyor…"
+                    }
+                    try {
+                        val response = request("$api&action=$action")
+                        val arr = JSONArray(response)
+                        val count = arr.length()
+                        for (i in 0 until count) {
+                            val o = arr.optJSONObject(i) ?: continue
+                            val id = o.optString(
+                                if (action == "get_series") "series_id" else "stream_id",
+                                ""
+                            ).trim()
+                            if (id.isBlank()) continue
+
+                            val name = o.optString("name", "İsimsiz içerik").ifBlank { "İsimsiz içerik" }
+                            val categoryId = o.optString("category_id")
+                            val group = o.optString("category_name").takeIf { it.isNotBlank() }
+                                ?: categories[categoryId]
+                                ?: "Diğer"
+                            val ext = o.optString(
+                                "container_extension",
+                                if (type == "Canlı TV") "ts" else "mp4"
+                            ).ifBlank { if (type == "Canlı TV") "ts" else "mp4" }
+                            val plot = o.optString("plot", o.optString("description", ""))
+                            val actors = o.optString("cast", o.optString("actors", ""))
+
+                            // Xtream providers use different artwork keys by content type.
+                            // Prefer stream_icon for live/VOD and cover for series, then
+                            // fall back through the common provider-specific alternatives.
+                            val artworkKeys = when (type) {
+                                "Canlı TV" -> listOf("stream_icon", "cover", "cover_big", "movie_image", "logo")
+                                "Filmler" -> listOf("stream_icon", "movie_image", "cover_big", "cover", "poster")
+                                else -> listOf("cover", "cover_big", "stream_icon", "movie_image", "poster")
+                            }
+                            val rawArtwork = artworkKeys
+                                .asSequence()
+                                .map { key -> o.optString(key, "").trim() }
+                                .firstOrNull { it.isNotBlank() && it != "null" }
+                                .orEmpty()
+                            val artwork = when {
+                                rawArtwork.startsWith("//") -> "https:$rawArtwork"
+                                rawArtwork.startsWith("/") -> "$base$rawArtwork"
+                                else -> rawArtwork
+                            }
+
+                            val streamUrl = when (type) {
+                                "Canlı TV" -> "$base/live/$u/$p/$id.$ext"
+                                "Filmler" -> "$base/movie/$u/$p/$id.$ext"
+                                else -> ""
+                            }
+                            loaded.add(
+                                MediaItem(
+                                    id, name, streamUrl, group, type, artwork,
+                                    ext, if (type == "Diziler") id else "",
+                                    source.id, plot, actors,
+                                    o.optString("rating", o.optString("vote_average", "")),
+                                    o.optString("releaseDate", o.optString("year", "")),
+                                    o.optString("genre", "")
+                                )
+                            )
+                            if (i % 250 == 0) {
+                                val within = if (count == 0) 0 else (i * 16 / count)
+                                val progress = (40 + actionIndex * 18 + within).coerceIn(1, 98)
+                                runOnUiThread {
+                                    loadProgress = progress
+                                    status.text = "${source.name}: $type yükleniyor… %$progress"
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        failedParts.add(type)
+                        android.util.Log.e("KaiserTV", "$type list failed", e)
+                    }
+                }
+
+                if (loaded.isEmpty()) {
+                    throw Exception(
+                        if (failedParts.isEmpty()) "Kaynak boş içerik döndürdü."
+                        else "İçerik listeleri alınamadı: ${failedParts.distinct().joinToString()}"
+                    )
+                }
+
+                runOnUiThread {
+                    items.removeAll { it.sourceId == source.id }
+                    items.addAll(loaded)
                     saveCachedItems()
                     selectedType = "Tümü"
                     selectedGroup = "Tüm kategoriler"
+                    expandedCategory = null
                     sidebarMode = "main"
-                    xtreamBase = base; xtreamUser = user; xtreamPass = pass
-                    status.text = ""
-                    status.visibility = View.GONE
+                    xtreamBase = base
+                    xtreamUser = user
+                    xtreamPass = pass
                     isLoadingSource = false
                     hasLoadedSource = true
-                    sidebarMode = "main"
+                    loadProgress = 100
+                    status.visibility = View.VISIBLE
+                    status.text = if (failedParts.isEmpty()) {
+                        "${source.name}: ${loaded.size} içerik yüklendi."
+                    } else {
+                        "${source.name}: ${loaded.size} içerik yüklendi. Eksik yanıt: ${failedParts.distinct().joinToString()}."
+                    }
                     render()
                 }
-            } catch (e: Exception) { runOnUiThread {
-                loadProgress = 0
-                isLoadingSource = false
-                status.text = "Xtream yüklenemedi: ${e.message ?: "bağlantı hatası"}"
-                render()
-            } }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    loadProgress = 0
+                    isLoadingSource = false
+                    status.visibility = View.VISIBLE
+                    status.text = "${source.name} yüklenemedi: ${e.message ?: "bağlantı hatası"}"
+                    render()
+                }
+            }
         }
     }
 
@@ -2280,6 +2341,10 @@ class MainActivity : Activity() {
                     val logo = ImageView(this).apply {
                         scaleType = ImageView.ScaleType.FIT_CENTER
                         contentDescription = channel.name
+                        setImageDrawable(GradientDrawable().apply {
+                            cornerRadius = dp(8).toFloat()
+                            setColor(Color.rgb(31, 39, 54))
+                        })
                         setPadding(dp(6), dp(6), dp(6), dp(6))
                     }
                     tile.addView(logo, LinearLayout.LayoutParams(-1, dp(68)))
@@ -2533,6 +2598,8 @@ class MainActivity : Activity() {
                     scaleType = if (liveCard) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
                     background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
