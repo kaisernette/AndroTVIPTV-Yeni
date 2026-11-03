@@ -71,8 +71,8 @@ private class WrappingRowLayout(context: Context) : ViewGroup(context) {
                 x = paddingLeft
                 lineHeight = 0
             }
-            childLefts[i] = x + lp.leftMargin
-            childTops[i] = y + lp.topMargin
+            childLefts.add(x + lp.leftMargin)
+            childTops.add(y + lp.topMargin)
             x += outerWidth
             lineHeight = maxOf(lineHeight, outerHeight)
             maxRight = maxOf(maxRight, x)
