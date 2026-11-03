@@ -3161,9 +3161,9 @@ class MainActivity : Activity() {
                 isFocusableInTouchMode = true
                 isClickable = true
                 setTextColor(Color.WHITE)
-                background = roundedDrawable(if (index == selectedIndex) accent else panelColor, 8)
+                background = roundedDrawable(if (index == selectedIndex) accent else Color.rgb(21, 27, 39), 8)
                 setOnFocusChangeListener { view, focused ->
-                    view.background = roundedDrawable(if (focused || index == selectedIndex) accent else panelColor, 8)
+                    view.background = roundedDrawable(if (focused || index == selectedIndex) accent else Color.rgb(21, 27, 39), 8)
                 }
                 setOnClickListener {
                     panel.visibility = View.GONE
