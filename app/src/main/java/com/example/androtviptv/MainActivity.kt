@@ -781,8 +781,10 @@ class MainActivity : Activity() {
             if (::categoryPanel.isInitialized && selectedType in listOf("Filmler", "Diziler", "Canlı TV")) {
                 // Apply the same hidden-category rules to the sidebar category column
                 // as the content grid, so hidden TV/movie/series groups disappear everywhere.
-                val categoryItems = activeSourceItems.filter {
+                val categorySourceId = prefs.getString("last_source_id", "") ?: ""
+                val categoryItems = items.filter {
                     it.type == selectedType &&
+                    (categorySourceId.isBlank() || it.sourceId == categorySourceId) &&
                     (selectedType != "Canlı TV" || it.url.isNotBlank()) &&
                     !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
                 }
