@@ -677,6 +677,8 @@ class MainActivity : Activity() {
                         seriesEpisodesLoading = false
                         seriesEpisodesError = ""
                         selectedType = "Son İzlenenler"
+                        focusFirstCategoryOnRender = false
+                        focusFirstContentOnRender = true
                         prefs.edit().putString("last_section", "Son İzlenenler").apply()
                         selectedGroup = "Tüm kategoriler"
                         expandedCategory = null
@@ -714,7 +716,8 @@ class MainActivity : Activity() {
                         seriesEpisodeRows = emptyList()
                         seriesEpisodesLoading = false
                         seriesEpisodesError = ""
-                        focusFirstCategoryOnRender = true
+                        focusFirstCategoryOnRender = key in listOf("Canlı TV", "Filmler", "Diziler")
+                        focusFirstContentOnRender = key in listOf("Favoriler", "Son İzlenenler")
                         selectedGroup = "Tüm kategoriler"
                         focusedCategoryName = null
                         expandedCategory = null
@@ -771,6 +774,8 @@ class MainActivity : Activity() {
                         "Tümü" -> returnToMainMenu()
                         "Son İzlenenler" -> {
                             selectedType = key
+                            focusFirstCategoryOnRender = false
+                            focusFirstContentOnRender = true
                             sidebarMode = "main"
                             prefs.edit().putString("last_section", key).apply()
                             rebuildNavigation()
@@ -782,7 +787,8 @@ class MainActivity : Activity() {
                             prefs.edit().putString("last_section", key).apply()
                         }
                         else -> {
-                            focusFirstCategoryOnRender = true
+                            focusFirstCategoryOnRender = key in listOf("Canlı TV", "Filmler", "Diziler")
+                            focusFirstContentOnRender = key in listOf("Favoriler", "Son İzlenenler")
                             selectedType = key
                             selectedGroup = "Tüm kategoriler"
                             focusedCategoryName = null
@@ -1831,7 +1837,8 @@ class MainActivity : Activity() {
                 selectedSidebarFocusView?.requestFocus()
             } else if (focusFirstContentOnRender) {
                 focusFirstContentOnRender = false
-                firstContent?.requestFocus()
+                if (firstContent != null) firstContent.requestFocus()
+                else selectedSidebarFocusView?.requestFocus()
             }
         }
     }
@@ -2452,6 +2459,10 @@ class MainActivity : Activity() {
             if (items.isEmpty()) empty.addView(makeButton("KAYNAK EKLE  →", true) { showConnectionDialog() },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
             content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
+            if (selectedType in listOf("Favoriler", "Son İzlenenler")) {
+                rebuildNavigation()
+                requestSectionFocusAfterRender()
+            }
             return
         }
         if (::heroTitle.isInitialized) {
