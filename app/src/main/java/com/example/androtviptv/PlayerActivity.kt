@@ -290,10 +290,10 @@ class PlayerActivity : Activity() {
                                     currentStreamUrl = toHlsFallbackUrl(currentStreamUrl) ?: currentStreamUrl
                                     retryCount = 0
                                     android.util.Log.w("KaiserTVPlayer", "Live TS stream ended; trying HLS URL")
-                                    restartCurrentStream("Canlı yayın için alternatif akış deneniyor.")
+                                    restartCurrentStream("Canlı yayın için alternatif akış deneniyor.", force = true)
                                 } else {
-                                    android.util.Log.w("KaiserTVPlayer", "Live stream ended unexpectedly; reconnecting")
-                                    restartCurrentStream("Canlı yayın sona erdi gibi görünüyor.")
+                                    android.util.Log.w("KaiserTVPlayer", "Live stream reported ended; forcing reconnect")
+                                    restartCurrentStream("Canlı yayın akışı sona ermiş göründü; yeniden bağlanılıyor.", force = true)
                                 }
                                 return
                             }
@@ -441,9 +441,14 @@ class PlayerActivity : Activity() {
         if (highlighted) setStroke(dp(1), 0xFFDEB55B.toInt())
     }
 
-    private fun restartCurrentStream(reason: String) {
+    private fun restartCurrentStream(reason: String, force: Boolean = false) {
         val exo = player ?: return
-        if (currentStreamUrl.isBlank() || isFinishing || !isLiveStream || !exo.playWhenReady || reconnectPending) return
+        if (currentStreamUrl.isBlank() || isFinishing || !isLiveStream ||
+            (!exo.playWhenReady && !force) || reconnectPending) return
+
+        // A live stream may be incorrectly reported as ENDED (for example, a short TS segment).
+        // In that case force playback intent back on and reconnect even if ExoPlayer cleared it.
+        val shouldResume = exo.playWhenReady || force
 
         // Retry automatically with capped backoff; do not stop after three attempts.
         retryCount = (retryCount + 1).coerceAtMost(10)
@@ -459,8 +464,9 @@ class PlayerActivity : Activity() {
         }
         playbackHandler.postDelayed({
             reconnectPending = false
-            if (!isFinishing && player === exo && exo.playWhenReady && isLiveStream) {
+            if (!isFinishing && player === exo && shouldResume && isLiveStream) {
                 try {
+                    exo.playWhenReady = true
                     exo.stop()
                     exo.setMediaItem(createStreamMediaItem(currentStreamUrl))
                     exo.prepare()
