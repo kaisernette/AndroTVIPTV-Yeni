@@ -2246,17 +2246,12 @@ class MainActivity : Activity() {
                     })
                 } else {
                     selectedSearchHistory.retainAll(history.toSet())
-                    var historyRow: LinearLayout? = null
-                    history.forEachIndexed { index, term ->
-                        if (index % 8 == 0) {
-                            historyRow = LinearLayout(this).apply {
-                                orientation = LinearLayout.HORIZONTAL
-                                gravity = Gravity.CENTER_VERTICAL
-                            }
-                            content.addView(historyRow, LinearLayout.LayoutParams(-1, dp(48)).apply {
-                                setMargins(dp(4), dp(3), dp(4), dp(3))
-                            })
-                        }
+                    selectedSearchHistory.retainAll(history.toSet())
+                    val historyRow = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                    }
+                    history.forEach { term ->
                         val historyButton = makeButton(
                             (if (selectedSearchHistory.contains(term)) "✓ " else "◷ ") + term,
                             selectedSearchHistory.contains(term)
@@ -2264,13 +2259,12 @@ class MainActivity : Activity() {
                             if (!selectedSearchHistory.add(term)) selectedSearchHistory.remove(term)
                             render()
                         }.apply {
-                            textSize = 10f
+                            textSize = 12f
                             maxLines = 1
                             ellipsize = android.text.TextUtils.TruncateAt.END
-                            minWidth = 0
-                            minimumWidth = 0
-                            setPadding(dp(2), 0, dp(2), 0)
-                            // History entries are plain text chips: transparent, borderless.
+                            minWidth = dp(112)
+                            minimumWidth = dp(112)
+                            setPadding(dp(12), 0, dp(12), 0)
                             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                             setTextColor(if (selectedSearchHistory.contains(term)) accentBright else muted)
                             setOnFocusChangeListener { view, hasFocus ->
@@ -2289,10 +2283,21 @@ class MainActivity : Activity() {
                                 true
                             }
                         }
-                        historyRow?.addView(historyButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
-                            setMargins(dp(2), 0, dp(2), 0)
-                        })
+                        historyRow.addView(historyButton, LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)
+                        ).apply { setMargins(0, 0, dp(8), 0) })
                     }
+                    val historyScroll = android.widget.HorizontalScrollView(this).apply {
+                        isHorizontalScrollBarEnabled = false
+                        clipToPadding = false
+                        setPadding(dp(4), dp(2), dp(4), dp(2))
+                        addView(historyRow, android.widget.HorizontalScrollView.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT
+                        ))
+                    }
+                    content.addView(historyScroll, LinearLayout.LayoutParams(-1, dp(52)).apply {
+                        setMargins(dp(4), dp(3), dp(4), dp(3))
+                    })
                 }
             }
         }
