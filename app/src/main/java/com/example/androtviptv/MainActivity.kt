@@ -3008,48 +3008,55 @@ class MainActivity : Activity() {
     }
 
     private fun renderMovieDetail(movie: MediaItem) {
-        // Full-screen movie details: poster on the left, information and actions on the right.
+        // Full-screen movie details. The poster is edge-to-edge on the left;
+        // information scrolls independently while the three actions stay pinned below.
         content.setPadding(0, 0, 0, 0)
         val screenWidth = resources.displayMetrics.widthPixels
         val screenHeight = resources.displayMetrics.heightPixels
-        val posterWidth = (screenWidth * 0.36f).toInt().coerceAtLeast(dp(150))
-        val detailHeight = (screenHeight - dp(8)).coerceAtLeast(dp(300))
+        val posterWidth = (screenWidth * 0.37f).toInt().coerceAtLeast(dp(150))
+        val detailHeight = screenHeight.coerceAtLeast(dp(300))
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(Color.BLACK)
-            setPadding(dp(22), dp(16), dp(26), dp(16))
-            clipChildren = false
-            clipToPadding = false
+            setPadding(0, 0, 0, 0)
+            clipChildren = true
+            clipToPadding = true
         }
 
-        val posterFrame = FrameLayout(this).apply {
-            setBackgroundColor(Color.BLACK)
-            clipToOutline = true
-            background = roundedDrawable(Color.BLACK, 12, Color.rgb(45, 58, 78))
-        }
+        // Frameless, full-height poster: no card, border, or outer margin.
         val poster = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
+            scaleType = ImageView.ScaleType.CENTER_CROP
             contentDescription = movie.name
             setBackgroundColor(Color.BLACK)
         }
-        posterFrame.addView(poster, FrameLayout.LayoutParams(-1, -1))
         if (movie.icon.startsWith("http://") || movie.icon.startsWith("https://")) {
             loadPoster(movie.icon, poster)
         }
-        layout.addView(posterFrame, LinearLayout.LayoutParams(posterWidth, -1).apply {
-            setMargins(0, 0, dp(28), 0)
-        })
+        layout.addView(poster, LinearLayout.LayoutParams(posterWidth, -1))
 
+        val infoColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.TOP
+            setBackgroundColor(Color.BLACK)
+            setPadding(dp(28), dp(22), dp(28), dp(18))
+            clipChildren = false
+        }
+
+        val infoScroll = ScrollView(this).apply {
+            isFillViewport = false
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            clipToPadding = false
+        }
         val info = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(8), 0, dp(8))
+            setPadding(0, 0, 0, dp(18))
         }
         info.addView(TextView(this).apply {
             text = "FİLM"
-            textSize = 12f
+            textSize = 13f
             letterSpacing = 0.14f
             setTextColor(accentBright)
         })
@@ -3060,7 +3067,7 @@ class MainActivity : Activity() {
             ellipsize = android.text.TextUtils.TruncateAt.END
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
-            setPadding(0, dp(7), 0, dp(9))
+            setPadding(0, dp(7), 0, dp(10))
         })
 
         val metadata = listOf(
@@ -3070,55 +3077,50 @@ class MainActivity : Activity() {
         ).filterNotNull().filter { it.isNotBlank() }.joinToString("   •   ")
         if (metadata.isNotBlank()) info.addView(TextView(this).apply {
             text = metadata
-            textSize = 13f
+            textSize = 14f
             setTextColor(accentBright)
             maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(0, 0, 0, dp(14))
+            setPadding(0, 0, 0, dp(18))
         })
 
         info.addView(TextView(this).apply {
             text = "KONU"
-            textSize = 13f
+            textSize = 14f
             letterSpacing = 0.08f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
-            setPadding(0, 0, 0, dp(6))
+            setPadding(0, 0, 0, dp(7))
         })
         info.addView(TextView(this).apply {
             text = movie.plot.ifBlank { "Bu film için konu bilgisi kaynakta bulunamadı." }
             textSize = 15f
-            maxLines = 6
-            ellipsize = android.text.TextUtils.TruncateAt.END
             setTextColor(Color.rgb(220, 225, 235))
-            setPadding(0, 0, 0, dp(16))
+            setPadding(0, 0, 0, dp(18))
         })
         info.addView(TextView(this).apply {
             text = "OYUNCULAR"
-            textSize = 13f
+            textSize = 14f
             letterSpacing = 0.08f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
-            setPadding(0, 0, 0, dp(6))
+            setPadding(0, 0, 0, dp(7))
         })
         info.addView(TextView(this).apply {
             text = movie.actors.ifBlank { "Oyuncu bilgisi kaynakta bulunamadı." }
             textSize = 14f
-            maxLines = 4
-            ellipsize = android.text.TextUtils.TruncateAt.END
             setTextColor(Color.rgb(190, 198, 212))
-            setPadding(0, 0, 0, dp(20))
         })
+        infoScroll.addView(info, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        infoColumn.addView(infoScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             weightSum = 3f
+            setPadding(0, dp(12), 0, 0)
         }
-        val buttonHeight = dp(48)
-        val actionParams = LinearLayout.LayoutParams(0, buttonHeight, 1f).apply {
-            setMargins(dp(4), 0, dp(8), 0)
-        }
+        val buttonHeight = dp(50)
         val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
             gravity = Gravity.CENTER
             textSize = 14f
@@ -3148,8 +3150,8 @@ class MainActivity : Activity() {
             setMargins(0, 0, dp(8), 0)
         })
         actions.addView(backButton, LinearLayout.LayoutParams(0, buttonHeight, 1f))
-        info.addView(actions)
-        layout.addView(info, LinearLayout.LayoutParams(0, -1, 1f))
+        infoColumn.addView(actions, LinearLayout.LayoutParams(-1, buttonHeight + dp(12)))
+        layout.addView(infoColumn, LinearLayout.LayoutParams(0, -1, 1f))
         content.addView(layout, LinearLayout.LayoutParams(-1, detailHeight))
         watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
     }
