@@ -1704,6 +1704,51 @@ class MainActivity : Activity() {
         render()
     }
 
+    private fun requestSectionFocusAfterRender() {
+        content.post {
+            fun firstFocusable(view: View): View? {
+                if (view.visibility != View.VISIBLE || !view.isEnabled) return null
+                if (view.isFocusable && view.isShown) return view
+                if (view is ViewGroup) {
+                    for (index in 0 until view.childCount) {
+                        val found = firstFocusable(view.getChildAt(index))
+                        if (found != null) return found
+                    }
+                }
+                return null
+            }
+            val firstContent = firstFocusable(content)
+            val firstCategory = firstCategoryFocusView?.takeIf { it.isShown && it.isFocusable }
+            firstRightContentFocusView = firstContent
+            if (firstContent != null && firstContent.id == View.NO_ID) firstContent.id = View.generateViewId()
+            selectedSidebarFocusView?.let { navButton ->
+                val rightTarget = firstCategory ?: firstContent
+                if (rightTarget != null) {
+                    navButton.nextFocusRightId = rightTarget.id
+                    rightTarget.nextFocusLeftId = navButton.id
+                }
+            }
+            if (firstContent != null) {
+                firstCategory?.let { category ->
+                    if (category.id == View.NO_ID) category.id = View.generateViewId()
+                    category.nextFocusRightId = firstContent.id
+                    firstContent.nextFocusLeftId = category.id
+                } ?: selectedSidebarFocusView?.let { navButton -> firstContent.nextFocusLeftId = navButton.id }
+            }
+            if (focusFirstCategoryOnRender && firstCategory != null) {
+                focusFirstCategoryOnRender = false
+                initialSidebarFocusPending = false
+                firstCategory.requestFocus()
+            } else if (initialSidebarFocusPending && navBar.visibility == View.VISIBLE && selectedSidebarFocusView != null) {
+                initialSidebarFocusPending = false
+                selectedSidebarFocusView?.requestFocus()
+            } else if (focusFirstContentOnRender) {
+                focusFirstContentOnRender = false
+                firstContent?.requestFocus()
+            }
+        }
+    }
+
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
         content.removeAllViews()
@@ -2268,6 +2313,8 @@ class MainActivity : Activity() {
                     })
                 }
             }
+            rebuildNavigation()
+            requestSectionFocusAfterRender()
             return
         }
         if (visible.isEmpty() && !(sidebarMode == "search" && query.isBlank())) {
@@ -2389,7 +2436,7 @@ class MainActivity : Activity() {
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
         val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
-            ?: if (selectedType == "Filmler" || selectedType == "Diziler") groups.take(12) else groups
+            ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
@@ -2641,50 +2688,7 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
         }
-        content.post {
-            fun firstFocusable(view: View): View? {
-                if (view.visibility != View.VISIBLE || !view.isEnabled) return null
-                if (view.isFocusable && view.isShown) return view
-                if (view is ViewGroup) {
-                    for (index in 0 until view.childCount) {
-                        val found = firstFocusable(view.getChildAt(index))
-                        if (found != null) return found
-                    }
-                }
-                return null
-            }
-            val firstContent = firstFocusable(content)
-            val firstCategory = firstCategoryFocusView?.takeIf { it.isShown && it.isFocusable }
-            firstRightContentFocusView = firstContent
-            if (firstContent != null && firstContent.id == View.NO_ID) firstContent.id = View.generateViewId()
-            selectedSidebarFocusView?.let { navButton ->
-                val rightTarget = firstCategory ?: firstContent
-                if (rightTarget != null) {
-                    navButton.nextFocusRightId = rightTarget.id
-                    rightTarget.nextFocusLeftId = navButton.id
-                }
-            }
-            if (firstContent != null) {
-                firstCategory?.let { category ->
-                    if (category.id == View.NO_ID) category.id = View.generateViewId()
-                    category.nextFocusRightId = firstContent.id
-                    firstContent.nextFocusLeftId = category.id
-                } ?: selectedSidebarFocusView?.let { navButton -> firstContent.nextFocusLeftId = navButton.id }
-            }
-            if (focusFirstCategoryOnRender && firstCategory != null) {
-                // Entering TV/Movies/Series should land on the first category,
-                // making its blue focus background immediately visible.
-                focusFirstCategoryOnRender = false
-                initialSidebarFocusPending = false
-                firstCategory.requestFocus()
-            } else if (initialSidebarFocusPending && navBar.visibility == View.VISIBLE && selectedSidebarFocusView != null) {
-                initialSidebarFocusPending = false
-                selectedSidebarFocusView?.requestFocus()
-            } else if (focusFirstContentOnRender) {
-                focusFirstContentOnRender = false
-                firstContent?.requestFocus()
-            }
-        }
+        requestSectionFocusAfterRender()
     }
 
     private fun showSeriesDetail(series: MediaItem) {
