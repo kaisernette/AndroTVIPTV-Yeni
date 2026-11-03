@@ -1822,6 +1822,12 @@ class MainActivity : Activity() {
             mainContentScroll.post { mainContentScroll.scrollTo(0, 0) }
         }
         val detailMode = detailSeries != null || detailMovie != null
+        content.setPadding(
+            if (detailMode) 0 else dp(18),
+            if (detailMode) 0 else dp(18),
+            if (detailMode) 0 else dp(30),
+            if (detailMode) 0 else dp(20)
+        )
         val firstEntry = items.isEmpty() && !isLoadingSource
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
@@ -2579,7 +2585,8 @@ class MainActivity : Activity() {
                             play(item)
                         } else {
                             when (item.type) {
-                                "Diziler", "Filmler" -> showPosterFullscreen(item)
+                                "Diziler" -> showPosterFullscreen(item)
+                                "Filmler" -> showMovieDetail(item)
                                 else -> showItemDetails(item)
                             }
                         }
@@ -3001,82 +3008,150 @@ class MainActivity : Activity() {
     }
 
     private fun renderMovieDetail(movie: MediaItem) {
-        val hero = FrameLayout(this).apply {
-            background = roundedDrawable(Color.rgb(24, 31, 45), 18, Color.rgb(50, 60, 78))
+        // Full-screen movie details: poster on the left, information and actions on the right.
+        content.setPadding(0, 0, 0, 0)
+        val screenWidth = resources.displayMetrics.widthPixels
+        val screenHeight = resources.displayMetrics.heightPixels
+        val posterWidth = (screenWidth * 0.36f).toInt().coerceAtLeast(dp(150))
+        val detailHeight = (screenHeight - dp(8)).coerceAtLeast(dp(300))
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(Color.BLACK)
+            setPadding(dp(22), dp(16), dp(26), dp(16))
+            clipChildren = false
+            clipToPadding = false
+        }
+
+        val posterFrame = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
             clipToOutline = true
+            background = roundedDrawable(Color.BLACK, 12, Color.rgb(45, 58, 78))
         }
         val poster = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
+            scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = movie.name
-            alpha = 0.78f
+            setBackgroundColor(Color.BLACK)
         }
-        hero.addView(poster, FrameLayout.LayoutParams(-1, -1))
-        if (movie.icon.startsWith("http://") || movie.icon.startsWith("https://")) loadPoster(movie.icon, poster)
-        hero.addView(View(this).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(0x22070A11, 0xF5070A11.toInt()))
-        }, FrameLayout.LayoutParams(-1, -1))
-        val copy = LinearLayout(this).apply {
+        posterFrame.addView(poster, FrameLayout.LayoutParams(-1, -1))
+        if (movie.icon.startsWith("http://") || movie.icon.startsWith("https://")) {
+            loadPoster(movie.icon, poster)
+        }
+        layout.addView(posterFrame, LinearLayout.LayoutParams(posterWidth, -1).apply {
+            setMargins(0, 0, dp(28), 0)
+        })
+
+        val info = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.BOTTOM
-            // Keep text and buttons clear of the TV's right-edge system overlay.
-            setPadding(dp(18), dp(18), dp(64), dp(26))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(8), 0, dp(8))
         }
-        copy.addView(TextView(this).apply {
-            text = "FİLM  •  ${movie.group.ifBlank { "DİĞER" }.uppercase()}"
-            textSize = 12f; setTextColor(accentBright); letterSpacing = 0.08f
+        info.addView(TextView(this).apply {
+            text = "FİLM"
+            textSize = 12f
+            letterSpacing = 0.14f
+            setTextColor(accentBright)
         })
-        copy.addView(TextView(this).apply {
-            text = movie.name; textSize = 26f; maxLines = 2
-            setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
-            maxWidth = dp(760)
-            setPadding(0, 8, 0, 6)
+        info.addView(TextView(this).apply {
+            text = movie.name
+            textSize = 27f
+            maxLines = 2
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            setPadding(0, dp(7), 0, dp(9))
         })
-        val metadata = listOf(movie.releaseDate, movie.genre, movie.rating.takeIf { it.isNotBlank() }?.let { "Puan $it" })
-            .filterNotNull().filter { it.isNotBlank() }.joinToString("   •   ")
-        if (metadata.isNotBlank()) copy.addView(TextView(this).apply {
-            text = metadata; textSize = 13f; setTextColor(accentBright)
-            maxWidth = dp(760); maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(0, 0, 0, 8)
+
+        val metadata = listOf(
+            movie.releaseDate,
+            movie.genre,
+            movie.rating.takeIf { it.isNotBlank() }?.let { "Puan $it" }
+        ).filterNotNull().filter { it.isNotBlank() }.joinToString("   •   ")
+        if (metadata.isNotBlank()) info.addView(TextView(this).apply {
+            text = metadata
+            textSize = 13f
+            setTextColor(accentBright)
+            maxLines = 2
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(0, 0, 0, dp(14))
         })
-        copy.addView(TextView(this).apply {
-            text = movie.plot.ifBlank { "Film bilgileri kaynakta bulunmuyorsa doğrudan izleyebilirsin." }
-            textSize = 13f; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
-            maxWidth = dp(760)
-            setTextColor(Color.rgb(226, 230, 238))
+
+        info.addView(TextView(this).apply {
+            text = "KONU"
+            textSize = 13f
+            letterSpacing = 0.08f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            setPadding(0, 0, 0, dp(6))
         })
-        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val watchButton = makeButton("FİLMİ İZLE", true) { play(movie) }.apply {
-            gravity = Gravity.CENTER
+        info.addView(TextView(this).apply {
+            text = movie.plot.ifBlank { "Bu film için konu bilgisi kaynakta bulunamadı." }
             textSize = 15f
-            minHeight = dp(42)
+            maxLines = 6
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setTextColor(Color.rgb(220, 225, 235))
+            setPadding(0, 0, 0, dp(16))
+        })
+        info.addView(TextView(this).apply {
+            text = "OYUNCULAR"
+            textSize = 13f
+            letterSpacing = 0.08f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            setPadding(0, 0, 0, dp(6))
+        })
+        info.addView(TextView(this).apply {
+            text = movie.actors.ifBlank { "Oyuncu bilgisi kaynakta bulunamadı." }
+            textSize = 14f
+            maxLines = 4
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setTextColor(Color.rgb(190, 198, 212))
+            setPadding(0, 0, 0, dp(20))
+        })
+
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            weightSum = 3f
         }
-        actions.addView(watchButton,
-            LinearLayout.LayoutParams(dp(116), dp(38)).apply { setMargins(0, 6, dp(8), 0) })
+        val buttonHeight = dp(48)
+        val actionParams = LinearLayout.LayoutParams(0, buttonHeight, 1f).apply {
+            setMargins(dp(4), 0, dp(8), 0)
+        }
+        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
+            gravity = Gravity.CENTER
+            textSize = 14f
+            maxLines = 1
+            minHeight = buttonHeight
+        }
         val favoriteButton = makeFavoriteButton(movie).apply {
             gravity = Gravity.CENTER
-            textSize = 17f
-            minHeight = dp(46)
+            textSize = 14f
+            maxLines = 1
+            minHeight = buttonHeight
         }
-        actions.addView(favoriteButton,
-            LinearLayout.LayoutParams(dp(108), dp(38)).apply { setMargins(0, 6, 0, 0) })
-        copy.addView(actions)
-        watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
-        hero.addView(copy, FrameLayout.LayoutParams(-1, -1))
-        content.addView(hero, LinearLayout.LayoutParams(-1, if (detailMovie?.favoriteKey == movie.favoriteKey) resources.displayMetrics.heightPixels - dp(24) else dp(390)).apply { setMargins(0, 0, 0, dp(18)) })
-
-        val infoTitle = TextView(this).apply {
-            text = "FİLM HAKKINDA"; textSize = 20f
-            setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
-            setPadding(4, 0, 0, 8)
+        val backButton = makeButton("←  GERİ", false) {
+            detailMovie = null
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+            render()
+        }.apply {
+            gravity = Gravity.CENTER
+            textSize = 14f
+            maxLines = 1
+            minHeight = buttonHeight
         }
-        content.addView(infoTitle)
-        if (movie.actors.isNotBlank()) content.addView(TextView(this).apply {
-            text = "Oyuncular: ${movie.actors}"; textSize = 14f; setTextColor(muted)
-            maxWidth = dp(760)
-            maxLines = 3; ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(4, 0, 0, 12)
+        actions.addView(watchButton, LinearLayout.LayoutParams(0, buttonHeight, 1f).apply {
+            setMargins(0, 0, dp(8), 0)
         })
+        actions.addView(favoriteButton, LinearLayout.LayoutParams(0, buttonHeight, 1f).apply {
+            setMargins(0, 0, dp(8), 0)
+        })
+        actions.addView(backButton, LinearLayout.LayoutParams(0, buttonHeight, 1f))
+        info.addView(actions)
+        layout.addView(info, LinearLayout.LayoutParams(0, -1, 1f))
+        content.addView(layout, LinearLayout.LayoutParams(-1, detailHeight))
+        watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
     }
 
     private fun renderSeriesDetail(series: MediaItem) {
