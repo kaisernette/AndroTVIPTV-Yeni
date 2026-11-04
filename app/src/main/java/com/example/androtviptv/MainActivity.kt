@@ -479,6 +479,7 @@ class MainActivity : Activity() {
         selectedType = "Tümü"
         selectedGroup = "Tüm kategoriler"
         buildUi()
+        applyThemeSurfaces()
         showPreviousCrashIfAny()
         loadSavedSources()
     }
@@ -1450,7 +1451,7 @@ class MainActivity : Activity() {
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
-            cornerRadius = 0f
+            cornerRadius = dp(radiusDp).toFloat()
             if (strokeColor != null) setStroke((2 * resources.displayMetrics.density).toInt().coerceAtLeast(1), strokeColor)
         }
 
