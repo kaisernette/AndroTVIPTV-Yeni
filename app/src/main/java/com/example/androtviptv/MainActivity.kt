@@ -1281,7 +1281,7 @@ class MainActivity : Activity() {
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            background = roundedDrawable(panel, 16, Color.rgb(48, 57, 73))
         }
         form.addView(TextView(this).apply {
             text = t(if (editSource == null) "İzleme kaynağı ekle" else "Kaynağı düzenle")
@@ -1294,9 +1294,9 @@ class MainActivity : Activity() {
         })
         sourceName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(editSource?.name.orEmpty()) }
         sourceMode = RadioGroup(this).apply {
-            orientation = RadioGroup.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(5), 0, dp(5))
+            orientation = RadioGroup.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, dp(5), 0, dp(8))
         }
         val sourceChoiceTint = android.content.res.ColorStateList(
             arrayOf(
@@ -1349,9 +1349,11 @@ class MainActivity : Activity() {
                 Toast.makeText(this@MainActivity, "MAC Portal bağlantısı henüz desteklenmiyor.", Toast.LENGTH_LONG).show()
             }
         }
-        sourceMode.addView(m3u, RadioGroup.LayoutParams(0, dp(86), 1f).apply { setMargins(0, 0, dp(5), 0) })
-        sourceMode.addView(xtream, RadioGroup.LayoutParams(0, dp(86), 1f).apply { setMargins(dp(5), 0, dp(5), 0) })
-        sourceMode.addView(macPortal, RadioGroup.LayoutParams(0, dp(86), 1f).apply { setMargins(dp(5), 0, 0, 0) })
+        listOf(m3u, xtream, macPortal).forEach { card ->
+            sourceMode.addView(card, RadioGroup.LayoutParams(-1, dp(72)).apply {
+                setMargins(0, dp(4), 0, dp(4))
+            })
+        }
         form.addView(sourceMode)
         form.addView(TextView(this).apply {
             text = "İzleme kaynağı ekle"
@@ -1373,7 +1375,7 @@ class MainActivity : Activity() {
         val xtreamFieldsFrame = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(10), dp(7), dp(10), dp(7))
-            background = roundedDrawable(panel, 0, Color.rgb(48, 57, 73))
+            background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
         }
         fun framedInput(input: EditText): LinearLayout {
             return LinearLayout(this).apply {
