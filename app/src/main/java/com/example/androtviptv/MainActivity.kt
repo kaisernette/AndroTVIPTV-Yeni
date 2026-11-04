@@ -4629,79 +4629,57 @@ class MainActivity : Activity() {
                     val entries = recent.filter { it.type == sectionType }
                     val column = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
-                        setPadding(dp(5), dp(5), dp(5), dp(5))
-                        background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
+                        setPadding(dp(3), dp(3), dp(3), dp(3))
+                        background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     }
-                    // Başlık kartları yalnızca bölüm başlığıdır; tıklama işlevi yoktur.
                     column.addView(TextView(this).apply {
                         text = "${section.second}  ${t(section.third)}"
-                        textSize = 19f
+                        textSize = 21f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(accentBright)
                         gravity = Gravity.CENTER
-                        setPadding(dp(2), dp(15), dp(2), dp(15))
-                        background = roundedDrawable(panel, 9, Color.rgb(48, 57, 73))
-                    }, LinearLayout.LayoutParams(-1, dp(62)).apply {
-                        setMargins(0, 0, 0, dp(7))
+                        setPadding(dp(2), dp(12), dp(2), dp(12))
+                    }, LinearLayout.LayoutParams(-1, dp(58)).apply {
+                        setMargins(0, 0, 0, dp(5))
                     })
                     if (entries.isEmpty()) {
                         column.addView(TextView(this).apply {
                             text = "Henüz içerik yok"
-                            textSize = 12f
+                            textSize = 13f
                             setTextColor(muted)
                             gravity = Gravity.CENTER
-                            setPadding(dp(4), dp(12), dp(4), dp(12))
+                            setPadding(dp(3), dp(10), dp(3), dp(10))
                         })
                     }
                     entries.forEach { item ->
-                        val card = LinearLayout(this).apply {
-                            orientation = LinearLayout.VERTICAL
-                            setPadding(dp(5), dp(5), dp(5), dp(7))
-                            background = roundedDrawable(Color.rgb(25, 31, 42), 9, Color.rgb(48, 57, 73))
-                            isFocusable = true
-                            isClickable = true
-                        }
-                        val poster = ImageView(this).apply {
-                            scaleType = ImageView.ScaleType.CENTER_CROP
-                            contentDescription = item.name
-                            background = roundedDrawable(Color.rgb(28, 34, 45), 7, Color.rgb(48, 57, 73))
-                        }
-                        val posterUrl = item.icon
-                        if (posterUrl.startsWith("http://") || posterUrl.startsWith("https://")) {
-                            loadPoster(posterUrl, poster)
-                        } else {
-                            poster.setImageDrawable(GradientDrawable().apply {
-                                cornerRadius = dp(7).toFloat()
-                                setColor(Color.rgb(28, 34, 45))
-                            })
-                        }
-                        card.addView(poster, LinearLayout.LayoutParams(-1, dp(if (sectionType == "Canlı TV") 82 else 132)))
-                        card.addView(TextView(this).apply {
+                        val itemRow = TextView(this).apply {
                             text = item.name
-                            textSize = 13f
+                            textSize = 14f
                             maxLines = 2
-                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            gravity = Gravity.CENTER_VERTICAL
                             setTextColor(Color.WHITE)
-                            setPadding(dp(2), dp(6), dp(2), dp(2))
-                        })
-                        card.addView(TextView(this).apply {
-                            text = t(item.group.ifBlank { item.type })
-                            textSize = 11f
-                            maxLines = 1
-                            setTextColor(muted)
-                            setPadding(dp(2), 0, dp(2), 0)
-                        })
-                        card.setOnFocusChangeListener { v, focused ->
-                            v.background = roundedDrawable(if (focused) panel else Color.rgb(25, 31, 42), 9, if (focused) accent else Color.rgb(48, 57, 73))
-                            v.scaleX = if (focused) 1.025f else 1f
-                            v.scaleY = if (focused) 1.025f else 1f
+                            setPadding(dp(9), dp(9), dp(9), dp(9))
+                            background = roundedDrawable(Color.TRANSPARENT, 5, Color.rgb(48, 57, 73))
+                            isFocusable = true
+                            isFocusableInTouchMode = true
+                            isClickable = true
+                            setOnFocusChangeListener { v, focused ->
+                                v.background = roundedDrawable(
+                                    if (focused) panel else Color.TRANSPARENT,
+                                    5,
+                                    if (focused) accent else Color.rgb(48, 57, 73)
+                                )
+                                v.scaleX = if (focused) 1.015f else 1f
+                                v.scaleY = if (focused) 1.015f else 1f
+                            }
+                            setOnClickListener {
+                                if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item)
+                                else play(item)
+                            }
                         }
-                        card.setOnClickListener {
-                            if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item)
-                            else play(item)
-                        }
-                        column.addView(card, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                            setMargins(0, 0, 0, dp(7))
+                        column.addView(itemRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            setMargins(0, 0, 0, dp(5))
                         })
                     }
                     historyColumns.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
