@@ -57,6 +57,7 @@ class PlayerActivity : Activity() {
     private var lastObservedPositionMs = -1L
     private var positionStalledSinceMs = 0L
     private var reconnectPending = false
+    private var reconnectTimeoutRunnable: Runnable? = null
     private var idleSinceMs = 0L
     private val playbackHandler = Handler(Looper.getMainLooper())
     private val playbackWatchdog = object : Runnable {
@@ -304,6 +305,9 @@ class PlayerActivity : Activity() {
                             } else if (playbackState == Player.STATE_READY) {
                                 bufferingSinceMs = 0L
                                 idleSinceMs = 0L
+                                reconnectTimeoutRunnable?.let { playbackHandler.removeCallbacks(it) }
+                                reconnectTimeoutRunnable = null
+                                reconnectPending = false
                                 if (lastStablePlaybackMs == 0L) lastStablePlaybackMs = android.os.SystemClock.elapsedRealtime()
                             } else if (playbackState == Player.STATE_IDLE) {
                                 if (idleSinceMs == 0L) idleSinceMs = android.os.SystemClock.elapsedRealtime()
@@ -465,18 +469,31 @@ class PlayerActivity : Activity() {
             android.widget.Toast.makeText(this, "Yayın yeniden bağlanıyor…", android.widget.Toast.LENGTH_SHORT).show()
         }
         playbackHandler.postDelayed({
-            reconnectPending = false
             if (!isFinishing && player === exo && shouldResume && isLiveStream) {
                 try {
+                    // Keep retry pending until the player really reaches READY.
                     exo.playWhenReady = true
                     exo.stop()
+                    exo.clearMediaItems()
                     exo.setMediaItem(createStreamMediaItem(currentStreamUrl))
                     exo.prepare()
                     exo.playWhenReady = true
+                    reconnectTimeoutRunnable?.let { playbackHandler.removeCallbacks(it) }
+                    reconnectTimeoutRunnable = Runnable {
+                        if (reconnectPending && !isFinishing && player === exo) {
+                            reconnectPending = false
+                            android.util.Log.w("KaiserTVPlayer", "Reconnect did not reach READY; retrying")
+                            restartCurrentStream("Yeniden bağlantı zaman aşımına uğradı.", force = true)
+                        }
+                    }
+                    playbackHandler.postDelayed(reconnectTimeoutRunnable!!, 25000L)
                 } catch (e: Exception) {
                     android.util.Log.e("KaiserTVPlayer", "Reconnect failed", e)
-                    restartCurrentStream("Yeniden bağlantı başlatılamadı.")
+                    reconnectPending = false
+                    restartCurrentStream("Yeniden bağlantı başlatılamadı.", force = true)
                 }
+            } else {
+                reconnectPending = false
             }
         }, delayMs)
     }
@@ -489,6 +506,8 @@ class PlayerActivity : Activity() {
         triedHlsFallback = false
         usingHlsFallback = false
         retryCount = 0
+        reconnectTimeoutRunnable?.let { playbackHandler.removeCallbacks(it) }
+        reconnectTimeoutRunnable = null
         reconnectPending = false
         bufferingSinceMs = 0L
         idleSinceMs = 0L
