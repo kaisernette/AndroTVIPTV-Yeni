@@ -440,30 +440,30 @@ class MainActivity : Activity() {
     private var muted = Color.rgb(190, 198, 210)
     // Sidebar transparency is independent from the selected color theme.
     private var transparentMenu = true
+    private var ovalButtons = false
+    private var gradientBackground = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
-        // Apply Dark Cinematic once as the new demo baseline; later manual theme choices are preserved.
-        if (!prefs.getBoolean("dark_cinematic_applied", false)) {
-            prefs.edit().putString("theme_name", "Dark Cinematic").putBoolean("dark_cinematic_applied", true).apply()
+        ovalButtons = prefs.getBoolean("oval_buttons", false)
+        gradientBackground = prefs.getBoolean("gradient_background", false)
+        // Restore the selected KaiserTV Global theme before constructing any views.
+        if (!prefs.getBoolean("global_themes_initialized", false)) {
+            prefs.edit().putString("theme_name", "Antrasit • Mavi").putBoolean("global_themes_initialized", true).apply()
         }
-        // Restore the selected theme before constructing any views.
-        when (prefs.getString("theme_name", "Dark Cinematic")) {
-            "Dark Cinematic" -> {
-                bg = Color.rgb(10, 13, 19)
-                panel = Color.rgb(20, 26, 37)
-                accent = Color.rgb(0, 145, 255)
-                accentBright = Color.rgb(75, 195, 255)
-                muted = Color.rgb(174, 187, 204)
-            }
+        when (prefs.getString("theme_name", "Antrasit • Mavi")) {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
-            "Lacivert • Turkuaz" -> { bg = Color.rgb(10, 22, 38); accent = Color.rgb(35, 205, 190); accentBright = accent }
-            "Koyu • Mor" -> { bg = Color.rgb(20, 16, 29); accent = Color.rgb(174, 115, 255); accentBright = accent }
+            "Gece • Buzul" -> { bg = Color.rgb(16, 24, 32); accent = Color.rgb(84, 198, 217); accentBright = accent }
+            "Orman • Zümrüt" -> { bg = Color.rgb(16, 27, 24); accent = Color.rgb(32, 201, 151); accentBright = accent }
+            "Gece • Yakut" -> { bg = Color.rgb(25, 20, 23); accent = Color.rgb(240, 100, 121); accentBright = accent }
+            "Gece • Lavanta" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
+            "Lacivert • Turkuaz" -> { bg = Color.rgb(16, 24, 32); accent = Color.rgb(84, 198, 217); accentBright = accent }
+            "Koyu • Mor" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
             else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
         }
-        panel = if (prefs.getString("theme_name", "Dark Cinematic") == "Dark Cinematic") Color.rgb(20, 26, 37) else Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
+        panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
         try {
@@ -1422,6 +1422,31 @@ class MainActivity : Activity() {
         form.post { sourceName.requestFocus() }
     }
 
+    private fun applyThemeSurfaces() {
+        val base = bg
+        val blend = Color.rgb(
+            ((Color.red(base) * 0.72f) + (Color.red(accent) * 0.28f)).toInt().coerceIn(0, 255),
+            ((Color.green(base) * 0.72f) + (Color.green(accent) * 0.28f)).toInt().coerceIn(0, 255),
+            ((Color.blue(base) * 0.72f) + (Color.blue(accent) * 0.28f)).toInt().coerceIn(0, 255)
+        )
+        val surface = if (gradientBackground) {
+            GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(base, blend, base))
+        } else {
+            GradientDrawable().apply { setColor(base) }
+        }
+        rootLayout.background = surface
+        mainContentScroll.background = surface.constantState?.newDrawable()?.mutate() ?: surface
+        sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
+        window.statusBarColor = bg
+        window.navigationBarColor = bg
+    }
+
+    private fun buttonBackground(color: Int): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = dp(if (ovalButtons) 24 else 3).toFloat()
+        }
+
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
@@ -1445,9 +1470,9 @@ class MainActivity : Activity() {
             button.text = "Favori"
             button.setTextColor(if (selected) Color.rgb(25, 25, 25) else if (focused) Color.rgb(8, 13, 22) else Color.WHITE)
             button.background = when {
-                selected -> roundedDrawable(yellow, 0)
-                focused -> roundedDrawable(accent, 0)
-                else -> roundedDrawable(panel, 0)
+                selected -> buttonBackground(yellow)
+                focused -> buttonBackground(accent)
+                else -> buttonBackground(panel)
             }
         }
         return makeButton("Favori", false) {
@@ -1468,10 +1493,10 @@ class MainActivity : Activity() {
         text = t(label); textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
         setTextColor(Color.WHITE)
-        background = roundedDrawable(panel, 0)
+        background = buttonBackground(panel)
         stateListAnimator = null
         setOnFocusChangeListener { v, hasFocus ->
-            v.background = roundedDrawable(if (hasFocus) accent else panel, 0)
+            v.background = buttonBackground(if (hasFocus) accent else panel)
             (v as Button).setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
             v.elevation = 0f
             v.scaleX = 1f; v.scaleY = 1f
@@ -4220,11 +4245,13 @@ class MainActivity : Activity() {
                 val themes = listOf(
                     Triple("Antrasit • Mavi", Color.rgb(17, 20, 25), Color.rgb(0, 166, 255)),
                     Triple("Gece • Altın", Color.rgb(15, 16, 20), Color.rgb(224, 184, 95)),
-                    Triple("Lacivert • Turkuaz", Color.rgb(10, 22, 38), Color.rgb(35, 205, 190)),
-                    Triple("Koyu • Mor", Color.rgb(20, 16, 29), Color.rgb(174, 115, 255))
+                    Triple("Gece • Buzul", Color.rgb(16, 24, 32), Color.rgb(84, 198, 217)),
+                    Triple("Orman • Zümrüt", Color.rgb(16, 27, 24), Color.rgb(32, 201, 151)),
+                    Triple("Gece • Yakut", Color.rgb(25, 20, 23), Color.rgb(240, 100, 121)),
+                    Triple("Gece • Lavanta", Color.rgb(23, 21, 29), Color.rgb(167, 139, 250))
                 )
-                val selectedTheme = prefs.getString("theme_name", "Dark Cinematic")
-                themes.chunked(2).forEach { themeRow ->
+                val selectedTheme = prefs.getString("theme_name", "Antrasit • Mavi")
+                themes.chunked(3).forEach { themeRow ->
                     val row = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
@@ -4234,25 +4261,23 @@ class MainActivity : Activity() {
                         val card = LinearLayout(this).apply {
                             orientation = LinearLayout.VERTICAL
                             gravity = Gravity.CENTER_VERTICAL
-                            setPadding(dp(18), dp(18), dp(14), dp(18))
+                            setPadding(dp(12), dp(12), dp(10), dp(12))
                             isFocusable = true
                             isFocusableInTouchMode = true
                             isClickable = true
-                            background = android.graphics.drawable.GradientDrawable().apply {
-                                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                                cornerRadius = dp(14).toFloat()
+                            background = GradientDrawable().apply {
+                                cornerRadius = dp(12).toFloat()
                                 setColor(theme.second)
                                 setStroke(dp(if (isSelected) 3 else 1), if (isSelected) theme.third else 0x553B4658)
                             }
                             setOnFocusChangeListener { v, focused ->
-                                v.background = android.graphics.drawable.GradientDrawable().apply {
-                                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                                    cornerRadius = dp(14).toFloat()
+                                v.background = GradientDrawable().apply {
+                                    cornerRadius = dp(12).toFloat()
                                     setColor(theme.second)
                                     setStroke(dp(if (focused || isSelected) 3 else 1), if (focused || isSelected) theme.third else 0x553B4658)
                                 }
-                                v.scaleX = if (focused) 1.025f else 1f
-                                v.scaleY = if (focused) 1.025f else 1f
+                                v.scaleX = if (focused) 1.02f else 1f
+                                v.scaleY = if (focused) 1.02f else 1f
                             }
                             setOnClickListener {
                                 bg = theme.second
@@ -4260,51 +4285,144 @@ class MainActivity : Activity() {
                                 accent = theme.third
                                 accentBright = theme.third
                                 prefs.edit().putString("theme_name", theme.first).apply()
-                                rootLayout.setBackgroundColor(bg)
-                                sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
-                                mainContentScroll.setBackgroundColor(bg)
-                                window.statusBarColor = bg
-                                window.navigationBarColor = bg
+                                applyThemeSurfaces()
                                 settingsPage = "themes"
                                 render()
                             }
                         }
-                        val symbol = TextView(this).apply {
+                        card.addView(TextView(this).apply {
                             text = "◆"
-                            textSize = 29f
+                            textSize = 25f
                             setTextColor(theme.third)
                             gravity = Gravity.CENTER
-                            setPadding(0, 0, 0, dp(12))
-                        }
-                        card.addView(symbol)
+                            setPadding(0, 0, 0, dp(8))
+                        })
                         card.addView(TextView(this).apply {
                             text = t(theme.first)
-                            textSize = 18f
+                            textSize = 16f
                             setTypeface(null, android.graphics.Typeface.BOLD)
                             setTextColor(Color.WHITE)
                             maxLines = 2
                         })
                         card.addView(TextView(this).apply {
-                            text = if (isSelected) "✓  Seçili tema" else "Zemin ve vurgu rengi"
-                            textSize = 13f
+                            text = if (isSelected) "✓  Seçili tema" else t("Zemin ve vurgu rengi")
+                            textSize = 12f
                             setTextColor(theme.third)
-                            setPadding(0, dp(7), 0, 0)
+                            setPadding(0, dp(5), 0, 0)
                         })
-                        row.addView(card, LinearLayout.LayoutParams(0, dp(176), 1f).apply {
-                            setMargins(dp(5), dp(5), dp(5), dp(7))
+                        row.addView(card, LinearLayout.LayoutParams(0, dp(142), 1f).apply {
+                            setMargins(dp(4), dp(5), dp(4), dp(7))
                         })
                     }
-                    if (themeRow.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, dp(176), 1f))
                     content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                 }
-                option("◧  ${t("Şeffaf menü")}: ${t(if (transparentMenu) "Açık" else "Kapalı")}",
-                    t(if (transparentMenu) "Sol menü arka planı saydam; kapatmak için seç." else "Sol menü ayrı bir panel olarak görünür; saydam yapmak için seç.")) {
-                    transparentMenu = !transparentMenu
-                    prefs.edit().putBoolean("transparent_menu", transparentMenu).apply()
-                    sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
-                    settingsPage = "themes"
-                    render()
+
+                val settingsRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.TOP
                 }
+                fun choice(label: String, selected: Boolean, action: () -> Unit): TextView =
+                    TextView(this).apply {
+                        text = if (selected) "✓  ${t(label)}" else t(label)
+                        textSize = 13f
+                        gravity = Gravity.CENTER
+                        setTextColor(if (selected) Color.rgb(8, 13, 22) else Color.WHITE)
+                        setPadding(dp(4), dp(10), dp(4), dp(10))
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                        background = GradientDrawable().apply {
+                            cornerRadius = dp(if (ovalButtons) 24 else 5).toFloat()
+                            setColor(if (selected) accent else panel)
+                            setStroke(dp(if (selected) 2 else 1), if (selected) accent else Color.rgb(58, 68, 84))
+                        }
+                        setOnFocusChangeListener { v, focused ->
+                            v.background = GradientDrawable().apply {
+                                cornerRadius = dp(if (ovalButtons) 24 else 5).toFloat()
+                                setColor(if (focused || selected) accent else panel)
+                                setStroke(dp(if (focused || selected) 2 else 1), if (focused || selected) accent else Color.rgb(58, 68, 84))
+                            }
+                            (v as TextView).setTextColor(if (focused || selected) Color.rgb(8, 13, 22) else Color.WHITE)
+                        }
+                        setOnClickListener { action() }
+                    }
+                fun settingCard(
+                    title: String,
+                    subtitle: String,
+                    first: String,
+                    second: String,
+                    firstSelected: Boolean,
+                    onFirst: () -> Unit,
+                    onSecond: () -> Unit
+                ): LinearLayout = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(10), dp(10), dp(10), dp(10))
+                    background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
+                    addView(TextView(this@MainActivity).apply {
+                        text = title
+                        textSize = 17f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE)
+                        setPadding(0, 0, 0, dp(5))
+                    })
+                    addView(TextView(this@MainActivity).apply {
+                        text = subtitle
+                        textSize = 12f
+                        setTextColor(muted)
+                        setPadding(0, 0, 0, dp(9))
+                    })
+                    val options = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+                    options.addView(choice(first, firstSelected, onFirst), LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(0, 0, dp(4), 0) })
+                    options.addView(choice(second, !firstSelected, onSecond), LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, 0, 0) })
+                    addView(options)
+                }
+                settingsRow.addView(settingCard(
+                    "Menü", "Şeffaf Menü", "Açık", "Kapalı", transparentMenu,
+                    {
+                        transparentMenu = true
+                        prefs.edit().putBoolean("transparent_menu", true).apply()
+                        sidebar.setBackgroundColor(Color.TRANSPARENT)
+                        render()
+                    },
+                    {
+                        transparentMenu = false
+                        prefs.edit().putBoolean("transparent_menu", false).apply()
+                        sidebar.setBackgroundColor(panel)
+                        render()
+                    }
+                ), LinearLayout.LayoutParams(0, dp(142), 1f).apply { setMargins(dp(4), dp(10), dp(4), dp(6)) })
+                settingsRow.addView(settingCard(
+                    "Buton", "Köşe biçimi", "Köşeli", "Oval", !ovalButtons,
+                    {
+                        ovalButtons = false
+                        prefs.edit().putBoolean("oval_buttons", false).apply()
+                        render()
+                    },
+                    {
+                        ovalButtons = true
+                        prefs.edit().putBoolean("oval_buttons", true).apply()
+                        render()
+                    }
+                ), LinearLayout.LayoutParams(0, dp(142), 1f).apply { setMargins(dp(4), dp(10), dp(4), dp(6)) })
+                settingsRow.addView(settingCard(
+                    "Arkaplan", "Zemin görünümü", "Düz", "Gradyan", !gradientBackground,
+                    {
+                        gradientBackground = false
+                        prefs.edit().putBoolean("gradient_background", false).apply()
+                        applyThemeSurfaces()
+                        render()
+                    },
+                    {
+                        gradientBackground = true
+                        prefs.edit().putBoolean("gradient_background", true).apply()
+                        applyThemeSurfaces()
+                        render()
+                    }
+                ), LinearLayout.LayoutParams(0, dp(142), 1f).apply { setMargins(dp(4), dp(10), dp(4), dp(6)) })
+                content.addView(settingsRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
             "about" -> {
                 content.setBackgroundColor(Color.rgb(10, 13, 19))
