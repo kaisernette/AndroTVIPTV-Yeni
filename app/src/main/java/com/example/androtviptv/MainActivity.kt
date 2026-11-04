@@ -323,7 +323,8 @@ class MainActivity : Activity() {
                 "Bağlantı zaman aşımına uğradı. Yeniden deneyin." to "Connection timed out. Please try again.",
                 "Güvenli bağlantı kurulamadı." to "A secure connection could not be established.",
                 "Sunucu isteği reddetti" to "The server rejected the request",
-                "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "The source could not be loaded. Check your internet connection and source details."
+                "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "The source could not be loaded. Check your internet connection and source details.",
+                "Bölümler yüklenemedi" to "Episodes could not be loaded"
             ),
             "de" to mapOf(
                 "TV, film ve dizi kategorilerini ayrı ayrı yönet" to "TV-, Film- und Serienkategorien getrennt verwalten",
@@ -1632,7 +1633,7 @@ class MainActivity : Activity() {
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
         loadProgress = 0
-        status.text = "${source.name}: TV, filmler ve diziler yükleniyor…"
+        status.text = "${source.name}: ${t("TV, filmler ve diziler yükleniyor…")}"
         render()
         thread(name = "kaiser-xtream-load") {
             try {
@@ -1793,7 +1794,7 @@ class MainActivity : Activity() {
                     loadProgress = 0
                     isLoadingSource = false
                     status.visibility = View.VISIBLE
-                    status.text = "${source.name} yüklenemedi: ${e.message ?: "bağlantı hatası"}"
+                    status.text = "${source.name}: ${friendlyLoadError(e)}"
                     render()
                 }
             }
@@ -4645,7 +4646,7 @@ class MainActivity : Activity() {
                         }.setNegativeButton("Geri", null).show()
                     }.setNegativeButton("Kapat", null).show()
                 }
-            } catch (e: Exception) { runOnUiThread { status.text = "Bölümler yüklenemedi: ${e.message ?: "bağlantı hatası"}" } }
+            } catch (e: Exception) { runOnUiThread { status.text = "${t("Bölümler yüklenemedi")}: ${friendlyLoadError(e)}" } }
         }
     }
 
