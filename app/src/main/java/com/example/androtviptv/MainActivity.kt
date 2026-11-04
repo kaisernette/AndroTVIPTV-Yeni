@@ -2763,8 +2763,11 @@ class MainActivity : Activity() {
                 }
             }
         }
+        val selectedSourceIds = prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()
         val activeSourceId = prefs.getString("last_source_id", "") ?: ""
-        val activeSourceItems = if (activeSourceId.isBlank()) items.toList()
+        val activeSourceItems = if (selectedSourceIds.size > 1) items.filter { selectedSourceIds.contains(it.sourceId) }
+            else if (selectedSourceIds.size == 1) items.filter { it.sourceId == selectedSourceIds.first() }
+            else if (activeSourceId.isBlank()) items.toList()
             else items.filter { it.sourceId == activeSourceId }
         val unfilteredBase = when {
             // An expanded content row must render its captured items directly, independent
@@ -4110,26 +4113,40 @@ class MainActivity : Activity() {
                             setPadding(0, dp(2), 0, 0)
                         })
                         sourceRow.addView(sourceInfo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                        val sourceSelect = CheckBox(this).apply {
-                            buttonTintList = android.content.res.ColorStateList.valueOf(accentBright)
+                        val selectedIds = (prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()).toMutableSet()
+                        if (selectedIds.isEmpty()) {
+                            prefs.getString("last_source_id", "")?.takeIf { id -> savedSources.any { it.id == id } }?.let { selectedIds.add(it) }
+                        }
+                        val sourceSelect = Switch(this).apply {
+                            showText = false
+                            text = ""
+                            contentDescription = "${source.name} kaynağını etkinleştir"
                             isFocusable = true
-                            contentDescription = "${source.name} kaynağının içeriklerini göster"
-                            setPadding(0, 0, dp(2), 0)
-                            isChecked = prefs.getString("last_source_id", "") == source.id
+                            isChecked = selectedIds.contains(source.id)
+                            thumbTintList = android.content.res.ColorStateList(
+                                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                                intArrayOf(accentBright, Color.rgb(145, 153, 168))
+                            )
+                            trackTintList = android.content.res.ColorStateList(
+                                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                                intArrayOf(accent, Color.rgb(65, 72, 84))
+                            )
                             setOnCheckedChangeListener { _, checked ->
-                                if (checked) {
-                                    prefs.edit().putString("last_source_id", source.id).apply()
-                                    // Display only the content belonging to the selected source.
-                                    items.removeAll { it.sourceId != source.id }
-                                    saveCachedItems()
-                                    if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
-                                    render()
-                                } else if (prefs.getString("last_source_id", "") == source.id) {
-                                    isChecked = true
+                                val activeIds = (prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()).toMutableSet()
+                                if (activeIds.isEmpty()) {
+                                    prefs.getString("last_source_id", "")?.takeIf { id -> savedSources.any { it.id == id } }?.let { activeIds.add(it) }
                                 }
+                                if (checked) activeIds.add(source.id) else activeIds.remove(source.id)
+                                prefs.edit().putStringSet("selected_source_ids", activeIds).apply()
+                                if (activeIds.size == 1) prefs.edit().putString("last_source_id", activeIds.first()).apply()
+                                else prefs.edit().putString("last_source_id", "").apply()
+                                if (checked) {
+                                    if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
+                                }
+                                render()
                             }
                         }
-                        sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(38), dp(42)))
+                        sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(54), dp(42)))
                         sourceRow.addView(makeButton(t("Yenile"), false) {
                             if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
                         }, LinearLayout.LayoutParams(dp(84), dp(42)).apply {
