@@ -3893,16 +3893,70 @@ class MainActivity : Activity() {
                     Triple("ar", "العربية", "🇸🇦")
                 )
                 heading(t("Dil"), t("Uygulama dili") + ": " + (languageOptions.firstOrNull { it.first == currentLanguage }?.second ?: "Cihaz dili"))
-                languageOptions.forEach { entry ->
-                    val selected = entry.first == currentLanguage
-                    option((if (selected) "✓  " else "") + entry.second,
-                        if (entry.first == "system") t("Cihaz dili") else entry.first.uppercase(java.util.Locale.ROOT)) {
-                        prefs.edit().putString("app_language", entry.first).apply()
-                        val locale = if (entry.first == "system") java.util.Locale.getDefault()
-                            else java.util.Locale.forLanguageTag(entry.first)
-                        java.util.Locale.setDefault(locale)
-                        recreate()
+                languageOptions.chunked(3).forEach { languageRow ->
+                    val row = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
                     }
+                    languageRow.forEach { entry ->
+                        val selected = entry.first == currentLanguage
+                        val card = LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL
+                            gravity = Gravity.CENTER
+                            setPadding(dp(5), dp(13), dp(5), dp(13))
+                            background = android.graphics.drawable.GradientDrawable().apply {
+                                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                                cornerRadius = dp(12).toFloat()
+                                setColor(panel)
+                                setStroke(dp(if (selected) 2 else 1), if (selected) accent else 0x553B4658)
+                            }
+                            isFocusable = true
+                            isFocusableInTouchMode = true
+                            isClickable = true
+                            setOnFocusChangeListener { v, focused ->
+                                v.background = android.graphics.drawable.GradientDrawable().apply {
+                                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                                    cornerRadius = dp(12).toFloat()
+                                    setColor(panel)
+                                    setStroke(dp(if (focused || selected) 2 else 1), if (focused || selected) accent else 0x553B4658)
+                                }
+                                v.scaleX = if (focused) 1.035f else 1f
+                                v.scaleY = if (focused) 1.035f else 1f
+                            }
+                            setOnClickListener {
+                                prefs.edit().putString("app_language", entry.first).apply()
+                                val locale = if (entry.first == "system") java.util.Locale.getDefault()
+                                    else java.util.Locale.forLanguageTag(entry.first)
+                                java.util.Locale.setDefault(locale)
+                                recreate()
+                            }
+                        }
+                        card.addView(TextView(this@MainActivity).apply {
+                            text = entry.third
+                            textSize = 27f
+                            gravity = Gravity.CENTER
+                            setPadding(0, 0, 0, dp(7))
+                        })
+                        card.addView(TextView(this@MainActivity).apply {
+                            text = entry.second
+                            textSize = 14f
+                            gravity = Gravity.CENTER
+                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(Color.WHITE)
+                            maxLines = 2
+                        })
+                        if (selected) card.addView(TextView(this@MainActivity).apply {
+                            text = "✓"
+                            textSize = 12f
+                            gravity = Gravity.CENTER
+                            setTextColor(accentBright)
+                            setPadding(0, dp(4), 0, 0)
+                        })
+                        row.addView(card, LinearLayout.LayoutParams(0, dp(116), 1f).apply {
+                            setMargins(dp(4), dp(4), dp(4), dp(5))
+                        })
+                    }
+                    content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                 }
             }
             "sources" -> {
