@@ -1294,8 +1294,8 @@ class MainActivity : Activity() {
         })
         sourceName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(editSource?.name.orEmpty()) }
         sourceMode = RadioGroup(this).apply {
-            orientation = RadioGroup.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
+            orientation = RadioGroup.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(5), 0, dp(8))
         }
         val sourceChoiceTint = android.content.res.ColorStateList(
@@ -1350,8 +1350,8 @@ class MainActivity : Activity() {
             }
         }
         listOf(m3u, xtream, macPortal).forEach { card ->
-            sourceMode.addView(card, RadioGroup.LayoutParams(-1, dp(72)).apply {
-                setMargins(0, dp(4), 0, dp(4))
+            sourceMode.addView(card, RadioGroup.LayoutParams(0, dp(104), 1f).apply {
+                setMargins(dp(4), dp(4), dp(4), dp(4))
             })
         }
         form.addView(sourceMode)
@@ -1362,7 +1362,6 @@ class MainActivity : Activity() {
             setTextColor(Color.WHITE)
             setPadding(dp(2), dp(8), 0, dp(3))
         })
-        form.addView(sourceName, fieldParams())
         playlistUrl = edit(t("M3U / M3U8 oynatma listesi URL'si"), false).apply {
             setText(if (editSource?.mode == "m3u") editSource.address else "")
         }
@@ -1371,7 +1370,15 @@ class MainActivity : Activity() {
         }
         username = edit(t("Kullanıcı adı"), false).apply { setText(editSource?.username.orEmpty()) }
         password = edit(t("Şifre"), true).apply { setText(editSource?.password.orEmpty()) }
-        form.addView(playlistUrl, fieldParams())
+        form.addView(sourceNameFrame, LinearLayout.LayoutParams(-1, dp(56)).apply {
+            setMargins(0, dp(3), 0, dp(5))
+        })
+        val playlistFieldsFrame = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(9), dp(7), dp(9), dp(7))
+            background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
+            addView(playlistFrame, LinearLayout.LayoutParams(-1, dp(56)))
+        }
         val xtreamFieldsFrame = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(10), dp(7), dp(10), dp(7))
@@ -1381,16 +1388,19 @@ class MainActivity : Activity() {
             return LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_VERTICAL
-                background = roundedDrawable(panel, 0, Color.rgb(48, 57, 73))
-                setPadding(dp(8), 0, dp(8), 0)
+                background = roundedDrawable(panel, 10, Color.rgb(48, 57, 73))
+                setPadding(dp(9), 0, dp(9), 0)
                 isFocusable = false
-                input.background = roundedDrawable(Color.TRANSPARENT, 0)
-                addView(input, LinearLayout.LayoutParams(-1, dp(48)))
+                input.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                input.setPadding(dp(5), 0, dp(5), 0)
+                addView(input, LinearLayout.LayoutParams(-1, dp(52)))
                 input.setOnFocusChangeListener { _, hasFocus ->
-                    background = roundedDrawable(panel, 0, if (hasFocus) accent else Color.rgb(48, 57, 73))
+                    background = roundedDrawable(panel, 10, if (hasFocus) accent else Color.rgb(48, 57, 73))
                 }
             }
         }
+        val sourceNameFrame = framedInput(sourceName)
+        val playlistFrame = framedInput(playlistUrl)
         val serverFrame = framedInput(server)
         val usernameFrame = framedInput(username)
         val passwordFrame = framedInput(password)
@@ -1406,18 +1416,22 @@ class MainActivity : Activity() {
             setMargins(dp(5), dp(3), 0, dp(3))
         })
         xtreamFieldsFrame.addView(creds)
+        form.addView(playlistFieldsFrame, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(0, dp(3), 0, dp(3))
+        })
         form.addView(xtreamFieldsFrame, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             setMargins(0, dp(3), 0, dp(3))
         })
         sourceMode.setOnCheckedChangeListener { _, checked ->
             val useXtream = checked == xtream.id
-            playlistUrl.visibility = if (useXtream) View.GONE else View.VISIBLE
+            playlistFieldsFrame.visibility = if (useXtream) View.GONE else View.VISIBLE
             xtreamFieldsFrame.visibility = if (useXtream) View.VISIBLE else View.GONE
         }
         if (editSource?.mode == "xtream") sourceMode.check(xtream.id) else sourceMode.check(m3u.id)
         if (editSource?.mode == "xtream") {
-            playlistUrl.visibility = View.GONE; xtreamFieldsFrame.visibility = View.VISIBLE
+            playlistFieldsFrame.visibility = View.GONE; xtreamFieldsFrame.visibility = View.VISIBLE
         } else {
+            playlistFieldsFrame.visibility = View.VISIBLE
             xtreamFieldsFrame.visibility = View.GONE
         }
         val actions = LinearLayout(this).apply {
