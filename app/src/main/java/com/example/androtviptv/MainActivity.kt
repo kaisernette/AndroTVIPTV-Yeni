@@ -4188,9 +4188,9 @@ class MainActivity : Activity() {
                             val hiddenKey = sectionType + "|" + group
                             val isHidden = hiddenCategories.contains(hiddenKey)
                             val card = LinearLayout(this).apply {
-                                orientation = LinearLayout.VERTICAL
-                                gravity = Gravity.CENTER
-                                setPadding(dp(5), dp(9), dp(5), dp(9))
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.CENTER_VERTICAL
+                                setPadding(dp(10), dp(8), dp(10), dp(8))
                                 background = roundedDrawable(if (isHidden) Color.rgb(
                                     (Color.red(panel) - 4).coerceAtLeast(0),
                                     (Color.green(panel) - 4).coerceAtLeast(0),
@@ -4207,8 +4207,14 @@ class MainActivity : Activity() {
                                     )
                                     val fg = if (focused) Color.rgb(8, 13, 22) else Color.WHITE
                                     (v as ViewGroup).let { box ->
-                                        (box.getChildAt(0) as? TextView)?.setTextColor(if (focused) fg else if (isHidden) muted else accentBright)
-                                        (box.getChildAt(1) as? TextView)?.setTextColor(fg)
+                                        (box.getChildAt(0) as? TextView)?.setTextColor(fg)
+                                        (box.getChildAt(1) as? TextView)?.let { toggle ->
+                                            toggle.background = roundedDrawable(
+                                                if (focused) Color.rgb(8, 13, 22) else if (isHidden) Color.rgb(55, 62, 74) else accent,
+                                                20
+                                            )
+                                            toggle.setTextColor(if (focused) accentBright else Color.WHITE)
+                                        }
                                     }
                                 }
                                 setOnClickListener {
@@ -4220,19 +4226,23 @@ class MainActivity : Activity() {
                                 }
                             }
                             card.addView(TextView(this@MainActivity).apply {
-                                text = if (isHidden) "○" else "●"
-                                textSize = 19f
-                                gravity = Gravity.CENTER
-                                setTextColor(if (isHidden) muted else accentBright)
-                            })
-                            card.addView(TextView(this@MainActivity).apply {
                                 text = group
                                 textSize = 12f
-                                gravity = Gravity.CENTER
+                                gravity = Gravity.CENTER_VERTICAL or Gravity.START
                                 setTextColor(Color.WHITE)
-                                maxLines = 3
+                                maxLines = 2
                                 ellipsize = android.text.TextUtils.TruncateAt.END
+                            }, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
+                                setMargins(0, 0, dp(6), 0)
                             })
+                            card.addView(TextView(this@MainActivity).apply {
+                                text = "●"
+                                textSize = 14f
+                                gravity = if (isHidden) Gravity.CENTER_VERTICAL or Gravity.START else Gravity.CENTER_VERTICAL or Gravity.END
+                                setPadding(dp(5), 0, dp(5), 0)
+                                setTextColor(Color.WHITE)
+                                background = roundedDrawable(if (isHidden) Color.rgb(55, 62, 74) else accent, 20)
+                            }, LinearLayout.LayoutParams(dp(42), dp(24)))
                             column.addView(card, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                                 setMargins(0, dp(3), 0, dp(4))
                             })
