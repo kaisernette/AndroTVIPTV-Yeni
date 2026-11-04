@@ -215,7 +215,106 @@ class MainActivity : Activity() {
                 "Hepsini sil" to "حذف الكل", "← Geri dön" to "← رجوع", "Uygulamadan çıkmak istiyor musunuz?" to "هل تريد الخروج من التطبيق؟"
             )
         )
-        return translations[value] ?: common[language]?.get(value) ?: value
+        val extraTranslations = mapOf(
+            "en" to mapOf(
+                "Hepsini gizle" to "Hide all", "Hepsini göster" to "Show all", "TR olanları göster" to "Show Turkish categories",
+                "Gösterilecek TV kategorisi yok." to "No TV categories to display.", "Gösterilecek film kategorisi yok." to "No movie categories to display.",
+                "Gösterilecek dizi kategorisi yok." to "No series categories to display.", "Gösteriliyor — seçerek gizle" to "Visible — select to hide",
+                "Gizli — seçerek göster" to "Hidden — select to show", "Zemin ve vurgu rengi" to "Background and accent color",
+                "Renk seçimi anında uygulanır." to "Theme changes are applied immediately.", "Şeffaf menü" to "Transparent menu",
+                "Açık" to "On", "Kapalı" to "Off", "Sol menü arka planı saydam; kapatmak için seç." to "The sidebar background is transparent; select to turn it off.",
+                "Sol menü ayrı bir panel olarak görünür; saydam yapmak için seç." to "The sidebar appears as a separate panel; select to make it transparent.",
+                "Sürüm" to "Version", "Derleme tarihi" to "Build date", "Uygulama boyutu" to "App size", "Bilinmiyor" to "Unknown",
+                "TV" to "TV", "Filmler" to "Movies", "Diziler" to "Series", "Film" to "Movies", "Dizi" to "Series",
+                "Geçmiş kaydını sil" to "Delete history entry", "izleme geçmişinden silinsin mi?" to "be removed from watch history?",
+                "Sunucuya ulaşılamadı. İnternet bağlantısını ve sunucuyu kontrol et." to "Could not reach the server. Check your internet connection and the server.",
+                "Yüklenemedi" to "Could not load", "Kaynak yükleniyor…" to "Loading source…",
+                "Seçileni sil (" to "Delete selected (", "Geçmişi sil" to "Clear history",
+                "Kayıtlı kaynaklar" to "Saved sources", "Kapat" to "Close", "Kaynak ekle" to "Add source",
+                "İzleme geçmişini temizle" to "Clear watch history", "İptal" to "Cancel", "Sil" to "Delete",
+                "Antrasit • Mavi" to "Anthracite • Blue", "Gece • Altın" to "Night • Gold",
+                "Lacivert • Turkuaz" to "Navy • Turquoise", "Koyu • Mor" to "Dark • Purple"
+            ),
+            "de" to mapOf(
+                "Hepsini gizle" to "Alle ausblenden", "Hepsini göster" to "Alle anzeigen", "TR olanları göster" to "Türkische Kategorien anzeigen",
+                "Gösterilecek TV kategorisi yok." to "Keine TV-Kategorien vorhanden.", "Gösterilecek film kategorisi yok." to "Keine Filmkategorien vorhanden.",
+                "Gösterilecek dizi kategorisi yok." to "Keine Serienkategorien vorhanden.", "Gösteriliyor — seçerek gizle" to "Sichtbar — zum Ausblenden auswählen",
+                "Gizli — seçerek göster" to "Ausgeblendet — zum Anzeigen auswählen", "Zemin ve vurgu rengi" to "Hintergrund- und Akzentfarbe",
+                "Renk seçimi anında uygulanır." to "Farbänderungen werden sofort übernommen.", "Şeffaf menü" to "Transparentes Menü",
+                "Açık" to "Ein", "Kapalı" to "Aus", "Sürüm" to "Version", "Derleme tarihi" to "Build-Datum",
+                "Uygulama boyutu" to "App-Größe", "Bilinmiyor" to "Unbekannt", "Film" to "Filme", "Dizi" to "Serien",
+                "Geçmiş kaydını sil" to "Verlaufseintrag löschen", "Sunucuya ulaşılamadı. İnternet bağlantısını ve sunucuyu kontrol et." to "Server nicht erreichbar. Prüfe Internetverbindung und Server.",
+                "Yüklenemedi" to "Laden fehlgeschlagen", "Kaynak yükleniyor…" to "Quelle wird geladen…", "Seçileni sil (" to "Auswahl löschen (",
+                "Geçmişi sil" to "Verlauf löschen", "Kayıtlı kaynaklar" to "Gespeicherte Quellen", "Kapat" to "Schließen",
+                "Antrasit • Mavi" to "Anthrazit • Blau", "Gece • Altın" to "Nacht • Gold", "Lacivert • Turkuaz" to "Marineblau • Türkis", "Koyu • Mor" to "Dunkel • Violett"
+            ),
+            "fr" to mapOf(
+                "Hepsini gizle" to "Tout masquer", "Hepsini göster" to "Tout afficher", "TR olanları göster" to "Afficher les catégories turques",
+                "Gösterilecek TV kategorisi yok." to "Aucune catégorie TV à afficher.", "Gösterilecek film kategorisi yok." to "Aucune catégorie de films à afficher.",
+                "Gösterilecek dizi kategorisi yok." to "Aucune catégorie de séries à afficher.", "Gösteriliyor — seçerek gizle" to "Visible — sélectionner pour masquer",
+                "Gizli — seçerek göster" to "Masqué — sélectionner pour afficher", "Zemin ve vurgu rengi" to "Arrière-plan et couleur d’accent",
+                "Renk seçimi anında uygulanır." to "Les changements sont appliqués immédiatement.", "Şeffaf menü" to "Menu transparent",
+                "Açık" to "Activé", "Kapalı" to "Désactivé", "Sürüm" to "Version", "Derleme tarihi" to "Date de compilation",
+                "Uygulama boyutu" to "Taille de l’application", "Bilinmiyor" to "Inconnu", "Film" to "Films", "Dizi" to "Séries",
+                "Geçmiş kaydını sil" to "Supprimer l’entrée de l’historique", "Sunucuya ulaşılamadı. İnternet bağlantısını ve sunucuyu kontrol et." to "Serveur inaccessible. Vérifiez votre connexion et le serveur.",
+                "Yüklenemedi" to "Échec du chargement", "Kaynak yükleniyor…" to "Chargement de la source…", "Seçileni sil (" to "Supprimer la sélection (",
+                "Geçmişi sil" to "Effacer l’historique", "Kayıtlı kaynaklar" to "Sources enregistrées", "Kapat" to "Fermer",
+                "Antrasit • Mavi" to "Anthracite • Bleu", "Gece • Altın" to "Nuit • Or", "Lacivert • Turkuaz" to "Bleu marine • Turquoise", "Koyu • Mor" to "Sombre • Violet"
+            ),
+            "it" to mapOf(
+                "Hepsini gizle" to "Nascondi tutto", "Hepsini göster" to "Mostra tutto", "TR olanları göster" to "Mostra categorie turche",
+                "Gösterilecek TV kategorisi yok." to "Nessuna categoria TV da mostrare.", "Gösterilecek film kategorisi yok." to "Nessuna categoria film da mostrare.",
+                "Gösterilecek dizi kategorisi yok." to "Nessuna categoria serie da mostrare.", "Gösteriliyor — seçerek gizle" to "Visibile — seleziona per nascondere",
+                "Gizli — seçerek göster" to "Nascosto — seleziona per mostrare", "Zemin ve vurgu rengi" to "Sfondo e colore principale",
+                "Renk seçimi anında uygulanır." to "Le modifiche vengono applicate subito.", "Şeffaf menü" to "Menu trasparente",
+                "Açık" to "Attivo", "Kapalı" to "Disattivato", "Sürüm" to "Versione", "Derleme tarihi" to "Data build",
+                "Uygulama boyutu" to "Dimensione app", "Bilinmiyor" to "Sconosciuto", "Film" to "Film", "Dizi" to "Serie",
+                "Geçmiş kaydını sil" to "Elimina voce cronologia", "Sunucuya ulaşılamadı. İnternet bağlantısını ve sunucuyu kontrol et." to "Server non raggiungibile. Controlla la connessione e il server.",
+                "Yüklenemedi" to "Caricamento non riuscito", "Kaynak yükleniyor…" to "Caricamento sorgente…", "Seçileni sil (" to "Elimina selezionati (",
+                "Geçmişi sil" to "Cancella cronologia", "Kayıtlı kaynaklar" to "Sorgenti salvate", "Kapat" to "Chiudi",
+                "Antrasit • Mavi" to "Antracite • Blu", "Gece • Altın" to "Notte • Oro", "Lacivert • Turkuaz" to "Blu navy • Turchese", "Koyu • Mor" to "Scuro • Viola"
+            ),
+            "es" to mapOf(
+                "Hepsini gizle" to "Ocultar todo", "Hepsini göster" to "Mostrar todo", "TR olanları göster" to "Mostrar categorías turcas",
+                "Gösterilecek TV kategorisi yok." to "No hay categorías de TV para mostrar.", "Gösterilecek film kategorisi yok." to "No hay categorías de películas para mostrar.",
+                "Gösterilecek dizi kategorisi yok." to "No hay categorías de series para mostrar.", "Gösteriliyor — seçerek gizle" to "Visible — selecciona para ocultar",
+                "Gizli — seçerek göster" to "Oculto — selecciona para mostrar", "Zemin ve vurgu rengi" to "Fondo y color de acento",
+                "Renk seçimi anında uygulanır." to "Los cambios se aplican inmediatamente.", "Şeffaf menü" to "Menú transparente",
+                "Açık" to "Activado", "Kapalı" to "Desactivado", "Sürüm" to "Versión", "Derleme tarihi" to "Fecha de compilación",
+                "Uygulama boyutu" to "Tamaño de la aplicación", "Bilinmiyor" to "Desconocido", "Film" to "Películas", "Dizi" to "Series",
+                "Geçmiş kaydını sil" to "Eliminar entrada del historial", "Sunucuya ulaşılamadı. İnternet bağlantısını ve sunucuyu kontrol et." to "No se pudo acceder al servidor. Comprueba la conexión y el servidor.",
+                "Yüklenemedi" to "No se pudo cargar", "Kaynak yükleniyor…" to "Cargando fuente…", "Seçileni sil (" to "Eliminar selección (",
+                "Geçmişi sil" to "Borrar historial", "Kayıtlı kaynaklar" to "Fuentes guardadas", "Kapat" to "Cerrar",
+                "Antrasit • Mavi" to "Antracita • Azul", "Gece • Altın" to "Noche • Dorado", "Lacivert • Turkuaz" to "Azul marino • Turquesa", "Koyu • Mor" to "Oscuro • Morado"
+            ),
+            "ru" to mapOf(
+                "Hepsini gizle" to "Скрыть все", "Hepsini göster" to "Показать все", "TR olanları göster" to "Показать турецкие категории",
+                "Gösterilecek TV kategorisi yok." to "Нет категорий ТВ для отображения.", "Gösterilecek film kategorisi yok." to "Нет категорий фильмов для отображения.",
+                "Gösterilecek dizi kategorisi yok." to "Нет категорий сериалов для отображения.", "Gösteriliyor — seçerek gizle" to "Показано — выберите, чтобы скрыть",
+                "Gizli — seçerek göster" to "Скрыто — выберите, чтобы показать", "Zemin ve vurgu rengi" to "Цвет фона и акцента",
+                "Renk seçimi anında uygulanır." to "Изменения применяются сразу.", "Şeffaf menü" to "Прозрачное меню",
+                "Açık" to "Вкл.", "Kapalı" to "Выкл.", "Sürüm" to "Версия", "Derleme tarihi" to "Дата сборки",
+                "Uygulama boyutu" to "Размер приложения", "Bilinmiyor" to "Неизвестно", "Film" to "Фильмы", "Dizi" to "Сериалы",
+                "Geçmiş kaydını sil" to "Удалить запись истории", "Sunucuya ulaşılamadı. İnternet bağlantısını ve sunucuyu kontrol et." to "Не удалось связаться с сервером. Проверьте подключение и сервер.",
+                "Yüklenemedi" to "Не удалось загрузить", "Kaynak yükleniyor…" to "Загрузка источника…", "Seçileni sil (" to "Удалить выбранное (",
+                "Geçmişi sil" to "Очистить историю", "Kayıtlı kaynaklar" to "Сохранённые источники", "Kapat" to "Закрыть",
+                "Antrasit • Mavi" to "Антрацит • Синий", "Gece • Altın" to "Ночь • Золото", "Lacivert • Turkuaz" to "Тёмно-синий • Бирюзовый", "Koyu • Mor" to "Тёмный • Фиолетовый"
+            ),
+            "ar" to mapOf(
+                "Hepsini gizle" to "إخفاء الكل", "Hepsini göster" to "إظهار الكل", "TR olanları göster" to "إظهار الفئات التركية",
+                "Gösterilecek TV kategorisi yok." to "لا توجد فئات تلفزيونية لعرضها.", "Gösterilecek film kategorisi yok." to "لا توجد فئات أفلام لعرضها.",
+                "Gösterilecek dizi kategorisi yok." to "لا توجد فئات مسلسلات لعرضها.", "Gösteriliyor — seçerek gizle" to "ظاهر — اختر للإخفاء",
+                "Gizli — seçerek göster" to "مخفي — اختر للإظهار", "Zemin ve vurgu rengi" to "لون الخلفية والتمييز",
+                "Renk seçimi anında uygulanır." to "تُطبّق التغييرات فوراً.", "Şeffaf menü" to "قائمة شفافة",
+                "Açık" to "مفعّل", "Kapalı" to "متوقف", "Sürüm" to "الإصدار", "Derleme tarihi" to "تاريخ البناء",
+                "Uygulama boyutu" to "حجم التطبيق", "Bilinmiyor" to "غير معروف", "Film" to "أفلام", "Dizi" to "مسلسلات",
+                "Geçmiş kaydını sil" to "حذف سجل المشاهدة", "Sunucuya ulaşılamadı. İnternet bağlantısını ve sunucuyu kontrol et." to "تعذر الوصول إلى الخادم. تحقق من الاتصال والخادم.",
+                "Yüklenemedi" to "تعذر التحميل", "Kaynak yükleniyor…" to "جارٍ تحميل المصدر…", "Seçileni sil (" to "حذف المحدد (",
+                "Geçmişi sil" to "مسح السجل", "Kayıtlı kaynaklar" to "المصادر المحفوظة", "Kapat" to "إغلاق",
+                "Antrasit • Mavi" to "فحمي • أزرق", "Gece • Altın" to "ليلي • ذهبي", "Lacivert • Turkuaz" to "كحلي • فيروزي", "Koyu • Mor" to "داكن • بنفسجي"
+            )
+        )
+        return translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: value
     }
     private val posterExecutor = Executors.newFixedThreadPool(3)
     private val posterCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
@@ -2399,7 +2498,7 @@ class MainActivity : Activity() {
                     setTextColor(Color.WHITE)
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 if (history.isNotEmpty()) historyHeader.addView(makeButton(
-                    if (selectedSearchHistory.isEmpty()) "Geçmişi sil" else "Seçileni sil (" + selectedSearchHistory.size + ")", false
+                    if (selectedSearchHistory.isEmpty()) t("Geçmişi sil") else t("Seçileni sil (") + selectedSearchHistory.size + ")", false
                 ) {
                     val remaining = if (selectedSearchHistory.isEmpty()) emptyList()
                         else history.filterNot { selectedSearchHistory.contains(it) }
@@ -3862,7 +3961,7 @@ class MainActivity : Activity() {
                 val actionItems = listOf("Hepsini gizle", "Hepsini göster", "TR olanları göster")
                 actionItems.forEach { actionLabel ->
                     val actionButton = TextView(this).apply {
-                        text = actionLabel
+                        text = t(actionLabel)
                         textSize = 12f
                         gravity = Gravity.CENTER
                         setTextColor(Color.WHITE)
@@ -3955,7 +4054,7 @@ class MainActivity : Activity() {
                             ellipsize = android.text.TextUtils.TruncateAt.END
                         })
                         labels.addView(TextView(this@MainActivity).apply {
-                            text = if (isHidden) "Gizli — seçerek göster" else "Gösteriliyor — seçerek gizle"
+                            text = t(if (isHidden) "Gizli — seçerek göster" else "Gösteriliyor — seçerek gizle")
                             textSize = 13f
                             setTextColor(muted)
                             setPadding(0, dp(5), 0, 0)
@@ -3970,11 +4069,11 @@ class MainActivity : Activity() {
                     }
                 } else {
                     content.addView(TextView(this).apply {
-                        text = when (sectionType) {
+                        text = t(when (sectionType) {
                             "Canlı TV" -> "Gösterilecek TV kategorisi yok."
                             "Filmler" -> "Gösterilecek film kategorisi yok."
                             else -> "Gösterilecek dizi kategorisi yok."
-                        }
+                        })
                         textSize = 16f
                         setTextColor(muted)
                         setPadding(dp(8), dp(12), dp(8), dp(12))
@@ -3990,7 +4089,7 @@ class MainActivity : Activity() {
                     Triple("Koyu • Mor", Color.rgb(20, 16, 29), Color.rgb(174, 115, 255))
                 )
                 themes.forEach { theme ->
-                    option(theme.first, "Zemin ve vurgu rengi") {
+                    option(t(theme.first), "Zemin ve vurgu rengi") {
                         bg = theme.second
                         panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
                         accent = theme.third
@@ -4001,8 +4100,8 @@ class MainActivity : Activity() {
                         settingsPage = "themes"; render()
                     }
                 }
-                option("◧  Şeffaf menü: ${if (transparentMenu) "Açık" else "Kapalı"}",
-                    if (transparentMenu) "Sol menü arka planı saydam; kapatmak için seç." else "Sol menü ayrı bir panel olarak görünür; saydam yapmak için seç.") {
+                option("◧  ${t("Şeffaf menü")}: ${t(if (transparentMenu) "Açık" else "Kapalı")}",
+                    t(if (transparentMenu) "Sol menü arka planı saydam; kapatmak için seç." else "Sol menü ayrı bir panel olarak görünür; saydam yapmak için seç.")) {
                     transparentMenu = !transparentMenu
                     prefs.edit().putBoolean("transparent_menu", transparentMenu).apply()
                     sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
@@ -4040,7 +4139,7 @@ class MainActivity : Activity() {
                     val bytes = java.io.File(applicationInfo.sourceDir).length()
                     String.format(java.util.Locale("tr", "TR"), "%.1f MB", bytes / (1024.0 * 1024.0))
                 } catch (_: Exception) { "Bilinmiyor" }
-                listOf("Sürüm" to version, "Derleme tarihi" to buildDate, "Uygulama boyutu" to appSize).forEach { item ->
+                listOf(t("Sürüm") to version, t("Derleme tarihi") to buildDate, t("Uygulama boyutu") to appSize).forEach { item ->
                     val infoRow = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
@@ -4069,7 +4168,7 @@ class MainActivity : Activity() {
                 val historyOptions = listOf("Canlı TV", "Filmler", "Diziler")
                 val picker = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
                 historyOptions.forEach { type ->
-                    picker.addView(makeButton(when (type) { "Canlı TV" -> "▣  TV"; "Filmler" -> "▰  Filmler"; else -> "▤  Diziler" }, historyType == type) {
+                    picker.addView(makeButton(when (type) { "Canlı TV" -> "▣  TV"; "Filmler" -> "▰  ${t("Filmler")}"; else -> "▤  ${t("Diziler")}" }, historyType == type) {
                         historyType = type; render()
                     }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(8)) })
                 }
@@ -4081,11 +4180,11 @@ class MainActivity : Activity() {
                         android.app.AlertDialog.Builder(this)
                             .setTitle(t("İzleme geçmişini temizle"))
                             .setMessage(when (historyType) {
-                                "Canlı TV" -> "İzlenen tüm TV kanalları geçmişten silinsin mi?"
-                                "Filmler" -> "İzlenen tüm filmler geçmişten silinsin mi?"
-                                else -> "İzlenen tüm diziler geçmişten silinsin mi?"
+                                "Canlı TV" -> t("İzlenen tüm TV kanalları geçmişten silinsin mi?")
+                                "Filmler" -> t("İzlenen tüm filmler geçmişten silinsin mi?")
+                                else -> t("İzlenen tüm diziler geçmişten silinsin mi?")
                             })
-                            .setNegativeButton("İptal", null)
+                            .setNegativeButton(t("İptal"), null)
                             .setPositiveButton(t("Sil")) { _, _ ->
                                 recent.removeAll { it.type == historyType }
                                 persistRecentHistory()
@@ -4143,7 +4242,7 @@ class MainActivity : Activity() {
                         setTextColor(Color.WHITE)
                     })
                     itemInfo.addView(TextView(this).apply {
-                        text = item.group.ifBlank { item.type }
+                        text = t(item.group.ifBlank { item.type })
                         textSize = 13f
                         maxLines = 1
                         setTextColor(muted)
@@ -4151,10 +4250,10 @@ class MainActivity : Activity() {
                     historyRow.addView(itemInfo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                     historyRow.addView(makeButton("Sil", false) {
                         android.app.AlertDialog.Builder(this)
-                            .setTitle("Geçmiş kaydını sil")
-                            .setMessage("${item.name} izleme geçmişinden silinsin mi?")
-                            .setNegativeButton("İptal", null)
-                            .setPositiveButton("Sil") { _, _ ->
+                            .setTitle(t("Geçmiş kaydını sil"))
+                            .setMessage("${item.name} ${t("izleme geçmişinden silinsin mi?")}")
+                            .setNegativeButton(t("İptal"), null)
+                            .setPositiveButton(t("Sil")) { _, _ ->
                                 recent.removeAll { it.favoriteKey == item.favoriteKey }
                                 persistRecentHistory()
                                 render()
