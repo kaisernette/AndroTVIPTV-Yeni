@@ -447,6 +447,49 @@ class PlayerActivity : Activity() {
         if (highlighted) setStroke(dp(1), 0xFFDEB55B.toInt())
     }
 
+    private fun createFreshLivePlayer(): ExoPlayer {
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent("KaiserTv+/3.0 (Android TV)")
+            .setConnectTimeoutMs(10000)
+            .setReadTimeoutMs(18000)
+            .setAllowCrossProtocolRedirects(true)
+        val mediaSourceFactory = DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(httpFactory)
+        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
+            .setEnableDecoderFallback(true)
+        val durations = when (bufferMode) {
+            "low" -> intArrayOf(8000, 30000, 1000, 3500)
+            "high" -> intArrayOf(25000, 60000, 2500, 7000)
+            else -> intArrayOf(15000, 45000, 1500, 5000)
+        }
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(durations[0], durations[1], durations[2], durations[3])
+            .build()
+        return ExoPlayer.Builder(this, renderersFactory)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .setLoadControl(loadControl)
+            .build().also { fresh ->
+                fresh.addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(state: Int) {
+                        if (state == Player.STATE_READY) {
+                            bufferingSinceMs = 0L
+                            idleSinceMs = 0L
+                            reconnectTimeoutRunnable?.let { playbackHandler.removeCallbacks(it) }
+                            reconnectTimeoutRunnable = null
+                            reconnectPending = false
+                            lastObservedPositionMs = -1L
+                            positionStalledSinceMs = 0L
+                            lastStablePlaybackMs = android.os.SystemClock.elapsedRealtime()
+                        }
+                    }
+                    override fun onPlayerError(error: PlaybackException) {
+                        android.util.Log.e("KaiserTVPlayer", "Fresh player playback error: ${error.errorCodeName}", error)
+                        restartCurrentStream("Yeniden açılan oynatıcıda akış hatası: ${error.errorCodeName}", force = true)
+                    }
+                })
+            }
+    }
+
     private fun restartCurrentStream(reason: String, force: Boolean = false) {
         val exo = player ?: return
         if (currentStreamUrl.isBlank() || isFinishing || !isLiveStream ||
@@ -471,19 +514,21 @@ class PlayerActivity : Activity() {
         playbackHandler.postDelayed({
             if (!isFinishing && player === exo && shouldResume && isLiveStream) {
                 try {
-                    // Keep retry pending until the player really reaches READY.
-                    exo.playWhenReady = true
-                    exo.stop()
-                    exo.clearMediaItems()
-                    exo.setMediaItem(createStreamMediaItem(currentStreamUrl))
-                    exo.prepare()
-                    exo.playWhenReady = true
+                    // Release the failed playback session and create a new ExoPlayer instance.
+                    playerView?.player = null
+                    exo.release()
+                    val fresh = createFreshLivePlayer()
+                    player = fresh
+                    playerView?.player = fresh
+                    fresh.setMediaItem(createStreamMediaItem(currentStreamUrl))
+                    fresh.playWhenReady = true
+                    fresh.prepare()
                     reconnectTimeoutRunnable?.let { playbackHandler.removeCallbacks(it) }
                     reconnectTimeoutRunnable = Runnable {
-                        if (reconnectPending && !isFinishing && player === exo) {
+                        if (reconnectPending && !isFinishing && player === fresh) {
                             reconnectPending = false
-                            android.util.Log.w("KaiserTVPlayer", "Reconnect did not reach READY; retrying")
-                            restartCurrentStream("Yeniden bağlantı zaman aşımına uğradı.", force = true)
+                            android.util.Log.w("KaiserTVPlayer", "Fresh player did not reach READY; retrying")
+                            restartCurrentStream("Yayın bağlantısı zaman aşımına uğradı.", force = true)
                         }
                     }
                     playbackHandler.postDelayed(reconnectTimeoutRunnable!!, 25000L)
