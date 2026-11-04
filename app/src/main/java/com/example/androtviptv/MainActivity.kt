@@ -107,6 +107,31 @@ private class WrappingRowLayout(context: Context) : ViewGroup(context) {
 }
 
 class MainActivity : Activity() {
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = newBase.getSharedPreferences("androtv", Context.MODE_PRIVATE)
+        val selected = prefs.getString("app_language", "system") ?: "system"
+        val locale = if (selected == "system") java.util.Locale.getDefault() else java.util.Locale.forLanguageTag(selected)
+        java.util.Locale.setDefault(locale)
+        val configuration = android.content.res.Configuration(newBase.resources.configuration)
+        configuration.setLocale(locale)
+        super.attachBaseContext(newBase.createConfigurationContext(configuration))
+    }
+
+    private fun t(value: String): String {
+        val selected = prefs.getString("app_language", "system") ?: "system"
+        val language = if (selected == "system") java.util.Locale.getDefault().language else selected
+        val translations = when (language) {
+            "en" -> mapOf("Ayarlar" to "Settings", "Bir bölümü seç; ayrı ekranda açılacak." to "Choose a section to open it.", "Kaynak Yönetimi" to "Source Management", "M3U / Xtream kaynak ekle, düzenle" to "Add or edit M3U / Xtream sources", "İçerik Ayarları" to "Content Settings", "Kategoriler, gizleme ve sıralama" to "Categories, visibility and sorting", "Tema ve Görünüm" to "Theme & Appearance", "Renk, arka plan ve arayüz stili" to "Colors, background and interface style", "İzleme Geçmişi" to "Watch History", "Son izlenen içerikleri görüntüle" to "View recently watched content", "Hakkında" to "About", "Uygulama sürümü ve teknik bilgiler" to "App version and technical information", "Dil / Language" to "Language", "Uygulama dilini seç" to "Choose the app language", "Dil" to "Language", "Cihaz dili" to "Device language", "Uygulama dili" to "App language")
+            "de" -> mapOf("Ayarlar" to "Einstellungen", "Bir bölümü seç; ayrı ekranda açılacak." to "Wähle einen Bereich aus.", "Kaynak Yönetimi" to "Quellenverwaltung", "M3U / Xtream kaynak ekle, düzenle" to "M3U-/Xtream-Quellen hinzufügen oder bearbeiten", "İçerik Ayarları" to "Inhaltseinstellungen", "Kategoriler, gizleme ve sıralama" to "Kategorien, Ausblenden und Sortierung", "Tema ve Görünüm" to "Design & Darstellung", "Renk, arka plan ve arayüz stili" to "Farben, Hintergrund und Oberflächenstil", "İzleme Geçmişi" to "Wiedergabeverlauf", "Son izlenen içerikleri görüntüle" to "Zuletzt angesehene Inhalte", "Hakkında" to "Über", "Uygulama sürümü ve teknik bilgiler" to "App-Version und technische Informationen", "Dil / Language" to "Sprache", "Uygulama dilini seç" to "App-Sprache auswählen", "Dil" to "Sprache", "Cihaz dili" to "Gerätesprache", "Uygulama dili" to "App-Sprache")
+            "fr" -> mapOf("Ayarlar" to "Paramètres", "Bir bölümü seç; ayrı ekranda açılacak." to "Choisissez une rubrique.", "Kaynak Yönetimi" to "Gestion des sources", "M3U / Xtream kaynak ekle, düzenle" to "Ajouter ou modifier des sources M3U / Xtream", "İçerik Ayarları" to "Paramètres du contenu", "Kategoriler, gizleme ve sıralama" to "Catégories, masquage et tri", "Tema ve Görünüm" to "Thème et apparence", "Renk, arka plan ve arayüz stili" to "Couleurs, arrière-plan et style", "İzleme Geçmişi" to "Historique", "Son izlenen içerikleri görüntüle" to "Afficher les contenus récemment regardés", "Hakkında" to "À propos", "Uygulama sürümü ve teknik bilgiler" to "Version et informations techniques", "Dil / Language" to "Langue", "Uygulama dilini seç" to "Choisir la langue de l’application", "Dil" to "Langue", "Cihaz dili" to "Langue de l’appareil", "Uygulama dili" to "Langue de l’application")
+            "it" -> mapOf("Ayarlar" to "Impostazioni", "Bir bölümü seç; ayrı ekranda açılacak." to "Scegli una sezione.", "Kaynak Yönetimi" to "Gestione sorgenti", "M3U / Xtream kaynak ekle, düzenle" to "Aggiungi o modifica sorgenti M3U / Xtream", "İçerik Ayarları" to "Impostazioni contenuti", "Kategoriler, gizleme ve sıralama" to "Categorie, visibilità e ordinamento", "Tema ve Görünüm" to "Tema e aspetto", "Renk, arka plan ve arayüz stili" to "Colori, sfondo e stile dell’interfaccia", "İzleme Geçmişi" to "Cronologia", "Son izlenen içerikleri görüntüle" to "Visualizza i contenuti guardati di recente", "Hakkında" to "Informazioni", "Uygulama sürümü ve teknik bilgiler" to "Versione e informazioni tecniche", "Dil / Language" to "Lingua", "Uygulama dilini seç" to "Scegli la lingua dell’app", "Dil" to "Lingua", "Cihaz dili" to "Lingua del dispositivo", "Uygulama dili" to "Lingua dell’app")
+            "es" -> mapOf("Ayarlar" to "Ajustes", "Bir bölümü seç; ayrı ekranda açılacak." to "Elige una sección.", "Kaynak Yönetimi" to "Gestión de fuentes", "M3U / Xtream kaynak ekle, düzenle" to "Añadir o editar fuentes M3U / Xtream", "İçerik Ayarları" to "Ajustes de contenido", "Kategoriler, gizleme ve sıralama" to "Categorías, visibilidad y orden", "Tema ve Görünüm" to "Tema y apariencia", "Renk, arka plan ve arayüz stili" to "Colores, fondo y estilo de interfaz", "İzleme Geçmişi" to "Historial", "Son izlenen içerikleri görüntüle" to "Ver contenido visto recientemente", "Hakkında" to "Acerca de", "Uygulama sürümü ve teknik bilgiler" to "Versión e información técnica", "Dil / Language" to "Idioma", "Uygulama dilini seç" to "Elegir el idioma de la aplicación", "Dil" to "Idioma", "Cihaz dili" to "Idioma del dispositivo", "Uygulama dili" to "Idioma de la aplicación")
+            "ru" -> mapOf("Ayarlar" to "Настройки", "Bir bölümü seç; ayrı ekranda açılacak." to "Выберите раздел.", "Kaynak Yönetimi" to "Управление источниками", "M3U / Xtream kaynak ekle, düzenle" to "Добавить или изменить источники M3U / Xtream", "İçerik Ayarları" to "Настройки контента", "Kategoriler, gizleme ve sıralama" to "Категории, скрытие и сортировка", "Tema ve Görünüm" to "Тема и оформление", "Renk, arka plan ve arayüz stili" to "Цвета, фон и стиль интерфейса", "İzleme Geçmişi" to "История просмотров", "Son izlenen içerikleri görüntüle" to "Недавно просмотренный контент", "Hakkında" to "О приложении", "Uygulama sürümü ve teknik bilgiler" to "Версия и техническая информация", "Dil / Language" to "Язык", "Uygulama dilini seç" to "Выберите язык приложения", "Dil" to "Язык", "Cihaz dili" to "Язык устройства", "Uygulama dili" to "Язык приложения")
+            "ar" -> mapOf("Ayarlar" to "الإعدادات", "Bir bölümü seç; ayrı ekranda açılacak." to "اختر قسماً لفتحه.", "Kaynak Yönetimi" to "إدارة المصادر", "M3U / Xtream kaynak ekle, düzenle" to "إضافة أو تعديل مصادر M3U / Xtream", "İçerik Ayarları" to "إعدادات المحتوى", "Kategoriler, gizleme ve sıralama" to "الفئات والإخفاء والترتيب", "Tema ve Görünüm" to "المظهر والتصميم", "Renk, arka plan ve arayüz stili" to "الألوان والخلفية ونمط الواجهة", "İzleme Geçmişi" to "سجل المشاهدة", "Son izlenen içerikleri görüntüle" to "عرض المحتوى الذي تمت مشاهدته مؤخراً", "Hakkında" to "حول التطبيق", "Uygulama sürümü ve teknik bilgiler" to "إصدار التطبيق والمعلومات التقنية", "Dil / Language" to "اللغة", "Uygulama dilini seç" to "اختر لغة التطبيق", "Dil" to "اللغة", "Cihaz dili" to "لغة الجهاز", "Uygulama dili" to "لغة التطبيق")
+            else -> emptyMap()
+        }
+        return translations[value] ?: value
+    }
     private val posterExecutor = Executors.newFixedThreadPool(3)
     private val posterCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
@@ -3489,11 +3514,11 @@ class MainActivity : Activity() {
         mainContentScroll.scrollTo(0, 0)
         fun heading(title: String, subtitle: String) {
             content.addView(TextView(this).apply {
-                text = title; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
+                text = t(title); textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE); setPadding(dp(8), dp(16), dp(8), dp(4))
             })
             content.addView(TextView(this).apply {
-                text = subtitle; textSize = 14f; setTextColor(muted); setPadding(dp(8), 0, dp(8), dp(16))
+                text = t(subtitle); textSize = 14f; setTextColor(muted); setPadding(dp(8), 0, dp(8), dp(16))
             })
         }
         var settingsGridRow: LinearLayout? = null
@@ -3521,6 +3546,7 @@ class MainActivity : Activity() {
             }
             val contentIcon = when (title) {
                 "Kaynak Yönetimi" -> "▤"
+                "Dil / Language" -> "文"
                 "İçerik Ayarları" -> "▦"
                 "Tema ve Görünüm" -> "◈"
                 "İzleme Geçmişi" -> "◷"
@@ -3537,10 +3563,10 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
             }
             textColumn.addView(TextView(this).apply {
-                text = title; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                text = t(title); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             })
             textColumn.addView(TextView(this).apply {
-                text = detail; textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
+                text = t(detail); textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
             })
             card.addView(textColumn)
             if (settingsPage == "main") {
@@ -3571,6 +3597,33 @@ class MainActivity : Activity() {
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Hakkında", "Uygulama sürümü ve teknik bilgiler") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
+            "language" -> {
+                val currentLanguage = prefs.getString("app_language", "system") ?: "system"
+                val languageOptions = listOf(
+                    Triple("system", "Cihaz dili", "🌐"),
+                    Triple("tr", "Türkçe", "🇹🇷"),
+                    Triple("en", "English", "🇬🇧"),
+                    Triple("de", "Deutsch", "🇩🇪"),
+                    Triple("fr", "Français", "🇫🇷"),
+                    Triple("it", "Italiano", "🇮🇹"),
+                    Triple("es", "Español", "🇪🇸"),
+                    Triple("ru", "Русский", "🇷🇺"),
+                    Triple("ar", "العربية", "🇸🇦")
+                )
+                heading(t("Dil"), t("Uygulama dili") + ": " + (languageOptions.firstOrNull { it.first == currentLanguage }?.second ?: "Cihaz dili"))
+                languageOptions.forEach { entry ->
+                    val selected = entry.first == currentLanguage
+                    option((if (selected) "✓  " else "") + entry.second,
+                        if (entry.first == "system") t("Cihaz dili") else entry.first.uppercase(java.util.Locale.ROOT)) {
+                        prefs.edit().putString("app_language", entry.first).apply()
+                        val locale = if (entry.first == "system") java.util.Locale.getDefault()
+                            else java.util.Locale.forLanguageTag(entry.first)
+                        java.util.Locale.setDefault(locale)
+                        recreate()
+                    }
+                }
             }
             "sources" -> {
                 heading("Kaynaklar", "Kaynak ekle ve kayıtlı bağlantılarını buradan yönet.")
