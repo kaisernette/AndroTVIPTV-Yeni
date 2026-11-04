@@ -1322,7 +1322,6 @@ class MainActivity : Activity() {
                 background = roundedDrawable(panel, corner, if (focused) accent else outline)
             }
         }
-        val nameFrame = inputFrame(sourceName)
         val playlistFrame = inputFrame(playlistUrl)
         val serverFrame = inputFrame(server)
         val usernameFrame = inputFrame(username)
@@ -1420,13 +1419,11 @@ class MainActivity : Activity() {
         val m3uFields = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            addView(nameFrame, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(7) })
             addView(playlistFrame, LinearLayout.LayoutParams(-1, dp(48)))
         }
         val xtreamFields = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            addView(nameFrame, LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
             addView(serverFrame, LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
             addView(usernameFrame, LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
             addView(passwordFrame, LinearLayout.LayoutParams(-1, dp(43)))
@@ -1454,8 +1451,6 @@ class MainActivity : Activity() {
         val xtreamName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(if (editSource?.mode == "xtream") editSource.name else "") }
         val m3uNameFrame = inputFrame(m3uName)
         val xtreamNameFrame = inputFrame(xtreamName)
-        m3uFields.removeView(nameFrame)
-        xtreamFields.removeView(nameFrame)
         m3uFields.addView(m3uNameFrame, 0, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(7) })
         xtreamFields.addView(xtreamNameFrame, 0, LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
 
