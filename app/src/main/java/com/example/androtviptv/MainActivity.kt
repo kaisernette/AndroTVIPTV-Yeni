@@ -132,6 +132,18 @@ class MainActivity : Activity() {
         }
         val common = mapOf(
             "en" to mapOf(
+                "Tüm kaynaklarda ara" to "Search all sources", "Arama sonucu bulunamadı" to "No search results found",
+                "Kütüphanen seni bekliyor" to "Your library is waiting",
+                "Film, dizi veya kanal adını yaz. Bütün kayıtlı kaynaklar taranır." to "Enter a movie, series or channel name. All saved sources will be searched.",
+                "Başka bir kelime deneyebilir veya yazımı kontrol edebilirsin." to "Try another word or check the spelling.",
+                "Başlamak için kendi M3U/M3U8 veya Xtream kaynağını ekle." to "Add your own M3U/M3U8 or Xtream source to get started.",
+                "KAYNAK EKLE  →" to "ADD SOURCE  →", "KAYITLI_ICERIK_HAZIR" to " saved items ready.",
+                "CANLI YAYIN" to "LIVE", "FİLMİ İZLE" to "WATCH MOVIE", "FRAGMAN" to "TRAILER",
+                "BAŞTAN İZLE" to "WATCH FROM BEGINNING", "DETAYLAR" to "DETAILS", "▶ İzle" to "▶ Watch",
+                "Bu film için konu bilgisi kaynakta bulunamadı." to "Plot information is not available for this movie.",
+                "Oyuncu bilgisi kaynakta bulunamadı." to "Cast information is not available.",
+                "İzlenen TV kanalları" to "Watched TV channels", "İzlenen filmler" to "Watched movies", "İzlenen diziler" to "Watched series",
+                "Geçmiş" to "History", "Türü seçerek izleme geçmişini görüntüle." to "Choose a type to view your watch history.",
                 "Kaynaklar" to "Sources", "KAISERTV ORIGINAL  •  SENİN KÜTÜPHANEN" to "KAISERTV ORIGINAL  •  YOUR LIBRARY",
                 "Eğlenceye yeniden hoş geldin" to "Welcome back to entertainment", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Explore your live channels, movies and series.",
                 "İÇERİKLERİ KEŞFET  →" to "EXPLORE CONTENT  →", "Kaisertv hazır. Kaynak ekleyerek içeriklerini yükleyebilirsin." to "KaiserTV is ready. Add a source to load your content.",
@@ -1357,7 +1369,7 @@ class MainActivity : Activity() {
                 }
                 isLoadingSource = false
                 status.visibility = View.VISIBLE
-                status.text = "${items.size} kayıtlı içerik hazır."
+                status.text = "${items.size}${t("KAYITLI_ICERIK_HAZIR")}"
                 sidebarMode = if (selectedType in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
                 render()
             } else if (sourceToRestore != null && !isLoadingSource) {
@@ -2488,7 +2500,7 @@ class MainActivity : Activity() {
         if (selectedType == "Canlı TV" && sidebarMode == "context") {
             content.removeAllViews()
             content.addView(TextView(this).apply {
-                text = if (selectedGroup == "Tüm kategoriler") "Tüm Kanallar" else selectedGroup
+                text = if (selectedGroup == "Tüm kategoriler") t("Tüm Kanallar") else selectedGroup
                 textSize = 21f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -2589,27 +2601,27 @@ class MainActivity : Activity() {
                 setPadding(24, 24, 24, 24); background = roundedDrawable(panel, 18, Color.rgb(42, 49, 64))
             }
             empty.addView(TextView(this).apply {
-                text = when {
+                text = t(when {
                     sidebarMode == "search" && query.isBlank() -> "Tüm kaynaklarda ara"
                     sidebarMode == "search" -> "Arama sonucu bulunamadı"
                     selectedType == "Favoriler" -> "Henüz favori eklemedin"
                     selectedType == "Son İzlenenler" -> "İzleme geçmişin burada görünecek"
                     else -> "Kütüphanen seni bekliyor"
-                }
+                })
                 textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             })
             empty.addView(TextView(this).apply {
-                text = when {
+                text = t(when {
                     sidebarMode == "search" && query.isBlank() -> "Film, dizi veya kanal adını yaz. Bütün kayıtlı kaynaklar taranır."
                     sidebarMode == "search" -> "Başka bir kelime deneyebilir veya yazımı kontrol edebilirsin."
                     selectedType == "Favoriler" -> "Bir içerikte yıldız düğmesine basarak favorilerine ekle."
                     selectedType == "Son İzlenenler" -> "Bir içerik oynattığında burada kolayca devam edebilirsin."
                     items.isEmpty() -> "Başlamak için kendi M3U/M3U8 veya Xtream kaynağını ekle."
                     else -> "Bu bölümde şu anda gösterilecek içerik yok."
-                }
+                })
                 textSize = 14f; setTextColor(muted); setPadding(0, 7, 0, 14)
             })
-            if (items.isEmpty()) empty.addView(makeButton("KAYNAK EKLE  →", true) { showConnectionDialog() },
+            if (items.isEmpty()) empty.addView(makeButton(t("KAYNAK EKLE  →"), true) { showConnectionDialog() },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
             content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
             if (selectedType in listOf("Favoriler", "Son İzlenenler")) {
@@ -2821,12 +2833,12 @@ class MainActivity : Activity() {
                     intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
                 if (weeklyPoster) {
                     card.addView(TextView(this).apply {
-                        text = item.type.uppercase()
+                        text = t(item.type).uppercase()
                         textSize = 10f; setTextColor(accent); letterSpacing = 0.03f
                     })
                 } else {
                     card.addView(TextView(this).apply {
-                        text = if (item.type == "Canlı TV") "●  CANLI YAYIN" else item.type.uppercase()
+                        text = if (item.type == "Canlı TV") "●  ${t("CANLI YAYIN")}" else t(item.type).uppercase()
                         textSize = 10f; setTextColor(accent); setPadding(3, 8, 2, 4); letterSpacing = 0.05f
                     })
                 }
@@ -2837,7 +2849,7 @@ class MainActivity : Activity() {
                 if (!showingExpandedCategory && !weeklyPoster && selectedType != "Filmler" && selectedType != "Diziler" &&
                     selectedType != "Favoriler" && selectedType != "Son İzlenenler") {
                     val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                    if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton("▶ İzle", true) { play(item) },
+                    if (!homeCard && selectedType != "Filmler" && selectedType != "Diziler") actions.addView(makeButton(t("▶ İzle"), true) { play(item) },
                         LinearLayout.LayoutParams(0, 36, 1f).apply { setMargins(0, 7, 4, 0) })
                     // Arama sonuçlarında kart üzerindeki Favori kısayolunu gösterme.
                     // Favori işlemi film/dizi detay ekranında kullanılmaya devam eder.
@@ -3074,7 +3086,7 @@ class MainActivity : Activity() {
             setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD)
         })
-        footer.addView(makeButton("DETAYLAR", true) {
+        footer.addView(makeButton(t("DETAYLAR"), true) {
             closePosterFullscreen()
             if (item.type == "Filmler") showMovieDetail(item) else showSeriesDetail(item)
         }, LinearLayout.LayoutParams(dp(150), dp(46)).apply { setMargins(0, dp(12), 0, 0) })
@@ -3225,7 +3237,7 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(7))
         })
         info.addView(TextView(this).apply {
-            text = movie.plot.ifBlank { "Bu film için konu bilgisi kaynakta bulunamadı." }
+            text = movie.plot.ifBlank { t("Bu film için konu bilgisi kaynakta bulunamadı.") }
             textSize = 15f
             setTextColor(Color.rgb(220, 225, 235))
             setPadding(0, 0, 0, dp(18))
@@ -3239,7 +3251,7 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(7))
         })
         info.addView(TextView(this).apply {
-            text = movie.actors.ifBlank { "Oyuncu bilgisi kaynakta bulunamadı." }
+            text = movie.actors.ifBlank { t("Oyuncu bilgisi kaynakta bulunamadı.") }
             textSize = 14f
             setTextColor(Color.rgb(190, 198, 212))
         })
@@ -3253,13 +3265,13 @@ class MainActivity : Activity() {
             setPadding(0, dp(12), 0, 0)
         }
         val buttonHeight = dp(50)
-        val watchButton = makeButton("▶  FİLMİ İZLE", true) { play(movie) }.apply {
+        val watchButton = makeButton("▶  ${t("FİLMİ İZLE")}", true) { play(movie) }.apply {
             gravity = Gravity.CENTER
             textSize = 13f
             maxLines = 1
             minHeight = buttonHeight
         }
-        val trailerButton = makeButton("▷  FRAGMAN", false) {
+        val trailerButton = makeButton("▷  ${t("FRAGMAN")}", false) {
             val query = java.net.URLEncoder.encode(movie.name + " fragman", "UTF-8")
             val trailerIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.youtube.com/results?search_query=$query"))
             runCatching { startActivity(trailerIntent) }.onFailure {
@@ -3277,7 +3289,7 @@ class MainActivity : Activity() {
             maxLines = 1
             minHeight = buttonHeight
         }
-        val restartButton = makeButton("↺  BAŞTAN İZLE", false) { play(movie, startOver = true) }.apply {
+        val restartButton = makeButton("↺  ${t("BAŞTAN İZLE")}", false) { play(movie, startOver = true) }.apply {
             gravity = Gravity.CENTER
             textSize = 13f
             maxLines = 1
@@ -4082,7 +4094,7 @@ class MainActivity : Activity() {
                     setMargins(dp(8), 0, 0, dp(8))
                 })
                 content.addView(TextView(this).apply {
-                    text = (when (historyType) { "Canlı TV" -> "İzlenen TV kanalları"; "Filmler" -> "İzlenen filmler"; else -> "İzlenen diziler" }) + "  ·  " + entries.size
+                    text = t(when (historyType) { "Canlı TV" -> "İzlenen TV kanalları"; "Filmler" -> "İzlenen filmler"; else -> "İzlenen diziler" }) + "  ·  " + entries.size
                     textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(accentBright); setPadding(dp(8), dp(12), dp(8), dp(6))
                 })
