@@ -130,7 +130,80 @@ class MainActivity : Activity() {
             "ar" -> mapOf("Ayarlar" to "الإعدادات", "Bir bölümü seç; ayrı ekranda açılacak." to "اختر قسماً لفتحه.", "Kaynak Yönetimi" to "إدارة المصادر", "M3U / Xtream kaynak ekle, düzenle" to "إضافة أو تعديل مصادر M3U / Xtream", "İçerik Ayarları" to "إعدادات المحتوى", "Kategoriler, gizleme ve sıralama" to "الفئات والإخفاء والترتيب", "Tema ve Görünüm" to "المظهر والتصميم", "Renk, arka plan ve arayüz stili" to "الألوان والخلفية ونمط الواجهة", "İzleme Geçmişi" to "سجل المشاهدة", "Son izlenen içerikleri görüntüle" to "عرض المحتوى الذي تمت مشاهدته مؤخراً", "Hakkında" to "حول التطبيق", "Uygulama sürümü ve teknik bilgiler" to "إصدار التطبيق والمعلومات التقنية", "Dil / Language" to "اللغة", "Uygulama dilini seç" to "اختر لغة التطبيق", "Dil" to "اللغة", "Cihaz dili" to "لغة الجهاز", "Uygulama dili" to "لغة التطبيق")
             else -> emptyMap()
         }
-        return translations[value] ?: value
+        val common = mapOf(
+            "en" to mapOf(
+                "Kaynaklar" to "Sources", "KAISERTV ORIGINAL  •  SENİN KÜTÜPHANEN" to "KAISERTV ORIGINAL  •  YOUR LIBRARY",
+                "Eğlenceye yeniden hoş geldin" to "Welcome back to entertainment", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Explore your live channels, movies and series.",
+                "İÇERİKLERİ KEŞFET  →" to "EXPLORE CONTENT  →", "Kaisertv hazır. Kaynak ekleyerek içeriklerini yükleyebilirsin." to "KaiserTV is ready. Add a source to load your content.",
+                "Ara" to "Search", "Ana Sayfa" to "Home", "TV" to "TV", "Filmler" to "Movies", "Diziler" to "Series", "Favoriler" to "Favorites", "İzlediklerim" to "Recently Watched", "Son İzlenenler" to "Recently Watched",
+                "KATEGORİLER" to "CATEGORIES", "Tüm kategoriler" to "All categories", "Tüm Kanallar" to "All Channels",
+                "Film, dizi veya kanal ara..." to "Search movies, series or channels...", "ARA" to "SEARCH", "Arama geçmişi" to "Search history", "Geçmişi sil" to "Clear history", "Seçileni sil (" to "Delete selected (",
+                "Aradığın film, dizi veya kanal adını yaz." to "Enter a movie, series or channel name.", "Bu kategoride kanal bulunamadı." to "No channels found in this category.",
+                "Daha fazla kanal göster  (" to "Show more channels  (", "Henüz favori eklemedin" to "No favorites yet", "İzleme geçmişin burada görünecek" to "Your watch history will appear here",
+                "Bir içerikte yıldız düğmesine basarak favorilerine ekle." to "Press the star button on a title to add it to favorites.",
+                "Bir içerik oynattığında burada kolayca devam edebilirsin." to "Your recently played content will appear here.",
+                "Bu bölümde şu anda gösterilecek içerik yok." to "There is no content to show in this section.",
+                "Önce kaynak ekle." to "Add a source first.", "Kanal bulunamadı." to "No channels found.",
+                "Kanal listesi" to "Channel list", "Kaynak ekle" to "Add source", "Yenile" to "Refresh", "Düzenle" to "Edit", "Sil" to "Delete", "İptal" to "Cancel",
+                "Henüz kayıtlı kaynak yok." to "No saved sources yet.", "Konu bilgisi alınamadı." to "Plot information unavailable.", "Oyuncu bilgisi alınamadı." to "Cast information unavailable.", "Puan bilgisi alınamadı." to "Rating information unavailable.",
+                "Bilgiler yükleniyor…" to "Loading information…", "Bilgi yükleniyor…" to "Loading information…", "KONU" to "OVERVIEW", "OYUNCULAR" to "CAST", "FİLM" to "MOVIE", "DİZİ" to "SERIES",
+                "İzleme geçmişin burada görünecek" to "Your watch history will appear here.", "Bu türde henüz izleme geçmişi yok." to "No watch history for this type yet.",
+                "Hepsini sil" to "Delete all", "İzleme geçmişini temizle" to "Clear watch history", "İzlenen tüm TV kanalları geçmişten silinsin mi?" to "Delete all watched TV channels from history?",
+                "İzlenen tüm filmler geçmişten silinsin mi?" to "Delete all watched movies from history?", "İzlenen tüm diziler geçmişten silinsin mi?" to "Delete all watched series from history?",
+                "Sezon" to "Season", "Bölüm" to "Episode", "← Geri dön" to "← Go back", "Uygulamadan çıkmak istiyor musunuz?" to "Do you want to exit the app?",
+                "Canlı yayın zamanı" to "It's live time", "Film gecesi başlasın" to "Movie night starts here", "Bir sonraki bölüm seni bekliyor" to "Your next episode is waiting",
+                "Favorilerin burada" to "Your favorites", "Kaldığın yerden devam et" to "Continue where you left off", "Kütüphaneni keşfet" to "Explore your library"
+            ),
+            "de" to mapOf(
+                "Kaynaklar" to "Quellen", "Eğlenceye yeniden hoş geldin" to "Willkommen zurück", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Entdecke Live-TV, Filme und Serien.",
+                "İÇERİKLERİ KEŞFET  →" to "INHALTE ENTDECKEN  →", "Ara" to "Suche", "Ana Sayfa" to "Startseite", "Filmler" to "Filme", "Diziler" to "Serien", "Favoriler" to "Favoriten", "İzlediklerim" to "Zuletzt gesehen",
+                "KATEGORİLER" to "KATEGORIEN", "Tüm kategoriler" to "Alle Kategorien", "Tüm Kanallar" to "Alle Sender", "ARA" to "SUCHEN",
+                "Arama geçmişi" to "Suchverlauf", "Geçmişi sil" to "Verlauf löschen", "Yenile" to "Aktualisieren", "Düzenle" to "Bearbeiten", "Sil" to "Löschen", "İptal" to "Abbrechen",
+                "Kaynak ekle" to "Quelle hinzufügen", "Henüz kayıtlı kaynak yok." to "Noch keine Quellen gespeichert.", "KONU" to "ÜBERSICHT", "OYUNCULAR" to "BESETZUNG", "FİLM" to "FILM", "DİZİ" to "SERIE",
+                "Hepsini sil" to "Alle löschen", "← Geri dön" to "← Zurück", "Uygulamadan çıkmak istiyor musunuz?" to "Möchtest du die App verlassen?"
+            ),
+            "fr" to mapOf(
+                "Kaynaklar" to "Sources", "Eğlenceye yeniden hoş geldin" to "Bon retour", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Découvrez vos chaînes, films et séries.",
+                "İÇERİKLERİ KEŞFET  →" to "DÉCOUVRIR  →", "Ara" to "Recherche", "Ana Sayfa" to "Accueil", "Filmler" to "Films", "Diziler" to "Séries", "Favoriler" to "Favoris", "İzlediklerim" to "Récemment vus",
+                "KATEGORİLER" to "CATÉGORIES", "Tüm kategoriler" to "Toutes les catégories", "Tüm Kanallar" to "Toutes les chaînes", "ARA" to "RECHERCHER",
+                "Arama geçmişi" to "Historique de recherche", "Geçmişi sil" to "Effacer l’historique", "Yenile" to "Actualiser", "Düzenle" to "Modifier", "Sil" to "Supprimer", "İptal" to "Annuler",
+                "Kaynak ekle" to "Ajouter une source", "Henüz kayıtlı kaynak yok." to "Aucune source enregistrée.", "KONU" to "SYNOPSIS", "OYUNCULAR" to "ACTEURS", "FİLM" to "FILM", "DİZİ" to "SÉRIE",
+                "Hepsini sil" to "Tout supprimer", "← Geri dön" to "← Retour", "Uygulamadan çıkmak istiyor musunuz?" to "Voulez-vous quitter l’application ?"
+            ),
+            "it" to mapOf(
+                "Kaynaklar" to "Sorgenti", "Eğlenceye yeniden hoş geldin" to "Bentornato", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Scopri canali TV, film e serie.",
+                "İÇERİKLERİ KEŞFET  →" to "SCOPRI I CONTENUTI  →", "Ara" to "Cerca", "Ana Sayfa" to "Home", "Filmler" to "Film", "Diziler" to "Serie TV", "Favoriler" to "Preferiti", "İzlediklerim" to "Visti di recente",
+                "KATEGORİLER" to "CATEGORIE", "Tüm kategoriler" to "Tutte le categorie", "Tüm Kanallar" to "Tutti i canali", "ARA" to "CERCA",
+                "Arama geçmişi" to "Cronologia ricerche", "Geçmişi sil" to "Cancella cronologia", "Yenile" to "Aggiorna", "Düzenle" to "Modifica", "Sil" to "Elimina", "İptal" to "Annulla",
+                "Kaynak ekle" to "Aggiungi sorgente", "Henüz kayıtlı kaynak yok." to "Nessuna sorgente salvata.", "KONU" to "TRAMA", "OYUNCULAR" to "CAST", "FİLM" to "FILM", "DİZİ" to "SERIE",
+                "Hepsini sil" to "Elimina tutto", "← Geri dön" to "← Indietro", "Uygulamadan çıkmak istiyor musunuz?" to "Vuoi uscire dall’app?"
+            ),
+            "es" to mapOf(
+                "Kaynaklar" to "Fuentes", "Eğlenceye yeniden hoş geldin" to "Bienvenido de nuevo", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Descubre tus canales, películas y series.",
+                "İÇERİKLERİ KEŞFET  →" to "EXPLORAR CONTENIDO  →", "Ara" to "Buscar", "Ana Sayfa" to "Inicio", "Filmler" to "Películas", "Diziler" to "Series", "Favoriler" to "Favoritos", "İzlediklerim" to "Vistos recientemente",
+                "KATEGORİLER" to "CATEGORÍAS", "Tüm kategoriler" to "Todas las categorías", "Tüm Kanallar" to "Todos los canales", "ARA" to "BUSCAR",
+                "Arama geçmişi" to "Historial de búsqueda", "Geçmişi sil" to "Borrar historial", "Yenile" to "Actualizar", "Düzenle" to "Editar", "Sil" to "Eliminar", "İptal" to "Cancelar",
+                "Kaynak ekle" to "Añadir fuente", "Henüz kayıtlı kaynak yok." to "No hay fuentes guardadas.", "KONU" to "SINOPSIS", "OYUNCULAR" to "REPARTO", "FİLM" to "PELÍCULA", "DİZİ" to "SERIE",
+                "Hepsini sil" to "Borrar todo", "← Geri dön" to "← Volver", "Uygulamadan çıkmak istiyor musunuz?" to "¿Quieres salir de la aplicación?"
+            ),
+            "ru" to mapOf(
+                "Kaynaklar" to "Источники", "Eğlenceye yeniden hoş geldin" to "С возвращением", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Откройте для себя ТВ, фильмы и сериалы.",
+                "İÇERİKLERİ KEŞFET  →" to "ОТКРЫТЬ КОНТЕНТ  →", "Ara" to "Поиск", "Ana Sayfa" to "Главная", "Filmler" to "Фильмы", "Diziler" to "Сериалы", "Favoriler" to "Избранное", "İzlediklerim" to "Недавно просмотрено",
+                "KATEGORİLER" to "КАТЕГОРИИ", "Tüm kategoriler" to "Все категории", "Tüm Kanallar" to "Все каналы", "ARA" to "ПОИСК",
+                "Arama geçmişi" to "История поиска", "Geçmişi sil" to "Очистить историю", "Yenile" to "Обновить", "Düzenle" to "Изменить", "Sil" to "Удалить", "İptal" to "Отмена",
+                "Kaynak ekle" to "Добавить источник", "Henüz kayıtlı kaynak yok." to "Нет сохранённых источников.", "KONU" to "ОПИСАНИЕ", "OYUNCULAR" to "АКТЁРЫ", "FİLM" to "ФИЛЬМ", "DİZİ" to "СЕРИАЛ",
+                "Hepsini sil" to "Удалить всё", "← Geri dön" to "← Назад", "Uygulamadan çıkmak istiyor musunuz?" to "Выйти из приложения?"
+            ),
+            "ar" to mapOf(
+                "Kaynaklar" to "المصادر", "Eğlenceye yeniden hoş geldin" to "مرحباً بعودتك", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "اكتشف القنوات والأفلام والمسلسلات.",
+                "İÇERİKLERİ KEŞFET  →" to "اكتشف المحتوى  →", "Ara" to "بحث", "Ana Sayfa" to "الرئيسية", "Filmler" to "أفلام", "Diziler" to "مسلسلات", "Favoriler" to "المفضلة", "İzlediklerim" to "شوهد مؤخراً",
+                "KATEGORİLER" to "الفئات", "Tüm kategoriler" to "كل الفئات", "Tüm Kanallar" to "كل القنوات", "ARA" to "بحث",
+                "Arama geçmişi" to "سجل البحث", "Geçmişi sil" to "مسح السجل", "Yenile" to "تحديث", "Düzenle" to "تعديل", "Sil" to "حذف", "İptal" to "إلغاء",
+                "Kaynak ekle" to "إضافة مصدر", "Henüz kayıtlı kaynak yok." to "لا توجد مصادر محفوظة.", "KONU" to "الملخص", "OYUNCULAR" to "طاقم التمثيل", "FİLM" to "فيلم", "DİZİ" to "مسلسل",
+                "Hepsini sil" to "حذف الكل", "← Geri dön" to "← رجوع", "Uygulamadan çıkmak istiyor musunuz?" to "هل تريد الخروج من التطبيق؟"
+            )
+        )
+        return translations[value] ?: common[language]?.get(value) ?: value
     }
     private val posterExecutor = Executors.newFixedThreadPool(3)
     private val posterCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
@@ -458,7 +531,7 @@ class MainActivity : Activity() {
         }
         mainHeader.addView(View(this), LinearLayout.LayoutParams(0, dp(40), 1f))
         mainHeader.addView(TextView(this).apply {
-            text = "Kaynaklar"; textSize = 14f
+            text = t("Kaynaklar"); textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE); gravity = Gravity.CENTER
             isFocusable = true
@@ -507,21 +580,21 @@ class MainActivity : Activity() {
         }
         val heroCopy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         heroCopy.addView(TextView(this).apply {
-            text = "KAISERTV ORIGINAL  •  SENİN KÜTÜPHANEN"; textSize = 10f
+            text = t("KAISERTV ORIGINAL  •  SENİN KÜTÜPHANEN"); textSize = 10f
             setTextColor(accentBright); letterSpacing = 0.10f
         })
         heroTitle = TextView(this).apply {
-            text = "Eğlenceye yeniden hoş geldin"; textSize = 27f
+            text = t("Eğlenceye yeniden hoş geldin"); textSize = 27f
             setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD)
             setPadding(0, 8, 0, 4); maxLines = 2
         }
         heroCopy.addView(heroTitle)
         heroSubtitle = TextView(this).apply {
-            text = "Canlı yayınlarını, filmlerini ve dizilerini keşfet."; textSize = 13f
+            text = t("Canlı yayınlarını, filmlerini ve dizilerini keşfet."); textSize = 13f
             setTextColor(muted); maxLines = 2
         }
         heroCopy.addView(heroSubtitle)
-        heroCopy.addView(makeButton("İÇERİKLERİ KEŞFET  →", true) {
+        heroCopy.addView(makeButton(t("İÇERİKLERİ KEŞFET  →"), true) {
             selectedType = "Tümü"; selectedGroup = "Tüm kategoriler"; render()
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 13, 0, 0) })
         hero.addView(heroCopy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -594,7 +667,7 @@ class MainActivity : Activity() {
         main.addView(quickAccessScroll, LinearLayout.LayoutParams(-1, dp(92)).apply { setMargins(0, 0, 0, dp(6)) })
 
         status = TextView(this).apply {
-            text = "Kaisertv hazır. Kaynak ekleyerek içeriklerini yükleyebilirsin."
+            text = t("Kaisertv hazır. Kaynak ekleyerek içeriklerini yükleyebilirsin.")
             textSize = 12f; setTextColor(muted); setPadding(3, 2, 0, 8); maxLines = 2
         }
         main.addView(status)
@@ -902,7 +975,7 @@ class MainActivity : Activity() {
                 // The first category receives focus, but opens only after explicit selection.
                 val selectedName = expandedCategory?.first ?: grouped.firstOrNull()?.first
                 categoryPanel.addView(TextView(this).apply {
-                    text = if (selectedType == "Canlı TV") "KATEGORİLER" else "KATEGORİLER"
+                    text = t("KATEGORİLER")
                     textSize = 11f; setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(muted); setPadding(dp(8), 0, 0, dp(10))
                 })
@@ -979,7 +1052,7 @@ class MainActivity : Activity() {
                 categoryPanel.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
                 if (selectedType == "Canlı TV") {
                     categoryPanel.addView(TextView(this).apply {
-                        text = "Kanal listesi"
+                        text = t("Kanal listesi")
                         textSize = 12f; setTextColor(muted); setPadding(dp(8), dp(10), 0, 0)
                     })
                 }
@@ -1208,7 +1281,7 @@ class MainActivity : Activity() {
     }
 
     private fun makeButton(label: String, primary: Boolean, action: () -> Unit): Button = Button(this).apply {
-        text = label; textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
+        text = t(label); textSize = 12f; isAllCaps = false; isFocusable = true; isFocusableInTouchMode = true
         setPadding(16, 0, 16, 0)
         setTextColor(Color.WHITE)
         background = roundedDrawable(panel, 0)
@@ -1745,7 +1818,7 @@ class MainActivity : Activity() {
         brand.textSize = 21f
         exitPanel.addView(brand, LinearLayout.LayoutParams(-1, dp(42)))
         exitPanel.addView(TextView(this).apply {
-            text = "Uygulamadan çıkmak istiyor musunuz?"
+            text = t("Uygulamadan çıkmak istiyor musunuz?")
             textSize = 17f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
@@ -1846,9 +1919,9 @@ class MainActivity : Activity() {
                     }
                 } catch (_: Exception) {
                     runOnUiThread {
-                        if (plotView.text.toString() == "Bilgiler yükleniyor…") plotView.text = "Konu bilgisi alınamadı."
-                        if (actorsView.text.toString() == "Bilgiler yükleniyor…") actorsView.text = "Oyuncu bilgisi alınamadı."
-                        if (ratingView.text.toString() == "Bilgi yükleniyor…") ratingView.text = "Puan bilgisi alınamadı."
+                        if (plotView.text.toString() == "Bilgiler yükleniyor…") plotView.text = t("Konu bilgisi alınamadı.")
+                        if (actorsView.text.toString() == "Bilgiler yükleniyor…") actorsView.text = t("Oyuncu bilgisi alınamadı.")
+                        if (ratingView.text.toString() == "Bilgi yükleniyor…") ratingView.text = t("Puan bilgisi alınamadı.")
                     }
                 }
             }
@@ -2257,7 +2330,7 @@ class MainActivity : Activity() {
                 setPadding(dp(8), dp(6), dp(8), dp(14))
             }
             searchPanel.addView(TextView(this).apply {
-                text = "Ara"; textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
+                text = t("Ara"); textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE); setPadding(0, 0, 0, dp(12))
             })
             val searchRow = LinearLayout(this).apply {
@@ -2265,7 +2338,7 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL
             }
             val searchField = EditText(this).apply {
-                hint = "Film, dizi veya kanal ara..."
+                hint = t("Film, dizi veya kanal ara...")
                 setSingleLine(true)
                 textSize = 17f
                 setTextColor(Color.WHITE)
@@ -2287,7 +2360,7 @@ class MainActivity : Activity() {
                 }
             }
             searchRow.addView(searchField, LinearLayout.LayoutParams(0, dp(54), 1f))
-            searchRow.addView(makeButton("ARA", true) {
+            searchRow.addView(makeButton(t("ARA"), true) {
                 submitSearchQuery(searchField.text.toString())
             }, LinearLayout.LayoutParams(dp(92), dp(54)).apply { setMargins(dp(10), 0, 0, 0) })
             searchPanel.addView(searchRow)
@@ -2307,7 +2380,7 @@ class MainActivity : Activity() {
                     setPadding(dp(8), dp(8), dp(8), dp(8))
                 }
                 historyHeader.addView(TextView(this).apply {
-                    text = "Arama geçmişi"; textSize = 18f
+                    text = t("Arama geçmişi"); textSize = 18f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(Color.WHITE)
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -2327,7 +2400,7 @@ class MainActivity : Activity() {
                 if (history.isEmpty()) {
                     selectedSearchHistory.clear()
                     content.addView(TextView(this).apply {
-                        text = "Aradığın film, dizi veya kanal adını yaz."
+                        text = t("Aradığın film, dizi veya kanal adını yaz.")
                         textSize = 14f; setTextColor(muted); setPadding(dp(8), dp(8), dp(8), dp(8))
                     })
                 } else {
@@ -2425,7 +2498,7 @@ class MainActivity : Activity() {
             val displayedTvChannels = tvChannels.take(liveChannelsLimit)
             if (tvChannels.isEmpty()) {
                 content.addView(TextView(this).apply {
-                    text = "Bu kategoride kanal bulunamadı."
+                    text = t("Bu kategoride kanal bulunamadı.")
                     textSize = 15f; setTextColor(muted); setPadding(dp(8), dp(12), dp(8), dp(12))
                 })
             } else {
@@ -2647,7 +2720,7 @@ class MainActivity : Activity() {
             }, LinearLayout.LayoutParams(0, -2, 1f))
             val sectionCountView = TextView(this).apply {
                 id = View.generateViewId()
-                text = "← Geri dön"
+                text = t("← Geri dön")
                 textSize = 12f; setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
                 setPadding(dp(8), 0, dp(8), 0)
@@ -3114,7 +3187,7 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(18))
         }
         info.addView(TextView(this).apply {
-            text = "FİLM"
+            text = t("FİLM")
             textSize = 13f
             letterSpacing = 0.14f
             setTextColor(accentBright)
@@ -3144,7 +3217,7 @@ class MainActivity : Activity() {
         })
 
         info.addView(TextView(this).apply {
-            text = "KONU"
+            text = t("KONU")
             textSize = 14f
             letterSpacing = 0.08f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -3158,7 +3231,7 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(18))
         })
         info.addView(TextView(this).apply {
-            text = "OYUNCULAR"
+            text = t("OYUNCULAR")
             textSize = 14f
             letterSpacing = 0.08f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -3299,7 +3372,7 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(16))
         }
         details.addView(TextView(this).apply {
-            text = "DİZİ"; textSize = 13f; letterSpacing = 0.12f; setTextColor(accentBright)
+            text = t("DİZİ"); textSize = 13f; letterSpacing = 0.12f; setTextColor(accentBright)
         })
         details.addView(TextView(this).apply {
             text = series.name; textSize = 28f; maxLines = 2
@@ -3320,7 +3393,7 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(18))
         })
         details.addView(TextView(this).apply {
-            text = "KONU"; textSize = 14f; letterSpacing = 0.08f
+            text = t("KONU"); textSize = 14f; letterSpacing = 0.08f
             setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             setPadding(0, 0, 0, dp(7))
         })
@@ -3330,7 +3403,7 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(18))
         })
         details.addView(TextView(this).apply {
-            text = "OYUNCULAR"; textSize = 14f; letterSpacing = 0.08f
+            text = t("OYUNCULAR"); textSize = 14f; letterSpacing = 0.08f
             setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             setPadding(0, 0, 0, dp(7))
         })
@@ -3631,7 +3704,7 @@ class MainActivity : Activity() {
                 showConnectionDialog()
                 if (savedSources.isEmpty()) {
                     content.addView(TextView(this).apply {
-                        text = "Henüz kayıtlı kaynak yok."
+                        text = t("Henüz kayıtlı kaynak yok.")
                         textSize = 14f
                         setTextColor(muted)
                         setPadding(dp(8), dp(12), dp(8), dp(12))
@@ -4014,7 +4087,7 @@ class MainActivity : Activity() {
                     setTextColor(accentBright); setPadding(dp(8), dp(12), dp(8), dp(6))
                 })
                 if (entries.isEmpty()) content.addView(TextView(this).apply {
-                    text = "Bu türde henüz izleme geçmişi yok."; textSize = 14f; setTextColor(muted)
+                    text = t("Bu türde henüz izleme geçmişi yok."); textSize = 14f; setTextColor(muted)
                     setPadding(dp(8), dp(5), dp(8), dp(12))
                 })
                 entries.forEach { item ->
