@@ -1294,14 +1294,48 @@ class MainActivity : Activity() {
         })
         sourceName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(editSource?.name.orEmpty()) }
         form.addView(sourceName, fieldParams())
-        sourceMode = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
-        val m3u = RadioButton(this).apply {
-            id = View.generateViewId(); text = "M3U / M3U8"; setTextColor(Color.WHITE)
+        sourceMode = RadioGroup(this).apply {
+            orientation = RadioGroup.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(5), 0, dp(5))
         }
-        val xtream = RadioButton(this).apply {
-            id = View.generateViewId(); text = "Xtream Codes"; setTextColor(Color.WHITE)
+        val sourceChoiceTint = android.content.res.ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(android.R.attr.state_focused),
+                intArrayOf()
+            ),
+            intArrayOf(accent, accentBright, muted)
+        )
+        fun sourceChoice(label: String): RadioButton = RadioButton(this).apply {
+            id = View.generateViewId()
+            text = label
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            buttonTintList = sourceChoiceTint
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(9), dp(7), dp(12), dp(7))
+            background = roundedDrawable(panel, if (ovalButtons) 24 else 10, Color.rgb(48, 57, 73))
+            isFocusable = true
+            isFocusableInTouchMode = true
+            setOnFocusChangeListener { view, focused ->
+                view.background = roundedDrawable(
+                    if (focused) accent else panel,
+                    if (ovalButtons) 24 else 10,
+                    if (focused) accentBright else if (isChecked) accent else Color.rgb(48, 57, 73)
+                )
+                setTextColor(if (focused) Color.rgb(8, 13, 22) else Color.WHITE)
+            }
         }
-        sourceMode.addView(m3u); sourceMode.addView(xtream); form.addView(sourceMode)
+        val m3u = sourceChoice("M3U / M3U8")
+        val xtream = sourceChoice("Xtream Codes")
+        sourceMode.addView(m3u, RadioGroup.LayoutParams(0, dp(48), 1f).apply {
+            setMargins(0, 0, dp(6), 0)
+        })
+        sourceMode.addView(xtream, RadioGroup.LayoutParams(0, dp(48), 1f).apply {
+            setMargins(dp(6), 0, 0, 0)
+        })
+        form.addView(sourceMode)
         playlistUrl = edit(t("M3U / M3U8 oynatma listesi URL'si"), false).apply {
             setText(if (editSource?.mode == "m3u") editSource.address else "")
         }
