@@ -131,7 +131,7 @@ class MainActivity : Activity() {
             else -> emptyMap()
         }
         val common = mapOf(
-            "en" to mapOf("İzleme kaynağı ekle" to "Add streaming source", "Kaynağı düzenle" to "Edit source", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Only add streaming addresses you are authorized to use.", "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)", "M3U / M3U8 oynatma listesi URL'si" to "M3U / M3U8 playlist URL", "Sunucu adresi (https://...)" to "Server address (https://...)", "Kullanıcı adı" to "Username", "Şifre" to "Password", "Bağlan" to "Connect", "Kaydet" to "Save", "Sezon" to "Season", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Enter the server, username and password.", "Geçerli bir M3U/M3U8 URL'si gir." to "Enter a valid M3U/M3U8 URL.", 
+            "en" to mapOf("Kaynak ekle ve kayıtlı bağlantılarını buradan yönet." to "Add and manage your saved connections here.", "Türü seçerek izleme geçmişini görüntüle." to "Choose a type to view your watch history.", "Kaynak ve içerikleri silinsin mi?" to "Delete this source and its content?", "Kaynağı sil" to "Delete source", "Yenile" to "Refresh", "Düzenle" to "Edit", "Sil" to "Delete", "İptal" to "Cancel", "Hepsini sil" to "Delete all", "Geçmişi sil" to "Clear history", "Seçileni sil (" to "Delete selected (", "İzleme geçmişini temizle" to "Clear watch history", "İzlenen tüm TV kanalları geçmişten silinsin mi?" to "Delete all watched TV channels from history?", "İzlenen tüm filmler geçmişten silinsin mi?" to "Delete all watched movies from history?", "İzlenen tüm diziler geçmişten silinsin mi?" to "Delete all watched series from history?", "Sezon" to "Season", "KONU" to "OVERVIEW", "OYUNCULAR" to "CAST", "FİLM" to "MOVIE", "DİZİ" to "SERIES", "Film, dizi veya kanal ara..." to "Search movies, series or channels...", "Arama geçmişi" to "Search history", "Kaynaklar" to "Sources", "Geçmiş" to "History", "Ara" to "Search", "Kategoriler" to "Categories", "İzlenen TV kanalları" to "Watched TV channels", "İzlenen filmler" to "Watched movies", "İzlenen diziler" to "Watched series", "Bu türde henüz izleme geçmişi yok." to "No watch history for this type yet.", "Bağlan" to "Connect", "Kaydet" to "Save", "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)", "M3U / M3U8 oynatma listesi URL'si" to "M3U / M3U8 playlist URL", "Sunucu adresi (https://...)" to "Server address (https://...)", "Kullanıcı adı" to "Username", "Şifre" to "Password", "İzleme kaynağı ekle" to "Add streaming source", "Kaynağı düzenle" to "Edit source", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Only add streaming addresses you are authorized to use.", "İzleme kaynağı ekle" to "Add streaming source", "Kaynağı düzenle" to "Edit source", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Only add streaming addresses you are authorized to use.", "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)", "M3U / M3U8 oynatma listesi URL'si" to "M3U / M3U8 playlist URL", "Sunucu adresi (https://...)" to "Server address (https://...)", "Kullanıcı adı" to "Username", "Şifre" to "Password", "Bağlan" to "Connect", "Kaydet" to "Save", "Sezon" to "Season", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Enter the server, username and password.", "Geçerli bir M3U/M3U8 URL'si gir." to "Enter a valid M3U/M3U8 URL.", 
                 "Tüm kaynaklarda ara" to "Search all sources", "Arama sonucu bulunamadı" to "No search results found",
                 "Kütüphanen seni bekliyor" to "Your library is waiting",
                 "Film, dizi veya kanal adını yaz. Bütün kayıtlı kaynaklar taranır." to "Enter a movie, series or channel name. All saved sources will be searched.",
@@ -1396,7 +1396,7 @@ class MainActivity : Activity() {
             AlertDialog.Builder(this).setTitle(s.name).setItems(arrayOf("Yenile", "Sil")) { _, action ->
                 if (action == 0) { if (s.mode == "xtream") loadXtream(s, true) else loadM3u(s, true) }
                 else { savedSources.removeAll { it.id == s.id }; persistSources(); items.removeAll { it.sourceId == s.id }; render() }
-            }.setNegativeButton("İptal", null).show()
+            }.setNegativeButton(t("İptal"), null).show()
         }.setPositiveButton("Kaynak ekle") { _, _ -> showConnectionDialog() }.setNegativeButton("Kapat", null).show()
     }
 
@@ -3777,22 +3777,22 @@ class MainActivity : Activity() {
                             }
                         }
                         sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(38), dp(42)))
-                        sourceRow.addView(makeButton("Yenile", false) {
+                        sourceRow.addView(makeButton(t("Yenile"), false) {
                             if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
                         }, LinearLayout.LayoutParams(dp(84), dp(42)).apply {
                             setMargins(dp(2), 0, dp(4), 0)
                         })
-                        sourceRow.addView(makeButton("Düzenle", false) {
+                        sourceRow.addView(makeButton(t("Düzenle"), false) {
                             showConnectionDialog(source)
                         }, LinearLayout.LayoutParams(dp(92), dp(42)).apply {
                             setMargins(dp(4), 0, dp(4), 0)
                         })
-                        sourceRow.addView(makeButton("Sil", false) {
+                        sourceRow.addView(makeButton(t("Sil"), false) {
                             AlertDialog.Builder(this)
-                                .setTitle("Kaynağı sil")
-                                .setMessage("${source.name} kaynağı ve bu kaynağın içerikleri silinsin mi?")
-                                .setNegativeButton("İptal", null)
-                                .setPositiveButton("Sil") { _, _ ->
+                                .setTitle(t("Kaynağı sil"))
+                                .setMessage(t("Kaynak ve içerikleri silinsin mi?") + "\n" + source.name)
+                                .setNegativeButton(t("İptal"), null)
+                                .setPositiveButton(t("Sil")) { _, _ ->
                                     savedSources.removeAll { it.id == source.id }
                                     persistSources()
                                     items.removeAll { it.sourceId == source.id }
@@ -4076,17 +4076,17 @@ class MainActivity : Activity() {
                 content.addView(picker)
                 val entries = recent.filter { it.type == historyType }
                 // Bu türün tüm izleme geçmişini tek seferde temizle.
-                content.addView(makeButton("Hepsini sil", false) {
+                content.addView(makeButton(t("Hepsini sil"), false) {
                     if (entries.isNotEmpty()) {
                         android.app.AlertDialog.Builder(this)
-                            .setTitle("İzleme geçmişini temizle")
+                            .setTitle(t("İzleme geçmişini temizle"))
                             .setMessage(when (historyType) {
                                 "Canlı TV" -> "İzlenen tüm TV kanalları geçmişten silinsin mi?"
                                 "Filmler" -> "İzlenen tüm filmler geçmişten silinsin mi?"
                                 else -> "İzlenen tüm diziler geçmişten silinsin mi?"
                             })
                             .setNegativeButton("İptal", null)
-                            .setPositiveButton("Sil") { _, _ ->
+                            .setPositiveButton(t("Sil")) { _, _ ->
                                 recent.removeAll { it.type == historyType }
                                 persistRecentHistory()
                                 render()
