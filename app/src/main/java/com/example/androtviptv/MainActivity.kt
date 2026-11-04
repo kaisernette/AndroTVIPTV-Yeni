@@ -4592,6 +4592,45 @@ class MainActivity : Activity() {
             }
             "history" -> {
                 heading("Geçmiş", "Daha önce izlediğin içerikler")
+                val selectedHistoryKeys = mutableSetOf<String>()
+                val actions = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(4), 0, dp(10))
+                }
+                val selectDelete = makeButton(t("Seçileni Sil"), true) {
+                    val keys = selectedHistoryKeys.toSet()
+                    if (keys.isEmpty()) {
+                        Toast.makeText(this, "Önce içerik seç.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        AlertDialog.Builder(this)
+                            .setMessage("${keys.size} içerik silinsin mi?")
+                            .setNegativeButton(t("İptal"), null)
+                            .setPositiveButton(t("Sil")) { _, _ ->
+                                recent.removeAll { keys.contains(it.favoriteKey) }
+                                persistRecentHistory()
+                                render()
+                            }.show()
+                    }
+                }
+                val clearAll = makeButton(t("Geçmişi Sil"), false) {
+                    if (recent.isEmpty()) {
+                        Toast.makeText(this, "Geçmiş zaten boş.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        AlertDialog.Builder(this)
+                            .setMessage("Tüm izleme geçmişi silinsin mi?")
+                            .setNegativeButton(t("İptal"), null)
+                            .setPositiveButton(t("Geçmişi Sil")) { _, _ ->
+                                recent.clear()
+                                persistRecentHistory()
+                                render()
+                            }.show()
+                    }
+                }
+                actions.addView(selectDelete, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(dp(4), 0, dp(6), 0) })
+                actions.addView(clearAll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(dp(4), 0, dp(4), 0) })
+                content.addView(actions, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+
                 val historyColumns = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.TOP
@@ -4616,9 +4655,7 @@ class MainActivity : Activity() {
                         setTextColor(accentBright)
                         gravity = Gravity.CENTER
                         setPadding(dp(2), dp(12), dp(2), dp(12))
-                    }, LinearLayout.LayoutParams(-1, dp(58)).apply {
-                        setMargins(0, 0, 0, dp(5))
-                    })
+                    }, LinearLayout.LayoutParams(-1, dp(58)).apply { bottomMargin = dp(5) })
                     if (entries.isEmpty()) {
                         column.addView(TextView(this).apply {
                             text = "Henüz içerik yok"
@@ -4629,33 +4666,51 @@ class MainActivity : Activity() {
                         })
                     }
                     entries.forEach { item ->
-                        val itemRow = TextView(this).apply {
+                        val row = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            setPadding(dp(7), dp(5), dp(7), dp(5))
+                            isFocusable = true
+                            isFocusableInTouchMode = true
+                            isClickable = true
+                        }
+                        val check = CheckBox(this).apply {
+                            isClickable = false
+                            isFocusable = false
+                            buttonTintList = android.content.res.ColorStateList(
+                                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                                intArrayOf(accentBright, muted)
+                            )
+                            isChecked = false
+                        }
+                        row.addView(check, LinearLayout.LayoutParams(dp(34), dp(38)))
+                        row.addView(TextView(this).apply {
                             text = item.name
                             textSize = 14f
                             maxLines = 2
                             ellipsize = android.text.TextUtils.TruncateAt.END
                             gravity = Gravity.CENTER_VERTICAL
                             setTextColor(Color.WHITE)
-                            setPadding(dp(9), dp(9), dp(9), dp(9))
-                            background = roundedDrawable(Color.TRANSPARENT, 5, Color.rgb(48, 57, 73))
-                            isFocusable = true
-                            isFocusableInTouchMode = true
-                            isClickable = true
-                            setOnFocusChangeListener { v, focused ->
-                                v.background = roundedDrawable(
-                                    if (focused) panel else Color.TRANSPARENT,
-                                    5,
-                                    if (focused) accent else Color.rgb(48, 57, 73)
-                                )
-                                v.scaleX = if (focused) 1.015f else 1f
-                                v.scaleY = if (focused) 1.015f else 1f
-                            }
-                            setOnClickListener {
-                                if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item)
-                                else play(item)
-                            }
+                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                        fun updateSelection(focused: Boolean = row.hasFocus()) {
+                            val selected = selectedHistoryKeys.contains(item.favoriteKey)
+                            check.isChecked = selected
+                            row.background = roundedDrawable(
+                                if (selected) panel else if (focused) panel else Color.TRANSPARENT,
+                                if (ovalButtons) 12 else 5,
+                                if (selected || focused) accent else Color.rgb(48, 57, 73)
+                            )
                         }
-                        column.addView(itemRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        row.setOnFocusChangeListener { _, focused -> updateSelection(focused) }
+                        row.setOnClickListener {
+                            if (!selectedHistoryKeys.add(item.favoriteKey)) selectedHistoryKeys.remove(item.favoriteKey)
+                            updateSelection()
+                        }
+                        row.setOnLongClickListener {
+                            if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item) else play(item)
+                            true
+                        }
+                        column.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                             setMargins(0, 0, 0, dp(5))
                         })
                     }
