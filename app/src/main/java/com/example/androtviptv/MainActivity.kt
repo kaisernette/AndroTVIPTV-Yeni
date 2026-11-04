@@ -1293,7 +1293,6 @@ class MainActivity : Activity() {
             textSize = 13f; setTextColor(muted); setPadding(0, 0, 0, dp(8))
         })
         sourceName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(editSource?.name.orEmpty()) }
-        form.addView(sourceName, fieldParams())
         sourceMode = RadioGroup(this).apply {
             orientation = RadioGroup.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -1327,15 +1326,41 @@ class MainActivity : Activity() {
                 setTextColor(if (focused) Color.rgb(8, 13, 22) else Color.WHITE)
             }
         }
-        val m3u = sourceChoice("M3U / M3U8")
-        val xtream = sourceChoice("Xtream Codes")
-        sourceMode.addView(m3u, RadioGroup.LayoutParams(0, dp(48), 1f).apply {
-            setMargins(0, 0, dp(6), 0)
-        })
-        sourceMode.addView(xtream, RadioGroup.LayoutParams(0, dp(48), 1f).apply {
-            setMargins(dp(6), 0, 0, 0)
-        })
+        val m3u = sourceChoice("▤\nM3U / M3U8").apply {
+            gravity = Gravity.CENTER
+            textSize = 16f
+            setPadding(dp(5), dp(8), dp(5), dp(8))
+        }
+        val xtream = sourceChoice("▣\nXtream Codes").apply {
+            gravity = Gravity.CENTER
+            textSize = 16f
+            setPadding(dp(5), dp(8), dp(5), dp(8))
+        }
+        val macPortal = TextView(this).apply {
+            text = "▱\nMAC Portal"
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setTextColor(muted)
+            setPadding(dp(5), dp(8), dp(5), dp(8))
+            background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
+            isFocusable = true
+            isClickable = true
+            setOnClickListener {
+                Toast.makeText(this@MainActivity, "MAC Portal bağlantısı henüz desteklenmiyor.", Toast.LENGTH_LONG).show()
+            }
+        }
+        sourceMode.addView(m3u, RadioGroup.LayoutParams(0, dp(86), 1f).apply { setMargins(0, 0, dp(5), 0) })
+        sourceMode.addView(xtream, RadioGroup.LayoutParams(0, dp(86), 1f).apply { setMargins(dp(5), 0, dp(5), 0) })
+        sourceMode.addView(macPortal, RadioGroup.LayoutParams(0, dp(86), 1f).apply { setMargins(dp(5), 0, 0, 0) })
         form.addView(sourceMode)
+        form.addView(TextView(this).apply {
+            text = "İzleme kaynağı ekle"
+            textSize = 15f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            setPadding(dp(2), dp(8), 0, dp(3))
+        })
+        form.addView(sourceName, fieldParams())
         playlistUrl = edit(t("M3U / M3U8 oynatma listesi URL'si"), false).apply {
             setText(if (editSource?.mode == "m3u") editSource.address else "")
         }
