@@ -4605,110 +4605,101 @@ class MainActivity : Activity() {
                 })
             }
             "history" -> {
-                heading("Geçmiş", "Türü seçerek izleme geçmişini görüntüle.")
-                val historyOptions = listOf("Canlı TV", "Filmler", "Diziler")
-                val picker = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-                historyOptions.forEach { type ->
-                    picker.addView(makeButton(when (type) { "Canlı TV" -> "▣  TV"; "Filmler" -> "▰  ${t("Filmler")}"; else -> "▤  ${t("Diziler")}" }, historyType == type) {
-                        historyType = type; render()
-                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(8)) })
+                heading("Geçmiş", "Daha önce izlediğin içerikler")
+                val historyColumns = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.TOP
                 }
-                content.addView(picker)
-                val entries = recent.filter { it.type == historyType }
-                // Bu türün tüm izleme geçmişini tek seferde temizle.
-                content.addView(makeButton(t("Hepsini sil"), false) {
-                    if (entries.isNotEmpty()) {
-                        android.app.AlertDialog.Builder(this)
-                            .setTitle(t("İzleme geçmişini temizle"))
-                            .setMessage(when (historyType) {
-                                "Canlı TV" -> t("İzlenen tüm TV kanalları geçmişten silinsin mi?")
-                                "Filmler" -> t("İzlenen tüm filmler geçmişten silinsin mi?")
-                                else -> t("İzlenen tüm diziler geçmişten silinsin mi?")
-                            })
-                            .setNegativeButton(t("İptal"), null)
-                            .setPositiveButton(t("Sil")) { _, _ ->
-                                recent.removeAll { it.type == historyType }
-                                persistRecentHistory()
-                                render()
-                            }.show()
+                val historySections = listOf(
+                    Triple("Canlı TV", "▣", "TV"),
+                    Triple("Filmler", "▰", "Filmler"),
+                    Triple("Diziler", "▤", "Diziler")
+                )
+                historySections.forEach { section ->
+                    val sectionType = section.first
+                    val entries = recent.filter { it.type == sectionType }
+                    val column = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(5), dp(5), dp(5), dp(5))
+                        background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
                     }
-                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply {
-                    setMargins(dp(8), 0, 0, dp(8))
-                })
-                content.addView(TextView(this).apply {
-                    text = t(when (historyType) { "Canlı TV" -> "İzlenen TV kanalları"; "Filmler" -> "İzlenen filmler"; else -> "İzlenen diziler" }) + "  ·  " + entries.size
-                    textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(accentBright); setPadding(dp(8), dp(12), dp(8), dp(6))
-                })
-                if (entries.isEmpty()) content.addView(TextView(this).apply {
-                    text = t("Bu türde henüz izleme geçmişi yok."); textSize = 14f; setTextColor(muted)
-                    setPadding(dp(8), dp(5), dp(8), dp(12))
-                })
-                entries.forEach { item ->
-                    val historyRow = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(12), dp(6), dp(8), dp(6))
-                        background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
-                    }
-                    // Show the actual poster/logo on the right-side history screen.
-                    val historyPoster = ImageView(this).apply {
-                        scaleType = ImageView.ScaleType.CENTER_CROP
-                        contentDescription = item.name
-                        background = roundedDrawable(Color.rgb(28, 34, 45), 8, Color.rgb(48, 57, 73))
-                    }
-                    val posterUrl = item.icon
-                    if (posterUrl.startsWith("http://") || posterUrl.startsWith("https://")) {
-                        loadPoster(posterUrl, historyPoster)
-                    } else {
-                        historyPoster.setImageDrawable(GradientDrawable().apply {
-                            cornerRadius = dp(8).toFloat()
-                            setColor(Color.rgb(28, 34, 45))
+                    // Başlık kartları yalnızca bölüm başlığıdır; tıklama işlevi yoktur.
+                    column.addView(TextView(this).apply {
+                        text = "${section.second}  ${t(section.third)}"
+                        textSize = 19f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(accentBright)
+                        gravity = Gravity.CENTER
+                        setPadding(dp(2), dp(15), dp(2), dp(15))
+                        background = roundedDrawable(panel, 9, Color.rgb(48, 57, 73))
+                    }, LinearLayout.LayoutParams(-1, dp(62)).apply {
+                        setMargins(0, 0, 0, dp(7))
+                    })
+                    if (entries.isEmpty()) {
+                        column.addView(TextView(this).apply {
+                            text = "Henüz içerik yok"
+                            textSize = 12f
+                            setTextColor(muted)
+                            gravity = Gravity.CENTER
+                            setPadding(dp(4), dp(12), dp(4), dp(12))
                         })
                     }
-                    historyRow.addView(historyPoster, LinearLayout.LayoutParams(
-                        dp(if (historyType == "Canlı TV") 64 else 76),
-                        dp(if (historyType == "Canlı TV") 58 else 104)
-                    ).apply { setMargins(0, 0, dp(10), 0) })
-                    val itemInfo = LinearLayout(this).apply {
-                        orientation = LinearLayout.VERTICAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(6), dp(4), dp(8), dp(4))
+                    entries.forEach { item ->
+                        val card = LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(dp(5), dp(5), dp(5), dp(7))
+                            background = roundedDrawable(Color.rgb(25, 31, 42), 9, Color.rgb(48, 57, 73))
+                            isFocusable = true
+                            isClickable = true
+                        }
+                        val poster = ImageView(this).apply {
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                            contentDescription = item.name
+                            background = roundedDrawable(Color.rgb(28, 34, 45), 7, Color.rgb(48, 57, 73))
+                        }
+                        val posterUrl = item.icon
+                        if (posterUrl.startsWith("http://") || posterUrl.startsWith("https://")) {
+                            loadPoster(posterUrl, poster)
+                        } else {
+                            poster.setImageDrawable(GradientDrawable().apply {
+                                cornerRadius = dp(7).toFloat()
+                                setColor(Color.rgb(28, 34, 45))
+                            })
+                        }
+                        card.addView(poster, LinearLayout.LayoutParams(-1, dp(if (sectionType == "Canlı TV") 82 else 132)))
+                        card.addView(TextView(this).apply {
+                            text = item.name
+                            textSize = 13f
+                            maxLines = 2
+                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(Color.WHITE)
+                            setPadding(dp(2), dp(6), dp(2), dp(2))
+                        })
+                        card.addView(TextView(this).apply {
+                            text = t(item.group.ifBlank { item.type })
+                            textSize = 11f
+                            maxLines = 1
+                            setTextColor(muted)
+                            setPadding(dp(2), 0, dp(2), 0)
+                        })
+                        card.setOnFocusChangeListener { v, focused ->
+                            v.background = roundedDrawable(if (focused) panel else Color.rgb(25, 31, 42), 9, if (focused) accent else Color.rgb(48, 57, 73))
+                            v.scaleX = if (focused) 1.025f else 1f
+                            v.scaleY = if (focused) 1.025f else 1f
+                        }
+                        card.setOnClickListener {
+                            if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item)
+                            else play(item)
+                        }
+                        column.addView(card, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            setMargins(0, 0, 0, dp(7))
+                        })
                     }
-                    itemInfo.addView(TextView(this).apply {
-                        text = item.name
-                        textSize = 16f
-                        maxLines = 2
-                        setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(Color.WHITE)
+                    historyColumns.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        setMargins(dp(3), 0, dp(3), 0)
                     })
-                    itemInfo.addView(TextView(this).apply {
-                        text = t(item.group.ifBlank { item.type })
-                        textSize = 13f
-                        maxLines = 1
-                        setTextColor(muted)
-                    })
-                    historyRow.addView(itemInfo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    historyRow.addView(makeButton("Sil", false) {
-                        android.app.AlertDialog.Builder(this)
-                            .setTitle(t("Geçmiş kaydını sil"))
-                            .setMessage("${item.name} ${t("izleme geçmişinden silinsin mi?")}")
-                            .setNegativeButton(t("İptal"), null)
-                            .setPositiveButton(t("Sil")) { _, _ ->
-                                recent.removeAll { it.favoriteKey == item.favoriteKey }
-                                persistRecentHistory()
-                                render()
-                            }.show()
-                    }, LinearLayout.LayoutParams(dp(76), dp(40)))
-                    historyRow.isFocusable = true
-                    content.addView(historyRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                        setMargins(0, 0, 0, dp(8))
-                    })
-                    historyRow.setOnClickListener {
-                        if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item)
-                        else play(item)
-                    }
                 }
+                content.addView(historyColumns, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
         }
     }
