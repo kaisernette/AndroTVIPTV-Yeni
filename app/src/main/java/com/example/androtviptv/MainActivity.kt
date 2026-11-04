@@ -131,7 +131,7 @@ class MainActivity : Activity() {
             else -> emptyMap()
         }
         val common = mapOf(
-            "en" to mapOf(
+            "en" to mapOf("İzleme kaynağı ekle" to "Add streaming source", "Kaynağı düzenle" to "Edit source", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Only add streaming addresses you are authorized to use.", "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)", "M3U / M3U8 oynatma listesi URL'si" to "M3U / M3U8 playlist URL", "Sunucu adresi (https://...)" to "Server address (https://...)", "Kullanıcı adı" to "Username", "Şifre" to "Password", "Bağlan" to "Connect", "Kaydet" to "Save", "Sezon" to "Season", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Enter the server, username and password.", "Geçerli bir M3U/M3U8 URL'si gir." to "Enter a valid M3U/M3U8 URL.", 
                 "Tüm kaynaklarda ara" to "Search all sources", "Arama sonucu bulunamadı" to "No search results found",
                 "Kütüphanen seni bekliyor" to "Your library is waiting",
                 "Film, dizi veya kanal adını yaz. Bütün kayıtlı kaynaklar taranır." to "Enter a movie, series or channel name. All saved sources will be searched.",
@@ -166,7 +166,7 @@ class MainActivity : Activity() {
                 "Canlı yayın zamanı" to "It's live time", "Film gecesi başlasın" to "Movie night starts here", "Bir sonraki bölüm seni bekliyor" to "Your next episode is waiting",
                 "Favorilerin burada" to "Your favorites", "Kaldığın yerden devam et" to "Continue where you left off", "Kütüphaneni keşfet" to "Explore your library"
             ),
-            "de" to mapOf(
+            "de" to mapOf("İzleme kaynağı ekle" to "Streamingquelle hinzufügen", "Kaynağı düzenle" to "Quelle bearbeiten", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Füge nur Streaming-Adressen hinzu, zu deren Nutzung du berechtigt bist.", "Kaynak adı (ör. Ev Xtream)" to "Quellenname (z. B. Zuhause)", "M3U / M3U8 oynatma listesi URL'si" to "M3U-/M3U8-Playlist-URL", "Sunucu adresi (https://...)" to "Serveradresse (https://...)", "Kullanıcı adı" to "Benutzername", "Şifre" to "Passwort", "Bağlan" to "Verbinden", "Kaydet" to "Speichern", "Sezon" to "Staffel", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Server, Benutzername und Passwort eingeben.", "Geçerli bir M3U/M3U8 URL'si gir." to "Eine gültige M3U/M3U8-URL eingeben.", 
                 "Kaynaklar" to "Quellen", "Eğlenceye yeniden hoş geldin" to "Willkommen zurück", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Entdecke Live-TV, Filme und Serien.",
                 "İÇERİKLERİ KEŞFET  →" to "INHALTE ENTDECKEN  →", "Ara" to "Suche", "Ana Sayfa" to "Startseite", "Filmler" to "Filme", "Diziler" to "Serien", "Favoriler" to "Favoriten", "İzlediklerim" to "Zuletzt gesehen",
                 "KATEGORİLER" to "KATEGORIEN", "Tüm kategoriler" to "Alle Kategorien", "Tüm Kanallar" to "Alle Sender", "ARA" to "SUCHEN",
@@ -174,7 +174,7 @@ class MainActivity : Activity() {
                 "Kaynak ekle" to "Quelle hinzufügen", "Henüz kayıtlı kaynak yok." to "Noch keine Quellen gespeichert.", "KONU" to "ÜBERSICHT", "OYUNCULAR" to "BESETZUNG", "FİLM" to "FILM", "DİZİ" to "SERIE",
                 "Hepsini sil" to "Alle löschen", "← Geri dön" to "← Zurück", "Uygulamadan çıkmak istiyor musunuz?" to "Möchtest du die App verlassen?"
             ),
-            "fr" to mapOf(
+            "fr" to mapOf("İzleme kaynağı ekle" to "Ajouter une source", "Kaynağı düzenle" to "Modifier la source", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Ajoutez uniquement des adresses de diffusion que vous êtes autorisé à utiliser.", "Kaynak adı (ör. Ev Xtream)" to "Nom de la source (ex. Maison)", "M3U / M3U8 oynatma listesi URL'si" to "URL de la liste M3U / M3U8", "Sunucu adresi (https://...)" to "Adresse du serveur (https://...)", "Kullanıcı adı" to "Nom d’utilisateur", "Şifre" to "Mot de passe", "Bağlan" to "Connecter", "Kaydet" to "Enregistrer", "Sezon" to "Saison", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Renseignez le serveur, le nom d’utilisateur et le mot de passe.", "Geçerli bir M3U/M3U8 URL'si gir." to "Saisissez une URL M3U/M3U8 valide.", 
                 "Kaynaklar" to "Sources", "Eğlenceye yeniden hoş geldin" to "Bon retour", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Découvrez vos chaînes, films et séries.",
                 "İÇERİKLERİ KEŞFET  →" to "DÉCOUVRIR  →", "Ara" to "Recherche", "Ana Sayfa" to "Accueil", "Filmler" to "Films", "Diziler" to "Séries", "Favoriler" to "Favoris", "İzlediklerim" to "Récemment vus",
                 "KATEGORİLER" to "CATÉGORIES", "Tüm kategoriler" to "Toutes les catégories", "Tüm Kanallar" to "Toutes les chaînes", "ARA" to "RECHERCHER",
@@ -182,7 +182,7 @@ class MainActivity : Activity() {
                 "Kaynak ekle" to "Ajouter une source", "Henüz kayıtlı kaynak yok." to "Aucune source enregistrée.", "KONU" to "SYNOPSIS", "OYUNCULAR" to "ACTEURS", "FİLM" to "FILM", "DİZİ" to "SÉRIE",
                 "Hepsini sil" to "Tout supprimer", "← Geri dön" to "← Retour", "Uygulamadan çıkmak istiyor musunuz?" to "Voulez-vous quitter l’application ?"
             ),
-            "it" to mapOf(
+            "it" to mapOf("İzleme kaynağı ekle" to "Aggiungi sorgente", "Kaynağı düzenle" to "Modifica sorgente", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Aggiungi solo indirizzi streaming che sei autorizzato a utilizzare.", "Kaynak adı (ör. Ev Xtream)" to "Nome sorgente (es. Casa)", "M3U / M3U8 oynatma listesi URL'si" to "URL playlist M3U / M3U8", "Sunucu adresi (https://...)" to "Indirizzo server (https://...)", "Kullanıcı adı" to "Nome utente", "Şifre" to "Password", "Bağlan" to "Connetti", "Kaydet" to "Salva", "Sezon" to "Stagione", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Inserisci server, nome utente e password.", "Geçerli bir M3U/M3U8 URL'si gir." to "Inserisci un URL M3U/M3U8 valido.", 
                 "Kaynaklar" to "Sorgenti", "Eğlenceye yeniden hoş geldin" to "Bentornato", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Scopri canali TV, film e serie.",
                 "İÇERİKLERİ KEŞFET  →" to "SCOPRI I CONTENUTI  →", "Ara" to "Cerca", "Ana Sayfa" to "Home", "Filmler" to "Film", "Diziler" to "Serie TV", "Favoriler" to "Preferiti", "İzlediklerim" to "Visti di recente",
                 "KATEGORİLER" to "CATEGORIE", "Tüm kategoriler" to "Tutte le categorie", "Tüm Kanallar" to "Tutti i canali", "ARA" to "CERCA",
@@ -190,7 +190,7 @@ class MainActivity : Activity() {
                 "Kaynak ekle" to "Aggiungi sorgente", "Henüz kayıtlı kaynak yok." to "Nessuna sorgente salvata.", "KONU" to "TRAMA", "OYUNCULAR" to "CAST", "FİLM" to "FILM", "DİZİ" to "SERIE",
                 "Hepsini sil" to "Elimina tutto", "← Geri dön" to "← Indietro", "Uygulamadan çıkmak istiyor musunuz?" to "Vuoi uscire dall’app?"
             ),
-            "es" to mapOf(
+            "es" to mapOf("İzleme kaynağı ekle" to "Añadir fuente", "Kaynağı düzenle" to "Editar fuente", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Añade solo direcciones de streaming que tengas autorización para usar.", "Kaynak adı (ör. Ev Xtream)" to "Nombre de la fuente (p. ej., Casa)", "M3U / M3U8 oynatma listesi URL'si" to "URL de lista M3U / M3U8", "Sunucu adresi (https://...)" to "Dirección del servidor (https://...)", "Kullanıcı adı" to "Nombre de usuario", "Şifre" to "Contraseña", "Bağlan" to "Conectar", "Kaydet" to "Guardar", "Sezon" to "Temporada", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Introduce el servidor, el usuario y la contraseña.", "Geçerli bir M3U/M3U8 URL'si gir." to "Introduce una URL M3U/M3U8 válida.", 
                 "Kaynaklar" to "Fuentes", "Eğlenceye yeniden hoş geldin" to "Bienvenido de nuevo", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Descubre tus canales, películas y series.",
                 "İÇERİKLERİ KEŞFET  →" to "EXPLORAR CONTENIDO  →", "Ara" to "Buscar", "Ana Sayfa" to "Inicio", "Filmler" to "Películas", "Diziler" to "Series", "Favoriler" to "Favoritos", "İzlediklerim" to "Vistos recientemente",
                 "KATEGORİLER" to "CATEGORÍAS", "Tüm kategoriler" to "Todas las categorías", "Tüm Kanallar" to "Todos los canales", "ARA" to "BUSCAR",
@@ -198,7 +198,7 @@ class MainActivity : Activity() {
                 "Kaynak ekle" to "Añadir fuente", "Henüz kayıtlı kaynak yok." to "No hay fuentes guardadas.", "KONU" to "SINOPSIS", "OYUNCULAR" to "REPARTO", "FİLM" to "PELÍCULA", "DİZİ" to "SERIE",
                 "Hepsini sil" to "Borrar todo", "← Geri dön" to "← Volver", "Uygulamadan çıkmak istiyor musunuz?" to "¿Quieres salir de la aplicación?"
             ),
-            "ru" to mapOf(
+            "ru" to mapOf("İzleme kaynağı ekle" to "Добавить источник", "Kaynağı düzenle" to "Изменить источник", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Добавляйте только потоковые адреса, которыми вы имеете право пользоваться.", "Kaynak adı (ör. Ev Xtream)" to "Название источника (например, Дом)", "M3U / M3U8 oynatma listesi URL'si" to "URL плейлиста M3U / M3U8", "Sunucu adresi (https://...)" to "Адрес сервера (https://...)", "Kullanıcı adı" to "Имя пользователя", "Şifre" to "Пароль", "Bağlan" to "Подключить", "Kaydet" to "Сохранить", "Sezon" to "Сезон", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Введите сервер, имя пользователя и пароль.", "Geçerli bir M3U/M3U8 URL'si gir." to "Введите действительный URL M3U/M3U8.", 
                 "Kaynaklar" to "Источники", "Eğlenceye yeniden hoş geldin" to "С возвращением", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "Откройте для себя ТВ, фильмы и сериалы.",
                 "İÇERİKLERİ KEŞFET  →" to "ОТКРЫТЬ КОНТЕНТ  →", "Ara" to "Поиск", "Ana Sayfa" to "Главная", "Filmler" to "Фильмы", "Diziler" to "Сериалы", "Favoriler" to "Избранное", "İzlediklerim" to "Недавно просмотрено",
                 "KATEGORİLER" to "КАТЕГОРИИ", "Tüm kategoriler" to "Все категории", "Tüm Kanallar" to "Все каналы", "ARA" to "ПОИСК",
@@ -206,7 +206,7 @@ class MainActivity : Activity() {
                 "Kaynak ekle" to "Добавить источник", "Henüz kayıtlı kaynak yok." to "Нет сохранённых источников.", "KONU" to "ОПИСАНИЕ", "OYUNCULAR" to "АКТЁРЫ", "FİLM" to "ФИЛЬМ", "DİZİ" to "СЕРИАЛ",
                 "Hepsini sil" to "Удалить всё", "← Geri dön" to "← Назад", "Uygulamadan çıkmak istiyor musunuz?" to "Выйти из приложения?"
             ),
-            "ar" to mapOf(
+            "ar" to mapOf("İzleme kaynağı ekle" to "إضافة مصدر بث", "Kaynağı düzenle" to "تعديل المصدر", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "أضف فقط عناوين البث المصرح لك باستخدامها.", "Kaynak adı (ör. Ev Xtream)" to "اسم المصدر (مثال: المنزل)", "M3U / M3U8 oynatma listesi URL'si" to "رابط قائمة تشغيل M3U / M3U8", "Sunucu adresi (https://...)" to "عنوان الخادم (https://...)", "Kullanıcı adı" to "اسم المستخدم", "Şifre" to "كلمة المرور", "Bağlan" to "اتصال", "Kaydet" to "حفظ", "Sezon" to "الموسم", "Sunucu, kullanıcı adı ve şifreyi doldur." to "أدخل الخادم واسم المستخدم وكلمة المرور.", "Geçerli bir M3U/M3U8 URL'si gir." to "أدخل رابط M3U/M3U8 صالحاً.", 
                 "Kaynaklar" to "المصادر", "Eğlenceye yeniden hoş geldin" to "مرحباً بعودتك", "Canlı yayınlarını, filmlerini ve dizilerini keşfet." to "اكتشف القنوات والأفلام والمسلسلات.",
                 "İÇERİKLERİ KEŞFET  →" to "اكتشف المحتوى  →", "Ara" to "بحث", "Ana Sayfa" to "الرئيسية", "Filmler" to "أفلام", "Diziler" to "مسلسلات", "Favoriler" to "المفضلة", "İzlediklerim" to "شوهد مؤخراً",
                 "KATEGORİLER" to "الفئات", "Tüm kategoriler" to "كل الفئات", "Tüm Kanallar" to "كل القنوات", "ARA" to "بحث",
@@ -1111,15 +1111,15 @@ class MainActivity : Activity() {
             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
         form.addView(TextView(this).apply {
-            text = if (editSource == null) "İzleme kaynağı ekle" else "Kaynağı düzenle"
+            text = t(if (editSource == null) "İzleme kaynağı ekle" else "Kaynağı düzenle")
             textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             setPadding(0, 0, 0, dp(6))
         })
         form.addView(TextView(this).apply {
-            text = "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle."
+            text = t("Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle.")
             textSize = 13f; setTextColor(muted); setPadding(0, 0, 0, dp(8))
         })
-        sourceName = edit("Kaynak adı (ör. Ev Xtream)", false).apply { setText(editSource?.name.orEmpty()) }
+        sourceName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(editSource?.name.orEmpty()) }
         form.addView(sourceName, fieldParams())
         sourceMode = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
         val m3u = RadioButton(this).apply {
@@ -1129,14 +1129,14 @@ class MainActivity : Activity() {
             id = View.generateViewId(); text = "Xtream Codes"; setTextColor(Color.WHITE)
         }
         sourceMode.addView(m3u); sourceMode.addView(xtream); form.addView(sourceMode)
-        playlistUrl = edit("M3U / M3U8 oynatma listesi URL'si", false).apply {
+        playlistUrl = edit(t("M3U / M3U8 oynatma listesi URL'si"), false).apply {
             setText(if (editSource?.mode == "m3u") editSource.address else "")
         }
-        server = edit("Sunucu adresi (https://...)", false).apply {
+        server = edit(t("Sunucu adresi (https://...)"), false).apply {
             setText(if (editSource?.mode == "xtream") editSource.address else "")
         }
-        username = edit("Kullanıcı adı", false).apply { setText(editSource?.username.orEmpty()) }
-        password = edit("Şifre", true).apply { setText(editSource?.password.orEmpty()) }
+        username = edit(t("Kullanıcı adı"), false).apply { setText(editSource?.username.orEmpty()) }
+        password = edit(t("Şifre"), true).apply { setText(editSource?.password.orEmpty()) }
         form.addView(playlistUrl, fieldParams())
         val xtreamFieldsFrame = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1190,9 +1190,9 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END
             setPadding(0, dp(8), 0, 0)
         }
-        actions.addView(makeButton("İptal", false) { render() },
+        actions.addView(makeButton(t("İptal"), false) { render() },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)).apply { setMargins(dp(4), 0, dp(4), 0) })
-        val connectButton = makeButton(if (editSource == null) "Bağlan" else "Kaydet", true) {
+        val connectButton = makeButton(t(if (editSource == null) "Bağlan" else "Kaydet"), true) {
             val useXtream = sourceMode.checkedRadioButtonId == xtream.id
             if (useXtream) {
                 val address = server.text.toString().trim()
@@ -1347,7 +1347,9 @@ class MainActivity : Activity() {
         }
 
         if (savedSources.isNotEmpty()) {
-            val lastId = prefs.getString("last_source_id", "") ?: ""
+            // Start in the built-in demo every time. User sources remain saved and selectable.
+            prefs.edit().putString("last_source_id", demoSource.id).apply()
+            val lastId = demoSource.id
             val last = savedSources.firstOrNull { it.id == lastId }
 
             // Validate the cache against the selected source, not against items
@@ -3538,7 +3540,7 @@ class MainActivity : Activity() {
         }
 
         val seasons = seriesEpisodeRows.map { it.first }
-        seasonButton = makeButton("▱  SEZON ${selectedEpisodeSeason.ifBlank { seasons.firstOrNull().orEmpty() }}  ▾", false) {
+        seasonButton = makeButton("▱  ${t("Sezon").uppercase(java.util.Locale.ROOT)} ${selectedEpisodeSeason.ifBlank { seasons.firstOrNull().orEmpty() }}  ▾", false) {
             if (seasons.isNotEmpty()) {
                 val current = seasons.indexOf(selectedEpisodeSeason).coerceAtLeast(0)
                 if (seasonDropdown.visibility == View.VISIBLE) {
@@ -3547,7 +3549,7 @@ class MainActivity : Activity() {
                     showSeriesDropdown(seasonDropdown, seasons.map { "Sezon $it" }, current) { which ->
                     selectedEpisodeSeason = seasons[which]
                     selectedEpisodeIndex = seriesEpisodeRows.take(which).sumOf { it.second.size }
-                    seasonButton.text = "▱  SEZON ${seasons[which]}  ▾"
+                    seasonButton.text = "▱  ${t("Sezon").uppercase(java.util.Locale.ROOT)} ${seasons[which]}  ▾"
                     refreshEpisodeCards()
                     }
                 }
