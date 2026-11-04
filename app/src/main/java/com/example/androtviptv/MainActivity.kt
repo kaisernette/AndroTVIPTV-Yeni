@@ -1370,15 +1370,6 @@ class MainActivity : Activity() {
         }
         username = edit(t("Kullanıcı adı"), false).apply { setText(editSource?.username.orEmpty()) }
         password = edit(t("Şifre"), true).apply { setText(editSource?.password.orEmpty()) }
-        form.addView(sourceNameFrame, LinearLayout.LayoutParams(-1, dp(56)).apply {
-            setMargins(0, dp(3), 0, dp(5))
-        })
-        val playlistFieldsFrame = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(9), dp(7), dp(9), dp(7))
-            background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
-            addView(playlistFrame, LinearLayout.LayoutParams(-1, dp(56)))
-        }
         val xtreamFieldsFrame = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(10), dp(7), dp(10), dp(7))
@@ -1404,6 +1395,15 @@ class MainActivity : Activity() {
         val serverFrame = framedInput(server)
         val usernameFrame = framedInput(username)
         val passwordFrame = framedInput(password)
+        form.addView(sourceNameFrame, LinearLayout.LayoutParams(-1, dp(56)).apply {
+            setMargins(0, dp(3), 0, dp(5))
+        })
+        val playlistFieldsFrame = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(9), dp(7), dp(9), dp(7))
+            background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
+            addView(playlistFrame, LinearLayout.LayoutParams(-1, dp(56)))
+        }
         xtreamFieldsFrame.removeAllViews()
         xtreamFieldsFrame.addView(serverFrame, LinearLayout.LayoutParams(-1, dp(54)).apply {
             setMargins(0, dp(3), 0, dp(5))
