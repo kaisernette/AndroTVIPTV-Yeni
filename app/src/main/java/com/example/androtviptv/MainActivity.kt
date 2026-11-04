@@ -4003,54 +4003,16 @@ class MainActivity : Activity() {
             "categories" -> {
                 heading("Kategoriler", "TV, film ve dizi kategorilerini ayrı ayrı yönet")
 
-                // Üç bölüm düğmesi: yalnızca seçilen türün kategori listesi gösterilir.
-                val categoryTabs = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER
-                    setPadding(0, dp(8), 0, dp(10))
-                }
-                val tabInfo = listOf(
+                // Toplu işlemler tüm üç içerik türüne uygulanır.
+                val sectionTypes = listOf(
                     Triple("Canlı TV", "▣", "TV"),
                     Triple("Filmler", "▤", "Film"),
                     Triple("Diziler", "▱", "Dizi")
                 )
-                tabInfo.forEach { tab ->
-                    val selected = selectedCategorySection == tab.first
-                    val tabButton = TextView(this).apply {
-                        text = "${tab.second}  ${t(tab.third)}"
-                        textSize = 15f
-                        gravity = Gravity.CENTER
-                        setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(if (selected) Color.WHITE else muted)
-                        setPadding(dp(8), dp(12), dp(8), dp(12))
-                        background = roundedDrawable(panel, 12)
-                        isFocusable = true
-                        isFocusableInTouchMode = true
-                        isClickable = true
-                        setOnFocusChangeListener { v, hasFocus ->
-                            v.background = roundedDrawable(if (hasFocus) accent else panel, 12)
-                            (v as TextView).setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else muted)
-                        }
-                        setOnClickListener {
-                            selectedCategorySection = tab.first
-                            render()
-                            content.post { categoryTabs.getChildAt(tabInfo.indexOf(tab))?.requestFocus() }
-                        }
-                    }
-                    categoryTabs.addView(tabButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
-                        setMargins(dp(3), 0, dp(3), 0)
-                    })
-                }
-                content.addView(categoryTabs, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-
-                val sectionType = selectedCategorySection
-                val sectionGroups = items.filter { it.type == sectionType }
-                    .map { it.group.ifBlank { "Diğer" } }
-                    .distinct()
                 val categoryActions = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER
-                    setPadding(0, dp(2), 0, dp(8))
+                    setPadding(0, dp(8), 0, dp(10))
                 }
                 val actionItems = listOf("Hepsini gizle", "Hepsini göster", "Seçili dilin kategorilerini göster")
                 actionItems.forEach { actionLabel ->
@@ -4067,40 +4029,35 @@ class MainActivity : Activity() {
                         setOnFocusChangeListener { v, hasFocus ->
                             v.background = roundedDrawable(if (hasFocus) accent else panel, 10)
                             (v as TextView).setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
-                            v.elevation = 0f
                         }
                         setOnClickListener {
                             when (actionLabel) {
-                                "Hepsini gizle" -> sectionGroups.forEach { group ->
-                                    hiddenCategories.add(sectionType + "|" + group)
+                                "Hepsini gizle" -> sectionTypes.forEach { section ->
+                                    items.filter { it.type == section.first }.map { it.group.ifBlank { "Diğer" } }.distinct()
+                                        .forEach { hiddenCategories.add(section.first + "|" + it) }
                                 }
-                                "Hepsini göster" -> sectionGroups.forEach { group ->
-                                    hiddenCategories.remove(sectionType + "|" + group)
+                                "Hepsini göster" -> sectionTypes.forEach { section ->
+                                    items.filter { it.type == section.first }.map { it.group.ifBlank { "Diğer" } }.distinct()
+                                        .forEach { hiddenCategories.remove(section.first + "|" + it) }
                                 }
                                 "Seçili dilin kategorilerini göster" -> {
                                     val selectedLanguage = prefs.getString("app_language", "system") ?: "system"
                                     val language = if (selectedLanguage == "system") java.util.Locale.getDefault().language else selectedLanguage
                                     val languagePrefix = when (language.lowercase(java.util.Locale.ROOT)) {
-                                        "tr" -> "TR"
-                                        "en" -> "EN"
-                                        "de" -> "DE"
-                                        "fr" -> "FR"
-                                        "it" -> "IT"
-                                        "es" -> "ES"
-                                        "ru" -> "RU"
-                                        "ar" -> "AR"
+                                        "tr" -> "TR"; "en" -> "EN"; "de" -> "DE"; "fr" -> "FR"
+                                        "it" -> "IT"; "es" -> "ES"; "ru" -> "RU"; "ar" -> "AR"
                                         else -> language.uppercase(java.util.Locale.ROOT)
                                     }
-                                    sectionGroups.forEach { group ->
-                                        val normalizedGroup = group.trim()
-                                        val matchesLanguage = normalizedGroup.startsWith(languagePrefix, ignoreCase = true) &&
-                                            (normalizedGroup.length == languagePrefix.length ||
-                                             normalizedGroup[languagePrefix.length] in charArrayOf(' ', '|', '-', '_'))
-                                        if (matchesLanguage) {
-                                            hiddenCategories.remove(sectionType + "|" + group)
-                                        } else {
-                                            hiddenCategories.add(sectionType + "|" + group)
-                                        }
+                                    sectionTypes.forEach { section ->
+                                        items.filter { it.type == section.first }.map { it.group.ifBlank { "Diğer" } }.distinct()
+                                            .forEach { group ->
+                                                val normalized = group.trim()
+                                                val matches = normalized.startsWith(languagePrefix, ignoreCase = true) &&
+                                                    (normalized.length == languagePrefix.length ||
+                                                     normalized[languagePrefix.length] in charArrayOf(' ', '|', '-', '_'))
+                                                val key = section.first + "|" + group
+                                                if (matches) hiddenCategories.remove(key) else hiddenCategories.add(key)
+                                            }
                                     }
                                 }
                             }
@@ -4108,90 +4065,101 @@ class MainActivity : Activity() {
                             render()
                         }
                     }
-                    categoryActions.addView(actionButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                    categoryActions.addView(actionButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
                         setMargins(dp(3), 0, dp(3), 0)
                     })
                 }
                 content.addView(categoryActions, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                val rows = items.filter { it.type == sectionType }
-                    .map { Pair(Pair(it.type, it.group.ifBlank { "Diğer" }), it) }
-                    .groupBy({ it.first }, { it.second })
-                val sectionRows = rows.toList().sortedBy { it.first.second }
-                if (sectionRows.isNotEmpty()) {
-                    sectionRows.forEach { (key, entries) ->
-                        val hiddenKey = key.first + "|" + key.second
-                        val isHidden = hiddenCategories.contains(hiddenKey)
-                        val row = LinearLayout(this).apply {
-                            orientation = LinearLayout.HORIZONTAL
-                            gravity = android.view.Gravity.CENTER_VERTICAL
-                            setPadding(dp(18), dp(14), dp(18), dp(14))
-                            background = roundedDrawable(panel, 14)
-                            isFocusable = true
-                            isFocusableInTouchMode = true
-                            isClickable = true
-                            setOnFocusChangeListener { v, hasFocus ->
-                                v.background = roundedDrawable(if (hasFocus) accent else panel, 14)
-                                val foreground = if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE
-                                (v as ViewGroup).let { card ->
-                                    (card.getChildAt(0) as? TextView)?.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else if (isHidden) Color.WHITE else accentBright)
-                                    val textColumn = card.getChildAt(1) as? LinearLayout
-                                    textColumn?.let { column ->
-                                        (column.getChildAt(0) as? TextView)?.setTextColor(foreground)
-                                        (column.getChildAt(1) as? TextView)?.setTextColor(if (hasFocus) Color.rgb(25, 38, 54) else muted)
+
+                // TV, Film ve Dizi kategorileri aynı satırda üç sütun olarak gösterilir.
+                val categoryColumns = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.TOP
+                }
+                sectionTypes.forEach { section ->
+                    val sectionType = section.first
+                    val column = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(5), dp(8), dp(5), dp(8))
+                        background = roundedDrawable(panel, 12)
+                    }
+                    column.addView(TextView(this).apply {
+                        text = "${section.second}  ${t(section.third)}"
+                        textSize = 16f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(accentBright)
+                        gravity = Gravity.CENTER
+                        setPadding(dp(2), dp(8), dp(2), dp(12))
+                    })
+                    val groups = items.filter { it.type == sectionType }
+                        .map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+                    if (groups.isEmpty()) {
+                        column.addView(TextView(this).apply {
+                            text = "Kategori yok"
+                            textSize = 12f
+                            setTextColor(muted)
+                            gravity = Gravity.CENTER
+                            setPadding(dp(2), dp(8), dp(2), dp(8))
+                        })
+                    } else {
+                        groups.forEach { group ->
+                            val hiddenKey = sectionType + "|" + group
+                            val isHidden = hiddenCategories.contains(hiddenKey)
+                            val card = LinearLayout(this).apply {
+                                orientation = LinearLayout.VERTICAL
+                                gravity = Gravity.CENTER
+                                setPadding(dp(5), dp(9), dp(5), dp(9))
+                                background = roundedDrawable(if (isHidden) Color.rgb(
+                                    (Color.red(panel) - 4).coerceAtLeast(0),
+                                    (Color.green(panel) - 4).coerceAtLeast(0),
+                                    (Color.blue(panel) - 4).coerceAtLeast(0)
+                                ) else panel, 8)
+                                isFocusable = true
+                                isFocusableInTouchMode = true
+                                isClickable = true
+                                setOnFocusChangeListener { v, focused ->
+                                    v.background = roundedDrawable(if (focused) accent else panel, 8)
+                                    val fg = if (focused) Color.rgb(8, 13, 22) else Color.WHITE
+                                    (v as ViewGroup).let { box ->
+                                        (box.getChildAt(0) as? TextView)?.setTextColor(if (focused) fg else if (isHidden) muted else accentBright)
+                                        (box.getChildAt(1) as? TextView)?.setTextColor(fg)
                                     }
                                 }
-                                v.elevation = 0f
+                                setOnClickListener {
+                                    if (hiddenCategories.contains(hiddenKey)) hiddenCategories.remove(hiddenKey)
+                                    else hiddenCategories.add(hiddenKey)
+                                    categoryFocusRestoreKey = hiddenKey
+                                    prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply()
+                                    render()
+                                }
                             }
-                            setOnClickListener {
-                                if (hiddenCategories.contains(hiddenKey)) hiddenCategories.remove(hiddenKey)
-                                else hiddenCategories.add(hiddenKey)
-                                categoryFocusRestoreKey = hiddenKey
-                                prefs.edit().putStringSet("hidden_categories", hiddenCategories.toSet()).apply()
-                                render()
+                            card.addView(TextView(this@MainActivity).apply {
+                                text = if (isHidden) "○" else "●"
+                                textSize = 19f
+                                gravity = Gravity.CENTER
+                                setTextColor(if (isHidden) muted else accentBright)
+                            })
+                            card.addView(TextView(this@MainActivity).apply {
+                                text = group
+                                textSize = 12f
+                                gravity = Gravity.CENTER
+                                setTextColor(Color.WHITE)
+                                maxLines = 3
+                                ellipsize = android.text.TextUtils.TruncateAt.END
+                            })
+                            column.addView(card, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                                setMargins(0, dp(3), 0, dp(4))
+                            })
+                            if (categoryFocusRestoreKey == hiddenKey) {
+                                card.post { card.requestFocus(); categoryFocusRestoreKey = null }
                             }
-                        }
-                        val indicator = TextView(this).apply {
-                            text = if (isHidden) "◯" else "⦿"
-                            textSize = 25f
-                            setTextColor(if (isHidden) Color.WHITE else accentBright)
-                            gravity = android.view.Gravity.CENTER
-                        }
-                        row.addView(indicator, LinearLayout.LayoutParams(dp(38), ViewGroup.LayoutParams.WRAP_CONTENT))
-                        val labels = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                        labels.addView(TextView(this@MainActivity).apply {
-                            text = "${key.second}  ·  ${entries.size}"
-                            textSize = 17f
-                            setTypeface(null, android.graphics.Typeface.BOLD)
-                            setTextColor(Color.WHITE)
-                            maxLines = 2
-                            ellipsize = android.text.TextUtils.TruncateAt.END
-                        })
-                        labels.addView(TextView(this@MainActivity).apply {
-                            text = t(if (isHidden) "Gizli — seçerek göster" else "Gösteriliyor — seçerek gizle")
-                            textSize = 13f
-                            setTextColor(muted)
-                            setPadding(0, dp(5), 0, 0)
-                        })
-                        row.addView(labels, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                        content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                            setMargins(dp(6), dp(5), dp(6), dp(7))
-                        })
-                        if (categoryFocusRestoreKey == hiddenKey) {
-                            row.post { row.requestFocus(); categoryFocusRestoreKey = null }
                         }
                     }
-                } else {
-                    content.addView(TextView(this).apply {
-                        text = t(when (sectionType) {
-                            "Canlı TV" -> "Gösterilecek TV kategorisi yok."
-                            "Filmler" -> "Gösterilecek film kategorisi yok."
-                            else -> "Gösterilecek dizi kategorisi yok."
-                        })
-                        textSize = 16f
-                        setTextColor(muted)
-                        setPadding(dp(8), dp(12), dp(8), dp(12))
+                    categoryColumns.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        setMargins(dp(3), 0, dp(3), 0)
                     })
                 }
+                content.addView(categoryColumns, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
             "themes" -> {
                 heading("Temalar", "Renk seçimi anında uygulanır.")
