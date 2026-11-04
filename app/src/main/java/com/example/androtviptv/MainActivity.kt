@@ -2064,20 +2064,37 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
         val exitDialog = AlertDialog.Builder(this).setView(exitPanel).create()
-        val exitButton = makeButton("Çıkış Yap", false) {
+        fun exitActionButton(label: String, fillColor: Int, textColor: Int, onClick: () -> Unit): TextView =
+            TextView(this).apply {
+                text = t(label)
+                textSize = 18f
+                gravity = Gravity.CENTER
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(textColor)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                isClickable = true
+                background = roundedDrawable(fillColor, 12)
+                setOnFocusChangeListener { v, focused ->
+                    v.background = roundedDrawable(if (focused) accent else fillColor, 12)
+                    (v as TextView).setTextColor(if (focused) Color.rgb(8, 13, 22) else textColor)
+                }
+                setOnClickListener { onClick() }
+            }
+        val exitButton = exitActionButton("Çıkış Yap", Color.rgb(27, 33, 45), Color.WHITE) {
             exitDialog.dismiss()
             finish()
-        }.apply { textSize = 17f; setTypeface(null, android.graphics.Typeface.BOLD) }
-        val cancelButton = makeButton("Vazgeç", false) {
+        }
+        val cancelButton = exitActionButton("Vazgeç", accent, Color.rgb(8, 13, 22)) {
             exitDialog.dismiss()
-        }.apply { textSize = 23f; setTypeface(null, android.graphics.Typeface.BOLD) }
-        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+        }
+        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(54), 1f).apply {
             setMargins(0, 0, dp(10), 0)
         })
-        exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(68), 1f).apply {
+        exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(54), 1f).apply {
             setMargins(dp(10), 0, 0, 0)
         })
-        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(50)))
+        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(54)))
         exitDialog.setOnShowListener {
             exitDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
             exitDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
