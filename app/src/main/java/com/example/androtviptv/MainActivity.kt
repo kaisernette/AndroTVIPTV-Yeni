@@ -314,7 +314,79 @@ class MainActivity : Activity() {
                 "Antrasit • Mavi" to "فحمي • أزرق", "Gece • Altın" to "ليلي • ذهبي", "Lacivert • Turkuaz" to "كحلي • فيروزي", "Koyu • Mor" to "داكن • بنفسجي"
             )
         )
-        return translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: value
+        val runtimeTranslations = mapOf(
+            "en" to mapOf(
+                "TV, film ve dizi kategorilerini ayrı ayrı yönet" to "Manage TV, movie and series categories separately",
+                "TV, filmler ve diziler yükleniyor…" to "Loading TV, movies and series…",
+                "Sunucu bağlantıyı kapattı. Yeniden deneyin." to "The server closed the connection. Please try again.",
+                "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin." to "Could not reach the server. Check your internet connection.",
+                "Bağlantı zaman aşımına uğradı. Yeniden deneyin." to "Connection timed out. Please try again.",
+                "Güvenli bağlantı kurulamadı." to "A secure connection could not be established.",
+                "Sunucu isteği reddetti" to "The server rejected the request",
+                "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "The source could not be loaded. Check your internet connection and source details."
+            ),
+            "de" to mapOf(
+                "TV, film ve dizi kategorilerini ayrı ayrı yönet" to "TV-, Film- und Serienkategorien getrennt verwalten",
+                "TV, filmler ve diziler yükleniyor…" to "TV, Filme und Serien werden geladen…",
+                "Sunucu bağlantıyı kapattı. Yeniden deneyin." to "Der Server hat die Verbindung geschlossen. Bitte erneut versuchen.",
+                "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin." to "Server nicht erreichbar. Bitte Internetverbindung prüfen.",
+                "Bağlantı zaman aşımına uğradı. Yeniden deneyin." to "Zeitüberschreitung der Verbindung. Bitte erneut versuchen.",
+                "Güvenli bağlantı kurulamadı." to "Sichere Verbindung konnte nicht hergestellt werden.",
+                "Sunucu isteği reddetti" to "Der Server hat die Anfrage abgelehnt",
+                "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "Quelle konnte nicht geladen werden. Internetverbindung und Quelldaten prüfen."
+            ),
+            "fr" to mapOf(
+                "TV, film ve dizi kategorilerini ayrı ayrı yönet" to "Gérer séparément les catégories TV, films et séries",
+                "TV, filmler ve diziler yükleniyor…" to "Chargement de la TV, des films et des séries…",
+                "Sunucu bağlantıyı kapattı. Yeniden deneyin." to "Le serveur a fermé la connexion. Réessayez.",
+                "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin." to "Serveur inaccessible. Vérifiez votre connexion Internet.",
+                "Bağlantı zaman aşımına uğradı. Yeniden deneyin." to "Délai de connexion dépassé. Réessayez.",
+                "Güvenli bağlantı kurulamadı." to "Impossible d’établir une connexion sécurisée.",
+                "Sunucu isteği reddetti" to "Le serveur a refusé la requête",
+                "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "Impossible de charger la source. Vérifiez la connexion et les informations de la source."
+            ),
+            "it" to mapOf(
+                "TV, film ve dizi kategorilerini ayrı ayrı yönet" to "Gestisci separatamente le categorie TV, film e serie",
+                "TV, filmler ve diziler yükleniyor…" to "Caricamento di TV, film e serie…",
+                "Sunucu bağlantıyı kapattı. Yeniden deneyin." to "Il server ha chiuso la connessione. Riprova.",
+                "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin." to "Server non raggiungibile. Controlla la connessione Internet.",
+                "Bağlantı zaman aşımına uğradı. Yeniden deneyin." to "Connessione scaduta. Riprova.",
+                "Güvenli bağlantı kurulamadı." to "Impossibile stabilire una connessione sicura.",
+                "Sunucu isteği reddetti" to "Il server ha rifiutato la richiesta",
+                "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "Impossibile caricare la sorgente. Controlla la connessione e i dati della sorgente."
+            ),
+            "es" to mapOf(
+                "TV, film ve dizi kategorilerini ayrı ayrı yönet" to "Gestiona por separado las categorías de TV, películas y series",
+                "TV, filmler ve diziler yükleniyor…" to "Cargando TV, películas y series…",
+                "Sunucu bağlantıyı kapattı. Yeniden deneyin." to "El servidor cerró la conexión. Inténtalo de nuevo.",
+                "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin." to "No se pudo acceder al servidor. Comprueba tu conexión a Internet.",
+                "Bağlantı zaman aşımına uğradı. Yeniden deneyin." to "Se agotó el tiempo de conexión. Inténtalo de nuevo.",
+                "Güvenli bağlantı kurulamadı." to "No se pudo establecer una conexión segura.",
+                "Sunucu isteği reddetti" to "El servidor rechazó la solicitud",
+                "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "No se pudo cargar la fuente. Comprueba la conexión y los datos de la fuente."
+            ),
+            "ru" to mapOf(
+                "TV, film ve dizi kategorilerini ayrı ayrı yönet" to "Управляйте категориями ТВ, фильмов и сериалов отдельно",
+                "TV, filmler ve diziler yükleniyor…" to "Загрузка ТВ, фильмов и сериалов…",
+                "Sunucu bağlantıyı kapattı. Yeniden deneyin." to "Сервер закрыл соединение. Попробуйте ещё раз.",
+                "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin." to "Не удалось связаться с сервером. Проверьте подключение к интернету.",
+                "Bağlantı zaman aşımına uğradı. Yeniden deneyin." to "Время ожидания соединения истекло. Попробуйте ещё раз.",
+                "Güvenli bağlantı kurulamadı." to "Не удалось установить защищённое соединение.",
+                "Sunucu isteği reddetti" to "Сервер отклонил запрос",
+                "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "Не удалось загрузить источник. Проверьте подключение и данные источника."
+            ),
+            "ar" to mapOf(
+                "TV, film ve dizi kategorilerini ayrı ayrı yönet" to "إدارة فئات التلفاز والأفلام والمسلسلات بشكل منفصل",
+                "TV, filmler ve diziler yükleniyor…" to "جارٍ تحميل التلفاز والأفلام والمسلسلات…",
+                "Sunucu bağlantıyı kapattı. Yeniden deneyin." to "أغلق الخادم الاتصال. حاول مرة أخرى.",
+                "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin." to "تعذر الوصول إلى الخادم. تحقق من اتصال الإنترنت.",
+                "Bağlantı zaman aşımına uğradı. Yeniden deneyin." to "انتهت مهلة الاتصال. حاول مرة أخرى.",
+                "Güvenli bağlantı kurulamadı." to "تعذر إنشاء اتصال آمن.",
+                "Sunucu isteği reddetti" to "رفض الخادم الطلب",
+                "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "تعذر تحميل المصدر. تحقق من الاتصال وبيانات المصدر."
+            )
+        )
+        return translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: value
     }
     private val posterExecutor = Executors.newFixedThreadPool(3)
     private val posterCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
@@ -1438,18 +1510,24 @@ class MainActivity : Activity() {
             "test_user",
             "test_pass"
         )
+        val previousLastSourceId = prefs.getString("last_source_id", null)
         val demoWasAlreadySaved = savedSources.any { it.id == demoSource.id }
         if (!demoWasAlreadySaved) {
             savedSources.add(demoSource)
             persistSources()
-            prefs.edit().putString("last_source_id", demoSource.id).apply()
+            // Use the demo only on a fresh installation with no previously selected source.
+            if (previousLastSourceId.isNullOrBlank()) {
+                prefs.edit().putString("last_source_id", demoSource.id).apply()
+            }
         }
 
         if (savedSources.isNotEmpty()) {
-            // Start in the built-in demo every time. User sources remain saved and selectable.
-            prefs.edit().putString("last_source_id", demoSource.id).apply()
-            val lastId = demoSource.id
-            val last = savedSources.firstOrNull { it.id == lastId }
+            // Keep the user's last selected source across Activity recreation (including language changes).
+            val lastId = prefs.getString("last_source_id", null)
+            val last = savedSources.firstOrNull { it.id == lastId } ?: savedSources.firstOrNull()
+            if (last != null && last.id != lastId) {
+                prefs.edit().putString("last_source_id", last.id).apply()
+            }
 
             // Validate the cache against the selected source, not against items
             // belonging to any other saved source.
@@ -1499,11 +1577,26 @@ class MainActivity : Activity() {
         }.setPositiveButton("Kaynak ekle") { _, _ -> showConnectionDialog() }.setNegativeButton("Kapat", null).show()
     }
 
+    private fun friendlyLoadError(error: Exception): String {
+        val causes = generateSequence(error as Throwable?) { it.cause }.toList()
+        val message = causes.joinToString(" ") { it.message.orEmpty() }
+        return when {
+            causes.any { it is java.net.SocketTimeoutException } -> t("Bağlantı zaman aşımına uğradı. Yeniden deneyin.")
+            causes.any { it is java.net.UnknownHostException || it is java.net.ConnectException } -> t("Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.")
+            causes.any { it is javax.net.ssl.SSLException } -> t("Güvenli bağlantı kurulamadı.")
+            causes.any { it is java.net.SocketException } && message.contains("reset", true) ->
+                t("Sunucu bağlantıyı kapattı. Yeniden deneyin.")
+            Regex("HTTP\\s+(\\d{3})", RegexOption.IGNORE_CASE).find(message)?.let { it.groupValues[1] } != null ->
+                "${t("Sunucu isteği reddetti")} (HTTP ${Regex("HTTP\\s+(\\d{3})", RegexOption.IGNORE_CASE).find(message)!!.groupValues[1]})"
+            else -> t("Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin.")
+        }
+    }
+
     private fun loadM3u(source: SavedSource, append: Boolean) {
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
         loadProgress = 0
-        status.text = "${source.name}: TV, filmler ve diziler yükleniyor…"
+        status.text = "${source.name}: ${t("TV, filmler ve diziler yükleniyor…")}"
         render()
         thread {
             try {
@@ -1522,7 +1615,7 @@ class MainActivity : Activity() {
             } catch (e: Exception) { runOnUiThread {
                 loadProgress = 0
                 isLoadingSource = false
-                status.text = "${source.name} yüklenemedi: ${e.message ?: "bağlantı hatası"}"
+                status.text = "${source.name}: ${friendlyLoadError(e)}"
                 render()
             } }
         }
@@ -3923,7 +4016,7 @@ class MainActivity : Activity() {
                 tabInfo.forEach { tab ->
                     val selected = selectedCategorySection == tab.first
                     val tabButton = TextView(this).apply {
-                        text = "${tab.second}  ${tab.third}"
+                        text = "${tab.second}  ${t(tab.third)}"
                         textSize = 15f
                         gravity = Gravity.CENTER
                         setTypeface(null, android.graphics.Typeface.BOLD)
