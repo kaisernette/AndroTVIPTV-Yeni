@@ -4344,14 +4344,23 @@ class MainActivity : Activity() {
                             }, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
                                 setMargins(0, 0, dp(6), 0)
                             })
-                            card.addView(TextView(this@MainActivity).apply {
-                                text = "●"
-                                textSize = 14f
-                                gravity = if (isHidden) Gravity.CENTER_VERTICAL or Gravity.START else Gravity.CENTER_VERTICAL or Gravity.END
-                                setPadding(dp(5), 0, dp(5), 0)
-                                setTextColor(Color.WHITE)
-                                background = roundedDrawable(if (isHidden) Color.rgb(55, 62, 74) else accent, 20)
-                            }, LinearLayout.LayoutParams(dp(42), dp(24)))
+                            val categorySwitch = Switch(this@MainActivity).apply {
+                                showText = false
+                                text = ""
+                                contentDescription = "$group kategorisini ${if (isHidden) "göster" else "gizle"}"
+                                isFocusable = false
+                                isClickable = false
+                                isChecked = !isHidden
+                                thumbTintList = android.content.res.ColorStateList(
+                                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                                    intArrayOf(accentBright, Color.rgb(145, 153, 168))
+                                )
+                                trackTintList = android.content.res.ColorStateList(
+                                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                                    intArrayOf(accent, Color.rgb(65, 72, 84))
+                                )
+                            }
+                            card.addView(categorySwitch, LinearLayout.LayoutParams(dp(54), dp(34)))
                             column.addView(card, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                                 setMargins(0, dp(3), 0, dp(4))
                             })
