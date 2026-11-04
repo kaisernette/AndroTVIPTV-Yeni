@@ -217,7 +217,7 @@ class MainActivity : Activity() {
         )
         val extraTranslations = mapOf(
             "en" to mapOf(
-                "Hepsini gizle" to "Hide all", "Hepsini göster" to "Show all", "TR olanları göster" to "Show Turkish categories",
+                "Hepsini gizle" to "Hide all", "Hepsini göster" to "Show all", "Seçili dilin kategorilerini göster" to "Show English categories",
                 "Gösterilecek TV kategorisi yok." to "No TV categories to display.", "Gösterilecek film kategorisi yok." to "No movie categories to display.",
                 "Gösterilecek dizi kategorisi yok." to "No series categories to display.", "Gösteriliyor — seçerek gizle" to "Visible — select to hide",
                 "Gizli — seçerek göster" to "Hidden — select to show", "Zemin ve vurgu rengi" to "Background and accent color",
@@ -236,7 +236,7 @@ class MainActivity : Activity() {
                 "Lacivert • Turkuaz" to "Navy • Turquoise", "Koyu • Mor" to "Dark • Purple"
             ),
             "de" to mapOf(
-                "Hepsini gizle" to "Alle ausblenden", "Hepsini göster" to "Alle anzeigen", "TR olanları göster" to "Türkische Kategorien anzeigen",
+                "Hepsini gizle" to "Alle ausblenden", "Hepsini göster" to "Alle anzeigen", "Seçili dilin kategorilerini göster" to "Deutsche Kategorien anzeigen",
                 "Gösterilecek TV kategorisi yok." to "Keine TV-Kategorien vorhanden.", "Gösterilecek film kategorisi yok." to "Keine Filmkategorien vorhanden.",
                 "Gösterilecek dizi kategorisi yok." to "Keine Serienkategorien vorhanden.", "Gösteriliyor — seçerek gizle" to "Sichtbar — zum Ausblenden auswählen",
                 "Gizli — seçerek göster" to "Ausgeblendet — zum Anzeigen auswählen", "Zemin ve vurgu rengi" to "Hintergrund- und Akzentfarbe",
@@ -249,7 +249,7 @@ class MainActivity : Activity() {
                 "Antrasit • Mavi" to "Anthrazit • Blau", "Gece • Altın" to "Nacht • Gold", "Lacivert • Turkuaz" to "Marineblau • Türkis", "Koyu • Mor" to "Dunkel • Violett"
             ),
             "fr" to mapOf(
-                "Hepsini gizle" to "Tout masquer", "Hepsini göster" to "Tout afficher", "TR olanları göster" to "Afficher les catégories turques",
+                "Hepsini gizle" to "Tout masquer", "Hepsini göster" to "Tout afficher", "Seçili dilin kategorilerini göster" to "Afficher les catégories françaises",
                 "Gösterilecek TV kategorisi yok." to "Aucune catégorie TV à afficher.", "Gösterilecek film kategorisi yok." to "Aucune catégorie de films à afficher.",
                 "Gösterilecek dizi kategorisi yok." to "Aucune catégorie de séries à afficher.", "Gösteriliyor — seçerek gizle" to "Visible — sélectionner pour masquer",
                 "Gizli — seçerek göster" to "Masqué — sélectionner pour afficher", "Zemin ve vurgu rengi" to "Arrière-plan et couleur d’accent",
@@ -262,7 +262,7 @@ class MainActivity : Activity() {
                 "Antrasit • Mavi" to "Anthracite • Bleu", "Gece • Altın" to "Nuit • Or", "Lacivert • Turkuaz" to "Bleu marine • Turquoise", "Koyu • Mor" to "Sombre • Violet"
             ),
             "it" to mapOf(
-                "Hepsini gizle" to "Nascondi tutto", "Hepsini göster" to "Mostra tutto", "TR olanları göster" to "Mostra categorie turche",
+                "Hepsini gizle" to "Nascondi tutto", "Hepsini göster" to "Mostra tutto", "Seçili dilin kategorilerini göster" to "Mostra le categorie italiane",
                 "Gösterilecek TV kategorisi yok." to "Nessuna categoria TV da mostrare.", "Gösterilecek film kategorisi yok." to "Nessuna categoria film da mostrare.",
                 "Gösterilecek dizi kategorisi yok." to "Nessuna categoria serie da mostrare.", "Gösteriliyor — seçerek gizle" to "Visibile — seleziona per nascondere",
                 "Gizli — seçerek göster" to "Nascosto — seleziona per mostrare", "Zemin ve vurgu rengi" to "Sfondo e colore principale",
@@ -275,7 +275,7 @@ class MainActivity : Activity() {
                 "Antrasit • Mavi" to "Antracite • Blu", "Gece • Altın" to "Notte • Oro", "Lacivert • Turkuaz" to "Blu navy • Turchese", "Koyu • Mor" to "Scuro • Viola"
             ),
             "es" to mapOf(
-                "Hepsini gizle" to "Ocultar todo", "Hepsini göster" to "Mostrar todo", "TR olanları göster" to "Mostrar categorías turcas",
+                "Hepsini gizle" to "Ocultar todo", "Hepsini göster" to "Mostrar todo", "Seçili dilin kategorilerini göster" to "Mostrar categorías españolas",
                 "Gösterilecek TV kategorisi yok." to "No hay categorías de TV para mostrar.", "Gösterilecek film kategorisi yok." to "No hay categorías de películas para mostrar.",
                 "Gösterilecek dizi kategorisi yok." to "No hay categorías de series para mostrar.", "Gösteriliyor — seçerek gizle" to "Visible — selecciona para ocultar",
                 "Gizli — seçerek göster" to "Oculto — selecciona para mostrar", "Zemin ve vurgu rengi" to "Fondo y color de acento",
@@ -288,7 +288,7 @@ class MainActivity : Activity() {
                 "Antrasit • Mavi" to "Antracita • Azul", "Gece • Altın" to "Noche • Dorado", "Lacivert • Turkuaz" to "Azul marino • Turquesa", "Koyu • Mor" to "Oscuro • Morado"
             ),
             "ru" to mapOf(
-                "Hepsini gizle" to "Скрыть все", "Hepsini göster" to "Показать все", "TR olanları göster" to "Показать турецкие категории",
+                "Hepsini gizle" to "Скрыть все", "Hepsini göster" to "Показать все", "Seçili dilin kategorilerini göster" to "Показать русские категории",
                 "Gösterilecek TV kategorisi yok." to "Нет категорий ТВ для отображения.", "Gösterilecek film kategorisi yok." to "Нет категорий фильмов для отображения.",
                 "Gösterilecek dizi kategorisi yok." to "Нет категорий сериалов для отображения.", "Gösteriliyor — seçerek gizle" to "Показано — выберите, чтобы скрыть",
                 "Gizli — seçerek göster" to "Скрыто — выберите, чтобы показать", "Zemin ve vurgu rengi" to "Цвет фона и акцента",
@@ -301,7 +301,7 @@ class MainActivity : Activity() {
                 "Antrasit • Mavi" to "Антрацит • Синий", "Gece • Altın" to "Ночь • Золото", "Lacivert • Turkuaz" to "Тёмно-синий • Бирюзовый", "Koyu • Mor" to "Тёмный • Фиолетовый"
             ),
             "ar" to mapOf(
-                "Hepsini gizle" to "إخفاء الكل", "Hepsini göster" to "إظهار الكل", "TR olanları göster" to "إظهار الفئات التركية",
+                "Hepsini gizle" to "إخفاء الكل", "Hepsini göster" to "إظهار الكل", "Seçili dilin kategorilerini göster" to "إظهار الفئات العربية",
                 "Gösterilecek TV kategorisi yok." to "لا توجد فئات تلفزيونية لعرضها.", "Gösterilecek film kategorisi yok." to "لا توجد فئات أفلام لعرضها.",
                 "Gösterilecek dizi kategorisi yok." to "لا توجد فئات مسلسلات لعرضها.", "Gösteriliyor — seçerek gizle" to "ظاهر — اختر للإخفاء",
                 "Gizli — seçerek göster" to "مخفي — اختر للإظهار", "Zemin ve vurgu rengi" to "لون الخلفية والتمييز",
@@ -4052,7 +4052,7 @@ class MainActivity : Activity() {
                     gravity = Gravity.CENTER
                     setPadding(0, dp(2), 0, dp(8))
                 }
-                val actionItems = listOf("Hepsini gizle", "Hepsini göster", "TR olanları göster")
+                val actionItems = listOf("Hepsini gizle", "Hepsini göster", "Seçili dilin kategorilerini göster")
                 actionItems.forEach { actionLabel ->
                     val actionButton = TextView(this).apply {
                         text = t(actionLabel)
@@ -4077,11 +4077,30 @@ class MainActivity : Activity() {
                                 "Hepsini göster" -> sectionGroups.forEach { group ->
                                     hiddenCategories.remove(sectionType + "|" + group)
                                 }
-                                "TR olanları göster" -> sectionGroups.forEach { group ->
-                                    if (group.contains("TR", ignoreCase = true)) {
-                                        hiddenCategories.remove(sectionType + "|" + group)
-                                    } else {
-                                        hiddenCategories.add(sectionType + "|" + group)
+                                "Seçili dilin kategorilerini göster" -> {
+                                    val selectedLanguage = prefs.getString("app_language", "system") ?: "system"
+                                    val language = if (selectedLanguage == "system") java.util.Locale.getDefault().language else selectedLanguage
+                                    val languagePrefix = when (language.lowercase(java.util.Locale.ROOT)) {
+                                        "tr" -> "TR"
+                                        "en" -> "EN"
+                                        "de" -> "DE"
+                                        "fr" -> "FR"
+                                        "it" -> "IT"
+                                        "es" -> "ES"
+                                        "ru" -> "RU"
+                                        "ar" -> "AR"
+                                        else -> language.uppercase(java.util.Locale.ROOT)
+                                    }
+                                    sectionGroups.forEach { group ->
+                                        val normalizedGroup = group.trim()
+                                        val matchesLanguage = normalizedGroup.startsWith(languagePrefix, ignoreCase = true) &&
+                                            (normalizedGroup.length == languagePrefix.length ||
+                                             normalizedGroup[languagePrefix.length] in charArrayOf(' ', '|', '-', '_'))
+                                        if (matchesLanguage) {
+                                            hiddenCategories.remove(sectionType + "|" + group)
+                                        } else {
+                                            hiddenCategories.add(sectionType + "|" + group)
+                                        }
                                     }
                                 }
                             }
