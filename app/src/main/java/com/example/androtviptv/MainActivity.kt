@@ -4201,17 +4201,79 @@ class MainActivity : Activity() {
                     Triple("Lacivert • Turkuaz", Color.rgb(10, 22, 38), Color.rgb(35, 205, 190)),
                     Triple("Koyu • Mor", Color.rgb(20, 16, 29), Color.rgb(174, 115, 255))
                 )
-                themes.forEach { theme ->
-                    option(t(theme.first), "Zemin ve vurgu rengi") {
-                        bg = theme.second
-                        panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
-                        accent = theme.third
-                        accentBright = theme.third
-                        prefs.edit().putString("theme_name", theme.first).apply()
-                        rootLayout.setBackgroundColor(bg); sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel); mainContentScroll.setBackgroundColor(bg)
-                        window.statusBarColor = bg; window.navigationBarColor = bg
-                        settingsPage = "themes"; render()
+                val selectedTheme = prefs.getString("theme_name", "Dark Cinematic")
+                themes.chunked(2).forEach { themeRow ->
+                    val row = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
                     }
+                    themeRow.forEach { theme ->
+                        val isSelected = selectedTheme == theme.first
+                        val card = LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            setPadding(dp(18), dp(18), dp(14), dp(18))
+                            isFocusable = true
+                            isFocusableInTouchMode = true
+                            isClickable = true
+                            background = android.graphics.drawable.GradientDrawable().apply {
+                                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                                cornerRadius = dp(14).toFloat()
+                                setColor(theme.second)
+                                setStroke(dp(if (isSelected) 3 else 1), if (isSelected) theme.third else 0x553B4658)
+                            }
+                            setOnFocusChangeListener { v, focused ->
+                                v.background = android.graphics.drawable.GradientDrawable().apply {
+                                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                                    cornerRadius = dp(14).toFloat()
+                                    setColor(theme.second)
+                                    setStroke(dp(if (focused || isSelected) 3 else 1), if (focused || isSelected) theme.third else 0x553B4658)
+                                }
+                                v.scaleX = if (focused) 1.025f else 1f
+                                v.scaleY = if (focused) 1.025f else 1f
+                            }
+                            setOnClickListener {
+                                bg = theme.second
+                                panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
+                                accent = theme.third
+                                accentBright = theme.third
+                                prefs.edit().putString("theme_name", theme.first).apply()
+                                rootLayout.setBackgroundColor(bg)
+                                sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
+                                mainContentScroll.setBackgroundColor(bg)
+                                window.statusBarColor = bg
+                                window.navigationBarColor = bg
+                                settingsPage = "themes"
+                                render()
+                            }
+                        }
+                        val symbol = TextView(this).apply {
+                            text = "◆"
+                            textSize = 29f
+                            setTextColor(theme.third)
+                            gravity = Gravity.CENTER
+                            setPadding(0, 0, 0, dp(12))
+                        }
+                        card.addView(symbol)
+                        card.addView(TextView(this).apply {
+                            text = t(theme.first)
+                            textSize = 18f
+                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(Color.WHITE)
+                            maxLines = 2
+                        })
+                        card.addView(TextView(this).apply {
+                            text = if (isSelected) "✓  Seçili tema" else "Zemin ve vurgu rengi"
+                            textSize = 13f
+                            setTextColor(theme.third)
+                            setPadding(0, dp(7), 0, 0)
+                        })
+                        row.addView(card, LinearLayout.LayoutParams(0, dp(176), 1f).apply {
+                            setMargins(dp(5), dp(5), dp(5), dp(7))
+                        })
+                    }
+                    if (themeRow.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, dp(176), 1f))
+                    content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                 }
                 option("◧  ${t("Şeffaf menü")}: ${t(if (transparentMenu) "Açık" else "Kapalı")}",
                     t(if (transparentMenu) "Sol menü arka planı saydam; kapatmak için seç." else "Sol menü ayrı bir panel olarak görünür; saydam yapmak için seç.")) {
