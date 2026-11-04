@@ -1451,7 +1451,9 @@ class MainActivity : Activity() {
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
-            cornerRadius = dp(radiusDp).toFloat()
+            // Oval mode applies a consistently rounded silhouette to all shared
+            // buttons, clickable surfaces and their focus backgrounds.
+            cornerRadius = dp(if (ovalButtons) 24 else radiusDp).toFloat()
             if (strokeColor != null) setStroke((2 * resources.displayMetrics.density).toInt().coerceAtLeast(1), strokeColor)
         }
 
@@ -4161,7 +4163,7 @@ class MainActivity : Activity() {
                     val column = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
                         setPadding(dp(5), dp(8), dp(5), dp(8))
-                        background = roundedDrawable(panel, 12)
+                        background = roundedDrawable(panel, 12, Color.rgb(65, 92, 120))
                     }
                     column.addView(TextView(this).apply {
                         text = "${section.second}  ${t(section.third)}"
@@ -4193,12 +4195,16 @@ class MainActivity : Activity() {
                                     (Color.red(panel) - 4).coerceAtLeast(0),
                                     (Color.green(panel) - 4).coerceAtLeast(0),
                                     (Color.blue(panel) - 4).coerceAtLeast(0)
-                                ) else panel, 8)
+                                ) else panel, 8, Color.rgb(65, 92, 120))
                                 isFocusable = true
                                 isFocusableInTouchMode = true
                                 isClickable = true
                                 setOnFocusChangeListener { v, focused ->
-                                    v.background = roundedDrawable(if (focused) accent else panel, 8)
+                                    v.background = roundedDrawable(
+                                        if (focused) accent else panel,
+                                        8,
+                                        if (focused) accentBright else Color.rgb(65, 92, 120)
+                                    )
                                     val fg = if (focused) Color.rgb(8, 13, 22) else Color.WHITE
                                     (v as ViewGroup).let { box ->
                                         (box.getChildAt(0) as? TextView)?.setTextColor(if (focused) fg else if (isHidden) muted else accentBright)
@@ -4267,13 +4273,13 @@ class MainActivity : Activity() {
                             isFocusableInTouchMode = true
                             isClickable = true
                             background = GradientDrawable().apply {
-                                cornerRadius = dp(12).toFloat()
+                                cornerRadius = dp(if (ovalButtons) 28 else 12).toFloat()
                                 setColor(theme.second)
                                 setStroke(dp(if (isSelected) 3 else 1), if (isSelected) theme.third else 0x553B4658)
                             }
                             setOnFocusChangeListener { v, focused ->
                                 v.background = GradientDrawable().apply {
-                                    cornerRadius = dp(12).toFloat()
+                                    cornerRadius = dp(if (ovalButtons) 28 else 12).toFloat()
                                     setColor(theme.second)
                                     setStroke(dp(if (focused || isSelected) 3 else 1), if (focused || isSelected) theme.third else 0x553B4658)
                                 }
