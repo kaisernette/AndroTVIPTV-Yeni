@@ -514,6 +514,14 @@ class PlayerActivity : Activity() {
                         showPlaybackControls()
                         return true
                     }
+                    if (!trackMenuOpen && focused === subtitleButtonView) {
+                        subtitleButtonView?.performClick()
+                        return true
+                    }
+                    if (!trackMenuOpen && focused === audioButtonView) {
+                        audioButtonView?.performClick()
+                        return true
+                    }
                     if (!trackMenuOpen && focused !is SeekBar) {
                         player?.let { if (it.isPlaying) it.pause() else it.play() }
                         showPlaybackControls()
@@ -523,6 +531,15 @@ class PlayerActivity : Activity() {
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     if (channelOverlay != null) return super.dispatchKeyEvent(event)
                     if (trackMenuOpen) return super.dispatchKeyEvent(event)
+                    if (focused === subtitleButtonView && event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                        audioButtonView?.requestFocus()
+                        return true
+                    }
+                    if (focused === audioButtonView && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                        subtitleButtonView?.requestFocus()
+                        return true
+                    }
+                    if (focused === subtitleButtonView || focused === audioButtonView) return true
                     if (progressBar?.hasFocus() == true) return super.dispatchKeyEvent(event)
                     val delta = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 10000L else -10000L
                     val exo = player
@@ -541,17 +558,6 @@ class PlayerActivity : Activity() {
                     }
                     return super.dispatchKeyEvent(event)
                 }
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    val focusedView = currentFocus
-                    if (focusedView === subtitleButtonView && event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                        audioButtonView?.requestFocus()
-                        return true
-                    }
-                    if (focusedView === audioButtonView && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                        subtitleButtonView?.requestFocus()
-                        return true
-                    }
-                }
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
                     // Up/down are navigation keys, never channel-zap keys.
                     // Keep list movement only while the channel chooser itself is open.
@@ -569,13 +575,12 @@ class PlayerActivity : Activity() {
                     if (trackMenuOpen) return super.dispatchKeyEvent(event)
                     val centerRow = centerControlsView as? ViewGroup
                     val isCenterControl = centerRow != null && (0 until centerRow.childCount).any { centerRow.getChildAt(it) === focusedView }
-                    val isTrackButton = focusedView === subtitleButtonView || focusedView === audioButtonView
                     when {
                         focusedView == null || focusedView === playerView -> playButtonView()?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && isCenterControl -> audioButtonView?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && isTrackButton -> playButtonView()?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && isTrackButton -> progressBar?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && focusedView === progressBar -> audioButtonView?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && isCenterControl -> subtitleButtonView?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && (focusedView === subtitleButtonView || focusedView === audioButtonView) -> playButtonView()?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && (focusedView === subtitleButtonView || focusedView === audioButtonView) -> progressBar?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && focusedView === progressBar -> subtitleButtonView?.requestFocus()
                         else -> {
                             val direction = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
                             val next = focusedView?.focusSearch(direction)
