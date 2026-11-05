@@ -473,7 +473,9 @@ class PlayerActivity : Activity() {
                 }
             playbackHandler.removeCallbacks(playbackWatchdog)
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
-            if (channelUrls.size > 1) view.requestFocus()
+            // Start remote navigation on an actual control, not on PlayerView,
+            // whose default key handling can swallow DPAD up/down.
+            playButtonView()?.post { playButtonView()?.requestFocus() }
             refreshTrackChoices()
             uiHandler.post(uiTicker)
         } catch (e: Exception) {
@@ -534,11 +536,26 @@ class PlayerActivity : Activity() {
                         return true
                     }
                     showPlaybackControls()
-                    if (currentFocus == null) {
+                    val direction = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
+                    val focusedView = currentFocus
+                    if (focusedView == null || focusedView === playerView) {
                         playButtonView()?.requestFocus()
                         return true
                     }
-                    return super.dispatchKeyEvent(event)
+                    // Move focus explicitly between the visible playback controls.
+                    val nextFocus = focusedView.focusSearch(direction)
+                    if (nextFocus != null && nextFocus !== playerView &&
+                        nextFocus.isShown && nextFocus.isFocusable) {
+                        nextFocus.requestFocus()
+                        return true
+                    }
+                    // Keep navigation usable at row boundaries.
+                    if (direction == View.FOCUS_UP) {
+                        playButtonView()?.requestFocus()
+                    } else {
+                        progressBar?.requestFocus()
+                    }
+                    return true
                 }
                 KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
                     if (channelOverlay != null) { hideChannelOverlay(); return true }
