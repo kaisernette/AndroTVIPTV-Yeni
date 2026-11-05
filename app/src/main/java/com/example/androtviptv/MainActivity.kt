@@ -4213,18 +4213,29 @@ class MainActivity : Activity() {
                                 intArrayOf(accent, Color.rgb(65, 72, 84))
                             )
                             setOnCheckedChangeListener { _, checked ->
-                                val activeIds = (prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()).toMutableSet()
-                                if (activeIds.isEmpty()) {
-                                    prefs.getString("last_source_id", "")?.takeIf { id -> savedSources.any { it.id == id } }?.let { activeIds.add(it) }
-                                }
-                                if (checked) activeIds.add(source.id) else activeIds.remove(source.id)
-                                prefs.edit().putStringSet("selected_source_ids", activeIds).apply()
-                                if (activeIds.size == 1) prefs.edit().putString("last_source_id", activeIds.first()).apply()
-                                else prefs.edit().putString("last_source_id", "").apply()
+                                // Only one source can be active at a time. Selecting this
+                                // source immediately deselects every other saved source.
+                                val activeIds = if (checked) setOf(source.id) else emptySet()
+                                prefs.edit()
+                                    .putStringSet("selected_source_ids", activeIds)
+                                    .putString("last_source_id", if (checked) source.id else "")
+                                    .apply()
                                 if (checked) {
-                                    if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
+                                    selectedCategorySourceId = source.id
+                                    selectedGroup = "Tüm kategoriler"
+                                    expandedCategory = null
+                                    focusedCategoryName = null
+                                    if (source.mode == "xtream") loadXtream(source, false)
+                                    else if (source.mode == "mac") {
+                                        Toast.makeText(this, "MAC Portal yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
+                                        render()
+                                    } else loadM3u(source, false)
+                                } else {
+                                    selectedCategorySourceId = ""
+                                    items.clear()
+                                    saveCachedItems()
+                                    render()
                                 }
-                                render()
                             }
                         }
                         sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(54), dp(42)))
