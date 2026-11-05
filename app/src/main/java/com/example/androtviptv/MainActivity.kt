@@ -519,6 +519,7 @@ class MainActivity : Activity() {
     private lateinit var heroSubtitle: TextView
     private lateinit var heroArt: FrameLayout
     private lateinit var navBar: LinearLayout
+    private lateinit var settingsBar: LinearLayout
     private lateinit var sidebarMenuScroll: ScrollView
     private lateinit var brandView: LinearLayout
     private lateinit var heroPanel: LinearLayout
@@ -652,7 +653,7 @@ class MainActivity : Activity() {
             background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
             clipChildren = false
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(270), -1).apply { setMargins(0, 0, dp(8), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(230), -1).apply { setMargins(0, 0, dp(8), 0) })
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -685,6 +686,8 @@ class MainActivity : Activity() {
             addView(navBar)
         }
         primaryMenuColumn.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        settingsBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        primaryMenuColumn.addView(settingsBar, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         categoryPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(8), dp(78), dp(4), dp(8))
@@ -699,7 +702,7 @@ class MainActivity : Activity() {
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             addView(categoryPanel, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(190), -1))
+        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(158), -1))
         rebuildNavigation()
 
         val main = LinearLayout(this).apply {
@@ -891,7 +894,7 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = dp(if (showReadableCategories) 270 else 76)
+            val desiredWidth = dp(if (showReadableCategories) 230 else 76)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -908,6 +911,7 @@ class MainActivity : Activity() {
             categoryPanel.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         }
         navBar.removeAllViews()
+        if (::settingsBar.isInitialized) settingsBar.removeAllViews()
         // Re-enable descendant focus immediately after old children are detached.
         // Leaving FOCUS_BLOCK_DESCENDANTS active prevents the remote from entering the sidebar.
         navBar.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
@@ -920,7 +924,7 @@ class MainActivity : Activity() {
         }
         selectedSidebarFocusView = null
 
-        fun addSidebarButton(label: String, selected: Boolean = false, action: () -> Unit) {
+        fun addSidebarButton(label: String, selected: Boolean = false, target: LinearLayout = navBar, action: () -> Unit) {
             val iconRes = when {
                 label == "Ara" || label == "⌕" -> R.drawable.nav_search
                 label.contains("Ana Sayfa") || label == "⌂" -> R.drawable.nav_home
@@ -968,7 +972,7 @@ class MainActivity : Activity() {
                 minHeight = dp(42)
                 id = View.generateViewId()
             }
-            navBar.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(46)).apply { setMargins(0, dp(3), 0, dp(3)) })
+            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(46)).apply { setMargins(0, dp(3), 0, dp(3)) })
             if (selected) selectedSidebarFocusView = sidebarButton
         }
 
@@ -1031,7 +1035,7 @@ class MainActivity : Activity() {
                         render()
                     }
                 } else if (normalizedTab == "Ayarlar") {
-                    addSidebarButton(tab, selectedType == "Ayarlar" && settingsPage != "history") {
+                    addSidebarButton(tab, selectedType == "Ayarlar" && settingsPage != "history", settingsBar) {
                         detailSeries = null
                         detailMovie = null
                         settingsPage = "main"
@@ -1102,7 +1106,7 @@ class MainActivity : Activity() {
                     "Tümü" -> selectedType == "Tümü"
                     else -> selectedType == key
                 }
-                addSidebarButton(glyph, isSelected) {
+                addSidebarButton(glyph, isSelected, if (key == "Ayarlar") settingsBar else navBar) {
                     when (key) {
                         "Ara" -> {
                             detailSeries = null
