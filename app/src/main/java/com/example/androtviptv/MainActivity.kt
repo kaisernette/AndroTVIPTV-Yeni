@@ -1322,6 +1322,26 @@ class MainActivity : Activity() {
                 background = roundedDrawable(panel, corner, if (focused) accent else outline)
             }
         }
+        // MAC Portal uses a manually entered device MAC address; it is never read from the device.
+        val macName = edit(t("Kaynak adı (ör. Ev Portal)"), false).apply {
+            setText(if (editSource?.mode == "mac") editSource.name else "")
+        }
+        val macPortal = edit("Portal URL (https://...)", false).apply {
+            setText(if (editSource?.mode == "mac") editSource.address else "")
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
+        }
+        val macAddress = edit("MAC adresi (00:1A:79:XX:XX:XX)", false).apply {
+            setText(if (editSource?.mode == "mac") editSource.username else "")
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+        }
+        val macFields = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.TOP
+            addView(inputFrame(macName), LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
+            addView(inputFrame(macPortal), LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
+            addView(inputFrame(macAddress), LinearLayout.LayoutParams(-1, dp(43)))
+        }
+
         val playlistFrame = inputFrame(playlistUrl)
         val serverFrame = inputFrame(server)
         val usernameFrame = inputFrame(username)
@@ -1440,27 +1460,6 @@ class MainActivity : Activity() {
             addView(usernameFrame, LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
             addView(passwordFrame, LinearLayout.LayoutParams(-1, dp(43)))
         }
-        // Move the shared source-name field into the active form, while reserving identical card dimensions.
-        // MAC Portal uses a manually entered device MAC address; it is never read from the device.
-        val macName = edit(t("Kaynak adı (ör. Ev Portal)"), false).apply {
-            setText(if (editSource?.mode == "mac") editSource.name else "")
-        }
-        val macPortal = edit("Portal URL (https://...)", false).apply {
-            setText(if (editSource?.mode == "mac") editSource.address else "")
-            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
-        }
-        val macAddress = edit("MAC adresi (00:1A:79:XX:XX:XX)", false).apply {
-            setText(if (editSource?.mode == "mac") editSource.username else "")
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
-        }
-        val macFields = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.TOP
-            addView(inputFrame(macName), LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
-            addView(inputFrame(macPortal), LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
-            addView(inputFrame(macAddress), LinearLayout.LayoutParams(-1, dp(43)))
-        }
-
         // Each card has its own source-name field and starts at the same top alignment.
         val m3uName = edit(t("Kaynak adı (ör. Ev TV)"), false).apply { setText(if (editSource?.mode == "m3u") editSource.name else "") }
         val xtreamName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(if (editSource?.mode == "xtream") editSource.name else "") }
