@@ -547,12 +547,13 @@ class PlayerActivity : Activity() {
                     if (focusedCenterIndex != null && centerRow != null) {
                         val step = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
                         val targetIndex = (focusedCenterIndex + step).coerceIn(0, centerRow.childCount - 1)
-                        if (targetIndex != focusedCenterIndex) {
-                            centerRow.getChildAt(targetIndex)?.requestFocus()
-                        }
+                        if (targetIndex != focusedCenterIndex) centerRow.getChildAt(targetIndex)?.requestFocus()
                         return true
                     }
-                    if (progressBar?.hasFocus() == true) return super.dispatchKeyEvent(event)
+                    if (progressBar?.hasFocus() == true) {
+                        // The seek bar owns left/right for precise seeking.
+                        return super.dispatchKeyEvent(event)
+                    }
                     val delta = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 10000L else -10000L
                     val exo = player
                     if (exo != null && !isLiveStream && exo.duration > 0) {
@@ -589,10 +590,11 @@ class PlayerActivity : Activity() {
                     val isCenterControl = centerRow != null && (0 until centerRow.childCount).any { centerRow.getChildAt(it) === focusedView }
                     when {
                         focusedView == null || focusedView === playerView -> playButtonView()?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && isCenterControl -> subtitleButtonView?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && (focusedView === subtitleButtonView || focusedView === audioButtonView) -> playButtonView()?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && focusedView === progressBar -> playButtonView()?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && isCenterControl -> progressBar?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && (focusedView === subtitleButtonView || focusedView === audioButtonView) -> progressBar?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && focusedView === progressBar -> subtitleButtonView?.requestFocus()
                         event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && (focusedView === subtitleButtonView || focusedView === audioButtonView) -> progressBar?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && focusedView === progressBar -> subtitleButtonView?.requestFocus()
                         else -> {
                             val direction = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
                             val next = focusedView?.focusSearch(direction)
