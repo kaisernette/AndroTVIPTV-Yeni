@@ -1714,13 +1714,28 @@ class MainActivity : Activity() {
             ((Color.green(base) * 0.72f) + (Color.green(accent) * 0.28f)).toInt().coerceIn(0, 255),
             ((Color.blue(base) * 0.72f) + (Color.blue(accent) * 0.28f)).toInt().coerceIn(0, 255)
         )
+        // Main shell follows the selected theme; the poster/content panel uses
+        // a darker gradient derived from the same theme colors.
         val surface = if (gradientBackground) {
             GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(base, blend, base))
         } else {
             GradientDrawable().apply { setColor(base) }
         }
+        fun shade(color: Int, factor: Float): Int = Color.rgb(
+            (Color.red(color) * factor).toInt().coerceIn(0, 255),
+            (Color.green(color) * factor).toInt().coerceIn(0, 255),
+            (Color.blue(color) * factor).toInt().coerceIn(0, 255)
+        )
+        val darkBase = shade(base, 0.48f)
+        val darkBlend = shade(blend, 0.48f)
+        val contentSurface = if (gradientBackground) {
+            GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(darkBase, darkBlend, darkBase))
+        } else {
+            GradientDrawable().apply { setColor(darkBase) }
+        }
         rootLayout.background = surface
         mainContentScroll.background = surface.constantState?.newDrawable()?.mutate() ?: surface
+        content.background = contentSurface
         sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
         window.statusBarColor = bg
         window.navigationBarColor = bg
@@ -3037,8 +3052,7 @@ class MainActivity : Activity() {
         // Live TV category content: compact logo/name grid; OK opens the channel fullscreen.
         if (selectedType == "Canlı TV" && sidebarMode == "context") {
             content.removeAllViews()
-            mainContentScroll.setBackgroundColor(Color.rgb(24, 24, 36))
-            content.setBackgroundColor(Color.rgb(24, 24, 36))
+            applyThemeSurfaces()
             content.clipChildren = true
             content.clipToPadding = true
             val tvChannels = visible.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
