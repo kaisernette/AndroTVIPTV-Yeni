@@ -263,114 +263,189 @@ class PlayerActivity : Activity() {
         root.addView(contentInfoView, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.LEFT).apply {
             setMargins(dp(24), dp(22), dp(24), 0)
         })
-        val centerControls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        fun roundControl(symbol: String, big: Boolean = false, action: () -> Unit) = TextView(this).apply {
-            text = symbol; textSize = if (big) 30f else 26f; gravity = Gravity.CENTER
-            setTextColor(Color.WHITE); isFocusable = true; isClickable = true
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x66101824); setStroke(dp(if (big) 2 else 1), if (big) 0xFF079BE8.toInt() else 0x889AA7B8.toInt()) }
-            setOnClickListener { action() }
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(22), dp(14), dp(22), dp(16))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(22).toFloat()
+                setColor(0xE6101722.toInt())
+                setStroke(dp(1), 0x553A9BEF)
+            }
+            elevation = dp(14).toFloat()
         }
-        val previousControl = roundControl("|◀") {
-            if (isLiveStream && channelUrls.isNotEmpty()) {
-                tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
-            } else if (episodeUrls.isNotEmpty()) {
-                val current = player?.currentMediaItemIndex ?: selectedEpisodeIndex
-                playEpisodeAt(current - 1)
-            } else player?.seekToPreviousMediaItem()
-        }
-        val rewindControl = roundControl("↶") { player?.seekBack() }
-        val playControl = roundControl("Ⅱ", true) { player?.let { if (it.isPlaying) it.pause() else it.play() } }
-        val forwardControl = roundControl("↷") { player?.seekForward() }
-        val nextControl = roundControl("▶|") {
-            if (isLiveStream && channelUrls.isNotEmpty()) {
-                tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
-            } else if (episodeUrls.isNotEmpty()) {
-                val current = player?.currentMediaItemIndex ?: selectedEpisodeIndex
-                playEpisodeAt(current + 1)
-            } else player?.seekToNextMediaItem()
-        }
-        listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEachIndexed { i, button ->
-            val size = if (i == 2) 84 else 68
-            centerControls.addView(button, LinearLayout.LayoutParams(dp(size), dp(size)).apply { setMargins(dp(6), 0, dp(6), 0) })
-        }
-        root.addView(centerControls, FrameLayout.LayoutParams(-2, dp(100), Gravity.CENTER))
-        centerControlsView = centerControls
+        root.addView(panel, FrameLayout.LayoutParams(-1, dp(326), Gravity.BOTTOM).apply {
+            setMargins(dp(42), 0, dp(42), dp(24))
+        })
 
-        fun createTrackPanel(type: Int): LinearLayout {
-            val panel = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(8), dp(8), dp(8))
-                background = GradientDrawable().apply { setColor(0xDD101722.toInt()); cornerRadius = dp(14).toFloat(); setStroke(dp(1), 0xFF079BE8.toInt()) }
-                visibility = View.GONE
-            }
-            panel.addView(TextView(this).apply {
-                text = if (type == C.TRACK_TYPE_TEXT) "▣   Altyazı" else "◖   Ses Dili"
-                textSize = 15f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); setPadding(dp(4), dp(2), dp(4), dp(7))
-            })
-            val options = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            val scroll = ScrollView(this).apply { isVerticalScrollBarEnabled = false; addView(options) }
-            panel.addView(scroll, LinearLayout.LayoutParams(-1, dp(174)))
-            panel.tag = Pair(type, options)
-            return panel
-        }
-        subtitlePanel = createTrackPanel(C.TRACK_TYPE_TEXT)
-        audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
-        fun trackButton(label: String, panel: LinearLayout) = TextView(this).apply {
-            text = label; textSize = 15f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); isFocusable = true; isClickable = true
-            background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(0x99101824.toInt()); setStroke(dp(1), 0xFF079BE8.toInt()) }
-            setOnClickListener {
-                val other = if (panel === subtitlePanel) audioPanel else subtitlePanel
-                other?.visibility = View.GONE
-                panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-                if (panel.visibility == View.VISIBLE) {
-                    showPlaybackControls()
-                    val options = (panel.tag as? Pair<*, *>)?.second as? LinearLayout
-                    options?.getChildAt(0)?.post { options.getChildAt(0)?.requestFocus() }
-                }
-            }
-        }
-        val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.BOTTOM }
-        fun addTrackColumn(panel: LinearLayout, button: View) {
-            val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM }
-            column.addView(panel, LinearLayout.LayoutParams(dp(248), dp(220)).apply { bottomMargin = dp(7) })
-            column.addView(button, LinearLayout.LayoutParams(dp(248), dp(52)))
-            right.addView(column, LinearLayout.LayoutParams(dp(254), -2).apply { setMargins(dp(3), 0, dp(3), 0) })
-        }
-        val subtitleButton = trackButton("▣  Altyazı", subtitlePanel!!)
-        val audioButton = trackButton("◖  Ses Dili", audioPanel!!)
-        listOf(subtitleButton, audioButton).forEach { button ->
-            button.setOnFocusChangeListener { focused, hasFocus ->
-                focused.background = GradientDrawable().apply {
-                    cornerRadius = dp(14).toFloat()
-                    setColor(if (hasFocus) 0xFF087FCA.toInt() else 0x99101824.toInt())
-                    setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) 0xFF29B6F6.toInt() else 0xFF079BE8.toInt())
-                }
-                focused.elevation = if (hasFocus) dp(8).toFloat() else 0f
-            }
-        }
-        subtitleButtonView = subtitleButton
-        audioButtonView = audioButton
-        addTrackColumn(subtitlePanel!!, subtitleButton)
-        addTrackColumn(audioPanel!!, audioButton)
-        root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
-        trackControlsView = right
-
-        val bottom = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val progressLine = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        elapsedLabel = TextView(this).apply { text = "00:00"; textSize = 14f; setTextColor(Color.WHITE); minWidth = dp(58) }
+        durationLabel = TextView(this).apply { text = "00:00"; textSize = 14f; setTextColor(Color.WHITE); gravity = Gravity.RIGHT; minWidth = dp(58) }
         progressBar = SeekBar(this).apply {
-            progressTintList = android.content.res.ColorStateList.valueOf(0xFF079BE8.toInt())
-            thumbTintList = android.content.res.ColorStateList.valueOf(0xFF079BE8.toInt())
+            progressTintList = android.content.res.ColorStateList.valueOf(0xFF168BFF.toInt())
+            thumbTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            isFocusable = true
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) { if (fromUser) elapsedLabel?.text = formatTime(value.toLong()) }
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (fromUser) elapsedLabel?.text = formatTime(value.toLong())
+                }
                 override fun onStartTrackingTouch(seekBar: SeekBar?) {}
                 override fun onStopTrackingTouch(seekBar: SeekBar?) { player?.seekTo(seekBar?.progress?.toLong() ?: 0L) }
             })
         }
-        bottom.addView(progressBar, LinearLayout.LayoutParams(-1, dp(28)))
-        val times = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        elapsedLabel = TextView(this).apply { text = "00:00"; textSize = 14f; setTextColor(Color.WHITE) }
-        durationLabel = TextView(this).apply { text = " •  00:00"; textSize = 14f; setTextColor(0xFFB8BEC8.toInt()) }
-        times.addView(elapsedLabel); times.addView(durationLabel); bottom.addView(times)
-        root.addView(bottom, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM).apply { setMargins(dp(24), 0, dp(24), dp(88)) })
-        progressControlsView = bottom
+        progressLine.addView(elapsedLabel)
+        progressLine.addView(progressBar, LinearLayout.LayoutParams(0, dp(34), 1f).apply { setMargins(dp(8), 0, dp(8), 0) })
+        progressLine.addView(durationLabel)
+        panel.addView(progressLine, LinearLayout.LayoutParams(-1, dp(42)))
+        progressControlsView = progressLine
+
+        val centerControls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(0, dp(8), 0, dp(12))
+        }
+        fun roundControl(symbol: String, label: String, big: Boolean = false, action: () -> Unit) = TextView(this).apply {
+            text = if (label.isBlank()) symbol else "$symbol\\n$label"
+            textSize = if (big) 28f else 20f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(if (big) 44 else 34).toFloat()
+                setColor(if (big) 0xFF087FE8.toInt() else 0xCC252D38.toInt())
+                setStroke(dp(if (big) 2 else 1), if (big) 0xFF69B9FF.toInt() else 0x665E6D7D)
+            }
+            setOnFocusChangeListener { v, hasFocus ->
+                v.background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dp(if (big) 44 else 34).toFloat()
+                    setColor(if (hasFocus) 0xFF087FE8.toInt() else if (big) 0xFF087FE8.toInt() else 0xCC252D38.toInt())
+                    setStroke(dp(if (hasFocus || big) 3 else 1), if (hasFocus) 0xFF80C8FF.toInt() else 0x665E6D7D)
+                }
+                v.elevation = if (hasFocus) dp(10).toFloat() else 0f
+            }
+            setOnClickListener { action() }
+        }
+        val previousControl = roundControl("◀|", "", false) {
+            if (isLiveStream && channelUrls.isNotEmpty()) tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
+            else if (episodeUrls.isNotEmpty()) playEpisodeAt((player?.currentMediaItemIndex ?: selectedEpisodeIndex) - 1)
+            else player?.seekToPreviousMediaItem()
+        }
+        val rewindControl = roundControl("≪", "10 sn") { player?.seekBack() }
+        val playControl = roundControl("Ⅱ", "", true) { player?.let { if (it.isPlaying) it.pause() else it.play() } }
+        val forwardControl = roundControl("≫", "10 sn") { player?.seekForward() }
+        val nextControl = roundControl("|▶", "", false) {
+            if (isLiveStream && channelUrls.isNotEmpty()) tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
+            else if (episodeUrls.isNotEmpty()) playEpisodeAt((player?.currentMediaItemIndex ?: selectedEpisodeIndex) + 1)
+            else player?.seekToNextMediaItem()
+        }
+        listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEachIndexed { i, button ->
+            val w = if (i == 2) 88 else 78
+            val h = if (i == 2) 82 else 68
+            centerControls.addView(button, LinearLayout.LayoutParams(dp(w), dp(h)).apply { setMargins(dp(12), 0, dp(12), 0) })
+        }
+        panel.addView(centerControls, LinearLayout.LayoutParams(-1, dp(112)))
+        centerControlsView = centerControls
+
+        fun createTrackPanel(type: Int): LinearLayout {
+            val trackPanel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                background = GradientDrawable().apply {
+                    setColor(0xF018202C.toInt())
+                    cornerRadius = dp(14).toFloat()
+                    setStroke(dp(1), 0xFF168BFF.toInt())
+                }
+                visibility = View.GONE
+                elevation = dp(18).toFloat()
+            }
+            trackPanel.addView(TextView(this).apply {
+                text = if (type == C.TRACK_TYPE_TEXT) "Altyazı seç" else "Ses dili seç"
+                textSize = 15f
+                setTextColor(Color.WHITE)
+                setTypeface(null, Typeface.BOLD)
+                setPadding(dp(4), dp(2), dp(4), dp(7))
+            })
+            val options = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            val scroll = ScrollView(this).apply { isVerticalScrollBarEnabled = false; addView(options) }
+            trackPanel.addView(scroll, LinearLayout.LayoutParams(-1, dp(174)))
+            trackPanel.tag = Pair(type, options)
+            return trackPanel
+        }
+        subtitlePanel = createTrackPanel(C.TRACK_TYPE_TEXT)
+        audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
+
+        val optionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        fun optionButton(label: String, sub: String, action: () -> Unit) = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            background = GradientDrawable().apply {
+                cornerRadius = dp(15).toFloat()
+                setColor(0xCC202833.toInt())
+                setStroke(dp(1), 0x554F6072)
+            }
+            addView(TextView(this@PlayerActivity).apply {
+                text = label
+                textSize = 16f
+                setTextColor(Color.WHITE)
+                setTypeface(null, Typeface.BOLD)
+                gravity = Gravity.CENTER
+            })
+            addView(TextView(this@PlayerActivity).apply {
+                text = sub
+                textSize = 12f
+                setTextColor(0xFFB9C4D0.toInt())
+                gravity = Gravity.CENTER
+            })
+            setOnFocusChangeListener { v, hasFocus ->
+                v.background = GradientDrawable().apply {
+                    cornerRadius = dp(15).toFloat()
+                    setColor(if (hasFocus) 0xFF087FCA.toInt() else 0xCC202833.toInt())
+                    setStroke(dp(if (hasFocus) 3 else 1), if (hasFocus) 0xFF80C8FF.toInt() else 0x554F6072)
+                }
+                v.elevation = if (hasFocus) dp(8).toFloat() else 0f
+            }
+            setOnClickListener { action() }
+        }
+        fun trackOption(label: String, panelView: LinearLayout) = optionButton(label, if (panelView === subtitlePanel) "Türkçe / Kapalı" else "Türkçe / AAC") {
+            val other = if (panelView === subtitlePanel) audioPanel else subtitlePanel
+            other?.visibility = View.GONE
+            panelView.visibility = if (panelView.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            if (panelView.visibility == View.VISIBLE) {
+                showPlaybackControls()
+                val opts = (panelView.tag as? Pair<*, *>)?.second as? LinearLayout
+                opts?.getChildAt(0)?.post { opts.getChildAt(0)?.requestFocus() }
+            }
+        }
+        val subtitleButton = trackOption("Altyazı", subtitlePanel!!)
+        val audioButton = trackOption("Ses Dili", audioPanel!!)
+        val speedButton = optionButton("Hız", "1.00x") {
+            val speeds = floatArrayOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
+            val current = player?.playbackParameters?.speed ?: 1f
+            val next = speeds.firstOrNull { it > current + 0.01f } ?: speeds.first()
+            player?.setPlaybackSpeed(next)
+            (it as? View)?.contentDescription = "Oynatma hızı $next"
+            (speedButtonText)?.text = "Hız"
+        }
+        val screenButton = optionButton("Ekran", "Tam ekran") { applyPlayerImmersiveMode() }
+        listOf(subtitleButton, audioButton, speedButton, screenButton).forEachIndexed { i, button ->
+            optionRow.addView(button, LinearLayout.LayoutParams(0, dp(66), 1f).apply { setMargins(dp(6), 0, dp(6), 0) })
+        }
+        subtitleButtonView = subtitleButton
+        audioButtonView = audioButton
+        val optionStack = FrameLayout(this)
+        optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(66), Gravity.BOTTOM))
+        optionStack.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6); bottomMargin = dp(72) })
+        optionStack.addView(audioPanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6 + 0); bottomMargin = dp(72) })
+        panel.addView(optionStack, LinearLayout.LayoutParams(-1, dp(206)))
+        trackControlsView = optionStack
+
         view.post {
             val controlIds = intArrayOf(
                 androidx.media3.ui.R.id.exo_play,
