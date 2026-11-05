@@ -601,6 +601,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyKaiserImmersiveMode()
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         ovalButtons = prefs.getBoolean("oval_buttons", false)
@@ -814,28 +815,44 @@ class MainActivity : Activity() {
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(dp(66), -1)
+            layoutParams = LinearLayout.LayoutParams(dp(78), -1)
         }
         sidebar.addView(primaryMenuColumn)
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 0)
+            setPadding(0, dp(2), 0, dp(2))
+            clipChildren = false
         }
         brandView.addView(TextView(this).apply {
-            val logo = android.text.SpannableString("▶ KAISER TV+")
-            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            text = logo
-            textSize = if (prefs.getBoolean("compact_logo", true)) 13f else 17f
+            text = "▶"
+            textSize = 27f
+            setTextColor(Color.rgb(0, 174, 255))
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            contentDescription = "KAISER TV+"
-        }, LinearLayout.LayoutParams(-1, dp(42)))
-        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(60)))
+            includeFontPadding = false
+        }, LinearLayout.LayoutParams(-1, dp(29)))
+        brandView.addView(TextView(this).apply {
+            text = "KAISER"
+            textSize = 13.5f
+            setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+        }, LinearLayout.LayoutParams(-1, dp(19)))
+        brandView.addView(TextView(this).apply {
+            val tvPlus = android.text.SpannableString("TV+")
+            tvPlus.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 2, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            tvPlus.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 2, 3, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            text = tvPlus
+            textSize = 16f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+        }, LinearLayout.LayoutParams(-1, dp(22)))
+        brandView.contentDescription = "KAISER TV+"
+        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(82)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
@@ -5108,6 +5125,23 @@ class MainActivity : Activity() {
                 }
             }
         }
+    }
+
+    private fun applyKaiserImmersiveMode() {
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        )
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) applyKaiserImmersiveMode()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
