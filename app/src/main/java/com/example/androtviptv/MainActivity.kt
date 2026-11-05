@@ -1714,30 +1714,26 @@ class MainActivity : Activity() {
             ((Color.green(base) * 0.72f) + (Color.green(accent) * 0.28f)).toInt().coerceIn(0, 255),
             ((Color.blue(base) * 0.72f) + (Color.blue(accent) * 0.28f)).toInt().coerceIn(0, 255)
         )
-        // Main shell follows the selected theme; the poster/content panel uses
-        // a darker gradient derived from the same theme colors.
-        val surface = if (gradientBackground) {
-            GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(base, blend, base))
-        } else {
-            GradientDrawable().apply { setColor(base) }
-        }
+        // One continuous theme gradient spans the whole app: brighter behind
+        // the sidebar and gradually deeper toward the right content edge.
         fun shade(color: Int, factor: Float): Int = Color.rgb(
             (Color.red(color) * factor).toInt().coerceIn(0, 255),
             (Color.green(color) * factor).toInt().coerceIn(0, 255),
             (Color.blue(color) * factor).toInt().coerceIn(0, 255)
         )
-        // Keep the content panel visibly darker than the shell, but not near-black.
-        // A 0.68 multiplier preserves each theme's hue while improving poster-area contrast.
-        val darkBase = shade(base, 0.74f)
-        val darkBlend = shade(blend, 0.74f)
-        val contentSurface = if (gradientBackground) {
-            GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(darkBase, darkBlend, darkBase))
+        val rightBase = shade(blend, 0.76f)
+        val surface = if (gradientBackground) {
+            GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(base, blend, rightBase)
+            )
         } else {
-            GradientDrawable().apply { setColor(darkBase) }
+            GradientDrawable().apply { setColor(base) }
         }
         rootLayout.background = surface
-        mainContentScroll.background = surface.constantState?.newDrawable()?.mutate() ?: surface
-        content.background = contentSurface
+        // No separate right-side panel: let the root gradient show through.
+        mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
+        content.setBackgroundColor(Color.TRANSPARENT)
         sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
         window.statusBarColor = bg
         window.navigationBarColor = bg
