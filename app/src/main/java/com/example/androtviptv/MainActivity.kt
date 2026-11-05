@@ -653,7 +653,7 @@ class MainActivity : Activity() {
             background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
             clipChildren = false
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(230), -1).apply { setMargins(0, 0, dp(8), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(205), -1).apply { setMargins(0, 0, dp(8), 0) })
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -702,7 +702,7 @@ class MainActivity : Activity() {
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             addView(categoryPanel, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(158), -1))
+        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(138), -1))
         rebuildNavigation()
 
         val main = LinearLayout(this).apply {
@@ -876,9 +876,9 @@ class MainActivity : Activity() {
         }
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(18), dp(30), dp(20))
-            clipChildren = false
-            clipToPadding = false
+            setPadding(dp(14), dp(12), dp(14), dp(16))
+            clipChildren = true
+            clipToPadding = true
         }
         mainContentScroll.addView(content)
         main.addView(mainContentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -894,7 +894,7 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = dp(if (showReadableCategories) 230 else 76)
+            val desiredWidth = dp(if (showReadableCategories) 205 else 76)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -2362,7 +2362,7 @@ class MainActivity : Activity() {
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
             if (firstEntry || isLoadingSource || detailMode || selectedType == "Ayarlar") View.GONE else View.VISIBLE
-        if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Tümü" || selectedType == "Filmler" || selectedType == "Diziler") View.GONE else View.VISIBLE
+        if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Tümü" || selectedType == "Filmler" || selectedType == "Diziler" || (selectedType == "Canlı TV" && sidebarMode == "context")) View.GONE else View.VISIBLE
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
             mainContentScroll.visibility = View.VISIBLE
@@ -2820,14 +2820,31 @@ class MainActivity : Activity() {
         // Live TV category content: compact logo/name grid; OK opens the channel fullscreen.
         if (selectedType == "Canlı TV" && sidebarMode == "context") {
             content.removeAllViews()
-            content.addView(TextView(this).apply {
+            mainContentScroll.setBackgroundColor(Color.rgb(24, 24, 36))
+            content.setBackgroundColor(Color.rgb(24, 24, 36))
+            content.clipChildren = true
+            content.clipToPadding = true
+            val tvChannels = visible.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+            val tvHeading = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(8), dp(6), dp(8), dp(12))
+            }
+            tvHeading.addView(TextView(this).apply {
                 text = if (selectedGroup == "Tüm kategoriler") t("Tüm Kanallar") else selectedGroup
-                textSize = 21f
+                textSize = 22f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
-                setPadding(dp(8), dp(10), dp(8), dp(12))
-            })
-            val tvChannels = visible.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            tvHeading.addView(TextView(this).apply {
+                text = "${tvChannels.size}"
+                textSize = 14f
+                setTextColor(muted)
+                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            content.addView(tvHeading, LinearLayout.LayoutParams(-1, dp(46)))
             val displayedTvChannels = tvChannels.take(liveChannelsLimit)
             if (tvChannels.isEmpty()) {
                 content.addView(TextView(this).apply {
@@ -2842,9 +2859,9 @@ class MainActivity : Activity() {
                         channelRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.TOP
-                            clipChildren = false
-                            clipToPadding = false
-                            setPadding(0, dp(14), 0, dp(6))
+                            clipChildren = true
+                            clipToPadding = true
+                            setPadding(0, dp(8), 0, dp(6))
                         }
                         content.addView(channelRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
@@ -2855,19 +2872,19 @@ class MainActivity : Activity() {
                         isFocusableInTouchMode = true
                         isClickable = true
                         setPadding(dp(8), dp(8), dp(8), dp(8))
-                        background = roundedDrawable(panel, 12, Color.rgb(43, 51, 68))
+                        background = roundedDrawable(Color.rgb(30, 31, 44), 12, Color.rgb(43, 51, 68))
                         minimumHeight = dp(126)
                         setOnFocusChangeListener { v, hasFocus ->
                             v.animate().cancel()
-                            v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                            v.elevation = if (hasFocus) dp(22).toFloat() else 0f
-                            v.translationZ = if (hasFocus) dp(22).toFloat() else 0f
-                            v.cameraDistance = dp(2200).toFloat()
-                            v.animate().scaleX(if (hasFocus) 1.15f else 1f)
-                                .scaleY(if (hasFocus) 1.15f else 1f)
-                                .translationY(if (hasFocus) -dp(10).toFloat() else 0f)
-                                .translationZ(if (hasFocus) dp(22).toFloat() else 0f)
-                                .setDuration(180).start()
+                            v.background = roundedDrawable(
+                                if (hasFocus) Color.rgb(38, 43, 61) else Color.rgb(30, 31, 44),
+                                12, if (hasFocus) accent else Color.rgb(43, 51, 68)
+                            )
+                            v.elevation = 0f
+                            v.translationZ = 0f
+                            v.scaleX = 1f
+                            v.scaleY = 1f
+                            v.translationY = 0f
                         }
                         setOnClickListener { play(channel) }
                         contentDescription = channel.name
