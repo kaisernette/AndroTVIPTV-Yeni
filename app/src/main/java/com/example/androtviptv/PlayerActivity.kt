@@ -40,6 +40,8 @@ class PlayerActivity : Activity() {
         @Volatile var pendingEpisodeNames: List<String> = emptyList()
         @Volatile var pendingEpisodeUrls: List<String> = emptyList()
         @Volatile var pendingEpisodeIndex: Int = 0
+        @Volatile var pendingSeriesTitle: String = ""
+        @Volatile var pendingSeriesKey: String = ""
     }
 
     private var player: ExoPlayer? = null
