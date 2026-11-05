@@ -503,147 +503,213 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            val focused = currentFocus
-            val trackMenuOpen = subtitlePanel?.visibility == View.VISIBLE || audioPanel?.visibility == View.VISIBLE
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
-                    if (trackMenuOpen) {
-                        val activePanel = if (audioPanel?.visibility == View.VISIBLE) audioPanel else subtitlePanel
-                        val options = (activePanel?.tag as? Pair<*, *>)?.second as? ViewGroup
-                        val inOptions = generateSequence(focused as? View) { it.parent as? View }.any { it === options }
-                        if (inOptions) { focused?.performClick(); showPlaybackControls(); return true }
-                        val first = options?.getChildAt(0)
-                        if (first != null) { first.requestFocus(); return true }
+        if (event.action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event)
+
+        val key = event.keyCode
+        val focused = currentFocus
+        val trackMenuOpen = subtitlePanel?.visibility == View.VISIBLE || audioPanel?.visibility == View.VISIBLE
+        val centerRow = centerControlsView as? ViewGroup
+
+        fun requestCenter(index: Int = 2): Boolean {
+            val target = centerRow?.getChildAt(index) ?: return false
+            showPlaybackControls()
+            return target.requestFocus()
+        }
+
+        fun activeTrackPanel(): LinearLayout? =
+            if (audioPanel?.visibility == View.VISIBLE) audioPanel else subtitlePanel
+
+        fun trackOptions(panel: LinearLayout?): ViewGroup? =
+            (panel?.tag as? Pair<*, *>)?.second as? ViewGroup
+
+        fun isInside(view: View?, parent: ViewGroup?): Boolean {
+            if (view == null || parent == null) return false
+            return generateSequence(view as View?) { it.parent as? View }.any { it === parent }
+        }
+
+        when (key) {
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                if (channelOverlay != null) { hideChannelOverlay(); return true }
+                if (audioPanel?.visibility == View.VISIBLE) {
+                    audioPanel?.visibility = View.GONE
+                    audioButtonView?.requestFocus()
+                    return true
+                }
+                if (subtitlePanel?.visibility == View.VISIBLE) {
+                    subtitlePanel?.visibility = View.GONE
+                    subtitleButtonView?.requestFocus()
+                    return true
+                }
+            }
+
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
+                if (trackMenuOpen) {
+                    val panel = activeTrackPanel()
+                    val options = trackOptions(panel)
+                    if (isInside(focused, options)) {
+                        focused?.performClick()
+                        showPlaybackControls()
+                        return true
                     }
-                    if (focused === playButtonView()) {
+                    val first = options?.getChildAt(0)
+                    if (first != null) {
+                        first.requestFocus()
+                        showPlaybackControls()
+                        return true
+                    }
+                }
+                when {
+                    focused === subtitleButtonView -> { subtitleButtonView?.performClick(); return true }
+                    focused === audioButtonView -> { audioButtonView?.performClick(); return true }
+                    focused === playButtonView() -> {
                         player?.let { if (it.isPlaying) it.pause() else it.play() }
                         showPlaybackControls()
                         return true
                     }
-                    if (!trackMenuOpen && focused === subtitleButtonView) {
-                        subtitleButtonView?.performClick()
+                    focused is View && centerRow != null &&
+                        (0 until centerRow.childCount).any { centerRow.getChildAt(it) === focused } -> {
+                        focused.performClick()
+                        showPlaybackControls()
                         return true
                     }
-                    if (!trackMenuOpen && focused === audioButtonView) {
-                        audioButtonView?.performClick()
-                        return true
-                    }
-                    if (!trackMenuOpen && focused !is SeekBar) {
+                    focused is View && focused !is SeekBar -> {
                         player?.let { if (it.isPlaying) it.pause() else it.play() }
                         showPlaybackControls()
                         return true
                     }
                 }
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (channelOverlay != null) return super.dispatchKeyEvent(event)
-                    val centerRow = centerControlsView as? ViewGroup
-                    val focusedCenterIndex = centerRow?.let { row ->
-                        (0 until row.childCount).firstOrNull { row.getChildAt(it) === focused }
+            }
+
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (channelOverlay != null) return super.dispatchKeyEvent(event)
+
+                val centerIndex = centerRow?.let { row ->
+                    (0 until row.childCount).firstOrNull { row.getChildAt(it) === focused }
+                }
+                if (centerIndex != null && centerRow != null) {
+                    val next = (centerIndex + if (key == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1)
+                        .coerceIn(0, centerRow.childCount - 1)
+                    if (next != centerIndex) centerRow.getChildAt(next)?.requestFocus()
+                    showPlaybackControls()
+                    return true
+                }
+
+                if (trackMenuOpen) {
+                    val panel = activeTrackPanel()
+                    val options = trackOptions(panel)
+                    if (isInside(focused, options)) return true
+                    if (key == KeyEvent.KEYCODE_DPAD_RIGHT && panel === subtitlePanel) {
+                        audioButtonView?.requestFocus(); showPlaybackControls(); return true
                     }
-                    if (focusedCenterIndex != null && centerRow != null) {
-                        val step = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
-                        val targetIndex = (focusedCenterIndex + step).coerceIn(0, centerRow.childCount - 1)
-                        if (targetIndex != focusedCenterIndex) centerRow.getChildAt(targetIndex)?.requestFocus()
-                        return true
+                    if (key == KeyEvent.KEYCODE_DPAD_LEFT && panel === audioPanel) {
+                        subtitleButtonView?.requestFocus(); showPlaybackControls(); return true
                     }
-                    if (trackMenuOpen) {
-                        val activePanel = if (audioPanel?.visibility == View.VISIBLE) audioPanel else subtitlePanel
-                        val options = (activePanel?.tag as? Pair<*, *>)?.second as? ViewGroup
-                        if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && activePanel === subtitlePanel) {
-                            audioButtonView?.requestFocus(); return true
-                        }
-                        if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT && activePanel === audioPanel) {
-                            subtitleButtonView?.requestFocus(); return true
-                        }
-                        return super.dispatchKeyEvent(event)
-                    }
-                    if (focused === subtitleButtonView && event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                        audioButtonView?.requestFocus()
-                        return true
-                    }
-                    if (focused === audioButtonView && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                        subtitleButtonView?.requestFocus()
-                        return true
-                    }
-                    if (focused === subtitleButtonView || focused === audioButtonView) return true
-                    if (progressBar?.hasFocus() == true) {
-                        // The seek bar owns left/right for precise seeking.
-                        return super.dispatchKeyEvent(event)
-                    }
-                    val delta = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 10000L else -10000L
+                    return true
+                }
+
+                if (focused === subtitleButtonView && key == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    audioButtonView?.requestFocus(); showPlaybackControls(); return true
+                }
+                if (focused === audioButtonView && key == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    subtitleButtonView?.requestFocus(); showPlaybackControls(); return true
+                }
+                if (focused === subtitleButtonView || focused === audioButtonView) return true
+
+                if (progressBar?.hasFocus() == true) {
                     val exo = player
                     if (exo != null && !isLiveStream && exo.duration > 0) {
+                        val delta = if (key == KeyEvent.KEYCODE_DPAD_RIGHT) 10000L else -10000L
                         exo.seekTo((exo.currentPosition + delta).coerceIn(0L, exo.duration))
                         showPlaybackControls()
                         return true
                     }
-                    if (isLiveStream && channelUrls.isNotEmpty()) {
-                        val next = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
-                            (selectedChannelIndex + 1) % channelUrls.size
-                        else (selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it }
-                        tuneChannel(next)
-                        showPlaybackControls()
-                        return true
-                    }
-                    return super.dispatchKeyEvent(event)
-                }
-                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    // Up/down are navigation keys, never channel-zap keys.
-                    // Keep list movement only while the channel chooser itself is open.
-                    if (channelOverlay != null && channelUrls.isNotEmpty()) {
-                        highlightedChannelIndex = (highlightedChannelIndex +
-                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
-                            .coerceIn(0, channelUrls.lastIndex)
-                        refreshChannelHighlight()
-                        showPlaybackControls()
-                        return true
-                    }
-                    showPlaybackControls()
-                    val focusedView = currentFocus
-                    val trackMenuOpen = subtitlePanel?.visibility == View.VISIBLE || audioPanel?.visibility == View.VISIBLE
-                    if (trackMenuOpen) {
-                        val activePanel = if (audioPanel?.visibility == View.VISIBLE) audioPanel else subtitlePanel
-                        val options = (activePanel?.tag as? Pair<*, *>)?.second as? ViewGroup
-                        val inOptions = generateSequence(focusedView as? View) { it.parent as? View }
-                            .any { it === options }
-                        if (!inOptions) {
-                            val first = options?.getChildAt(0)
-                            if (first != null) first.requestFocus()
-                        } else {
-                            val direction = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
-                            focusedView?.focusSearch(direction)?.takeIf { it.isShown && it.isFocusable }?.requestFocus()
-                        }
-                        return true
-                    }
-                    val centerRow = centerControlsView as? ViewGroup
-                    val isCenterControl = centerRow != null && (0 until centerRow.childCount).any { centerRow.getChildAt(it) === focusedView }
-                    when {
-                        focusedView == null || focusedView === playerView -> playButtonView()?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && focusedView === progressBar -> playButtonView()?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && isCenterControl -> progressBar?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && (focusedView === subtitleButtonView || focusedView === audioButtonView) -> progressBar?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && focusedView === progressBar -> subtitleButtonView?.requestFocus()
-                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && (focusedView === subtitleButtonView || focusedView === audioButtonView) -> progressBar?.requestFocus()
-                        else -> {
-                            val direction = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
-                            val next = focusedView?.focusSearch(direction)
-                            if (next != null && next !== playerView && next.isShown && next.isFocusable) next.requestFocus()
-                            else if (direction == View.FOCUS_UP) playButtonView()?.requestFocus()
-                            else progressBar?.requestFocus()
-                        }
-                    }
                     return true
                 }
-                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                    if (channelOverlay != null) { hideChannelOverlay(); return true }
-                    if (audioPanel?.visibility == View.VISIBLE) { audioPanel?.visibility = View.GONE; return true }
-                    if (subtitlePanel?.visibility == View.VISIBLE) { subtitlePanel?.visibility = View.GONE; return true }
+
+                val exo = player
+                if (exo != null && !isLiveStream && exo.duration > 0) {
+                    val delta = if (key == KeyEvent.KEYCODE_DPAD_RIGHT) 10000L else -10000L
+                    exo.seekTo((exo.currentPosition + delta).coerceIn(0L, exo.duration))
+                    showPlaybackControls()
+                    return true
+                }
+                if (isLiveStream && channelUrls.isNotEmpty()) {
+                    val next = if (key == KeyEvent.KEYCODE_DPAD_RIGHT)
+                        (selectedChannelIndex + 1) % channelUrls.size
+                    else (selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it }
+                    tuneChannel(next)
+                    showPlaybackControls()
+                    return true
                 }
             }
-            if (event.keyCode !in intArrayOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE)) showPlaybackControls()
+
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                if (channelOverlay != null && channelUrls.isNotEmpty()) {
+                    highlightedChannelIndex = (highlightedChannelIndex +
+                        if (key == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
+                        .coerceIn(0, channelUrls.lastIndex)
+                    refreshChannelHighlight()
+                    return true
+                }
+
+                showPlaybackControls()
+                if (trackMenuOpen) {
+                    val options = trackOptions(activeTrackPanel())
+                    val count = options?.childCount ?: 0
+                    if (count == 0) return true
+                    val index = (0 until count).firstOrNull { options?.getChildAt(it) === focused }
+                    val next = when {
+                        index == null -> 0
+                        key == KeyEvent.KEYCODE_DPAD_DOWN -> (index + 1).coerceAtMost(count - 1)
+                        else -> (index - 1).coerceAtLeast(0)
+                    }
+                    options?.getChildAt(next)?.requestFocus()
+                    return true
+                }
+
+                val centerIndex = centerRow?.let { row ->
+                    (0 until row.childCount).firstOrNull { row.getChildAt(it) === focused }
+                }
+                when {
+                    key == KeyEvent.KEYCODE_DPAD_UP &&
+                        (focused == null || focused === playerView || focused === progressBar) ->
+                        { requestCenter(2); return true }
+                    key == KeyEvent.KEYCODE_DPAD_DOWN && centerIndex != null -> {
+                        progressBar?.requestFocus(); return true
+                    }
+                    key == KeyEvent.KEYCODE_DPAD_UP && centerIndex != null -> {
+                        return requestCenter(2)
+                    }
+                    key == KeyEvent.KEYCODE_DPAD_DOWN && focused === progressBar -> {
+                        subtitleButtonView?.requestFocus(); return true
+                    }
+                    key == KeyEvent.KEYCODE_DPAD_UP &&
+                        (focused === subtitleButtonView || focused === audioButtonView) -> {
+                        progressBar?.requestFocus(); return true
+                    }
+                    key == KeyEvent.KEYCODE_DPAD_DOWN &&
+                        (focused === subtitleButtonView || focused === audioButtonView) -> {
+                        val panel = if (focused === audioButtonView) audioPanel else subtitlePanel
+                        val first = trackOptions(panel)?.getChildAt(0)
+                        if (first != null) first.requestFocus()
+                        else (if (focused === audioButtonView) audioButtonView else subtitleButtonView)?.performClick()
+                        return true
+                    }
+                    key == KeyEvent.KEYCODE_DPAD_UP &&
+                        isInside(focused, trackOptions(subtitlePanel)) -> {
+                        subtitleButtonView?.requestFocus(); return true
+                    }
+                    key == KeyEvent.KEYCODE_DPAD_UP &&
+                        isInside(focused, trackOptions(audioPanel)) -> {
+                        audioButtonView?.requestFocus(); return true
+                    }
+                    else -> return true
+                }
+            }
         }
+
+        if (key !in intArrayOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE)) showPlaybackControls()
         return super.dispatchKeyEvent(event)
     }
 
