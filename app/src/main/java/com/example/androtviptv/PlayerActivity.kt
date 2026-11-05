@@ -165,6 +165,7 @@ class PlayerActivity : Activity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyPlayerImmersiveMode()
         val title = intent.getStringExtra("name") ?: "Oynatıcı"
         val url = intent.getStringExtra("url") ?: run { finish(); return }
         channelRows = pendingChannelNames
@@ -641,6 +642,23 @@ class PlayerActivity : Activity() {
         }
         fill(subtitlePanel, C.TRACK_TYPE_TEXT)
         fill(audioPanel, C.TRACK_TYPE_AUDIO)
+    }
+
+    private fun applyPlayerImmersiveMode() {
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        )
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) applyPlayerImmersiveMode()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
