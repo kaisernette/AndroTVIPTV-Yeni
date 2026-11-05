@@ -509,6 +509,14 @@ class PlayerActivity : Activity() {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                     if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
+                    if (trackMenuOpen) {
+                        val activePanel = if (audioPanel?.visibility == View.VISIBLE) audioPanel else subtitlePanel
+                        val options = (activePanel?.tag as? Pair<*, *>)?.second as? ViewGroup
+                        val inOptions = generateSequence(focused as? View) { it.parent as? View }.any { it === options }
+                        if (inOptions) { focused?.performClick(); showPlaybackControls(); return true }
+                        val first = options?.getChildAt(0)
+                        if (first != null) { first.requestFocus(); return true }
+                    }
                     if (focused === playButtonView()) {
                         player?.let { if (it.isPlaying) it.pause() else it.play() }
                         showPlaybackControls()
@@ -530,7 +538,27 @@ class PlayerActivity : Activity() {
                 }
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     if (channelOverlay != null) return super.dispatchKeyEvent(event)
-                    if (trackMenuOpen) return super.dispatchKeyEvent(event)
+                    val centerRow = centerControlsView as? ViewGroup
+                    val focusedCenterIndex = centerRow?.let { row ->
+                        (0 until row.childCount).firstOrNull { row.getChildAt(it) === focused }
+                    }
+                    if (focusedCenterIndex != null && centerRow != null) {
+                        val step = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                        val targetIndex = (focusedCenterIndex + step).coerceIn(0, centerRow.childCount - 1)
+                        if (targetIndex != focusedCenterIndex) centerRow.getChildAt(targetIndex)?.requestFocus()
+                        return true
+                    }
+                    if (trackMenuOpen) {
+                        val activePanel = if (audioPanel?.visibility == View.VISIBLE) audioPanel else subtitlePanel
+                        val options = (activePanel?.tag as? Pair<*, *>)?.second as? ViewGroup
+                        if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && activePanel === subtitlePanel) {
+                            audioButtonView?.requestFocus(); return true
+                        }
+                        if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT && activePanel === audioPanel) {
+                            subtitleButtonView?.requestFocus(); return true
+                        }
+                        return super.dispatchKeyEvent(event)
+                    }
                     if (focused === subtitleButtonView && event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                         audioButtonView?.requestFocus()
                         return true
@@ -585,7 +613,20 @@ class PlayerActivity : Activity() {
                     showPlaybackControls()
                     val focusedView = currentFocus
                     val trackMenuOpen = subtitlePanel?.visibility == View.VISIBLE || audioPanel?.visibility == View.VISIBLE
-                    if (trackMenuOpen) return super.dispatchKeyEvent(event)
+                    if (trackMenuOpen) {
+                        val activePanel = if (audioPanel?.visibility == View.VISIBLE) audioPanel else subtitlePanel
+                        val options = (activePanel?.tag as? Pair<*, *>)?.second as? ViewGroup
+                        val inOptions = generateSequence(focusedView as? View) { it.parent as? View }
+                            .any { it === options }
+                        if (!inOptions) {
+                            val first = options?.getChildAt(0)
+                            if (first != null) first.requestFocus()
+                        } else {
+                            val direction = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
+                            focusedView?.focusSearch(direction)?.takeIf { it.isShown && it.isFocusable }?.requestFocus()
+                        }
+                        return true
+                    }
                     val centerRow = centerControlsView as? ViewGroup
                     val isCenterControl = centerRow != null && (0 until centerRow.childCount).any { centerRow.getChildAt(it) === focusedView }
                     when {
