@@ -1726,8 +1726,10 @@ class MainActivity : Activity() {
             (Color.green(color) * factor).toInt().coerceIn(0, 255),
             (Color.blue(color) * factor).toInt().coerceIn(0, 255)
         )
-        val darkBase = shade(base, 0.48f)
-        val darkBlend = shade(blend, 0.48f)
+        // Keep the content panel visibly darker than the shell, but not near-black.
+        // A 0.68 multiplier preserves each theme's hue while improving poster-area contrast.
+        val darkBase = shade(base, 0.68f)
+        val darkBlend = shade(blend, 0.68f)
         val contentSurface = if (gradientBackground) {
             GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(darkBase, darkBlend, darkBase))
         } else {
