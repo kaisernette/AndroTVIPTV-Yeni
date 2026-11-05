@@ -131,7 +131,33 @@ class MainActivity : Activity() {
             else -> emptyMap()
         }
         val common = mapOf(
-            "en" to mapOf("Kaynak ekle ve kayıtlı bağlantılarını buradan yönet." to "Add and manage your saved connections here.", "Türü seçerek izleme geçmişini görüntüle." to "Choose a type to view your watch history.", "Kaynak ve içerikleri silinsin mi?" to "Delete this source and its content?", "Kaynağı sil" to "Delete source", "Yenile" to "Refresh", "Düzenle" to "Edit", "Sil" to "Delete", "İptal" to "Cancel", "Hepsini sil" to "Delete all", "Geçmişi sil" to "Clear history", "Seçileni sil (" to "Delete selected (", "İzleme geçmişini temizle" to "Clear watch history", "İzlenen tüm TV kanalları geçmişten silinsin mi?" to "Delete all watched TV channels from history?", "İzlenen tüm filmler geçmişten silinsin mi?" to "Delete all watched movies from history?", "İzlenen tüm diziler geçmişten silinsin mi?" to "Delete all watched series from history?", "Sezon" to "Season", "KONU" to "OVERVIEW", "OYUNCULAR" to "CAST", "FİLM" to "MOVIE", "DİZİ" to "SERIES", "Film, dizi veya kanal ara..." to "Search movies, series or channels...", "Arama geçmişi" to "Search history", "Kaynaklar" to "Sources", "Geçmiş" to "History", "Ara" to "Search", "Kategoriler" to "Categories", "İzlenen TV kanalları" to "Watched TV channels", "İzlenen filmler" to "Watched movies", "İzlenen diziler" to "Watched series", "Bu türde henüz izleme geçmişi yok." to "No watch history for this type yet.", "Bağlan" to "Connect", "Kaydet" to "Save", "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)", "M3U / M3U8 oynatma listesi URL'si" to "M3U / M3U8 playlist URL", "Sunucu adresi (https://...)" to "Server address (https://...)", "Kullanıcı adı" to "Username", "Şifre" to "Password", "İzleme kaynağı ekle" to "Add streaming source", "Kaynağı düzenle" to "Edit source", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Only add streaming addresses you are authorized to use.", "İzleme kaynağı ekle" to "Add streaming source", "Kaynağı düzenle" to "Edit source", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Only add streaming addresses you are authorized to use.", "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)", "M3U / M3U8 oynatma listesi URL'si" to "M3U / M3U8 playlist URL", "Sunucu adresi (https://...)" to "Server address (https://...)", "Kullanıcı adı" to "Username", "Şifre" to "Password", "Bağlan" to "Connect", "Kaydet" to "Save", "Sezon" to "Season", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Enter the server, username and password.", "Geçerli bir M3U/M3U8 URL'si gir." to "Enter a valid M3U/M3U8 URL.", 
+            "en" to mapOf("Kaynak ekle ve kayıtlı bağlantılarını buradan yönet." to "Add and manage your saved connections here.",
+                "Daha önce izlediğin içerikler" to "Previously watched content",
+                "Önce içerik seç." to "Select content first.",
+                "Geçmiş zaten boş." to "History is already empty.",
+                "Tüm izleme geçmişi silinsin mi?" to "Delete all watch history?",
+                "Seçileni Sil" to "Delete Selected",
+                "Geçmişi Sil" to "Clear History",
+                "Kaynak adı (ör. Ev TV)" to "Source name (e.g. Home TV)",
+                "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)",
+                "Kaynak adı (ör. Ev Portal)" to "Source name (e.g. Home Portal)",
+                "Portal URL (https://...)" to "Portal URL (https://...)",
+                "MAC adresi (00:1A:79:XX:XX:XX)" to "MAC address (00:1A:79:XX:XX:XX)",
+                "KAYNAKLAR" to "SOURCES",
+                "Sunucu, kullanıcı adı ve şifreyi doldur." to "Enter the server, username and password.",
+                "Geçerli bir M3U/M3U8 URL'si gir." to "Enter a valid M3U/M3U8 URL.",
+                "Portal URL ve geçerli MAC adresini girin (00:1A:79:XX:XX:XX)." to "Enter the portal URL and a valid MAC address (00:1A:79:XX:XX:XX).",
+                "MAC Portal bilgileri kaydedildi. Yayın bağlantısı henüz etkin değil." to "MAC Portal details saved. Streaming is not enabled yet.",
+                "MAC Portal yayın bağlantısı henüz etkin değil." to "MAC Portal streaming is not enabled yet.",
+                "Kaynak adı girin" to "Enter source name",
+                "İzleme kaynağını ekleyerek başla" to "Start by adding a streaming source",
+                "Köşe biçimi" to "Corner style",
+                "Zemin görünümü" to "Background style",
+                "Şeffaf Menü" to "Transparent Menu",
+                "Düz" to "Solid",
+                "Gradyan" to "Gradient",
+                "Köşeli" to "Rounded",
+                "Oval" to "Oval", "Türü seçerek izleme geçmişini görüntüle." to "Choose a type to view your watch history.", "Kaynak ve içerikleri silinsin mi?" to "Delete this source and its content?", "Kaynağı sil" to "Delete source", "Yenile" to "Refresh", "Düzenle" to "Edit", "Sil" to "Delete", "İptal" to "Cancel", "Hepsini sil" to "Delete all", "Geçmişi sil" to "Clear history", "Seçileni sil (" to "Delete selected (", "İzleme geçmişini temizle" to "Clear watch history", "İzlenen tüm TV kanalları geçmişten silinsin mi?" to "Delete all watched TV channels from history?", "İzlenen tüm filmler geçmişten silinsin mi?" to "Delete all watched movies from history?", "İzlenen tüm diziler geçmişten silinsin mi?" to "Delete all watched series from history?", "Sezon" to "Season", "KONU" to "OVERVIEW", "OYUNCULAR" to "CAST", "FİLM" to "MOVIE", "DİZİ" to "SERIES", "Film, dizi veya kanal ara..." to "Search movies, series or channels...", "Arama geçmişi" to "Search history", "Kaynaklar" to "Sources", "Geçmiş" to "History", "Ara" to "Search", "Kategoriler" to "Categories", "İzlenen TV kanalları" to "Watched TV channels", "İzlenen filmler" to "Watched movies", "İzlenen diziler" to "Watched series", "Bu türde henüz izleme geçmişi yok." to "No watch history for this type yet.", "Bağlan" to "Connect", "Kaydet" to "Save", "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)", "M3U / M3U8 oynatma listesi URL'si" to "M3U / M3U8 playlist URL", "Sunucu adresi (https://...)" to "Server address (https://...)", "Kullanıcı adı" to "Username", "Şifre" to "Password", "İzleme kaynağı ekle" to "Add streaming source", "Kaynağı düzenle" to "Edit source", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Only add streaming addresses you are authorized to use.", "İzleme kaynağı ekle" to "Add streaming source", "Kaynağı düzenle" to "Edit source", "Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle." to "Only add streaming addresses you are authorized to use.", "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)", "M3U / M3U8 oynatma listesi URL'si" to "M3U / M3U8 playlist URL", "Sunucu adresi (https://...)" to "Server address (https://...)", "Kullanıcı adı" to "Username", "Şifre" to "Password", "Bağlan" to "Connect", "Kaydet" to "Save", "Sezon" to "Season", "Sunucu, kullanıcı adı ve şifreyi doldur." to "Enter the server, username and password.", "Geçerli bir M3U/M3U8 URL'si gir." to "Enter a valid M3U/M3U8 URL.", 
                 "Tüm kaynaklarda ara" to "Search all sources", "Arama sonucu bulunamadı" to "No search results found",
                 "Kütüphanen seni bekliyor" to "Your library is waiting",
                 "Film, dizi veya kanal adını yaz. Bütün kayıtlı kaynaklar taranır." to "Enter a movie, series or channel name. All saved sources will be searched.",
@@ -1370,11 +1396,11 @@ class MainActivity : Activity() {
         val macName = edit(t("Kaynak adı (ör. Ev Portal)"), false).apply {
             setText(if (editSource?.mode == "mac") editSource.name else "")
         }
-        val macPortal = edit("Portal URL (https://...)", false).apply {
+        val macPortal = edit(t("Portal URL (https://...)"), false).apply {
             setText(if (editSource?.mode == "mac") editSource.address else "")
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
         }
-        val macAddress = edit("MAC adresi (00:1A:79:XX:XX:XX)", false).apply {
+        val macAddress = edit(t("MAC adresi (00:1A:79:XX:XX:XX)"), false).apply {
             setText(if (editSource?.mode == "mac") editSource.username else "")
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
         }
@@ -1415,7 +1441,7 @@ class MainActivity : Activity() {
                 val address = server.text.toString().trim()
                 if (!(address.startsWith("http://") || address.startsWith("https://")) ||
                     username.text.isNullOrBlank() || password.text.isNullOrBlank()) {
-                    Toast.makeText(this, "Sunucu, kullanıcı adı ve şifreyi doldur.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, t("Sunucu, kullanıcı adı ve şifreyi doldur."), Toast.LENGTH_LONG).show()
                     return@makeButton
                 }
                 val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
@@ -1425,7 +1451,7 @@ class MainActivity : Activity() {
             } else {
                 val address = playlistUrl.text.toString().trim()
                 if (!address.startsWith("http://") && !address.startsWith("https://")) {
-                    Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, t("Geçerli bir M3U/M3U8 URL'si gir."), Toast.LENGTH_LONG).show()
                     return@makeButton
                 }
                 val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
@@ -1465,14 +1491,14 @@ class MainActivity : Activity() {
                     val macValue = macAddress.text.toString().trim().uppercase(java.util.Locale.ROOT)
                     val validMac = Regex("^[0-9A-F]{2}(:[0-9A-F]{2}){5}$").matches(macValue)
                     if (!(portal.startsWith("http://") || portal.startsWith("https://")) || !validMac) {
-                        Toast.makeText(this@MainActivity, "Portal URL ve geçerli MAC adresini girin (00:1A:79:XX:XX:XX).", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@MainActivity, t("Portal URL ve geçerli MAC adresini girin (00:1A:79:XX:XX:XX)."), Toast.LENGTH_LONG).show()
                         return@makeButton
                     }
                     val label = macName.text.toString().trim().ifBlank { "MAC Portal ${savedSources.size + 1}" }
                     val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "mac", portal, macValue)
                     saveSource(src)
                     hideKeyboard()
-                    Toast.makeText(this@MainActivity, "MAC Portal bilgileri kaydedildi. Yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, t("MAC Portal bilgileri kaydedildi. Yayın bağlantısı henüz etkin değil."), Toast.LENGTH_LONG).show()
                     render()
                 } else {
                     sourceMode.check(modeId)
@@ -2425,7 +2451,7 @@ class MainActivity : Activity() {
             }
             welcome.addView(welcomeLogo, LinearLayout.LayoutParams(-1, dp(110)))
             welcome.addView(TextView(this).apply {
-                text = "İzleme kaynağını ekleyerek başla"
+                text = t("İzleme kaynağını ekleyerek başla")
                 textSize = 16f; setTextColor(muted); gravity = Gravity.CENTER
                 setPadding(0, dp(8), 0, dp(18))
             })
@@ -2433,8 +2459,8 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(8), dp(4), dp(8), dp(4))
             }
-            sourceName = edit("Kaynak adı girin", false)
-            sourceName.hint = "Kaynak adı girin"
+            sourceName = edit(t("Kaynak adı girin"), false)
+            sourceName.hint = t("Kaynak adı girin")
             inlineForm.addView(TextView(this).apply {
                 text = "Kaynak adı (ör. Ev Xtream)"
                 textSize = 13f; setTextColor(muted)
@@ -4692,7 +4718,7 @@ class MainActivity : Activity() {
                 })
             }
             "history" -> {
-                heading("Geçmiş", "Daha önce izlediğin içerikler")
+                heading("Geçmiş", t("Daha önce izlediğin içerikler"))
                 val selectedHistoryKeys = mutableSetOf<String>()
                 val actions = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -4702,7 +4728,7 @@ class MainActivity : Activity() {
                 val selectDelete = makeButton(t("Seçileni Sil"), true) {
                     val keys = selectedHistoryKeys.toSet()
                     if (keys.isEmpty()) {
-                        Toast.makeText(this, "Önce içerik seç.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, t("Önce içerik seç."), Toast.LENGTH_SHORT).show()
                     } else {
                         AlertDialog.Builder(this)
                             .setMessage("${keys.size} içerik silinsin mi?")
@@ -4716,10 +4742,10 @@ class MainActivity : Activity() {
                 }
                 val clearAll = makeButton(t("Geçmişi Sil"), false) {
                     if (recent.isEmpty()) {
-                        Toast.makeText(this, "Geçmiş zaten boş.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, t("Geçmiş zaten boş."), Toast.LENGTH_SHORT).show()
                     } else {
                         AlertDialog.Builder(this)
-                            .setMessage("Tüm izleme geçmişi silinsin mi?")
+                            .setMessage(t("Tüm izleme geçmişi silinsin mi?"))
                             .setNegativeButton(t("İptal"), null)
                             .setPositiveButton(t("Geçmişi Sil")) { _, _ ->
                                 recent.clear()
