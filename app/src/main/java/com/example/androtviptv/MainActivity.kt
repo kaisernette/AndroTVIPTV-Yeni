@@ -2388,7 +2388,8 @@ class MainActivity : Activity() {
             exitDialog.dismiss()
             finish()
         }
-        val cancelButton = exitActionButton("Vazgeç", accent, Color.rgb(8, 13, 22)) {
+        // Both actions stay neutral when unfocused; only the focused action is accented.
+        val cancelButton = exitActionButton("Vazgeç", Color.rgb(27, 33, 45), Color.WHITE) {
             exitDialog.dismiss()
         }
         exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(54), 1f).apply {
