@@ -107,6 +107,26 @@ class PlayerActivity : Activity() {
     private var elapsedLabel: TextView? = null
     private var durationLabel: TextView? = null
     private val uiHandler = Handler(Looper.getMainLooper())
+    private var controlsRoot: View? = null
+    private var centerControlsView: View? = null
+    private var trackControlsView: View? = null
+    private var progressControlsView: View? = null
+    private var controlsHideTask = Runnable { setPlaybackControlsVisible(false) }
+    private var controlsVisible = true
+
+    private fun setPlaybackControlsVisible(visible: Boolean) {
+        controlsVisible = visible
+        centerControlsView?.visibility = if (visible) View.VISIBLE else View.GONE
+        trackControlsView?.visibility = if (visible) View.VISIBLE else View.GONE
+        progressControlsView?.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
+    private fun showPlaybackControls() {
+        uiHandler.removeCallbacks(controlsHideTask)
+        setPlaybackControlsVisible(true)
+        uiHandler.postDelayed(controlsHideTask, 3000L)
+    }
+
     private val uiTicker = object : Runnable {
         override fun run() {
             val exo = player
@@ -210,6 +230,7 @@ class PlayerActivity : Activity() {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x22000000, 0x00000000, 0x99000000.toInt()))
         }
         root.addView(shade, FrameLayout.LayoutParams(-1, -1))
+        controlsRoot = root
         val centerControls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         fun roundControl(symbol: String, big: Boolean = false, action: () -> Unit) = TextView(this).apply {
             text = symbol; textSize = if (big) 30f else 26f; gravity = Gravity.CENTER
@@ -241,6 +262,7 @@ class PlayerActivity : Activity() {
             centerControls.addView(button, LinearLayout.LayoutParams(dp(size), dp(size)).apply { setMargins(dp(6), 0, dp(6), 0) })
         }
         root.addView(centerControls, FrameLayout.LayoutParams(-2, dp(100), Gravity.CENTER))
+        centerControlsView = centerControls
 
         fun createTrackPanel(type: Int): LinearLayout {
             val panel = LinearLayout(this).apply {
@@ -260,20 +282,30 @@ class PlayerActivity : Activity() {
         }
         subtitlePanel = createTrackPanel(C.TRACK_TYPE_TEXT)
         audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
-        val panels = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        panels.addView(subtitlePanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
-        panels.addView(audioPanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
-        val right = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(panels) }
-        val trackButtons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun trackButton(label: String, panel: LinearLayout) = TextView(this).apply {
             text = label; textSize = 15f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); isFocusable = true; isClickable = true
             background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(0x99101824.toInt()); setStroke(dp(1), 0xFF079BE8.toInt()) }
-            setOnClickListener { val other = if (panel === subtitlePanel) audioPanel else subtitlePanel; other?.visibility = View.GONE; panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+            setOnClickListener {
+                val other = if (panel === subtitlePanel) audioPanel else subtitlePanel
+                other?.visibility = View.GONE
+                panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                if (panel.visibility == View.VISIBLE) {
+                    panel.requestFocus()
+                    showPlaybackControls()
+                }
+            }
         }
-        trackButtons.addView(trackButton("▣  Altyazı", subtitlePanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
-        trackButtons.addView(trackButton("◖  Ses Dili", audioPanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
-        right.addView(trackButtons)
+        val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.BOTTOM }
+        fun addTrackColumn(label: String, panel: LinearLayout) {
+            val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM }
+            column.addView(panel, LinearLayout.LayoutParams(dp(248), dp(220)).apply { bottomMargin = dp(7) })
+            column.addView(trackButton(label, panel), LinearLayout.LayoutParams(dp(248), dp(52)))
+            right.addView(column, LinearLayout.LayoutParams(dp(254), -2).apply { setMargins(dp(3), 0, dp(3), 0) })
+        }
+        addTrackColumn("▣  Altyazı", subtitlePanel!!)
+        addTrackColumn("◖  Ses Dili", audioPanel!!)
         root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
+        trackControlsView = right
 
         val bottom = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         progressBar = SeekBar(this).apply {
@@ -291,6 +323,7 @@ class PlayerActivity : Activity() {
         durationLabel = TextView(this).apply { text = " •  00:00"; textSize = 14f; setTextColor(0xFFB8BEC8.toInt()) }
         times.addView(elapsedLabel); times.addView(durationLabel); bottom.addView(times)
         root.addView(bottom, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM).apply { setMargins(dp(24), 0, dp(24), dp(88)) })
+        progressControlsView = bottom
         view.post {
             val controlIds = intArrayOf(
                 androidx.media3.ui.R.id.exo_play,
@@ -319,6 +352,9 @@ class PlayerActivity : Activity() {
             }
         }
         setContentView(root)
+        root.isClickable = true
+        root.setOnClickListener { showPlaybackControls() }
+        showPlaybackControls()
         if (url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
             finish()
@@ -416,39 +452,76 @@ class PlayerActivity : Activity() {
         }
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && channelUrls.isNotEmpty()) {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            val focused = currentFocus
+            val trackMenuOpen = subtitlePanel?.visibility == View.VISIBLE || audioPanel?.visibility == View.VISIBLE
             when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
+                    if (focused === playButtonView()) {
+                        player?.let { if (it.isPlaying) it.pause() else it.play() }
+                        showPlaybackControls()
+                        return true
+                    }
+                    if (!trackMenuOpen && focused !is SeekBar) {
+                        player?.let { if (it.isPlaying) it.pause() else it.play() }
+                        showPlaybackControls()
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (channelOverlay != null) return super.dispatchKeyEvent(event)
+                    if (trackMenuOpen) return super.dispatchKeyEvent(event)
+                    if (progressBar?.hasFocus() == true) return super.dispatchKeyEvent(event)
+                    val delta = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 10000L else -10000L
+                    val exo = player
+                    if (exo != null && !isLiveStream && exo.duration > 0) {
+                        exo.seekTo((exo.currentPosition + delta).coerceIn(0L, exo.duration))
+                        showPlaybackControls()
+                        return true
+                    }
+                    if (isLiveStream && channelUrls.isNotEmpty()) {
+                        val next = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
+                            (selectedChannelIndex + 1) % channelUrls.size
+                        else (selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it }
+                        tuneChannel(next)
+                        showPlaybackControls()
+                        return true
+                    }
+                    return super.dispatchKeyEvent(event)
+                }
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (channelOverlay != null) {
+                    if (channelOverlay != null && channelUrls.isNotEmpty()) {
                         highlightedChannelIndex = (highlightedChannelIndex +
                             if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
                             .coerceIn(0, channelUrls.lastIndex)
                         refreshChannelHighlight()
-                    } else {
+                        return true
+                    }
+                    if (isLiveStream && channelUrls.isNotEmpty() && !trackMenuOpen) {
                         val next = (selectedChannelIndex +
                             if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
                             .let { if (it < 0) channelUrls.lastIndex else if (it > channelUrls.lastIndex) 0 else it }
                         tuneChannel(next)
+                        showPlaybackControls()
+                        return true
                     }
-                    return true
-                }
-                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    if (channelOverlay == null) showChannelOverlay()
-                    return true
-                }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (channelOverlay == null) showRecentOverlay()
-                    return true
-                }
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
+                    showPlaybackControls()
+                    return super.dispatchKeyEvent(event)
                 }
                 KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
                     if (channelOverlay != null) { hideChannelOverlay(); return true }
+                    if (audioPanel?.visibility == View.VISIBLE) { audioPanel?.visibility = View.GONE; return true }
+                    if (subtitlePanel?.visibility == View.VISIBLE) { subtitlePanel?.visibility = View.GONE; return true }
                 }
             }
+            if (event.keyCode !in intArrayOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE)) showPlaybackControls()
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun playButtonView(): View? = centerControlsView?.let { container ->
+        (container as? ViewGroup)?.getChildAt(2)
     }
 
     private fun showRecentOverlay() {
