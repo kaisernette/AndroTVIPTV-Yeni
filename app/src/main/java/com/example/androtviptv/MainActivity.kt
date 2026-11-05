@@ -1397,7 +1397,19 @@ class MainActivity : Activity() {
             val cancel = makeButton(t("İptal"), false) { render() }.apply { minWidth = 0; textSize = 12f }
             val connect = makeButton(t(if (editSource == null) "Bağlan" else "Kaydet"), true) {
                 if (mac) {
-                    Toast.makeText(this@MainActivity, "MAC Portal bağlantısı henüz desteklenmiyor.", Toast.LENGTH_LONG).show()
+                    val portal = macPortal.text.toString().trim().trimEnd('/')
+                    val macValue = macAddress.text.toString().trim().uppercase(java.util.Locale.ROOT)
+                    val validMac = Regex("^[0-9A-F]{2}(:[0-9A-F]{2}){5}$").matches(macValue)
+                    if (!(portal.startsWith("http://") || portal.startsWith("https://")) || !validMac) {
+                        Toast.makeText(this@MainActivity, "Portal URL ve geçerli MAC adresini girin (00:1A:79:XX:XX:XX).", Toast.LENGTH_LONG).show()
+                        return@makeButton
+                    }
+                    val label = macName.text.toString().trim().ifBlank { "MAC Portal ${savedSources.size + 1}" }
+                    val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "mac", portal, macValue)
+                    saveSource(src)
+                    hideKeyboard()
+                    Toast.makeText(this@MainActivity, "MAC Portal bilgileri kaydedildi. Yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
+                    render()
                 } else {
                     sourceMode.check(modeId)
                     connectButton.performClick()
@@ -1429,30 +1441,35 @@ class MainActivity : Activity() {
             addView(passwordFrame, LinearLayout.LayoutParams(-1, dp(43)))
         }
         // Move the shared source-name field into the active form, while reserving identical card dimensions.
+        // MAC Portal uses a manually entered device MAC address; it is never read from the device.
+        val macName = edit(t("Kaynak adı (ör. Ev Portal)"), false).apply {
+            setText(if (editSource?.mode == "mac") editSource.name else "")
+        }
+        val macPortal = edit("Portal URL (https://...)", false).apply {
+            setText(if (editSource?.mode == "mac") editSource.address else "")
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
+        }
+        val macAddress = edit("MAC adresi (00:1A:79:XX:XX:XX)", false).apply {
+            setText(if (editSource?.mode == "mac") editSource.username else "")
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+        }
         val macFields = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            addView(TextView(this@MainActivity).apply {
-                text = "MAC Portal"
-                textSize = 16f
-                gravity = Gravity.CENTER
-                setTextColor(muted)
-            })
-            addView(TextView(this@MainActivity).apply {
-                text = "Henüz desteklenmiyor"
-                textSize = 12f
-                gravity = Gravity.CENTER
-                setTextColor(muted)
-            })
+            gravity = Gravity.TOP
+            addView(inputFrame(macName), LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
+            addView(inputFrame(macPortal), LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
+            addView(inputFrame(macAddress), LinearLayout.LayoutParams(-1, dp(43)))
         }
 
-        // Both editable source cards use a separate source-name field so their layouts remain open and aligned.
+        // Each card has its own source-name field and starts at the same top alignment.
         val m3uName = edit(t("Kaynak adı (ör. Ev TV)"), false).apply { setText(if (editSource?.mode == "m3u") editSource.name else "") }
         val xtreamName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(if (editSource?.mode == "xtream") editSource.name else "") }
         val m3uNameFrame = inputFrame(m3uName)
         val xtreamNameFrame = inputFrame(xtreamName)
         m3uFields.addView(m3uNameFrame, 0, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(7) })
         xtreamFields.addView(xtreamNameFrame, 0, LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
+        m3uFields.gravity = Gravity.TOP
+        xtreamFields.gravity = Gravity.TOP
 
         val cardHeight = dp(300)
         val m3uCard = makeSourceCard("▤  M3U / M3U8", m3u.id, editSource?.mode != "xtream", m3uFields)
@@ -1648,11 +1665,17 @@ class MainActivity : Activity() {
             AlertDialog.Builder(this).setTitle("Kaynaklar").setMessage("Henüz kayıtlı kaynak yok.")
                 .setPositiveButton("Kaynak ekle") { _, _ -> showConnectionDialog() }.setNegativeButton("Kapat", null).show(); return
         }
-        val labels = savedSources.map { "${it.name} • ${if (it.mode == "xtream") "Xtream" else "M3U"}" }.toTypedArray()
+        val labels = savedSources.map { "${it.name} • ${when (it.mode) { "xtream" -> "Xtream"; "mac" -> "MAC Portal"; else -> "M3U" }}" }.toTypedArray()
         AlertDialog.Builder(this).setTitle("Kayıtlı kaynaklar").setItems(labels) { _, which ->
             val s = savedSources[which]
             AlertDialog.Builder(this).setTitle(s.name).setItems(arrayOf("Yenile", "Sil")) { _, action ->
-                if (action == 0) { if (s.mode == "xtream") loadXtream(s, true) else loadM3u(s, true) }
+                if (action == 0) {
+                    when (s.mode) {
+                        "xtream" -> loadXtream(s, true)
+                        "mac" -> Toast.makeText(this, "MAC Portal kaynak bilgileri kayıtlı; yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
+                        else -> loadM3u(s, true)
+                    }
+                }
                 else { savedSources.removeAll { it.id == s.id }; persistSources(); items.removeAll { it.sourceId == s.id }; render() }
             }.setNegativeButton(t("İptal"), null).show()
         }.setPositiveButton("Kaynak ekle") { _, _ -> showConnectionDialog() }.setNegativeButton("Kapat", null).show()
