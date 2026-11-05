@@ -2563,11 +2563,9 @@ class MainActivity : Activity() {
             rootLayout.setPadding(if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(14),
                 if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(12))
         }
-        window.decorView.systemUiVisibility = if (detailMode) (
-            View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-        ) else View.SYSTEM_UI_FLAG_VISIBLE
+        // Keep the app immersive after every render/focus-driven UI refresh.
+        // Setting SYSTEM_UI_FLAG_VISIBLE here caused system bars to reappear on selection.
+        applyKaiserImmersiveMode()
         if (::heroPanel.isInitialized) heroPanel.visibility = View.GONE
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
