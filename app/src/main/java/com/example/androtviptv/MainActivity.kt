@@ -4227,7 +4227,7 @@ class MainActivity : Activity() {
                                     focusedCategoryName = null
                                     if (source.mode == "xtream") loadXtream(source, false)
                                     else if (source.mode == "mac") {
-                                        Toast.makeText(this, "MAC Portal yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(this@MainActivity, "MAC Portal yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
                                         render()
                                     } else loadM3u(source, false)
                                 } else {
