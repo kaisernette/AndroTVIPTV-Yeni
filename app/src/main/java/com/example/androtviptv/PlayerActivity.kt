@@ -523,22 +523,21 @@ class PlayerActivity : Activity() {
                     return super.dispatchKeyEvent(event)
                 }
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    // Up/down are navigation keys, never channel-zap keys.
+                    // Keep list movement only while the channel chooser itself is open.
                     if (channelOverlay != null && channelUrls.isNotEmpty()) {
                         highlightedChannelIndex = (highlightedChannelIndex +
                             if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
                             .coerceIn(0, channelUrls.lastIndex)
                         refreshChannelHighlight()
-                        return true
-                    }
-                    if (isLiveStream && channelUrls.isNotEmpty() && !trackMenuOpen) {
-                        val next = (selectedChannelIndex +
-                            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) 1 else -1)
-                            .let { if (it < 0) channelUrls.lastIndex else if (it > channelUrls.lastIndex) 0 else it }
-                        tuneChannel(next)
                         showPlaybackControls()
                         return true
                     }
                     showPlaybackControls()
+                    if (currentFocus == null) {
+                        playButtonView()?.requestFocus()
+                        return true
+                    }
                     return super.dispatchKeyEvent(event)
                 }
                 KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
