@@ -132,6 +132,28 @@ class MainActivity : Activity() {
         }
         val common = mapOf(
             "en" to mapOf("Kaynak ekle ve kayıtlı bağlantılarını buradan yönet." to "Add and manage your saved connections here.",
+                "Henüz içerik yok" to "No content yet",
+                "Cihaz dili" to "Device language",
+                "Menü" to "Menu",
+                "Buton" to "Button",
+                "Arkaplan" to "Background",
+                "Şeffaf Menü" to "Transparent Menu",
+                "Köşe biçimi" to "Corner style",
+                "Zemin görünümü" to "Background style",
+                "Açık" to "On",
+                "Kapalı" to "Off",
+                "Köşeli" to "Rounded",
+                "Oval" to "Oval",
+                "Düz" to "Solid",
+                "Gradyan" to "Gradient",
+                "Seçili tema" to "Selected theme",
+                "Zemin ve vurgu rengi" to "Background and accent color",
+                "Orman • Zümrüt" to "Forest • Emerald",
+                "Gece • Yakut" to "Night • Ruby",
+                "Gece • Lavanta" to "Night • Lavender",
+                "Antrasit • Mavi" to "Anthracite • Blue",
+                "Gece • Altın" to "Night • Gold",
+                "Gece • Buzul" to "Night • Glacier",
                 "Daha önce izlediğin içerikler" to "Previously watched content",
                 "Önce içerik seç." to "Select content first.",
                 "Geçmiş zaten boş." to "History is already empty.",
@@ -1544,7 +1566,7 @@ class MainActivity : Activity() {
         val m3uCard = makeSourceCard("▤  M3U / M3U8", m3u.id, editSource?.mode != "xtream", m3uFields)
         val xtreamCard = makeSourceCard("▣  Xtream Codes", xtream.id, editSource?.mode == "xtream", xtreamFields)
         val macCard = makeSourceCard("▱  MAC Portal", -1, false, macFields, true)
-        listOf(m3uCard, xtreamCard, macCard).forEach { card ->
+        listOf(m3uCard, macCard, xtreamCard).forEach { card ->
             columns.addView(card, LinearLayout.LayoutParams(0, cardHeight, 1f).apply {
                 setMargins(dp(3), dp(3), dp(3), dp(3))
             })
@@ -4098,7 +4120,7 @@ class MainActivity : Activity() {
             "language" -> {
                 val currentLanguage = prefs.getString("app_language", "system") ?: "system"
                 val languageOptions = listOf(
-                    Triple("system", "Cihaz dili", "🌐"),
+                    Triple("system", t("Cihaz dili"), "🌐"),
                     Triple("tr", "Türkçe", "🇹🇷"),
                     Triple("en", "English", "🇬🇧"),
                     Triple("de", "Deutsch", "🇩🇪"),
@@ -4544,7 +4566,7 @@ class MainActivity : Activity() {
                             maxLines = 2
                         })
                         card.addView(TextView(this).apply {
-                            text = if (isSelected) "✓  Seçili tema" else t("Zemin ve vurgu rengi")
+                            text = if (isSelected) "✓  ${t("Seçili tema")}" else t("Zemin ve vurgu rengi")
                             textSize = 12f
                             setTextColor(theme.third)
                             setPadding(0, dp(5), 0, 0)
@@ -4619,7 +4641,7 @@ class MainActivity : Activity() {
                     addView(options)
                 }
                 settingsRow.addView(settingCard(
-                    "Menü", "Şeffaf Menü", "Açık", "Kapalı", transparentMenu,
+                    t("Menü"), t("Şeffaf Menü"), "Açık", "Kapalı", transparentMenu,
                     {
                         transparentMenu = true
                         prefs.edit().putBoolean("transparent_menu", true).apply()
@@ -4634,7 +4656,7 @@ class MainActivity : Activity() {
                     }
                 ), LinearLayout.LayoutParams(0, dp(142), 1f).apply { setMargins(dp(4), dp(10), dp(4), dp(6)) })
                 settingsRow.addView(settingCard(
-                    "Buton", "Köşe biçimi", "Köşeli", "Oval", !ovalButtons,
+                    t("Buton"), t("Köşe biçimi"), "Köşeli", "Oval", !ovalButtons,
                     {
                         ovalButtons = false
                         prefs.edit().putBoolean("oval_buttons", false).apply()
@@ -4647,7 +4669,7 @@ class MainActivity : Activity() {
                     }
                 ), LinearLayout.LayoutParams(0, dp(142), 1f).apply { setMargins(dp(4), dp(10), dp(4), dp(6)) })
                 settingsRow.addView(settingCard(
-                    "Arkaplan", "Zemin görünümü", "Düz", "Gradyan", !gradientBackground,
+                    t("Arkaplan"), t("Zemin görünümü"), "Düz", "Gradyan", !gradientBackground,
                     {
                         gradientBackground = false
                         prefs.edit().putBoolean("gradient_background", false).apply()
@@ -4785,7 +4807,7 @@ class MainActivity : Activity() {
                     }, LinearLayout.LayoutParams(-1, dp(58)).apply { bottomMargin = dp(5) })
                     if (entries.isEmpty()) {
                         column.addView(TextView(this).apply {
-                            text = "Henüz içerik yok"
+                            text = t("Henüz içerik yok")
                             textSize = 13f
                             setTextColor(muted)
                             gravity = Gravity.CENTER
