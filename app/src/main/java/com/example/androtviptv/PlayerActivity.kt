@@ -112,6 +112,8 @@ class PlayerActivity : Activity() {
     private var trackControlsView: View? = null
     private var progressControlsView: View? = null
     private var contentInfoView: TextView? = null
+    private var subtitleButtonView: View? = null
+    private var audioButtonView: View? = null
 
     private fun updateContentInfo() {
         val baseTitle = intent.getStringExtra("name")?.takeIf { it.isNotBlank() } ?: "Oynatıcı"
@@ -320,20 +322,25 @@ class PlayerActivity : Activity() {
                 other?.visibility = View.GONE
                 panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
                 if (panel.visibility == View.VISIBLE) {
-                    panel.requestFocus()
                     showPlaybackControls()
+                    val options = (panel.tag as? Pair<*, *>)?.second as? LinearLayout
+                    options?.getChildAt(0)?.post { options.getChildAt(0)?.requestFocus() }
                 }
             }
         }
         val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.BOTTOM }
-        fun addTrackColumn(label: String, panel: LinearLayout) {
+        fun addTrackColumn(panel: LinearLayout, button: View) {
             val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM }
             column.addView(panel, LinearLayout.LayoutParams(dp(248), dp(220)).apply { bottomMargin = dp(7) })
-            column.addView(trackButton(label, panel), LinearLayout.LayoutParams(dp(248), dp(52)))
+            column.addView(button, LinearLayout.LayoutParams(dp(248), dp(52)))
             right.addView(column, LinearLayout.LayoutParams(dp(254), -2).apply { setMargins(dp(3), 0, dp(3), 0) })
         }
-        addTrackColumn("▣  Altyazı", subtitlePanel!!)
-        addTrackColumn("◖  Ses Dili", audioPanel!!)
+        val subtitleButton = trackButton("▣  Altyazı", subtitlePanel!!)
+        val audioButton = trackButton("◖  Ses Dili", audioPanel!!)
+        subtitleButtonView = subtitleButton
+        audioButtonView = audioButton
+        addTrackColumn(subtitlePanel!!, subtitleButton)
+        addTrackColumn(audioPanel!!, audioButton)
         root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
         trackControlsView = right
 
@@ -536,24 +543,25 @@ class PlayerActivity : Activity() {
                         return true
                     }
                     showPlaybackControls()
-                    val direction = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
                     val focusedView = currentFocus
-                    if (focusedView == null || focusedView === playerView) {
-                        playButtonView()?.requestFocus()
-                        return true
-                    }
-                    // Move focus explicitly between the visible playback controls.
-                    val nextFocus = focusedView.focusSearch(direction)
-                    if (nextFocus != null && nextFocus !== playerView &&
-                        nextFocus.isShown && nextFocus.isFocusable) {
-                        nextFocus.requestFocus()
-                        return true
-                    }
-                    // Keep navigation usable at row boundaries.
-                    if (direction == View.FOCUS_UP) {
-                        playButtonView()?.requestFocus()
-                    } else {
-                        progressBar?.requestFocus()
+                    val trackMenuOpen = subtitlePanel?.visibility == View.VISIBLE || audioPanel?.visibility == View.VISIBLE
+                    if (trackMenuOpen) return super.dispatchKeyEvent(event)
+                    val centerRow = centerControlsView as? ViewGroup
+                    val isCenterControl = centerRow != null && (0 until centerRow.childCount).any { centerRow.getChildAt(it) === focusedView }
+                    val isTrackButton = focusedView === subtitleButtonView || focusedView === audioButtonView
+                    when {
+                        focusedView == null || focusedView === playerView -> playButtonView()?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && isCenterControl -> audioButtonView?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && isTrackButton -> playButtonView()?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && isTrackButton -> progressBar?.requestFocus()
+                        event.keyCode == KeyEvent.KEYCODE_DPAD_UP && focusedView === progressBar -> audioButtonView?.requestFocus()
+                        else -> {
+                            val direction = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
+                            val next = focusedView?.focusSearch(direction)
+                            if (next != null && next !== playerView && next.isShown && next.isFocusable) next.requestFocus()
+                            else if (direction == View.FOCUS_UP) playButtonView()?.requestFocus()
+                            else progressBar?.requestFocus()
+                        }
                     }
                     return true
                 }
