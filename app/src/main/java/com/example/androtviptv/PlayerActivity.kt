@@ -274,7 +274,7 @@ class PlayerActivity : Activity() {
             }
             elevation = dp(14).toFloat()
         }
-        root.addView(panel, FrameLayout.LayoutParams(-1, dp(326), Gravity.BOTTOM).apply {
+        root.addView(panel, FrameLayout.LayoutParams(-1, dp(410), Gravity.BOTTOM).apply {
             setMargins(dp(42), 0, dp(42), dp(24))
         })
 
@@ -305,7 +305,7 @@ class PlayerActivity : Activity() {
             setPadding(0, dp(8), 0, dp(12))
         }
         fun roundControl(symbol: String, label: String, big: Boolean = false, action: () -> Unit) = TextView(this).apply {
-            text = if (label.isBlank()) symbol else "$symbol\\n$label"
+            text = if (label.isBlank()) symbol else "$symbol\n$label"
             textSize = if (big) 28f else 20f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
@@ -347,6 +347,16 @@ class PlayerActivity : Activity() {
             val h = if (i == 2) 82 else 68
             centerControls.addView(button, LinearLayout.LayoutParams(dp(w), dp(h)).apply { setMargins(dp(12), 0, dp(12), 0) })
         }
+        val centerButtons = listOf(previousControl, rewindControl, playControl, forwardControl, nextControl)
+        centerButtons.forEachIndexed { index, button ->
+            button.id = View.generateViewId()
+            button.nextFocusLeftId = centerButtons[(index - 1).coerceAtLeast(0)].id
+            button.nextFocusRightId = centerButtons[(index + 1).coerceAtMost(centerButtons.lastIndex)].id
+            button.nextFocusDownId = progressBar?.id ?: View.NO_ID
+        }
+        progressBar?.id = View.generateViewId()
+        centerButtons.forEach { it.nextFocusDownId = progressBar!!.id }
+        progressBar?.nextFocusUpId = playControl.id
         panel.addView(centerControls, LinearLayout.LayoutParams(-1, dp(112)))
         centerControlsView = centerControls
 
@@ -438,6 +448,14 @@ class PlayerActivity : Activity() {
         }
         subtitleButtonView = subtitleButton
         audioButtonView = audioButton
+        val optionButtons = listOf(subtitleButton, audioButton, speedButton, screenButton)
+        optionButtons.forEachIndexed { index, button ->
+            button.id = View.generateViewId()
+            button.nextFocusLeftId = optionButtons[(index - 1).coerceAtLeast(0)].id
+            button.nextFocusRightId = optionButtons[(index + 1).coerceAtMost(optionButtons.lastIndex)].id
+            button.nextFocusUpId = progressBar?.id ?: View.NO_ID
+        }
+        progressBar?.nextFocusDownId = subtitleButton.id
         val optionStack = FrameLayout(this)
         optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(66), Gravity.BOTTOM))
         optionStack.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6); bottomMargin = dp(72) })
@@ -957,7 +975,8 @@ class PlayerActivity : Activity() {
             fun add(label: String, group: Tracks.Group? = null, index: Int? = null, disabled: Boolean = false) {
                 options.addView(TextView(this).apply {
                     text = label; textSize = 14f; gravity = Gravity.CENTER_VERTICAL; setTextColor(Color.WHITE)
-                    setPadding(dp(8), dp(7), dp(8), dp(7)); isFocusable = true; isClickable = true
+                    setPadding(dp(8), dp(7), dp(8), dp(7)); isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+                    id = View.generateViewId()
                     background = GradientDrawable().apply { cornerRadius = dp(8).toFloat(); setColor(if (label == "Otomatik") 0xFF087FCA.toInt() else Color.TRANSPARENT) }
                     setOnClickListener {
                         val exo = player ?: return@setOnClickListener
