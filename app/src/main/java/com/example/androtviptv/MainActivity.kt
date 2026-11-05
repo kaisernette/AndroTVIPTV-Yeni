@@ -435,7 +435,114 @@ class MainActivity : Activity() {
                 "Kaynak yüklenemedi. İnternet bağlantınızı ve kaynak bilgilerini kontrol edin." to "تعذر تحميل المصدر. تحقق من الاتصال وبيانات المصدر."
             )
         )
-        return translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: value
+        // Complete translations for shared UI labels used across every settings and history screen.
+        val sharedUiTranslations = when (language) {
+            "de" -> mapOf(
+                "Henüz içerik yok" to "Noch keine Inhalte vorhanden", "Daha önce izlediğin içerikler" to "Zuvor angesehene Inhalte",
+                "Seçileni Sil" to "Ausgewählte löschen", "Geçmişi Sil" to "Verlauf löschen", "Cihaz dili" to "Gerätesprache",
+                "Menü" to "Menü", "Buton" to "Schaltfläche", "Arkaplan" to "Hintergrund", "Şeffaf Menü" to "Transparentes Menü",
+                "Köşe biçimi" to "Eckenform", "Zemin görünümü" to "Hintergrunddarstellung", "Açık" to "Ein", "Kapalı" to "Aus",
+                "Köşeli" to "Abgerundet", "Oval" to "Oval", "Düz" to "Einfarbig", "Gradyan" to "Verlauf",
+                "Seçili tema" to "Ausgewähltes Design", "Zemin ve vurgu rengi" to "Hintergrund- und Akzentfarbe",
+                "Orman • Zümrüt" to "Wald • Smaragd", "Gece • Yakut" to "Nacht • Rubin", "Gece • Lavanta" to "Nacht • Lavendel",
+                "Antrasit • Mavi" to "Anthrazit • Blau", "Gece • Altın" to "Nacht • Gold", "Gece • Buzul" to "Nacht • Gletscher",
+                "Kaynak adı (ör. Ev TV)" to "Quellenname (z. B. Zuhause TV)", "Kaynak adı (ör. Ev Portal)" to "Quellenname (z. B. Zuhause Portal)",
+                "Portal URL (https://...)" to "Portal-URL (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "MAC-Adresse (00:1A:79:XX:XX:XX)",
+                "KAYNAKLAR" to "QUELLEN", "Kaynak adı girin" to "Quellennamen eingeben", "İzleme kaynağını ekleyerek başla" to "Beginne mit dem Hinzufügen einer Quelle",
+                "Önce içerik seç." to "Wähle zuerst einen Inhalt aus.", "Geçmiş zaten boş." to "Der Verlauf ist bereits leer.",
+                "Tüm izleme geçmişi silinsin mi?" to "Den gesamten Wiedergabeverlauf löschen?", "Kaynak ve içerikleri silinsin mi?" to "Diese Quelle und ihre Inhalte löschen?",
+                "Kaynak ekle" to "Quelle hinzufügen", "Bağlan" to "Verbinden", "Kaydet" to "Speichern", "İptal" to "Abbrechen",
+                "Düzenle" to "Bearbeiten", "Sil" to "Löschen", "Yenile" to "Aktualisieren", "Kapat" to "Schließen",
+                "No content yet" to "Noch keine Inhalte vorhanden"
+            )
+            "fr" -> mapOf(
+                "Henüz içerik yok" to "Aucun contenu pour le moment", "Daha önce izlediğin içerikler" to "Contenus regardés précédemment",
+                "Seçileni Sil" to "Supprimer la sélection", "Geçmişi Sil" to "Effacer l’historique", "Cihaz dili" to "Langue de l’appareil",
+                "Menü" to "Menu", "Buton" to "Bouton", "Arkaplan" to "Arrière-plan", "Şeffaf Menü" to "Menu transparent",
+                "Köşe biçimi" to "Forme des coins", "Zemin görünümü" to "Style d’arrière-plan", "Açık" to "Activé", "Kapalı" to "Désactivé",
+                "Köşeli" to "Arrondi", "Oval" to "Ovale", "Düz" to "Uni", "Gradyan" to "Dégradé",
+                "Seçili tema" to "Thème sélectionné", "Zemin ve vurgu rengi" to "Arrière-plan et couleur d’accent",
+                "Orman • Zümrüt" to "Forêt • Émeraude", "Gece • Yakut" to "Nuit • Rubis", "Gece • Lavanta" to "Nuit • Lavande",
+                "Antrasit • Mavi" to "Anthracite • Bleu", "Gece • Altın" to "Nuit • Or", "Gece • Buzul" to "Nuit • Glacier",
+                "Kaynak adı (ör. Ev TV)" to "Nom de la source (ex. TV maison)", "Kaynak adı (ör. Ev Portal)" to "Nom de la source (ex. Portail maison)",
+                "Portal URL (https://...)" to "URL du portail (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "Adresse MAC (00:1A:79:XX:XX:XX)",
+                "KAYNAKLAR" to "SOURCES", "Kaynak adı girin" to "Saisir le nom de la source", "İzleme kaynağını ekleyerek başla" to "Commencez par ajouter une source",
+                "Önce içerik seç." to "Sélectionnez d’abord un contenu.", "Geçmiş zaten boş." to "L’historique est déjà vide.",
+                "Tüm izleme geçmişi silinsin mi?" to "Supprimer tout l’historique de lecture ?", "Kaynak ve içerikleri silinsin mi?" to "Supprimer cette source et son contenu ?",
+                "Kaynak ekle" to "Ajouter une source", "Bağlan" to "Connecter", "Kaydet" to "Enregistrer", "İptal" to "Annuler",
+                "Düzenle" to "Modifier", "Sil" to "Supprimer", "Yenile" to "Actualiser", "Kapat" to "Fermer"
+            )
+            "it" -> mapOf(
+                "Henüz içerik yok" to "Nessun contenuto", "Daha önce izlediğin içerikler" to "Contenuti guardati in precedenza",
+                "Seçileni Sil" to "Elimina selezionati", "Geçmişi Sil" to "Cancella cronologia", "Cihaz dili" to "Lingua del dispositivo",
+                "Menü" to "Menu", "Buton" to "Pulsante", "Arkaplan" to "Sfondo", "Şeffaf Menü" to "Menu trasparente",
+                "Köşe biçimi" to "Forma degli angoli", "Zemin görünümü" to "Stile dello sfondo", "Açık" to "Attivo", "Kapalı" to "Disattivo",
+                "Köşeli" to "Arrotondato", "Oval" to "Ovale", "Düz" to "Tinta unita", "Gradyan" to "Sfumatura",
+                "Seçili tema" to "Tema selezionato", "Zemin ve vurgu rengi" to "Sfondo e colore di accento",
+                "Orman • Zümrüt" to "Foresta • Smeraldo", "Gece • Yakut" to "Notte • Rubino", "Gece • Lavanta" to "Notte • Lavanda",
+                "Antrasit • Mavi" to "Antracite • Blu", "Gece • Altın" to "Notte • Oro", "Gece • Buzul" to "Notte • Ghiacciaio",
+                "Kaynak adı (ör. Ev TV)" to "Nome sorgente (es. TV casa)", "Kaynak adı (ör. Ev Portal)" to "Nome sorgente (es. Portale casa)",
+                "Portal URL (https://...)" to "URL del portale (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "Indirizzo MAC (00:1A:79:XX:XX:XX)",
+                "KAYNAKLAR" to "SORGENTI", "Kaynak adı girin" to "Inserisci il nome della sorgente", "İzleme kaynağını ekleyerek başla" to "Inizia aggiungendo una sorgente",
+                "Önce içerik seç." to "Seleziona prima un contenuto.", "Geçmiş zaten boş." to "La cronologia è già vuota.",
+                "Tüm izleme geçmişi silinsin mi?" to "Eliminare tutta la cronologia?", "Kaynak ve içerikleri silinsin mi?" to "Eliminare questa sorgente e i suoi contenuti?",
+                "Kaynak ekle" to "Aggiungi sorgente", "Bağlan" to "Connetti", "Kaydet" to "Salva", "İptal" to "Annulla",
+                "Düzenle" to "Modifica", "Sil" to "Elimina", "Yenile" to "Aggiorna", "Kapat" to "Chiudi"
+            )
+            "es" -> mapOf(
+                "Henüz içerik yok" to "Aún no hay contenido", "Daha önce izlediğin içerikler" to "Contenido visto anteriormente",
+                "Seçileni Sil" to "Eliminar seleccionados", "Geçmişi Sil" to "Borrar historial", "Cihaz dili" to "Idioma del dispositivo",
+                "Menü" to "Menú", "Buton" to "Botón", "Arkaplan" to "Fondo", "Şeffaf Menü" to "Menú transparente",
+                "Köşe biçimi" to "Forma de las esquinas", "Zemin görünümü" to "Estilo del fondo", "Açık" to "Activado", "Kapalı" to "Desactivado",
+                "Köşeli" to "Redondeado", "Oval" to "Ovalado", "Düz" to "Liso", "Gradyan" to "Degradado",
+                "Seçili tema" to "Tema seleccionado", "Zemin ve vurgu rengi" to "Fondo y color de acento",
+                "Orman • Zümrüt" to "Bosque • Esmeralda", "Gece • Yakut" to "Noche • Rubí", "Gece • Lavanta" to "Noche • Lavanda",
+                "Antrasit • Mavi" to "Antracita • Azul", "Gece • Altın" to "Noche • Oro", "Gece • Buzul" to "Noche • Glaciar",
+                "Kaynak adı (ör. Ev TV)" to "Nombre de fuente (p. ej., TV casa)", "Kaynak adı (ör. Ev Portal)" to "Nombre de fuente (p. ej., Portal casa)",
+                "Portal URL (https://...)" to "URL del portal (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "Dirección MAC (00:1A:79:XX:XX:XX)",
+                "KAYNAKLAR" to "FUENTES", "Kaynak adı girin" to "Introduce el nombre de la fuente", "İzleme kaynağını ekleyerek başla" to "Empieza añadiendo una fuente",
+                "Önce içerik seç." to "Selecciona primero un contenido.", "Geçmiş zaten boş." to "El historial ya está vacío.",
+                "Tüm izleme geçmişi silinsin mi?" to "¿Eliminar todo el historial?", "Kaynak ve içerikleri silinsin mi?" to "¿Eliminar esta fuente y su contenido?",
+                "Kaynak ekle" to "Añadir fuente", "Bağlan" to "Conectar", "Kaydet" to "Guardar", "İptal" to "Cancelar",
+                "Düzenle" to "Editar", "Sil" to "Eliminar", "Yenile" to "Actualizar", "Kapat" to "Cerrar"
+            )
+            "ru" -> mapOf(
+                "Henüz içerik yok" to "Пока нет контента", "Daha önce izlediğin içerikler" to "Ранее просмотренный контент",
+                "Seçileni Sil" to "Удалить выбранное", "Geçmişi Sil" to "Очистить историю", "Cihaz dili" to "Язык устройства",
+                "Menü" to "Меню", "Buton" to "Кнопка", "Arkaplan" to "Фон", "Şeffaf Menü" to "Прозрачное меню",
+                "Köşe biçimi" to "Форма углов", "Zemin görünümü" to "Стиль фона", "Açık" to "Вкл.", "Kapalı" to "Выкл.",
+                "Köşeli" to "Скруглённые", "Oval" to "Овальные", "Düz" to "Сплошной", "Gradyan" to "Градиент",
+                "Seçili tema" to "Выбранная тема", "Zemin ve vurgu rengi" to "Цвет фона и акцента",
+                "Orman • Zümrüt" to "Лес • Изумруд", "Gece • Yakut" to "Ночь • Рубин", "Gece • Lavanta" to "Ночь • Лаванда",
+                "Antrasit • Mavi" to "Антрацит • Синий", "Gece • Altın" to "Ночь • Золото", "Gece • Buzul" to "Ночь • Ледник",
+                "Kaynak adı (ör. Ev TV)" to "Имя источника (например, Дом ТВ)", "Kaynak adı (ör. Ev Portal)" to "Имя источника (например, Домашний портал)",
+                "Portal URL (https://...)" to "URL портала (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "MAC-адрес (00:1A:79:XX:XX:XX)",
+                "KAYNAKLAR" to "ИСТОЧНИКИ", "Kaynak adı girin" to "Введите имя источника", "İzleme kaynağını ekleyerek başla" to "Начните с добавления источника",
+                "Önce içerik seç." to "Сначала выберите контент.", "Geçmiş zaten boş." to "История уже пуста.",
+                "Tüm izleme geçmişi silinsin mi?" to "Удалить всю историю просмотров?", "Kaynak ve içerikleri silinsin mi?" to "Удалить этот источник и его содержимое?",
+                "Kaynak ekle" to "Добавить источник", "Bağlan" to "Подключить", "Kaydet" to "Сохранить", "İptal" to "Отмена",
+                "Düzenle" to "Изменить", "Sil" to "Удалить", "Yenile" to "Обновить", "Kapat" to "Закрыть"
+            )
+            "ar" -> mapOf(
+                "Henüz içerik yok" to "لا يوجد محتوى بعد", "Daha önce izlediğin içerikler" to "المحتوى الذي تمت مشاهدته سابقاً",
+                "Seçileni Sil" to "حذف المحدد", "Geçmişi Sil" to "مسح السجل", "Cihaz dili" to "لغة الجهاز",
+                "Menü" to "القائمة", "Buton" to "زر", "Arkaplan" to "الخلفية", "Şeffaf Menü" to "قائمة شفافة",
+                "Köşe biçimi" to "شكل الزوايا", "Zemin görünümü" to "نمط الخلفية", "Açık" to "تشغيل", "Kapalı" to "إيقاف",
+                "Köşeli" to "مستدير", "Oval" to "بيضاوي", "Düz" to "لون موحد", "Gradyan" to "تدرج",
+                "Seçili tema" to "السمة المحددة", "Zemin ve vurgu rengi" to "لون الخلفية والإبراز",
+                "Orman • Zümrüt" to "الغابة • الزمرد", "Gece • Yakut" to "الليل • الياقوت", "Gece • Lavanta" to "الليل • اللافندر",
+                "Antrasit • Mavi" to "فحمي • أزرق", "Gece • Altın" to "الليل • ذهبي", "Gece • Buzul" to "الليل • جليدي",
+                "Kaynak adı (ör. Ev TV)" to "اسم المصدر (مثال: تلفاز المنزل)", "Kaynak adı (ör. Ev Portal)" to "اسم المصدر (مثال: بوابة المنزل)",
+                "Portal URL (https://...)" to "رابط البوابة (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "عنوان MAC (00:1A:79:XX:XX:XX)",
+                "KAYNAKLAR" to "المصادر", "Kaynak adı girin" to "أدخل اسم المصدر", "İzleme kaynağını ekleyerek başla" to "ابدأ بإضافة مصدر",
+                "Önce içerik seç." to "اختر محتوى أولاً.", "Geçmiş zaten boş." to "السجل فارغ بالفعل.",
+                "Tüm izleme geçmişi silinsin mi?" to "هل تريد حذف سجل المشاهدة بالكامل؟", "Kaynak ve içerikleri silinsin mi?" to "هل تريد حذف هذا المصدر ومحتواه؟",
+                "Kaynak ekle" to "إضافة مصدر", "Bağlan" to "اتصال", "Kaydet" to "حفظ", "İptal" to "إلغاء",
+                "Düzenle" to "تعديل", "Sil" to "حذف", "Yenile" to "تحديث", "Kapat" to "إغلاق"
+            )
+            else -> emptyMap()
+        }
+        return translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
     }
     private val posterExecutor = Executors.newFixedThreadPool(3)
     private val posterCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
