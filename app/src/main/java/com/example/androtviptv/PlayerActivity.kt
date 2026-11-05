@@ -430,8 +430,7 @@ class PlayerActivity : Activity() {
             val current = player?.playbackParameters?.speed ?: 1f
             val next = speeds.firstOrNull { it > current + 0.01f } ?: speeds.first()
             player?.setPlaybackSpeed(next)
-            (it as? View)?.contentDescription = "Oynatma hızı $next"
-            (speedButtonText)?.text = "Hız"
+            android.widget.Toast.makeText(this, "Oynatma hızı: " + next + "x", android.widget.Toast.LENGTH_SHORT).show()
         }
         val screenButton = optionButton("Ekran", "Tam ekran") { applyPlayerImmersiveMode() }
         listOf(subtitleButton, audioButton, speedButton, screenButton).forEachIndexed { i, button ->
