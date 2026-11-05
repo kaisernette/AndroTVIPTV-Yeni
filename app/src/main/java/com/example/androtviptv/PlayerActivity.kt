@@ -17,7 +17,11 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.SeekBar
 import androidx.media3.common.MediaItem
+import androidx.media3.common.C
+import androidx.media3.common.Tracks
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.MimeTypes
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.common.PlaybackException
@@ -36,29 +40,23 @@ class PlayerActivity : Activity() {
         @Volatile var pendingEpisodeNames: List<String> = emptyList()
         @Volatile var pendingEpisodeUrls: List<String> = emptyList()
         @Volatile var pendingEpisodeIndex: Int = 0
-        @Volatile var pendingSeriesTitle: String = ""
-        @Volatile var pendingSeriesKey: String = ""
     }
 
     private var player: ExoPlayer? = null
+    private var episodeNames: List<String> = emptyList()
+    private var episodeUrls: List<String> = emptyList()
+    private var selectedEpisodeIndex: Int = 0
     private var resumeKey: String = ""
     private var currentStreamUrl: String = ""
     private var originalStreamUrl: String = ""
     private var triedHlsFallback: Boolean = false
     private var usingHlsFallback: Boolean = false
     private var isLiveStream: Boolean = false
-    private var bufferMode: String = "normal"
-    private var aspectMode: String = "fit"
-    private var resumeEnabled: Boolean = true
-    private var startOverRequested: Boolean = false
     private var retryCount = 0
     private var bufferingSinceMs = 0L
     private var lastStablePlaybackMs = 0L
     private var lastObservedPositionMs = -1L
     private var positionStalledSinceMs = 0L
-    private var reconnectPending = false
-    private var reconnectTimeoutRunnable: Runnable? = null
-    private var idleSinceMs = 0L
     private val playbackHandler = Handler(Looper.getMainLooper())
     private val playbackWatchdog = object : Runnable {
         override fun run() {
@@ -67,7 +65,7 @@ class PlayerActivity : Activity() {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (exo.playbackState == Player.STATE_BUFFERING) {
                     if (bufferingSinceMs == 0L) bufferingSinceMs = now
-                    if (now - bufferingSinceMs >= 12000L && !reconnectPending) {
+                    if (now - bufferingSinceMs >= 18000L) {
                         restartCurrentStream("Yayın akışı 18 saniyeden uzun süre bekledi.")
                     }
                 } else if (exo.playbackState == Player.STATE_READY) {
@@ -75,7 +73,7 @@ class PlayerActivity : Activity() {
                     val position = exo.currentPosition
                     if (lastObservedPositionMs >= 0L && position <= lastObservedPositionMs) {
                         if (positionStalledSinceMs == 0L) positionStalledSinceMs = now
-                        if (now - positionStalledSinceMs >= 8000L && !reconnectPending) {
+                        if (now - positionStalledSinceMs >= 12000L) {
                             restartCurrentStream("Oynatma konumu 12 saniyedir ilerlemiyor.")
                         }
                     } else {
@@ -87,19 +85,12 @@ class PlayerActivity : Activity() {
                         retryCount = 0
                         lastStablePlaybackMs = now
                     }
-                } else if (exo.playbackState == Player.STATE_IDLE && isLiveStream) {
-                    if (idleSinceMs == 0L) idleSinceMs = now
-                    if (now - idleSinceMs >= 8000L && !reconnectPending) {
-                        restartCurrentStream("Canlı yayın oynatıcı boşta kaldı.")
-                    }
                 } else {
-                    idleSinceMs = 0L
                     bufferingSinceMs = 0L
                     positionStalledSinceMs = 0L
                     lastObservedPositionMs = -1L
                 }
             } else {
-                idleSinceMs = 0L
                 positionStalledSinceMs = 0L
                 lastObservedPositionMs = -1L
             }
@@ -107,6 +98,29 @@ class PlayerActivity : Activity() {
         }
     }
     private var playerView: PlayerView? = null
+    private var currentTracks: Tracks = Tracks.EMPTY
+    private var subtitlePanel: LinearLayout? = null
+    private var audioPanel: LinearLayout? = null
+    private var progressBar: SeekBar? = null
+    private var elapsedLabel: TextView? = null
+    private var durationLabel: TextView? = null
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private val uiTicker = object : Runnable {
+        override fun run() {
+            val exo = player
+            val bar = progressBar
+            if (exo != null && bar != null && exo.duration > 0 && !isLiveStream) {
+                bar.max = exo.duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                bar.progress = exo.currentPosition.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                elapsedLabel?.text = formatTime(exo.currentPosition)
+                durationLabel?.text = " •  " + formatTime(exo.duration)
+            } else if (isLiveStream) {
+                elapsedLabel?.text = "CANLI"
+                durationLabel?.text = ""
+            }
+            uiHandler.postDelayed(this, 500L)
+        }
+    }
     private var channelOverlay: LinearLayout? = null
     private var channelRows: List<String> = emptyList()
     private var channelUrls: List<String> = emptyList()
@@ -115,12 +129,6 @@ class PlayerActivity : Activity() {
     private var recentChannelRows: List<String> = emptyList()
     private var recentChannelUrls: List<String> = emptyList()
     private var overlayIsRecent = false
-    private var episodeNames: List<String> = emptyList()
-    private var episodeUrls: List<String> = emptyList()
-    private var episodeIndex = 0
-    private var seriesTitle = ""
-    private var seriesResumeKey = ""
-    private var currentContentTitle = "Oynatıcı"
     private var savedChannelRows: List<String> = emptyList()
     private var savedChannelUrls: List<String> = emptyList()
     private val playbackPrefs by lazy { getSharedPreferences("androtv_playback", Context.MODE_PRIVATE) }
@@ -146,13 +154,9 @@ class PlayerActivity : Activity() {
     }
 
     private fun savePlaybackPosition() {
-        if (isLiveStream || !resumeEnabled) return
+        if (isLiveStream) return
         val exo = player ?: return
         val pos = exo.currentPosition.coerceAtLeast(0L)
-        if (episodeUrls.isNotEmpty() && seriesResumeKey.isNotBlank()) {
-            episodeIndex = exo.currentMediaItemIndex.coerceIn(0, episodeUrls.lastIndex)
-            playbackPrefs.edit().putInt("last_episode_$seriesResumeKey", episodeIndex).apply()
-        }
         if (exo.duration > 0 && pos >= exo.duration - 5000L) {
             playbackPrefs.edit().remove(resumeKey).apply()
         } else if (pos > 3000L) {
@@ -162,18 +166,7 @@ class PlayerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val title = intent.getStringExtra("name") ?: "Oynatıcı"
-        currentContentTitle = title
         val url = intent.getStringExtra("url") ?: run { finish(); return }
-        episodeNames = pendingEpisodeNames
-        episodeUrls = pendingEpisodeUrls
-        episodeIndex = pendingEpisodeIndex.coerceIn(0, (episodeUrls.size - 1).coerceAtLeast(0))
-        seriesTitle = pendingSeriesTitle
-        seriesResumeKey = pendingSeriesKey
-        pendingEpisodeNames = emptyList()
-        pendingEpisodeUrls = emptyList()
-        pendingEpisodeIndex = 0
-        pendingSeriesTitle = ""
-        pendingSeriesKey = ""
         channelRows = pendingChannelNames
         channelUrls = pendingChannelUrls
         selectedChannelIndex = pendingChannelIndex.coerceIn(0, (channelUrls.size - 1).coerceAtLeast(0))
@@ -184,30 +177,117 @@ class PlayerActivity : Activity() {
         pendingChannelUrls = emptyList()
         pendingRecentChannelNames = emptyList()
         pendingRecentChannelUrls = emptyList()
+        episodeNames = pendingEpisodeNames
+        episodeUrls = pendingEpisodeUrls
+        selectedEpisodeIndex = pendingEpisodeIndex.coerceIn(0, (episodeUrls.size - 1).coerceAtLeast(0))
+        pendingEpisodeNames = emptyList()
+        pendingEpisodeUrls = emptyList()
+        pendingEpisodeIndex = 0
         pendingChannelIndex = 0
         currentStreamUrl = url.trim()
         originalStreamUrl = currentStreamUrl
         triedHlsFallback = false
         usingHlsFallback = false
         isLiveStream = intent.getBooleanExtra("isLive", false)
-        bufferMode = intent.getStringExtra("bufferMode") ?: "normal"
-        aspectMode = intent.getStringExtra("aspectMode") ?: "fit"
-        resumeEnabled = intent.getBooleanExtra("resumeEnabled", true)
-        startOverRequested = intent.getBooleanExtra("startOver", false)
         resumeKey = "position_" + url.hashCode().toString()
-        if (isLiveStream || !resumeEnabled || startOverRequested) playbackPrefs.edit().remove(resumeKey).apply()
+        if (isLiveStream) playbackPrefs.edit().remove(resumeKey).apply()
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val view = PlayerView(this).apply {
-            resizeMode = if (aspectMode == "fill") androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
-            useController = true
+            useController = false
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
             isFocusable = true
             isFocusableInTouchMode = true
         }
         playerView = view
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
+        val shade = View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x22000000, 0x00000000, 0x99000000.toInt()))
+        }
+        root.addView(shade, FrameLayout.LayoutParams(-1, -1))
+        val centerControls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        fun roundControl(symbol: String, big: Boolean = false, action: () -> Unit) = TextView(this).apply {
+            text = symbol; textSize = if (big) 30f else 26f; gravity = Gravity.CENTER
+            setTextColor(Color.WHITE); isFocusable = true; isClickable = true
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x66101824); setStroke(dp(if (big) 2 else 1), if (big) 0xFF079BE8.toInt() else 0x889AA7B8.toInt()) }
+            setOnClickListener { action() }
+        }
+        val previousControl = roundControl("|◀") {
+            if (isLiveStream && channelUrls.isNotEmpty()) {
+                tuneChannel((selectedChannelIndex - 1).let { if (it < 0) channelUrls.lastIndex else it })
+            } else if (episodeUrls.isNotEmpty()) {
+                val current = player?.currentMediaItemIndex ?: selectedEpisodeIndex
+                playEpisodeAt(current - 1)
+            } else player?.seekToPreviousMediaItem()
+        }
+        val rewindControl = roundControl("↶") { player?.seekBack() }
+        val playControl = roundControl("Ⅱ", true) { player?.let { if (it.isPlaying) it.pause() else it.play() } }
+        val forwardControl = roundControl("↷") { player?.seekForward() }
+        val nextControl = roundControl("▶|") {
+            if (isLiveStream && channelUrls.isNotEmpty()) {
+                tuneChannel((selectedChannelIndex + 1) % channelUrls.size)
+            } else if (episodeUrls.isNotEmpty()) {
+                val current = player?.currentMediaItemIndex ?: selectedEpisodeIndex
+                playEpisodeAt(current + 1)
+            } else player?.seekToNextMediaItem()
+        }
+        listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEachIndexed { i, button ->
+            val size = if (i == 2) 84 else 68
+            centerControls.addView(button, LinearLayout.LayoutParams(dp(size), dp(size)).apply { setMargins(dp(6), 0, dp(6), 0) })
+        }
+        root.addView(centerControls, FrameLayout.LayoutParams(-2, dp(100), Gravity.CENTER))
+
+        fun createTrackPanel(type: Int): LinearLayout {
+            val panel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(8), dp(8), dp(8))
+                background = GradientDrawable().apply { setColor(0xDD101722.toInt()); cornerRadius = dp(14).toFloat(); setStroke(dp(1), 0xFF079BE8.toInt()) }
+                visibility = View.GONE
+            }
+            panel.addView(TextView(this).apply {
+                text = if (type == C.TRACK_TYPE_TEXT) "▣   Altyazı" else "◖   Ses Dili"
+                textSize = 15f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); setPadding(dp(4), dp(2), dp(4), dp(7))
+            })
+            val options = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            val scroll = ScrollView(this).apply { isVerticalScrollBarEnabled = false; addView(options) }
+            panel.addView(scroll, LinearLayout.LayoutParams(-1, dp(174)))
+            panel.tag = Pair(type, options)
+            return panel
+        }
+        subtitlePanel = createTrackPanel(C.TRACK_TYPE_TEXT)
+        audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
+        val panels = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        panels.addView(subtitlePanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
+        panels.addView(audioPanel, LinearLayout.LayoutParams(dp(126), dp(220)).apply { setMargins(dp(3), 0, dp(3), dp(7)) })
+        val right = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(panels) }
+        val trackButtons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        fun trackButton(label: String, panel: LinearLayout) = TextView(this).apply {
+            text = label; textSize = 15f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); isFocusable = true; isClickable = true
+            background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(0x99101824.toInt()); setStroke(dp(1), 0xFF079BE8.toInt()) }
+            setOnClickListener { val other = if (panel === subtitlePanel) audioPanel else subtitlePanel; other?.visibility = View.GONE; panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+        }
+        trackButtons.addView(trackButton("▣  Altyazı", subtitlePanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
+        trackButtons.addView(trackButton("◖  Ses Dili", audioPanel!!), LinearLayout.LayoutParams(dp(126), dp(52)).apply { setMargins(dp(3), 0, dp(3), 0) })
+        right.addView(trackButtons)
+        root.addView(right, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.BOTTOM).apply { setMargins(0, 0, dp(20), dp(18)) })
+
+        val bottom = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        progressBar = SeekBar(this).apply {
+            progressTintList = android.content.res.ColorStateList.valueOf(0xFF079BE8.toInt())
+            thumbTintList = android.content.res.ColorStateList.valueOf(0xFF079BE8.toInt())
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) { if (fromUser) elapsedLabel?.text = formatTime(value.toLong()) }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) { player?.seekTo(seekBar?.progress?.toLong() ?: 0L) }
+            })
+        }
+        bottom.addView(progressBar, LinearLayout.LayoutParams(-1, dp(28)))
+        val times = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        elapsedLabel = TextView(this).apply { text = "00:00"; textSize = 14f; setTextColor(Color.WHITE) }
+        durationLabel = TextView(this).apply { text = " •  00:00"; textSize = 14f; setTextColor(0xFFB8BEC8.toInt()) }
+        times.addView(elapsedLabel); times.addView(durationLabel); bottom.addView(times)
+        root.addView(bottom, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM).apply { setMargins(dp(24), 0, dp(24), dp(88)) })
         view.post {
             val controlIds = intArrayOf(
                 androidx.media3.ui.R.id.exo_play,
@@ -227,20 +307,12 @@ class PlayerActivity : Activity() {
                 control.setOnFocusChangeListener { focusedView, hasFocus ->
                     focusedView.background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dp(10).toFloat()
-                        setColor(if (hasFocus) 0x553399FF else Color.TRANSPARENT)
-                        if (hasFocus) setStroke(dp(3), playerAccentColor())
+                        cornerRadius = dp(8).toFloat()
+                        setColor(if (hasFocus) 0x3329B6F6 else Color.TRANSPARENT)
+                        if (hasFocus) setStroke(dp(2), 0xFF29B6F6.toInt())
                     }
-                    focusedView.scaleX = if (hasFocus) 1.12f else 1f
-                    focusedView.scaleY = if (hasFocus) 1.12f else 1f
-                    focusedView.elevation = if (hasFocus) dp(14).toFloat() else 0f
+                    focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
                 }
-            }
-            (view.findViewById<View>(androidx.media3.ui.R.id.exo_progress) as? androidx.media3.ui.DefaultTimeBar)?.let { bar ->
-                bar.setPlayedColor(playerAccentColor())
-                bar.setScrubberColor(playerAccentColor())
-                bar.setBufferedColor(0xAAFFFFFF.toInt())
-                bar.setUnplayedColor(0x665B6472)
             }
         }
         setContentView(root)
@@ -252,22 +324,16 @@ class PlayerActivity : Activity() {
         try {
             val httpFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent("KaiserTv+/3.0 (Android TV)")
-                .setConnectTimeoutMs(10000)
-                .setReadTimeoutMs(18000)
+                .setConnectTimeoutMs(15000)
+                .setReadTimeoutMs(30000)
                 .setAllowCrossProtocolRedirects(true)
             val mediaSourceFactory = DefaultMediaSourceFactory(this)
                 .setDataSourceFactory(httpFactory)
             val mediaItem = createStreamMediaItem(currentStreamUrl)
             val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
                 .setEnableDecoderFallback(true)
-            // Moderate live-TV buffering balances resilience, startup delay and memory use.
-            val bufferDurations = when (bufferMode) {
-                "low" -> intArrayOf(8000, 30000, 1000, 3500)
-                "high" -> intArrayOf(25000, 60000, 2500, 7000)
-                else -> intArrayOf(15000, 45000, 1500, 5000)
-            }
             val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(bufferDurations[0], bufferDurations[1], bufferDurations[2], bufferDurations[3])
+                .setBufferDurationsMs(30000, 90000, 2500, 7000)
                 .build()
             player = ExoPlayer.Builder(this, renderersFactory)
                 .setMediaSourceFactory(mediaSourceFactory)
@@ -275,15 +341,21 @@ class PlayerActivity : Activity() {
                 .build().also { exo ->
                     view.player = exo
                     exo.addListener(object : Player.Listener {
+                        override fun onTracksChanged(tracks: Tracks) { currentTracks = tracks; refreshTrackChoices() }
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                            if (episodeUrls.isNotEmpty()) {
-                                episodeIndex = exo.currentMediaItemIndex.coerceIn(0, episodeUrls.lastIndex)
-                                currentContentTitle = episodeNames.getOrNull(episodeIndex) ?: "Bölüm ${episodeIndex + 1}"
-                                currentStreamUrl = episodeUrls.getOrNull(episodeIndex) ?: currentStreamUrl
-                                originalStreamUrl = currentStreamUrl
-                                resumeKey = "position_" + currentStreamUrl.hashCode().toString()
+                            if (!isLiveStream && episodeUrls.isNotEmpty()) {
+                                val index = exo.currentMediaItemIndex
+                                if (index in episodeUrls.indices) {
+                                    selectedEpisodeIndex = index
+                                    currentStreamUrl = episodeUrls[index]
+                                    originalStreamUrl = currentStreamUrl
+                                    resumeKey = "position_" + currentStreamUrl.hashCode().toString()
+                                    triedHlsFallback = false
+                                    usingHlsFallback = false
+                                }
                             }
                         }
+                        override fun onIsPlayingChanged(isPlaying: Boolean) { playControl.text = if (isPlaying) "Ⅱ" else "▶" }
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && isLiveStream) {
                                 val cleanUrl = currentStreamUrl.substringBefore("?").lowercase()
@@ -293,10 +365,10 @@ class PlayerActivity : Activity() {
                                     currentStreamUrl = toHlsFallbackUrl(currentStreamUrl) ?: currentStreamUrl
                                     retryCount = 0
                                     android.util.Log.w("KaiserTVPlayer", "Live TS stream ended; trying HLS URL")
-                                    restartCurrentStream("Canlı yayın için alternatif akış deneniyor.", force = true)
+                                    restartCurrentStream("Canlı yayın için alternatif akış deneniyor.")
                                 } else {
-                                    android.util.Log.w("KaiserTVPlayer", "Live stream reported ended; forcing reconnect")
-                                    restartCurrentStream("Canlı yayın akışı sona ermiş göründü; yeniden bağlanılıyor.", force = true)
+                                    android.util.Log.w("KaiserTVPlayer", "Live stream ended unexpectedly; reconnecting")
+                                    restartCurrentStream("Canlı yayın sona erdi gibi görünüyor.")
                                 }
                                 return
                             }
@@ -304,13 +376,7 @@ class PlayerActivity : Activity() {
                                 if (bufferingSinceMs == 0L) bufferingSinceMs = android.os.SystemClock.elapsedRealtime()
                             } else if (playbackState == Player.STATE_READY) {
                                 bufferingSinceMs = 0L
-                                idleSinceMs = 0L
-                                reconnectTimeoutRunnable?.let { playbackHandler.removeCallbacks(it) }
-                                reconnectTimeoutRunnable = null
-                                reconnectPending = false
                                 if (lastStablePlaybackMs == 0L) lastStablePlaybackMs = android.os.SystemClock.elapsedRealtime()
-                            } else if (playbackState == Player.STATE_IDLE) {
-                                if (idleSinceMs == 0L) idleSinceMs = android.os.SystemClock.elapsedRealtime()
                             }
                         }
                         override fun onPlayerError(error: PlaybackException) {
@@ -324,20 +390,21 @@ class PlayerActivity : Activity() {
                             restartCurrentStream("Akış hatası: ${error.errorCodeName}")
                         }
                     })
-                    if (!isLiveStream && episodeUrls.size > 1) {
-                        val seasonPlaylist = episodeUrls.map { createStreamMediaItem(it) }
-                        exo.setMediaItems(seasonPlaylist, episodeIndex, 0L)
+                    val resumePosition = if (isLiveStream) 0L else playbackPrefs.getLong(resumeKey, 0L)
+                    if (episodeUrls.isNotEmpty()) {
+                        val queue = episodeUrls.map { createStreamMediaItem(it) }
+                        exo.setMediaItems(queue, selectedEpisodeIndex, resumePosition)
                     } else {
                         exo.setMediaItem(mediaItem)
                     }
-                    val resumePosition = if (isLiveStream || startOverRequested) 0L else playbackPrefs.getLong(resumeKey, 0L)
                     exo.prepare()
-                    if (resumePosition > 5000L) exo.seekTo(resumePosition)
                     exo.playWhenReady = true
                 }
             playbackHandler.removeCallbacks(playbackWatchdog)
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
             if (channelUrls.size > 1) view.requestFocus()
+            refreshTrackChoices()
+            uiHandler.post(uiTicker)
         } catch (e: Exception) {
             player?.release()
             player = null
@@ -405,7 +472,7 @@ class PlayerActivity : Activity() {
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(14), dp(14), dp(14))
-            background = GradientDrawable().apply { setColor(0xD91A2030.toInt()); cornerRadius = 0f; setStroke(dp(1), 0xAADEB55B.toInt()) }
+            background = GradientDrawable().apply { setColor(0xD91A2030.toInt()); cornerRadius = dp(16).toFloat(); setStroke(dp(1), 0xAADEB55B.toInt()) }
             elevation = dp(12).toFloat()
         }
         panel.addView(TextView(this).apply { text = "CANLI KANALLAR"; textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); setPadding(dp(4), dp(2), dp(4), dp(10)) })
@@ -443,105 +510,37 @@ class PlayerActivity : Activity() {
 
     private fun channelRowBackground(highlighted: Boolean) = GradientDrawable().apply {
         setColor(if (highlighted) 0xAADEB55B.toInt() else 0x33000000)
-        cornerRadius = 0f
+        cornerRadius = dp(8).toFloat()
         if (highlighted) setStroke(dp(1), 0xFFDEB55B.toInt())
     }
 
-    private fun createFreshLivePlayer(): ExoPlayer {
-        val httpFactory = DefaultHttpDataSource.Factory()
-            .setUserAgent("KaiserTv+/3.0 (Android TV)")
-            .setConnectTimeoutMs(10000)
-            .setReadTimeoutMs(18000)
-            .setAllowCrossProtocolRedirects(true)
-        val mediaSourceFactory = DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(httpFactory)
-        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
-            .setEnableDecoderFallback(true)
-        val durations = when (bufferMode) {
-            "low" -> intArrayOf(8000, 30000, 1000, 3500)
-            "high" -> intArrayOf(25000, 60000, 2500, 7000)
-            else -> intArrayOf(15000, 45000, 1500, 5000)
-        }
-        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(durations[0], durations[1], durations[2], durations[3])
-            .build()
-        return ExoPlayer.Builder(this, renderersFactory)
-            .setMediaSourceFactory(mediaSourceFactory)
-            .setLoadControl(loadControl)
-            .build().also { fresh ->
-                fresh.addListener(object : Player.Listener {
-                    override fun onPlaybackStateChanged(state: Int) {
-                        if (state == Player.STATE_READY) {
-                            bufferingSinceMs = 0L
-                            idleSinceMs = 0L
-                            reconnectTimeoutRunnable?.let { playbackHandler.removeCallbacks(it) }
-                            reconnectTimeoutRunnable = null
-                            reconnectPending = false
-                            lastObservedPositionMs = -1L
-                            positionStalledSinceMs = 0L
-                            lastStablePlaybackMs = android.os.SystemClock.elapsedRealtime()
-                        }
-                    }
-                    override fun onPlayerError(error: PlaybackException) {
-                        android.util.Log.e("KaiserTVPlayer", "Fresh player playback error: ${error.errorCodeName}", error)
-                        restartCurrentStream("Yeniden açılan oynatıcıda akış hatası: ${error.errorCodeName}", force = true)
-                    }
-                })
-            }
-    }
-
-    private fun restartCurrentStream(reason: String, force: Boolean = false) {
+    private fun restartCurrentStream(reason: String) {
         val exo = player ?: return
-        if (currentStreamUrl.isBlank() || isFinishing || !isLiveStream ||
-            (!exo.playWhenReady && !force) || reconnectPending) return
-
-        // A live stream may be incorrectly reported as ENDED (for example, a short TS segment).
-        // In that case force playback intent back on and reconnect even if ExoPlayer cleared it.
-        val shouldResume = exo.playWhenReady || force
-
-        // Retry automatically with capped backoff; do not stop after three attempts.
-        retryCount = (retryCount + 1).coerceAtMost(10)
-        reconnectPending = true
+        if (currentStreamUrl.isBlank() || isFinishing || retryCount >= 3) {
+            if (retryCount >= 3) {
+                android.widget.Toast.makeText(this, "Yayın birkaç kez yeniden bağlanamadı. Kanalı tekrar seçmeyi dene.", android.widget.Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        retryCount++
         bufferingSinceMs = android.os.SystemClock.elapsedRealtime()
-        idleSinceMs = 0L
         positionStalledSinceMs = 0L
         lastObservedPositionMs = -1L
-        val delayMs = (1500L * (1L shl (retryCount - 1).coerceAtMost(4))).coerceAtMost(20000L)
-        android.util.Log.w("KaiserTVPlayer", "$reason Otomatik yeniden bağlanma denemesi $retryCount")
-        if (retryCount == 1 || retryCount % 3 == 0) {
-            android.widget.Toast.makeText(this, "Yayın yeniden bağlanıyor…", android.widget.Toast.LENGTH_SHORT).show()
-        }
+        android.util.Log.w("KaiserTVPlayer", "$reason Yeniden bağlanma denemesi $retryCount/3")
+        android.widget.Toast.makeText(this, "Yayın yeniden bağlanıyor… ($retryCount/3)", android.widget.Toast.LENGTH_SHORT).show()
         playbackHandler.postDelayed({
-            if (!isFinishing && player === exo && shouldResume && isLiveStream) {
+            if (!isFinishing && player === exo) {
                 try {
-                    // Release the failed playback session and create a new ExoPlayer instance.
-                    playerView?.player = null
-                    exo.release()
-                    val fresh = createFreshLivePlayer()
-                    player = fresh
-                    playerView?.player = fresh
-                    fresh.setMediaItem(createStreamMediaItem(currentStreamUrl))
-                    fresh.playWhenReady = true
-                    fresh.prepare()
-                    reconnectTimeoutRunnable?.let { playbackHandler.removeCallbacks(it) }
-                    reconnectTimeoutRunnable = Runnable {
-                        if (reconnectPending && !isFinishing && player === fresh) {
-                            reconnectPending = false
-                            android.util.Log.w("KaiserTVPlayer", "Fresh player did not reach READY; retrying")
-                            restartCurrentStream("Yayın bağlantısı zaman aşımına uğradı.", force = true)
-                        }
-                    }
-                    playbackHandler.postDelayed(reconnectTimeoutRunnable!!, 25000L)
+                    exo.setMediaItem(createStreamMediaItem(currentStreamUrl))
+                    exo.prepare()
+                    exo.playWhenReady = true
                 } catch (e: Exception) {
                     android.util.Log.e("KaiserTVPlayer", "Reconnect failed", e)
-                    reconnectPending = false
-                    restartCurrentStream("Yeniden bağlantı başlatılamadı.", force = true)
                 }
-            } else {
-                reconnectPending = false
             }
-        }, delayMs)
+        }, 1200L)
     }
+
     private fun tuneChannel(index: Int) {
         if (index !in channelUrls.indices) return
         val url = channelUrls[index]
@@ -551,11 +550,7 @@ class PlayerActivity : Activity() {
         triedHlsFallback = false
         usingHlsFallback = false
         retryCount = 0
-        reconnectTimeoutRunnable?.let { playbackHandler.removeCallbacks(it) }
-        reconnectTimeoutRunnable = null
-        reconnectPending = false
         bufferingSinceMs = 0L
-        idleSinceMs = 0L
         lastStablePlaybackMs = 0L
         resumeKey = "position_" + url.hashCode().toString()
         player?.let { exo -> exo.setMediaItem(createStreamMediaItem(url)); exo.prepare(); exo.playWhenReady = true }
@@ -578,26 +573,79 @@ class PlayerActivity : Activity() {
         playerView?.requestFocus()
     }
 
-    private fun playerAccentColor(): Int {
-        return when (getSharedPreferences("androtv", Context.MODE_PRIVATE).getString("theme_name", "Dark Cinematic")) {
-            "Gece • Altın" -> Color.rgb(224, 184, 95)
-            "Lacivert • Turkuaz" -> Color.rgb(35, 205, 190)
-            "Koyu • Mor" -> Color.rgb(174, 115, 255)
-            else -> Color.rgb(0, 145, 255)
+
+    private fun playEpisodeAt(index: Int) {
+        val exo = player ?: return
+        if (episodeUrls.isEmpty() || index !in episodeUrls.indices) {
+            android.widget.Toast.makeText(
+                this,
+                if (index < 0) "Bu sezonun ilk bölümündesin." else "Bu sezonun son bölümündesin.",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
         }
+        if (exo.mediaItemCount != episodeUrls.size) {
+            val queue = episodeUrls.map { createStreamMediaItem(it) }
+            exo.setMediaItems(queue, index, 0L)
+            exo.prepare()
+        } else {
+            exo.seekTo(index, 0L)
+        }
+        selectedEpisodeIndex = index
+        currentStreamUrl = episodeUrls[index]
+        originalStreamUrl = currentStreamUrl
+        resumeKey = "position_" + currentStreamUrl.hashCode().toString()
+        triedHlsFallback = false
+        usingHlsFallback = false
+        exo.playWhenReady = true
+        exo.play()
+    }
+
+    private fun formatTime(ms: Long): String {
+        val seconds = (ms / 1000L).coerceAtLeast(0L)
+        return String.format(java.util.Locale.US, "%02d:%02d", seconds / 60L, seconds % 60L)
+    }
+
+    private fun refreshTrackChoices() {
+        fun fill(panel: LinearLayout?, type: Int) {
+            val target = panel ?: return
+            val options = (target.tag as? Pair<*, *>)?.second as? LinearLayout ?: return
+            options.removeAllViews()
+            fun add(label: String, group: Tracks.Group? = null, index: Int? = null, disabled: Boolean = false) {
+                options.addView(TextView(this).apply {
+                    text = label; textSize = 14f; gravity = Gravity.CENTER_VERTICAL; setTextColor(Color.WHITE)
+                    setPadding(dp(8), dp(7), dp(8), dp(7)); isFocusable = true; isClickable = true
+                    background = GradientDrawable().apply { cornerRadius = dp(8).toFloat(); setColor(if (label == "Otomatik") 0xFF087FCA.toInt() else Color.TRANSPARENT) }
+                    setOnClickListener {
+                        val exo = player ?: return@setOnClickListener
+                        val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(type).setTrackTypeDisabled(type, disabled)
+                        if (group != null && index != null) { builder.setTrackTypeDisabled(type, false); builder.setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index)) }
+                        exo.trackSelectionParameters = builder.build()
+                        target.visibility = View.GONE
+                    }
+                }, LinearLayout.LayoutParams(-1, dp(35)))
+            }
+            add("Otomatik")
+            if (type == C.TRACK_TYPE_TEXT) add("Kapalı", disabled = true)
+            var count = 0
+            currentTracks.groups.forEach { group ->
+                if (group.type != type) return@forEach
+                for (i in 0 until group.length) {
+                    val format = group.getTrackFormat(i)
+                    val language = format.language?.takeIf { it.isNotBlank() && it != "und" }
+                    val label = format.label?.takeIf { it.isNotBlank() } ?: language?.let { java.util.Locale.forLanguageTag(it).getDisplayLanguage(java.util.Locale("tr")) } ?: if (type == C.TRACK_TYPE_TEXT) "Altyazı ${count + 1}" else "Ses ${count + 1}"
+                    add(label, group, i); count++
+                }
+            }
+            if (count == 0) options.addView(TextView(this).apply { text = "Yayın parçası bulunamadı"; textSize = 12f; setTextColor(0xFFC5CCD6.toInt()); setPadding(dp(6), dp(8), dp(6), dp(8)) })
+        }
+        fill(subtitlePanel, C.TRACK_TYPE_TEXT)
+        fill(audioPanel, C.TRACK_TYPE_AUDIO)
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    override fun onResume() {
-        super.onResume()
-        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-    }
-    override fun onPause() {
-        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        savePlaybackPosition()
-        super.onPause()
-    }
+    override fun onPause() { savePlaybackPosition(); super.onPause() }
     override fun onStop() { savePlaybackPosition(); player?.pause(); super.onStop() }
-    override fun onDestroy() { playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
+    override fun onDestroy() { uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
 }
