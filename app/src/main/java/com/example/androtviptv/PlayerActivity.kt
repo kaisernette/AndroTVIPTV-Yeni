@@ -111,6 +111,19 @@ class PlayerActivity : Activity() {
     private var centerControlsView: View? = null
     private var trackControlsView: View? = null
     private var progressControlsView: View? = null
+    private var contentInfoView: TextView? = null
+
+    private fun updateContentInfo() {
+        val baseTitle = intent.getStringExtra("name")?.takeIf { it.isNotBlank() } ?: "Oynatıcı"
+        val title = if (isLiveStream) {
+            baseTitle
+        } else {
+            val episode = episodeNames.getOrNull(selectedEpisodeIndex)
+            if (episode != null && episode.isNotBlank() && episode != baseTitle) "$baseTitle  ·  $episode" else baseTitle
+        }
+        contentInfoView?.text = title
+        contentInfoView?.visibility = if (controlsVisible) View.VISIBLE else View.GONE
+    }
     private var controlsHideTask = Runnable { setPlaybackControlsVisible(false) }
     private var controlsVisible = true
 
@@ -119,6 +132,7 @@ class PlayerActivity : Activity() {
         centerControlsView?.visibility = if (visible) View.VISIBLE else View.GONE
         trackControlsView?.visibility = if (visible) View.VISIBLE else View.GONE
         progressControlsView?.visibility = if (visible) View.VISIBLE else View.GONE
+        contentInfoView?.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
     private fun showPlaybackControls() {
@@ -231,6 +245,22 @@ class PlayerActivity : Activity() {
         }
         root.addView(shade, FrameLayout.LayoutParams(-1, -1))
         controlsRoot = root
+        contentInfoView = TextView(this).apply {
+            text = title
+            textSize = 20f
+            maxLines = 2
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(0x99101824.toInt())
+                setStroke(dp(1), 0x66079BE8)
+            }
+        }
+        root.addView(contentInfoView, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.LEFT).apply {
+            setMargins(dp(24), dp(22), dp(24), 0)
+        })
         val centerControls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         fun roundControl(symbol: String, big: Boolean = false, action: () -> Unit) = TextView(this).apply {
             text = symbol; textSize = if (big) 30f else 26f; gravity = Gravity.CENTER
@@ -352,6 +382,7 @@ class PlayerActivity : Activity() {
             }
         }
         setContentView(root)
+        updateContentInfo()
         root.isClickable = true
         root.setOnClickListener { showPlaybackControls() }
         showPlaybackControls()
@@ -386,6 +417,7 @@ class PlayerActivity : Activity() {
                                 val index = exo.currentMediaItemIndex
                                 if (index in episodeUrls.indices) {
                                     selectedEpisodeIndex = index
+                                    updateContentInfo()
                                     currentStreamUrl = episodeUrls[index]
                                     originalStreamUrl = currentStreamUrl
                                     resumeKey = "position_" + currentStreamUrl.hashCode().toString()
