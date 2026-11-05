@@ -337,6 +337,16 @@ class PlayerActivity : Activity() {
         }
         val subtitleButton = trackButton("▣  Altyazı", subtitlePanel!!)
         val audioButton = trackButton("◖  Ses Dili", audioPanel!!)
+        listOf(subtitleButton, audioButton).forEach { button ->
+            button.setOnFocusChangeListener { focused, hasFocus ->
+                focused.background = GradientDrawable().apply {
+                    cornerRadius = dp(14).toFloat()
+                    setColor(if (hasFocus) 0xFF087FCA.toInt() else 0x99101824.toInt())
+                    setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) 0xFF29B6F6.toInt() else 0xFF079BE8.toInt())
+                }
+                focused.elevation = if (hasFocus) dp(8).toFloat() else 0f
+            }
+        }
         subtitleButtonView = subtitleButton
         audioButtonView = audioButton
         addTrackColumn(subtitlePanel!!, subtitleButton)
@@ -530,6 +540,17 @@ class PlayerActivity : Activity() {
                         return true
                     }
                     return super.dispatchKeyEvent(event)
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    val focusedView = currentFocus
+                    if (focusedView === subtitleButtonView && event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                        audioButtonView?.requestFocus()
+                        return true
+                    }
+                    if (focusedView === audioButtonView && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                        subtitleButtonView?.requestFocus()
+                        return true
+                    }
                 }
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
                     // Up/down are navigation keys, never channel-zap keys.
