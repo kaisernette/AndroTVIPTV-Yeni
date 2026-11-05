@@ -1728,8 +1728,8 @@ class MainActivity : Activity() {
         )
         // Keep the content panel visibly darker than the shell, but not near-black.
         // A 0.68 multiplier preserves each theme's hue while improving poster-area contrast.
-        val darkBase = shade(base, 0.68f)
-        val darkBlend = shade(blend, 0.68f)
+        val darkBase = shade(base, 0.74f)
+        val darkBlend = shade(blend, 0.74f)
         val contentSurface = if (gradientBackground) {
             GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(darkBase, darkBlend, darkBase))
         } else {
@@ -2567,6 +2567,12 @@ class MainActivity : Activity() {
             mainContentScroll.post { mainContentScroll.scrollTo(0, 0) }
         }
         val detailMode = detailSeries != null || detailMovie != null
+        // Reapply the selected theme surfaces on every normal tab render.
+        // Previously only the Live TV category branch refreshed them, leaving
+        // Movies, Series, Favorites and Search with stale near-black panels.
+        if (!detailMode && ::rootLayout.isInitialized && ::mainContentScroll.isInitialized) {
+            applyThemeSurfaces()
+        }
         content.setPadding(
             if (detailMode) 0 else dp(18),
             if (detailMode) 0 else dp(18),
