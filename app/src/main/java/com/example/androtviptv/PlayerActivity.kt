@@ -973,19 +973,45 @@ class PlayerActivity : Activity() {
             val options = (target.tag as? Pair<*, *>)?.second as? LinearLayout ?: return
             options.removeAllViews()
             fun add(label: String, group: Tracks.Group? = null, index: Int? = null, disabled: Boolean = false) {
-                options.addView(TextView(this).apply {
-                    text = label; textSize = 14f; gravity = Gravity.CENTER_VERTICAL; setTextColor(Color.WHITE)
-                    setPadding(dp(8), dp(7), dp(8), dp(7)); isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+                val option = TextView(this).apply {
+                    text = label
+                    textSize = 14f
+                    gravity = Gravity.CENTER_VERTICAL
+                    setTextColor(Color.WHITE)
+                    setPadding(dp(10), dp(7), dp(10), dp(7))
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    isClickable = true
                     id = View.generateViewId()
-                    background = GradientDrawable().apply { cornerRadius = dp(8).toFloat(); setColor(if (label == "Otomatik") 0xFF087FCA.toInt() else Color.TRANSPARENT) }
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(8).toFloat()
+                        setColor(if (label == "Otomatik") 0xFF123D60.toInt() else Color.TRANSPARENT)
+                    }
+                    setOnFocusChangeListener { focusedView, hasFocus ->
+                        focusedView.background = GradientDrawable().apply {
+                            cornerRadius = dp(8).toFloat()
+                            setColor(if (hasFocus) 0xFF087FCA.toInt() else if (label == "Otomatik") 0xFF123D60.toInt() else Color.TRANSPARENT)
+                            if (hasFocus) setStroke(dp(2), 0xFF8CCBFF.toInt())
+                        }
+                        focusedView.elevation = if (hasFocus) dp(5).toFloat() else 0f
+                    }
                     setOnClickListener {
                         val exo = player ?: return@setOnClickListener
-                        val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(type).setTrackTypeDisabled(type, disabled)
-                        if (group != null && index != null) { builder.setTrackTypeDisabled(type, false); builder.setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index)) }
+                        val builder = exo.trackSelectionParameters.buildUpon()
+                            .clearOverridesOfType(type)
+                            .setTrackTypeDisabled(type, disabled)
+                        if (group != null && index != null) {
+                            builder.setTrackTypeDisabled(type, false)
+                            builder.setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index))
+                        }
                         exo.trackSelectionParameters = builder.build()
                         target.visibility = View.GONE
+                        if (type == C.TRACK_TYPE_TEXT) subtitleButtonView?.requestFocus()
+                        else audioButtonView?.requestFocus()
+                        showPlaybackControls()
                     }
-                }, LinearLayout.LayoutParams(-1, dp(35)))
+                }
+                options.addView(option, LinearLayout.LayoutParams(-1, dp(40)))
             }
             add("Otomatik")
             if (type == C.TRACK_TYPE_TEXT) add("Kapalı", disabled = true)
