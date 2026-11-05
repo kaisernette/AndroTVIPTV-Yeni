@@ -442,13 +442,15 @@ class MainActivity : Activity() {
     private var transparentMenu = true
     private var ovalButtons = false
     private var gradientBackground = false
+    private var selectedCategorySourceId = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         ovalButtons = prefs.getBoolean("oval_buttons", false)
-        gradientBackground = prefs.getBoolean("gradient_background", false)
+        gradientBackground = prefs.getBoolean("gradient_background", true)
+        if (!prefs.contains("gradient_background")) prefs.edit().putBoolean("gradient_background", true).apply()
         // Restore the selected KaiserTV Global theme before constructing any views.
         if (!prefs.getBoolean("global_themes_initialized", false)) {
             prefs.edit().putString("theme_name", "Antrasit • Mavi").putBoolean("global_themes_initialized", true).apply()
@@ -1152,7 +1154,45 @@ class MainActivity : Activity() {
             if (::categoryPanel.isInitialized && selectedType in listOf("Filmler", "Diziler", "Canlı TV")) {
                 // Apply the same hidden-category rules to the sidebar category column
                 // as the content grid, so hidden TV/movie/series groups disappear everywhere.
-                val categorySourceId = prefs.getString("last_source_id", "") ?: ""
+                val allowedSourceIds = prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()
+                val availableCategorySources = savedSources.filter { source ->
+                    (allowedSourceIds.isEmpty() || allowedSourceIds.contains(source.id)) &&
+                        items.any { it.sourceId == source.id && it.type == selectedType }
+                }
+                if (availableCategorySources.size > 1) {
+                    categoryPanel.addView(TextView(this).apply {
+                        text = t("KAYNAKLAR")
+                        textSize = 11f; setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(muted); setPadding(dp(8), 0, 0, dp(8))
+                    })
+                    availableCategorySources.forEach { source ->
+                        val sourceButton = TextView(this).apply {
+                            text = source.name
+                            textSize = 13f
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            setTextColor(if (source.id == selectedCategorySourceId) Color.WHITE else muted)
+                            gravity = Gravity.CENTER_VERTICAL
+                            setPadding(dp(10), dp(8), dp(6), dp(8))
+                            minHeight = dp(40)
+                            isFocusable = true
+                            isClickable = true
+                            background = if (source.id == selectedCategorySourceId) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            setOnClickListener {
+                                selectedCategorySourceId = source.id
+                                selectedGroup = "Tüm kategoriler"
+                                expandedCategory = null
+                                focusedCategoryName = null
+                                render()
+                            }
+                        }
+                        sourceButton.id = View.generateViewId()
+                        categoryPanel.addView(sourceButton, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            setMargins(0, dp(1), 0, dp(1))
+                        })
+                    }
+                }
+                val categorySourceId = selectedCategorySourceId
                 val categoryItems = items.filter {
                     it.type == selectedType &&
                     (categorySourceId.isBlank() || it.sourceId == categorySourceId) &&
@@ -2782,10 +2822,17 @@ class MainActivity : Activity() {
         }
         val selectedSourceIds = prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()
         val activeSourceId = prefs.getString("last_source_id", "") ?: ""
-        val activeSourceItems = if (selectedSourceIds.size > 1) items.filter { selectedSourceIds.contains(it.sourceId) }
+        val activeSourceItemsBase = if (selectedSourceIds.size > 1) items.filter { selectedSourceIds.contains(it.sourceId) }
             else if (selectedSourceIds.size == 1) items.filter { it.sourceId == selectedSourceIds.first() }
             else if (activeSourceId.isBlank()) items.toList()
             else items.filter { it.sourceId == activeSourceId }
+        if (selectedCategorySourceId.isBlank() || activeSourceItemsBase.none { it.sourceId == selectedCategorySourceId }) {
+            selectedCategorySourceId = activeSourceId.takeIf { id -> activeSourceItemsBase.any { it.sourceId == id } }
+                ?: activeSourceItemsBase.firstOrNull()?.sourceId.orEmpty()
+        }
+        val activeSourceItems = if (selectedCategorySourceId.isNotBlank())
+            activeSourceItemsBase.filter { it.sourceId == selectedCategorySourceId }
+        else activeSourceItemsBase
         val unfilteredBase = when {
             // An expanded content row must render its captured items directly, independent
             // of the currently selected category filter.
