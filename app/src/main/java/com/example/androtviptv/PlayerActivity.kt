@@ -568,16 +568,6 @@ class PlayerActivity : Activity() {
                         return true
                     }
                     if (focused === subtitleButtonView || focused === audioButtonView) return true
-                    val centerRow = centerControlsView as? ViewGroup
-                    val focusedCenterIndex = centerRow?.let { row ->
-                        (0 until row.childCount).firstOrNull { row.getChildAt(it) === focused }
-                    }
-                    if (focusedCenterIndex != null && centerRow != null) {
-                        val step = if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
-                        val targetIndex = (focusedCenterIndex + step).coerceIn(0, centerRow.childCount - 1)
-                        if (targetIndex != focusedCenterIndex) centerRow.getChildAt(targetIndex)?.requestFocus()
-                        return true
-                    }
                     if (progressBar?.hasFocus() == true) {
                         // The seek bar owns left/right for precise seeking.
                         return super.dispatchKeyEvent(event)
