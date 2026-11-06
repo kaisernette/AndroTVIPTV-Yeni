@@ -115,6 +115,7 @@ class PlayerActivity : Activity() {
     private var contentInfoView: TextView? = null
     private var subtitleButtonView: View? = null
     private var audioButtonView: View? = null
+    private var lastPlaybackFocusView: View? = null
 
     private fun playerThemeAccent(): Int {
         val theme = getSharedPreferences("androtv", Context.MODE_PRIVATE).getString("theme_name", "Antrasit • Mavi")
@@ -143,11 +144,55 @@ class PlayerActivity : Activity() {
     private var controlsVisible = true
 
     private fun setPlaybackControlsVisible(visible: Boolean) {
+        if (!visible) {
+            val focused = currentFocus
+            fun isInsideControls(view: View?, parent: View?): Boolean {
+                var current = view
+                while (current != null) {
+                    if (current === parent) return true
+                    current = current.parent as? View
+                }
+                return false
+            }
+            if (isInsideControls(focused, centerControlsView) ||
+                isInsideControls(focused, trackControlsView) ||
+                isInsideControls(focused, progressControlsView)) {
+                lastPlaybackFocusView = focused
+            }
+        }
+
         controlsVisible = visible
         centerControlsView?.visibility = if (visible) View.VISIBLE else View.GONE
         trackControlsView?.visibility = if (visible) View.VISIBLE else View.GONE
         progressControlsView?.visibility = if (visible) View.VISIBLE else View.GONE
         contentInfoView?.visibility = if (visible) View.VISIBLE else View.GONE
+
+        if (visible) {
+            // Android TV clears focus when the control row is set to GONE.
+            // Restore the last focused control (CC on first launch) after it is visible again.
+            controlsRoot?.post {
+                if (!controlsVisible || isFinishing) return@post
+                fun isInsideControls(view: View?, parent: View?): Boolean {
+                    var current = view
+                    while (current != null) {
+                        if (current === parent) return true
+                        current = current.parent as? View
+                    }
+                    return false
+                }
+                val focused = currentFocus
+                val focusStillOnControls =
+                    isInsideControls(focused, centerControlsView) ||
+                    isInsideControls(focused, trackControlsView) ||
+                    isInsideControls(focused, progressControlsView)
+                if (!focusStillOnControls) {
+                    val restore = lastPlaybackFocusView?.takeIf { it.isShown && it.isFocusable }
+                        ?: subtitleButtonView?.takeIf { it.isShown && it.isFocusable }
+                        ?: playButtonView()
+                    restore?.requestFocus()
+                }
+            }
+        }
     }
 
     private fun showPlaybackControls() {
