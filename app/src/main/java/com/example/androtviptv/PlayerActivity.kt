@@ -267,6 +267,8 @@ class PlayerActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(8), dp(4), dp(8), dp(4))
+            clipChildren = false
+            clipToPadding = false
             background = null
             elevation = 0f
         }
@@ -310,14 +312,14 @@ class PlayerActivity : Activity() {
             isClickable = true
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(if (big) 44 else 34).toFloat()
+                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 3).toFloat()
                 setColor(if (big) 0xFF087FE8.toInt() else 0xCC252D38.toInt())
                 setStroke(dp(if (big) 2 else 1), if (big) 0xFF69B9FF.toInt() else 0x665E6D7D)
             }
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dp(if (big) 44 else 34).toFloat()
+                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 3).toFloat()
                     setColor(if (hasFocus) 0xFF087FE8.toInt() else if (big) 0xFF087FE8.toInt() else 0xCC252D38.toInt())
                     setStroke(dp(if (hasFocus || big) 3 else 1), if (hasFocus) 0xFF80C8FF.toInt() else 0x665E6D7D)
                 }
@@ -422,21 +424,41 @@ class PlayerActivity : Activity() {
         fun trackOption(symbol: String, panelView: LinearLayout) = optionButton(symbol, "") {
             val other = if (panelView === subtitlePanel) audioPanel else subtitlePanel
             other?.visibility = View.GONE
-            if (panelView.visibility == View.VISIBLE) panelView.visibility = View.GONE else {
+            if (panelView.visibility == View.VISIBLE) {
+                panelView.visibility = View.GONE
+            } else {
                 refreshTrackChoices()
                 panelView.visibility = View.VISIBLE
+                panelView.bringToFront()
                 val opts = (panelView.tag as? Pair<*, *>)?.second as? LinearLayout
-                opts?.getChildAt(0)?.post { opts.getChildAt(0)?.requestFocus() }
+                opts?.post {
+                    val first = opts.getChildAt(0)
+                    if (first != null) first.requestFocus() else panelView.requestFocus()
+                }
             }
             showPlaybackControls()
         }
         val subtitleButton = trackOption("CC", subtitlePanel!!)
         val audioButton = trackOption("♫", audioPanel!!)
         val tvButton = optionButton("TV", "") {
-            if (isLiveStream) {
-                showChannelOverlay()
-            } else {
+            if (recentChannelUrls.isNotEmpty()) {
+                val latestUrl = recentChannelUrls.first()
+                val latestIndex = recentChannelUrls.indexOf(latestUrl).coerceAtLeast(0)
+                pendingChannelNames = recentChannelRows
+                pendingChannelUrls = recentChannelUrls
+                pendingChannelIndex = latestIndex
+                pendingRecentChannelNames = recentChannelRows
+                pendingRecentChannelUrls = recentChannelUrls
+                startActivity(Intent(this, PlayerActivity::class.java)
+                    .putExtra("name", recentChannelRows.getOrNull(latestIndex) ?: "Canlı TV")
+                    .putExtra("url", latestUrl)
+                    .putExtra("isLive", true)
+                    .putExtra("bufferMode", intent.getStringExtra("bufferMode") ?: "normal")
+                    .putExtra("aspectMode", intent.getStringExtra("aspectMode") ?: "fit")
+                    .putExtra("resumeEnabled", false))
                 finish()
+            } else {
+                android.widget.Toast.makeText(this, "Son izlenen kanal bulunamadı.", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
         val episodesButton = optionButton("☷", "") {
@@ -468,8 +490,8 @@ class PlayerActivity : Activity() {
             clipToPadding = false
         }
         optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(38), Gravity.BOTTOM))
-        optionStack.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6); bottomMargin = dp(72) })
-        optionStack.addView(audioPanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6 + 0); bottomMargin = dp(72) })
+        root.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(280), dp(210), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(118) })
+        root.addView(audioPanel!!, FrameLayout.LayoutParams(dp(280), dp(210), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(118) })
         panel.addView(optionStack, LinearLayout.LayoutParams(-1, dp(52)))
         trackControlsView = optionStack
 
