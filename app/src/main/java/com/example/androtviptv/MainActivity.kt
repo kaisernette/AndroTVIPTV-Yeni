@@ -590,7 +590,8 @@ class MainActivity : Activity() {
     private var xtreamBase = ""
     private val prefs by lazy { getSharedPreferences("androtv", MODE_PRIVATE) }
     private var bg = Color.rgb(17, 20, 25)
-    private var panel = Color.rgb(25, 30, 38)
+    // Shared cinematic anthracite surface used consistently across the app.
+    private var panel = Color.rgb(8, 10, 14)
     private var accent = Color.rgb(0, 166, 255)
     private var accentBright = Color.rgb(72, 190, 255)
     // Focus styling is independent from the selectable app theme.
@@ -624,7 +625,7 @@ class MainActivity : Activity() {
             "Koyu • Mor" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
             else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
         }
-        panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
+        panel = Color.rgb(8, 10, 14)
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
         try {
@@ -1705,10 +1706,8 @@ class MainActivity : Activity() {
         // No separate right-side panel: let the root gradient show through.
         mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
         content.setBackgroundColor(Color.TRANSPARENT)
-        // Opaque sidebar follows the active theme hue instead of using one fixed anthracite.
-        // Keep it darker than the page gradient so labels and icons remain clear.
-        val themedSidebar = shade(blend, 0.82f)
-        sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else themedSidebar)
+        // Opaque sidebar uses the same deep cinematic anthracite in every theme.
+        sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
         window.statusBarColor = bg
         window.navigationBarColor = bg
     }
@@ -3363,7 +3362,7 @@ class MainActivity : Activity() {
                     contentDescription = item.name
                     background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
+                        intArrayOf(Color.rgb(8, 10, 14), Color.rgb(14, 18, 24))))
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
@@ -3377,7 +3376,7 @@ class MainActivity : Activity() {
                 }
                 if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
                 else poster.setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                    intArrayOf(Color.rgb(43, 51, 68), Color.rgb(17, 22, 33))))
+                    intArrayOf(Color.rgb(8, 10, 14), Color.rgb(14, 18, 24))))
                 if (weeklyPoster) {
                     card.addView(TextView(this).apply {
                         text = t(item.type).uppercase()
@@ -4049,7 +4048,7 @@ class MainActivity : Activity() {
                     scaleType = ImageView.ScaleType.CENTER_CROP
                     background = GradientDrawable(
                         GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(Color.rgb(37, 48, 68), Color.rgb(19, 25, 37))
+                        intArrayOf(Color.rgb(8, 10, 14), Color.rgb(14, 18, 24))
                     ).apply { cornerRadius = dp(6).toFloat() }
                 }
                 card.addView(episodePoster, LinearLayout.LayoutParams(-1, dp(62)))
@@ -4058,7 +4057,7 @@ class MainActivity : Activity() {
                 } else {
                     episodePoster.setImageDrawable(GradientDrawable(
                         GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(Color.rgb(37, 48, 68), Color.rgb(19, 25, 37))
+                        intArrayOf(Color.rgb(8, 10, 14), Color.rgb(14, 18, 24))
                     ))
                 }
                 card.addView(TextView(this).apply {
@@ -4656,7 +4655,7 @@ class MainActivity : Activity() {
                             }
                             setOnClickListener {
                                 bg = theme.second
-                                panel = Color.rgb((Color.red(bg) + 8).coerceAtMost(255), (Color.green(bg) + 10).coerceAtMost(255), (Color.blue(bg) + 14).coerceAtMost(255))
+                                panel = Color.rgb(8, 10, 14)
                                 accent = theme.third
                                 accentBright = theme.third
                                 prefs.edit().putString("theme_name", theme.first).apply()
