@@ -338,7 +338,7 @@ class PlayerActivity : Activity() {
         elapsedLabel = TextView(this).apply { text = "00:00"; textSize = 12f; setTextColor(Color.WHITE); minWidth = dp(42) }
         durationLabel = TextView(this).apply { text = "00:00"; textSize = 12f; setTextColor(Color.WHITE); gravity = Gravity.RIGHT; minWidth = dp(42) }
         progressBar = SeekBar(this).apply {
-            progressTintList = android.content.res.ColorStateList.valueOf(0xFF168BFF.toInt())
+            progressTintList = android.content.res.ColorStateList.valueOf(playerThemeAccent())
             thumbTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
             isFocusable = true
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -371,15 +371,15 @@ class PlayerActivity : Activity() {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 3).toFloat()
-                setColor(if (big) 0xFF087FE8.toInt() else 0xCC252D38.toInt())
-                setStroke(dp(if (big) 2 else 1), if (big) 0xFF69B9FF.toInt() else 0x665E6D7D)
+                setColor(if (big) playerThemeAccent() else 0xCC252D38.toInt())
+                setStroke(dp(if (big) 2 else 1), if (big) playerThemeAccent() else 0x665E6D7D)
             }
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 3).toFloat()
-                    setColor(if (hasFocus) 0xFF087FE8.toInt() else if (big) 0xFF087FE8.toInt() else 0xCC252D38.toInt())
-                    setStroke(dp(if (hasFocus || big) 3 else 1), if (hasFocus) 0xFF80C8FF.toInt() else 0x665E6D7D)
+                    setColor(if (hasFocus || big) playerThemeAccent() else 0xCC252D38.toInt())
+                    setStroke(dp(if (hasFocus || big) 3 else 1), if (hasFocus || big) playerThemeAccent() else 0x665E6D7D)
                 }
                 v.elevation = if (hasFocus) dp(10).toFloat() else 0f
             }
@@ -609,8 +609,8 @@ class PlayerActivity : Activity() {
                     focusedView.background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
                         cornerRadius = dp(8).toFloat()
-                        setColor(if (hasFocus) 0x3329B6F6 else Color.TRANSPARENT)
-                        if (hasFocus) setStroke(dp(2), 0xFF29B6F6.toInt())
+                        setColor(if (hasFocus) playerThemeAccent() else Color.TRANSPARENT)
+                        if (hasFocus) setStroke(dp(2), playerThemeAccent())
                     }
                     focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
                 }
