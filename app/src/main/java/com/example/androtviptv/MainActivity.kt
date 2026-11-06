@@ -812,7 +812,9 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(6, 12, 6, 10)
             background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
+            // Keep rounded category-selection backgrounds fully visible in both themes.
             clipChildren = false
+            clipToPadding = false
         }
         root.addView(sidebar, LinearLayout.LayoutParams(dp(205), -1).apply { setMargins(0, 0, dp(8), 0) })
 
@@ -875,6 +877,7 @@ class MainActivity : Activity() {
             overScrollMode = View.OVER_SCROLL_NEVER
             isFillViewport = false
             clipToPadding = false
+            clipChildren = false
             visibility = View.GONE
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             addView(categoryPanel, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -1071,7 +1074,9 @@ class MainActivity : Activity() {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val params = sidebar.layoutParams
-            val desiredWidth = dp(if (showReadableCategories) 205 else 76)
+            // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
+            // with a small safety margin so right rounded corners are never clipped.
+            val desiredWidth = dp(if (showReadableCategories) 232 else 76)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
