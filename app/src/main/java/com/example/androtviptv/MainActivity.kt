@@ -107,6 +107,9 @@ private class WrappingRowLayout(context: Context) : ViewGroup(context) {
 }
 
 class MainActivity : Activity() {
+    companion object {
+        @Volatile var openTvTabOnResume: Boolean = false
+    }
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("androtv", Context.MODE_PRIVATE)
         val selected = prefs.getString("app_language", "system") ?: "system"
@@ -5263,6 +5266,18 @@ class MainActivity : Activity() {
         super.onResume()
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         openingPlayer = false
+        if (openTvTabOnResume) {
+            openTvTabOnResume = false
+            detailSeries = null
+            detailMovie = null
+            seriesEpisodeRows = emptyList()
+            selectedType = "Canlı TV"
+            selectedGroup = "Tüm kategoriler"
+            sidebarMode = "main"
+            searchQuery = ""
+            prefs.edit().putString("last_section", "Canlı TV").apply()
+            render()
+        }
     }
 
     override fun onPause() {
