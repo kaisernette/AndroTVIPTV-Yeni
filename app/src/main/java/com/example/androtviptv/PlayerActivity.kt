@@ -274,7 +274,7 @@ class PlayerActivity : Activity() {
             }
             elevation = dp(14).toFloat()
         }
-        root.addView(panel, FrameLayout.LayoutParams(-1, dp(410), Gravity.BOTTOM).apply {
+        root.addView(panel, FrameLayout.LayoutParams(-1, dp(260), Gravity.BOTTOM).apply {
             setMargins(dp(42), 0, dp(42), dp(24))
         })
 
@@ -352,11 +352,11 @@ class PlayerActivity : Activity() {
             button.id = View.generateViewId()
             button.nextFocusLeftId = centerButtons[(index - 1).coerceAtLeast(0)].id
             button.nextFocusRightId = centerButtons[(index + 1).coerceAtMost(centerButtons.lastIndex)].id
-            button.nextFocusDownId = progressBar?.id ?: View.NO_ID
+            button.nextFocusUpId = playControl.id
         }
         progressBar?.id = View.generateViewId()
-        centerButtons.forEach { it.nextFocusDownId = progressBar!!.id }
-        progressBar?.nextFocusUpId = playControl.id
+        centerButtons.forEach { it.nextFocusUpId = progressBar!!.id }
+        progressBar?.nextFocusDownId = playControl.id
         panel.addView(centerControls, LinearLayout.LayoutParams(-1, dp(112)))
         centerControlsView = centerControls
 
@@ -435,32 +435,38 @@ class PlayerActivity : Activity() {
         }
         val subtitleButton = trackOption("Altyazı", subtitlePanel!!)
         val audioButton = trackOption("Ses Dili", audioPanel!!)
-        val speedButton = optionButton("Hız", "1.00x") {
-            val speeds = floatArrayOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
-            val current = player?.playbackParameters?.speed ?: 1f
-            val next = speeds.firstOrNull { it > current + 0.01f } ?: speeds.first()
-            player?.setPlaybackSpeed(next)
-            android.widget.Toast.makeText(this, "Oynatma hızı: " + next + "x", android.widget.Toast.LENGTH_SHORT).show()
+        val tvButton = optionButton("TV", "Kanallar") {
+            if (isLiveStream) showChannelOverlay()
+            else android.widget.Toast.makeText(this, "TV listesi canlı yayınlarda kullanılabilir.", android.widget.Toast.LENGTH_SHORT).show()
         }
-        val screenButton = optionButton("Ekran", "Tam ekran") { applyPlayerImmersiveMode() }
-        listOf(subtitleButton, audioButton, speedButton, screenButton).forEachIndexed { i, button ->
+        val episodesButton = optionButton("Bölümler", "Liste") {
+            if (episodeNames.isEmpty()) {
+                android.widget.Toast.makeText(this, "Bölüm listesi bulunamadı.", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                AlertDialog.Builder(this)
+                    .setTitle("Bölümler")
+                    .setItems(episodeNames.toTypedArray()) { _, index -> playEpisodeAt(index) }
+                    .show()
+            }
+        }
+        listOf(tvButton, subtitleButton, audioButton, episodesButton).forEach { button ->
             optionRow.addView(button, LinearLayout.LayoutParams(0, dp(66), 1f).apply { setMargins(dp(6), 0, dp(6), 0) })
         }
         subtitleButtonView = subtitleButton
         audioButtonView = audioButton
-        val optionButtons = listOf(subtitleButton, audioButton, speedButton, screenButton)
+        val optionButtons = listOf(tvButton, subtitleButton, audioButton, episodesButton)
         optionButtons.forEachIndexed { index, button ->
             button.id = View.generateViewId()
             button.nextFocusLeftId = optionButtons[(index - 1).coerceAtLeast(0)].id
             button.nextFocusRightId = optionButtons[(index + 1).coerceAtMost(optionButtons.lastIndex)].id
             button.nextFocusUpId = progressBar?.id ?: View.NO_ID
         }
-        progressBar?.nextFocusDownId = subtitleButton.id
+        centerButtons.forEach { it.nextFocusDownId = subtitleButton.id }
         val optionStack = FrameLayout(this)
         optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(66), Gravity.BOTTOM))
         optionStack.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6); bottomMargin = dp(72) })
         optionStack.addView(audioPanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6 + 0); bottomMargin = dp(72) })
-        panel.addView(optionStack, LinearLayout.LayoutParams(-1, dp(206)))
+        panel.addView(optionStack, LinearLayout.LayoutParams(-1, dp(78)))
         trackControlsView = optionStack
 
         view.post {
@@ -666,6 +672,7 @@ class PlayerActivity : Activity() {
                         return true
                     }
                     focused is View && focused !is SeekBar -> {
+                        if (focused.isClickable && focused !== playerView) { focused.performClick(); showPlaybackControls(); return true }
                         player?.let { if (it.isPlaying) it.pause() else it.play() }
                         showPlaybackControls()
                         return true
@@ -706,7 +713,13 @@ class PlayerActivity : Activity() {
                 if (focused === audioButtonView && key == KeyEvent.KEYCODE_DPAD_LEFT) {
                     subtitleButtonView?.requestFocus(); showPlaybackControls(); return true
                 }
-                if (focused === subtitleButtonView || focused === audioButtonView) return true
+                val optionRowView = (trackControlsView as? FrameLayout)?.getChildAt(0) as? ViewGroup
+                val optionIndex = optionRowView?.let { row -> (0 until row.childCount).firstOrNull { row.getChildAt(it) === focused } }
+                if (optionIndex != null && optionRowView != null) {
+                    val next = (optionIndex + if (key == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1).coerceIn(0, optionRowView.childCount - 1)
+                    optionRowView.getChildAt(next)?.requestFocus()
+                    return true
+                }
 
                 if (progressBar?.hasFocus() == true) {
                     val exo = player
@@ -763,38 +776,26 @@ class PlayerActivity : Activity() {
                 val centerIndex = centerRow?.let { row ->
                     (0 until row.childCount).firstOrNull { row.getChildAt(it) === focused }
                 }
+                val optionRowView = (trackControlsView as? FrameLayout)?.getChildAt(0) as? ViewGroup
+                val onOptions = optionRowView?.let { row -> (0 until row.childCount).any { row.getChildAt(it) === focused } } == true
                 when {
-                    key == KeyEvent.KEYCODE_DPAD_UP &&
-                        (focused == null || focused === playerView || focused === progressBar) ->
-                        { requestCenter(2); return true }
-                    key == KeyEvent.KEYCODE_DPAD_DOWN && centerIndex != null -> {
-                        progressBar?.requestFocus(); return true
-                    }
                     key == KeyEvent.KEYCODE_DPAD_UP && centerIndex != null -> {
-                        return requestCenter(2)
+                        progressBar?.requestFocus(); return true
                     }
                     key == KeyEvent.KEYCODE_DPAD_DOWN && focused === progressBar -> {
+                        return requestCenter(2)
+                    }
+                    key == KeyEvent.KEYCODE_DPAD_DOWN && centerIndex != null -> {
                         subtitleButtonView?.requestFocus(); return true
                     }
-                    key == KeyEvent.KEYCODE_DPAD_UP &&
-                        (focused === subtitleButtonView || focused === audioButtonView) -> {
+                    key == KeyEvent.KEYCODE_DPAD_UP && onOptions -> {
+                        return requestCenter(2)
+                    }
+                    key == KeyEvent.KEYCODE_DPAD_UP && (focused == null || focused === playerView) -> {
                         progressBar?.requestFocus(); return true
                     }
-                    key == KeyEvent.KEYCODE_DPAD_DOWN &&
-                        (focused === subtitleButtonView || focused === audioButtonView) -> {
-                        val panel = if (focused === audioButtonView) audioPanel else subtitlePanel
-                        val first = trackOptions(panel)?.getChildAt(0)
-                        if (first != null) first.requestFocus()
-                        else (if (focused === audioButtonView) audioButtonView else subtitleButtonView)?.performClick()
-                        return true
-                    }
-                    key == KeyEvent.KEYCODE_DPAD_UP &&
-                        isInside(focused, trackOptions(subtitlePanel)) -> {
-                        subtitleButtonView?.requestFocus(); return true
-                    }
-                    key == KeyEvent.KEYCODE_DPAD_UP &&
-                        isInside(focused, trackOptions(audioPanel)) -> {
-                        audioButtonView?.requestFocus(); return true
+                    key == KeyEvent.KEYCODE_DPAD_DOWN && focused === playerView -> {
+                        progressBar?.requestFocus(); return true
                     }
                     else -> return true
                 }
