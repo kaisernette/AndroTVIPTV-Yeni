@@ -266,16 +266,12 @@ class PlayerActivity : Activity() {
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(dp(22), dp(14), dp(22), dp(16))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(22).toFloat()
-                setColor(0xE6101722.toInt())
-                setStroke(dp(1), 0x553A9BEF)
-            }
-            elevation = dp(14).toFloat()
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            background = null
+            elevation = 0f
         }
-        root.addView(panel, FrameLayout.LayoutParams(-1, dp(260), Gravity.BOTTOM).apply {
-            setMargins(dp(42), 0, dp(42), dp(24))
+        root.addView(panel, FrameLayout.LayoutParams(-1, dp(158), Gravity.BOTTOM).apply {
+            setMargins(dp(28), 0, dp(28), dp(16))
         })
 
         val progressLine = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -296,7 +292,7 @@ class PlayerActivity : Activity() {
         progressLine.addView(elapsedLabel)
         progressLine.addView(progressBar, LinearLayout.LayoutParams(0, dp(34), 1f).apply { setMargins(dp(8), 0, dp(8), 0) })
         progressLine.addView(durationLabel)
-        panel.addView(progressLine, LinearLayout.LayoutParams(-1, dp(42)))
+        panel.addView(progressLine, LinearLayout.LayoutParams(-1, dp(30)))
         progressControlsView = progressLine
 
         val centerControls = LinearLayout(this).apply {
@@ -306,7 +302,7 @@ class PlayerActivity : Activity() {
         }
         fun roundControl(symbol: String, label: String, big: Boolean = false, action: () -> Unit) = TextView(this).apply {
             text = if (label.isBlank()) symbol else "$symbol\n$label"
-            textSize = if (big) 28f else 20f
+            textSize = if (big) 23f else 17f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             isFocusable = true
@@ -343,9 +339,9 @@ class PlayerActivity : Activity() {
             else player?.seekToNextMediaItem()
         }
         listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEachIndexed { i, button ->
-            val w = if (i == 2) 88 else 78
-            val h = if (i == 2) 82 else 68
-            centerControls.addView(button, LinearLayout.LayoutParams(dp(w), dp(h)).apply { setMargins(dp(12), 0, dp(12), 0) })
+            val w = if (i == 2) 62 else 54
+            val h = if (i == 2) 60 else 52
+            centerControls.addView(button, LinearLayout.LayoutParams(dp(w), dp(h)).apply { setMargins(dp(7), 0, dp(7), 0) })
         }
         val centerButtons = listOf(previousControl, rewindControl, playControl, forwardControl, nextControl)
         centerButtons.forEachIndexed { index, button ->
@@ -357,7 +353,7 @@ class PlayerActivity : Activity() {
         progressBar?.id = View.generateViewId()
         centerButtons.forEach { it.nextFocusUpId = progressBar!!.id }
         progressBar?.nextFocusDownId = playControl.id
-        panel.addView(centerControls, LinearLayout.LayoutParams(-1, dp(112)))
+        panel.addView(centerControls, LinearLayout.LayoutParams(-1, dp(70)))
         centerControlsView = centerControls
 
         fun createTrackPanel(type: Int): LinearLayout {
@@ -396,13 +392,13 @@ class PlayerActivity : Activity() {
             isFocusableInTouchMode = true
             isClickable = true
             background = GradientDrawable().apply {
-                cornerRadius = dp(15).toFloat()
-                setColor(0xCC202833.toInt())
-                setStroke(dp(1), 0x554F6072)
+                cornerRadius = dp(10).toFloat()
+                setColor(Color.TRANSPARENT)
+                setStroke(0, Color.TRANSPARENT)
             }
             addView(TextView(this@PlayerActivity).apply {
                 text = label
-                textSize = 16f
+                textSize = 13f
                 setTextColor(Color.WHITE)
                 setTypeface(null, Typeface.BOLD)
                 gravity = Gravity.CENTER
@@ -450,7 +446,7 @@ class PlayerActivity : Activity() {
             }
         }
         listOf(tvButton, subtitleButton, audioButton, episodesButton).forEach { button ->
-            optionRow.addView(button, LinearLayout.LayoutParams(0, dp(66), 1f).apply { setMargins(dp(6), 0, dp(6), 0) })
+            optionRow.addView(button, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(dp(6), 0, dp(6), 0) })
         }
         subtitleButtonView = subtitleButton
         audioButtonView = audioButton
@@ -463,10 +459,10 @@ class PlayerActivity : Activity() {
         }
         centerButtons.forEach { it.nextFocusDownId = subtitleButton.id }
         val optionStack = FrameLayout(this)
-        optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(66), Gravity.BOTTOM))
+        optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(48), Gravity.BOTTOM))
         optionStack.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6); bottomMargin = dp(72) })
         optionStack.addView(audioPanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6 + 0); bottomMargin = dp(72) })
-        panel.addView(optionStack, LinearLayout.LayoutParams(-1, dp(78)))
+        panel.addView(optionStack, LinearLayout.LayoutParams(-1, dp(52)))
         trackControlsView = optionStack
 
         view.post {
