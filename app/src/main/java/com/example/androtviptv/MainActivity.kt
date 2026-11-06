@@ -1704,7 +1704,10 @@ class MainActivity : Activity() {
         // No separate right-side panel: let the root gradient show through.
         mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
         content.setBackgroundColor(Color.TRANSPARENT)
-        sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
+        // Opaque sidebar follows the active theme hue instead of using one fixed anthracite.
+        // Keep it darker than the page gradient so labels and icons remain clear.
+        val themedSidebar = shade(blend, 0.82f)
+        sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else themedSidebar)
         window.statusBarColor = bg
         window.navigationBarColor = bg
     }
