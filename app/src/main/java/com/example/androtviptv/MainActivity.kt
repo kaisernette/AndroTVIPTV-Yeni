@@ -2946,8 +2946,9 @@ class MainActivity : Activity() {
                             (if (selectedSearchHistory.contains(term)) "✓ " else "◷ ") + term,
                             selectedSearchHistory.contains(term)
                         ) {
-                            if (!selectedSearchHistory.add(term)) selectedSearchHistory.remove(term)
-                            render()
+                            // A normal click reruns this previous search immediately.
+                            selectedSearchHistory.clear()
+                            submitSearchQuery(term)
                         }.apply {
                             textSize = 12f
                             maxLines = 1
@@ -2965,10 +2966,9 @@ class MainActivity : Activity() {
                                 view.scaleX = if (hasFocus) 1.04f else 1f
                                 view.scaleY = if (hasFocus) 1.04f else 1f
                             }
+                            // Long press keeps the multi-select/delete workflow.
                             setOnLongClickListener {
-                                searchQuery = term
-                                selectedSearchHistory.clear()
-                                searchInputFocusPending = true
+                                if (!selectedSearchHistory.add(term)) selectedSearchHistory.remove(term)
                                 render()
                                 true
                             }
