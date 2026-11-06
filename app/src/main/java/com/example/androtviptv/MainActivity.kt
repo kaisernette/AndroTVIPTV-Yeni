@@ -1479,14 +1479,14 @@ class MainActivity : Activity() {
             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
         form.addView(TextView(this).apply {
-            text = t(if (editSource == null) "İzleme kaynağı ekle" else "Kaynağı düzenle")
+            text = t("Kaynaklar")
             textSize = 20f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
             setPadding(dp(2), 0, 0, dp(4))
         })
         form.addView(TextView(this).apply {
-            text = t("Yalnızca kullanma hakkına sahip olduğun yayın adreslerini ekle.")
+            text = t("Yasal kullanım hakkına sahip olduğun yayın adreslerini ekle yönet.")
             textSize = 13f
             setTextColor(muted)
             setPadding(dp(2), 0, 0, dp(9))
@@ -1591,9 +1591,11 @@ class MainActivity : Activity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(9), dp(9), dp(9), dp(9))
-                background = roundedDrawable(panel, corner, if (selected) accent else outline)
-                isFocusable = true
-                isFocusableInTouchMode = true
+                background = roundedDrawable(panel, corner, outline)
+                isFocusable = false
+                isFocusableInTouchMode = false
+                clipChildren = false
+                clipToPadding = false
             }
             card.addView(TextView(this).apply {
                 text = title
@@ -1607,7 +1609,6 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
             }
-            val cancel = makeButton(t("İptal"), false) { render() }.apply { minWidth = 0; textSize = 12f }
             val connect = makeButton(t(if (editSource == null) "Bağlan" else "Kaydet"), true) {
                 if (mac) {
                     val portal = macPortal.text.toString().trim().trimEnd('/')
@@ -1628,16 +1629,8 @@ class MainActivity : Activity() {
                     connectButton.performClick()
                 }
             }.apply { minWidth = 0; textSize = 12f }
-            footer.addView(cancel, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(0, 0, dp(3), 0) })
-            footer.addView(connect, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(3), 0, 0, 0) })
-            card.addView(footer, LinearLayout.LayoutParams(-1, dp(46)))
-            card.setOnClickListener {
-                if (!mac) sourceMode.check(modeId)
-            }
-            card.setOnFocusChangeListener { v, focused ->
-                v.background = roundedDrawable(panel, corner,
-                    if (focused) accentBright else if (!mac && sourceMode.checkedRadioButtonId == modeId) accent else outline)
-            }
+            footer.addView(connect, LinearLayout.LayoutParams(-1, dp(46)))
+            card.addView(footer, LinearLayout.LayoutParams(-1, dp(50)))
             return card
         }
 
@@ -1663,7 +1656,7 @@ class MainActivity : Activity() {
         m3uFields.gravity = Gravity.TOP
         xtreamFields.gravity = Gravity.TOP
 
-        val cardHeight = dp(300)
+        val cardHeight = dp(360)
         val m3uCard = makeSourceCard("▤  M3U / M3U8", m3u.id, editSource?.mode != "xtream", m3uFields)
         val xtreamCard = makeSourceCard("▣  Xtream Codes", xtream.id, editSource?.mode == "xtream", xtreamFields)
         val macCard = makeSourceCard("▱  MAC Portal", -1, false, macFields, true)
@@ -1673,9 +1666,9 @@ class MainActivity : Activity() {
             })
         }
         form.addView(columns, LinearLayout.LayoutParams(-1, cardHeight + dp(6)))
-        sourceMode.setOnCheckedChangeListener { _, checked ->
-            m3uCard.background = roundedDrawable(panel, corner, if (checked == m3u.id) accent else outline)
-            xtreamCard.background = roundedDrawable(panel, corner, if (checked == xtream.id) accent else outline)
+        sourceMode.setOnCheckedChangeListener { _, _ ->
+            m3uCard.background = roundedDrawable(panel, corner, outline)
+            xtreamCard.background = roundedDrawable(panel, corner, outline)
         }
         form.addView(sourceMode)
         content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
