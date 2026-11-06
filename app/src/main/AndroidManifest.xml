@@ -6,8 +6,8 @@
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:label="KaiserTV+"
         android:banner="@drawable/banner_kaisertv_tv"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_launcher_foreground_scaled"
+        android:roundIcon="@drawable/ic_launcher_foreground_scaled"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true">
         <activity android:name=".PlayerActivity" android:screenOrientation="landscape" android:exported="false" />
