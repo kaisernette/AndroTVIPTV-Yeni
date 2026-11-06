@@ -193,7 +193,8 @@ class PlayerActivity : Activity() {
                 val focusStillOnControls =
                     isInsideControls(focused, centerControlsView) ||
                     isInsideControls(focused, trackControlsView) ||
-                    isInsideControls(focused, progressControlsView)
+                    isInsideControls(focused, progressControlsView) ||
+                    isInsideControls(focused, episodesPanelView)
                 if (!focusStillOnControls) {
                     val restore = lastPlaybackFocusView?.takeIf { it.isShown && it.isFocusable }
                         ?: subtitleButtonView?.takeIf { it.isShown && it.isFocusable }
