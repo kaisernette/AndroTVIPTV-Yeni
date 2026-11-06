@@ -433,8 +433,11 @@ class PlayerActivity : Activity() {
         val subtitleButton = trackOption("CC", subtitlePanel!!)
         val audioButton = trackOption("♫", audioPanel!!)
         val tvButton = optionButton("TV", "") {
-            if (isLiveStream) showChannelOverlay()
-            else android.widget.Toast.makeText(this, "TV listesi canlı yayınlarda kullanılabilir.", android.widget.Toast.LENGTH_SHORT).show()
+            if (isLiveStream) {
+                showChannelOverlay()
+            } else {
+                finish()
+            }
         }
         val episodesButton = optionButton("☷", "") {
             if (episodeNames.isEmpty()) {
@@ -460,7 +463,10 @@ class PlayerActivity : Activity() {
         }
         centerButtons.forEach { it.nextFocusDownId = tvButton.id }
         optionButtons.forEach { it.nextFocusUpId = playControl.id }
-        val optionStack = FrameLayout(this)
+        val optionStack = FrameLayout(this).apply {
+            clipChildren = false
+            clipToPadding = false
+        }
         optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(38), Gravity.BOTTOM))
         optionStack.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6); bottomMargin = dp(72) })
         optionStack.addView(audioPanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6 + 0); bottomMargin = dp(72) })
@@ -640,7 +646,12 @@ class PlayerActivity : Activity() {
 
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                 if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
-                if (trackMenuOpen) {
+                if (focused === subtitleButtonView || focused === audioButtonView) {
+                    focused?.performClick()
+                    showPlaybackControls()
+                    return true
+                }
+                if (trackMenuOpen && isInside(focused, trackOptions(activeTrackPanel()))) {
                     val panel = activeTrackPanel()
                     val options = trackOptions(panel)
                     if (isInside(focused, options)) {
