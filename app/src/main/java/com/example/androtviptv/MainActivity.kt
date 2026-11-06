@@ -1006,11 +1006,11 @@ class MainActivity : Activity() {
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
                 setPadding(dp(10), dp(4), dp(10), dp(4))
-                background = roundedDrawable(tileColor, 14, tileColor)
+                background = roundedDrawable(tileColor, if (ovalButtons) 24 else 0, tileColor)
                 stateListAnimator = null
                 isFocusable = true
                 setOnFocusChangeListener { v, focused ->
-                    v.background = roundedDrawable(if (focused) accent else tileColor, 14)
+                    v.background = roundedDrawable(if (focused) accent else tileColor, if (ovalButtons) 24 else 0)
                     v.elevation = if (focused) dp(5).toFloat() else 0f
                     v.scaleX = if (focused) 1.03f else 1f
                     v.scaleY = if (focused) 1.03f else 1f
@@ -1129,7 +1129,7 @@ class MainActivity : Activity() {
                     val button = v as Button
                     button.background = if (hasFocus) GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dp(if (ovalButtons) 18 else 3).toFloat()
+                        cornerRadius = dp(if (ovalButtons) 24 else 0).toFloat()
                         setColor(accent)
                     } else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     button.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
@@ -1715,7 +1715,7 @@ class MainActivity : Activity() {
     private fun buttonBackground(color: Int): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
-            cornerRadius = dp(if (ovalButtons) 24 else 3).toFloat()
+            cornerRadius = dp(if (ovalButtons) 24 else 0).toFloat()
         }
 
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
@@ -4695,31 +4695,6 @@ class MainActivity : Activity() {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.TOP
                 }
-                fun choice(label: String, selected: Boolean, action: () -> Unit): TextView =
-                    TextView(this).apply {
-                        text = if (selected) "✓  ${t(label)}" else t(label)
-                        textSize = 13f
-                        gravity = Gravity.CENTER
-                        setTextColor(if (selected) Color.rgb(8, 13, 22) else Color.WHITE)
-                        setPadding(dp(4), dp(10), dp(4), dp(10))
-                        isFocusable = true
-                        isFocusableInTouchMode = true
-                        isClickable = true
-                        background = GradientDrawable().apply {
-                            cornerRadius = dp(if (ovalButtons) 24 else 5).toFloat()
-                            setColor(if (selected) accent else panel)
-                            setStroke(dp(if (selected) 2 else 1), if (selected) accent else Color.rgb(58, 68, 84))
-                        }
-                        setOnFocusChangeListener { v, focused ->
-                            v.background = GradientDrawable().apply {
-                                cornerRadius = dp(if (ovalButtons) 24 else 5).toFloat()
-                                setColor(if (focused || selected) accent else panel)
-                                setStroke(dp(if (focused || selected) 2 else 1), if (focused || selected) accent else Color.rgb(58, 68, 84))
-                            }
-                            (v as TextView).setTextColor(if (focused || selected) Color.rgb(8, 13, 22) else Color.WHITE)
-                        }
-                        setOnClickListener { action() }
-                    }
                 fun settingCard(
                     title: String,
                     subtitle: String,
@@ -4730,28 +4705,52 @@ class MainActivity : Activity() {
                     onSecond: () -> Unit
                 ): LinearLayout = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(dp(10), dp(10), dp(10), dp(10))
-                    background = roundedDrawable(panel, 12, Color.rgb(48, 57, 73))
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    isClickable = true
+                    val outline = Color.rgb(48, 57, 73)
+                    background = roundedDrawable(panel, 12, outline)
                     addView(TextView(this@MainActivity).apply {
                         text = title
                         textSize = 17f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(Color.WHITE)
-                        setPadding(0, 0, 0, dp(5))
                     })
-                    addView(TextView(this@MainActivity).apply {
+                    val detailRow = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(0, dp(7), 0, 0)
+                    }
+                    detailRow.addView(TextView(this@MainActivity).apply {
                         text = subtitle
                         textSize = 12f
                         setTextColor(muted)
-                        setPadding(0, 0, 0, dp(9))
-                    })
-                    val options = LinearLayout(this@MainActivity).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    val state = TextView(this@MainActivity).apply {
+                        text = if (firstSelected) first else second
+                        textSize = 13f
+                        gravity = Gravity.CENTER
+                        setPadding(dp(12), dp(7), dp(12), dp(7))
+                        setTextColor(Color.rgb(8, 13, 22))
+                        background = roundedDrawable(accent, if (ovalButtons) 24 else 0)
                     }
-                    options.addView(choice(first, firstSelected, onFirst), LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(0, 0, dp(4), 0) })
-                    options.addView(choice(second, !firstSelected, onSecond), LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, 0, 0) })
-                    addView(options)
+                    detailRow.addView(state, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)))
+                    addView(detailRow)
+                    fun updateFocus(focused: Boolean) {
+                        background = roundedDrawable(panel, 12, if (focused) accentBright else outline)
+                        state.background = roundedDrawable(
+                            if (focused || firstSelected) accent else Color.rgb(35, 42, 54),
+                            if (ovalButtons) 24 else 0,
+                            if (focused || firstSelected) accent else outline
+                        )
+                        state.setTextColor(if (focused || firstSelected) Color.rgb(8, 13, 22) else Color.WHITE)
+                        state.text = if (firstSelected) first else second
+                    }
+                    setOnFocusChangeListener { _, focused -> updateFocus(focused) }
+                    setOnClickListener { if (firstSelected) onSecond() else onFirst() }
+                    updateFocus(false)
                 }
                 settingsRow.addView(settingCard(
                     t("Menü"), t("Şeffaf Menü"), "Açık", "Kapalı", transparentMenu,
