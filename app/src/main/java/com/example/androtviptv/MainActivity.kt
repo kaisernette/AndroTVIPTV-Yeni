@@ -4404,16 +4404,89 @@ class MainActivity : Activity() {
                             setMargins(dp(4), 0, dp(4), 0)
                         })
                         sourceRow.addView(makeButton(t("Sil"), false) {
-                            AlertDialog.Builder(this)
-                                .setTitle(t("Kaynağı sil"))
-                                .setMessage(t("Kaynak ve içerikleri silinsin mi?") + "\n" + source.name)
-                                .setNegativeButton(t("İptal"), null)
-                                .setPositiveButton(t("Sil")) { _, _ ->
-                                    savedSources.removeAll { it.id == source.id }
-                                    persistSources()
-                                    items.removeAll { it.sourceId == source.id }
-                                    render()
-                                }.show()
+                            val deletePanel = LinearLayout(this).apply {
+                                orientation = LinearLayout.VERTICAL
+                                setPadding(dp(26), dp(22), dp(26), dp(22))
+                                background = roundedDrawable(Color.rgb(9, 15, 25), 18, accent)
+                            }
+                            val deleteTop = LinearLayout(this).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.CENTER_VERTICAL
+                            }
+                            val deleteIcon = TextView(this).apply {
+                                text = "▤"
+                                textSize = 38f
+                                gravity = Gravity.CENTER
+                                setTextColor(Color.WHITE)
+                                background = roundedDrawable(Color.rgb(14, 31, 50), 14, accent)
+                            }
+                            deleteTop.addView(deleteIcon, LinearLayout.LayoutParams(dp(76), dp(76)))
+                            val deleteDivider = View(this).apply { setBackgroundColor(Color.argb(150, 125, 151, 181)) }
+                            deleteTop.addView(deleteDivider, LinearLayout.LayoutParams(dp(2), dp(82)).apply {
+                                setMargins(dp(20), 0, dp(20), 0)
+                            })
+                            val deleteCopy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                            deleteCopy.addView(TextView(this).apply {
+                                text = t("Kaynağı sil")
+                                textSize = 25f
+                                setTypeface(null, android.graphics.Typeface.BOLD)
+                                setTextColor(Color.WHITE)
+                            })
+                            deleteCopy.addView(TextView(this).apply {
+                                text = t("Kaynak ve içerikleri silinsin mi?")
+                                textSize = 17f
+                                setTextColor(muted)
+                                setPadding(0, dp(9), 0, dp(5))
+                            })
+                            deleteCopy.addView(TextView(this).apply {
+                                text = source.name
+                                textSize = 19f
+                                setTypeface(null, android.graphics.Typeface.BOLD)
+                                setTextColor(accentBright)
+                            })
+                            deleteTop.addView(deleteCopy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                            deletePanel.addView(deleteTop, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                            val deleteActions = LinearLayout(this).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                            }
+                            val deleteDialog = AlertDialog.Builder(this).setView(deletePanel).create()
+                            fun deleteAction(label: String, primary: Boolean, action: () -> Unit): TextView =
+                                TextView(this).apply {
+                                    text = t(label)
+                                    textSize = 18f
+                                    gravity = Gravity.CENTER
+                                    setTypeface(null, android.graphics.Typeface.BOLD)
+                                    setTextColor(if (primary) Color.WHITE else Color.WHITE)
+                                    isFocusable = true
+                                    isFocusableInTouchMode = true
+                                    isClickable = true
+                                    background = roundedDrawable(if (primary) accent else Color.rgb(19, 29, 43), 12, if (primary) accentBright else Color.rgb(53, 68, 88))
+                                    setOnFocusChangeListener { v, focused ->
+                                        v.background = roundedDrawable(if (focused || primary) accent else Color.rgb(19, 29, 43), 12, if (focused || primary) accentBright else Color.rgb(53, 68, 88))
+                                        (v as TextView).setTextColor(Color.WHITE)
+                                    }
+                                    setOnClickListener { action() }
+                                }
+                            val cancelDelete = deleteAction("İptal", false) { deleteDialog.dismiss() }
+                            val confirmDelete = deleteAction("Sil", true) {
+                                deleteDialog.dismiss()
+                                savedSources.removeAll { it.id == source.id }
+                                persistSources()
+                                items.removeAll { it.sourceId == source.id }
+                                render()
+                            }
+                            deleteActions.addView(cancelDelete, LinearLayout.LayoutParams(dp(150), dp(54)).apply { setMargins(0, 0, dp(12), 0) })
+                            deleteActions.addView(confirmDelete, LinearLayout.LayoutParams(dp(150), dp(54)))
+                            deletePanel.addView(deleteActions, LinearLayout.LayoutParams(-1, dp(58)).apply { setMargins(0, dp(24), 0, 0) })
+                            deleteDialog.setOnShowListener {
+                                deleteDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                                deleteDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                                deleteDialog.window?.setDimAmount(0.78f)
+                                deleteDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.68f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+                                cancelDelete.post { cancelDelete.requestFocus() }
+                            }
+                            deleteDialog.show()
                         }, LinearLayout.LayoutParams(dp(68), dp(42)).apply {
                             setMargins(dp(4), 0, 0, 0)
                         })
