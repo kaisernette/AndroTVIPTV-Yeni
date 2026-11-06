@@ -371,14 +371,14 @@ class PlayerActivity : Activity() {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 3).toFloat()
-                setColor(if (big) playerThemeAccent() else 0xCC252D38.toInt())
+                setColor(if (big) playerThemeAccent() else 0xCC080A0E.toInt())
                 setStroke(dp(if (big) 2 else 1), if (big) playerThemeAccent() else 0x665E6D7D)
             }
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 3).toFloat()
-                    setColor(if (hasFocus || big) playerThemeAccent() else 0xCC252D38.toInt())
+                    setColor(if (hasFocus || big) playerThemeAccent() else 0xCC080A0E.toInt())
                     setStroke(dp(if (hasFocus || big) 3 else 1), if (hasFocus || big) playerThemeAccent() else 0x665E6D7D)
                 }
                 v.elevation = if (hasFocus) dp(10).toFloat() else 0f
@@ -476,7 +476,7 @@ class PlayerActivity : Activity() {
             isClickable = true
             background = GradientDrawable().apply {
                 cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 22 else 3).toFloat()
-                setColor(0xCC202833.toInt())
+                setColor(0xCC080A0E.toInt())
                 setStroke(dp(1), 0x554F6072)
             }
             addView(TextView(this@PlayerActivity).apply {
@@ -495,7 +495,7 @@ class PlayerActivity : Activity() {
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = GradientDrawable().apply {
                     cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 22 else 3).toFloat()
-                    setColor(if (hasFocus) playerThemeAccent() else 0xCC202833.toInt())
+                    setColor(if (hasFocus) playerThemeAccent() else 0xCC080A0E.toInt())
                     setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) playerThemeAccent() else 0x554F6072)
                 }
                 v.elevation = if (hasFocus) dp(8).toFloat() else 0f
@@ -968,7 +968,7 @@ class PlayerActivity : Activity() {
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(14), dp(14), dp(14))
-            background = GradientDrawable().apply { setColor(0xD91A2030.toInt()); cornerRadius = dp(16).toFloat(); setStroke(dp(1), 0xAADEB55B.toInt()) }
+            background = GradientDrawable().apply { setColor(0xD9080A0E.toInt()); cornerRadius = dp(16).toFloat(); setStroke(dp(1), 0xAADEB55B.toInt()) }
             elevation = dp(12).toFloat()
         }
         panel.addView(TextView(this).apply { text = "CANLI KANALLAR"; textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); setPadding(dp(4), dp(2), dp(4), dp(10)) })
