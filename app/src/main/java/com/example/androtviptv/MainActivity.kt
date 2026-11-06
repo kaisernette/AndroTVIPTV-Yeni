@@ -106,6 +106,39 @@ private class WrappingRowLayout(context: Context) : ViewGroup(context) {
     override fun checkLayoutParams(p: LayoutParams?): Boolean = p is MarginLayoutParams
 }
 
+private class GlassBackdropDrawable(private val baseColor: Int, private val accentColor: Int) : android.graphics.drawable.Drawable() {
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    override fun draw(canvas: android.graphics.Canvas) {
+        val b = bounds
+        val w = b.width().toFloat()
+        val h = b.height().toFloat()
+        canvas.drawColor(baseColor)
+        fun pane(l: Float, t: Float, r: Float, bot: Float, alpha: Int, radius: Float) {
+            val rect = android.graphics.RectF(b.left+w*l,b.top+h*t,b.left+w*r,b.top+h*bot)
+            paint.style=android.graphics.Paint.Style.FILL
+            paint.color=android.graphics.Color.argb(alpha,255,255,255)
+            canvas.drawRoundRect(rect,radius,radius,paint)
+            paint.style=android.graphics.Paint.Style.STROKE
+            paint.strokeWidth=1.2f
+            paint.color=android.graphics.Color.argb(alpha+12,225,239,255)
+            canvas.drawRoundRect(rect,radius,radius,paint)
+        }
+        pane(0.58f,0.06f,1.12f,0.42f,7,34f)
+        pane(0.72f,0.48f,1.08f,0.94f,6,30f)
+        pane(-0.18f,0.62f,0.38f,1.08f,5,28f)
+        paint.style=android.graphics.Paint.Style.STROKE
+        paint.strokeWidth=2f
+        paint.color=android.graphics.Color.argb(22,android.graphics.Color.red(accentColor),android.graphics.Color.green(accentColor),android.graphics.Color.blue(accentColor))
+        val reflection=android.graphics.RectF(b.left+w*0.66f,b.top+h*0.12f,b.left+w*1.04f,b.top+h*0.82f)
+        canvas.drawRoundRect(reflection,38f,38f,paint)
+        paint.style=android.graphics.Paint.Style.FILL
+    }
+    override fun setAlpha(alpha: Int) { paint.alpha=alpha }
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter=colorFilter }
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
+}
+
 class MainActivity : Activity() {
     companion object {
         @Volatile var openTvTabOnResume: Boolean = false
@@ -600,7 +633,7 @@ class MainActivity : Activity() {
     // Sidebar transparency is independent from the selected color theme.
     private var transparentMenu = true
     private var ovalButtons = false
-    private var gradientBackground = false
+    private var glassPanelBackground = true
     private var selectedCategorySourceId = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -609,8 +642,8 @@ class MainActivity : Activity() {
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         ovalButtons = prefs.getBoolean("oval_buttons", false)
-        gradientBackground = prefs.getBoolean("gradient_background", true)
-        if (!prefs.contains("gradient_background")) prefs.edit().putBoolean("gradient_background", true).apply()
+        glassPanelBackground = prefs.getBoolean("glass_panel_background", prefs.getBoolean("gradient_background", true))
+        if (!prefs.contains("glass_panel_background")) prefs.edit().putBoolean("glass_panel_background", glassPanelBackground).apply()
         // Restore the selected KaiserTV Global theme before constructing any views.
         if (!prefs.getBoolean("global_themes_initialized", false)) {
             prefs.edit().putString("theme_name", "Antrasit • Mavi").putBoolean("global_themes_initialized", true).apply()
@@ -1686,24 +1719,14 @@ class MainActivity : Activity() {
             ((Color.green(base) * 0.72f) + (Color.green(accent) * 0.28f)).toInt().coerceIn(0, 255),
             ((Color.blue(base) * 0.72f) + (Color.blue(accent) * 0.28f)).toInt().coerceIn(0, 255)
         )
-        // One continuous theme gradient spans the whole app: brighter behind
-        // the sidebar and gradually deeper toward the right content edge.
-        fun shade(color: Int, factor: Float): Int = Color.rgb(
-            (Color.red(color) * factor).toInt().coerceIn(0, 255),
-            (Color.green(color) * factor).toInt().coerceIn(0, 255),
-            (Color.blue(color) * factor).toInt().coerceIn(0, 255)
-        )
-        val rightBase = shade(blend, 0.76f)
-        val surface = if (gradientBackground) {
-            GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(base, blend, rightBase)
-            )
+        // Glass-panel mode: dark cinematic canvas with subtle translucent panes.
+        val surface: android.graphics.drawable.Drawable = if (glassPanelBackground) {
+            GlassBackdropDrawable(base, accent)
         } else {
             GradientDrawable().apply { setColor(base) }
         }
         rootLayout.background = surface
-        // No separate right-side panel: let the root gradient show through.
+        // Content remains transparent so the glass backdrop is visible between cards.
         mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
         content.setBackgroundColor(Color.TRANSPARENT)
         // Opaque sidebar uses the same deep cinematic anthracite in every theme.
@@ -1720,11 +1743,14 @@ class MainActivity : Activity() {
 
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
         GradientDrawable().apply {
-            setColor(color)
-            // Oval mode applies a consistently rounded silhouette to all shared
-            // buttons, clickable surfaces and their focus backgrounds.
+            val glassSurface = glassPanelBackground && color == panel
+            setColor(if (glassSurface) Color.argb(188, Color.red(color), Color.green(color), Color.blue(color)) else color)
             cornerRadius = dp(if (ovalButtons) 24 else radiusDp).toFloat()
-            if (strokeColor != null) setStroke((2 * resources.displayMetrics.density).toInt().coerceAtLeast(1), strokeColor)
+            if (strokeColor != null) {
+                setStroke((2 * resources.displayMetrics.density).toInt().coerceAtLeast(1), strokeColor)
+            } else if (glassSurface) {
+                setStroke(dp(1), Color.argb(42, 225, 239, 255))
+            }
         }
 
     private fun edit(hintText: String, secret: Boolean): EditText = EditText(this).apply {
@@ -4781,16 +4807,16 @@ class MainActivity : Activity() {
                     }
                 ), LinearLayout.LayoutParams(0, dp(142), 1f).apply { setMargins(dp(4), dp(10), dp(4), dp(6)) })
                 settingsRow.addView(settingCard(
-                    t("Arkaplan"), t("Zemin görünümü"), "Düz", "Gradyan", !gradientBackground,
+                    t("Arkaplan"), t("Zemin görünümü"), "Düz", "Cam Panel", !glassPanelBackground,
                     {
-                        gradientBackground = false
-                        prefs.edit().putBoolean("gradient_background", false).apply()
+                        glassPanelBackground = false
+                        prefs.edit().putBoolean("glass_panel_background", false).apply()
                         applyThemeSurfaces()
                         render()
                     },
                     {
-                        gradientBackground = true
-                        prefs.edit().putBoolean("gradient_background", true).apply()
+                        glassPanelBackground = true
+                        prefs.edit().putBoolean("glass_panel_background", true).apply()
                         applyThemeSurfaces()
                         render()
                     }
