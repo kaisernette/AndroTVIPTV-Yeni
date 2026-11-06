@@ -116,6 +116,18 @@ class PlayerActivity : Activity() {
     private var subtitleButtonView: View? = null
     private var audioButtonView: View? = null
 
+    private fun playerThemeAccent(): Int {
+        val theme = getSharedPreferences("androtv", Context.MODE_PRIVATE).getString("theme_name", "Antrasit • Mavi")
+        return when (theme) {
+            "Gece • Altın" -> 0xFFE0B85F.toInt()
+            "Gece • Buzul", "Lacivert • Turkuaz" -> 0xFF54C6D9.toInt()
+            "Orman • Zümrüt" -> 0xFF20C997.toInt()
+            "Gece • Yakut" -> 0xFFF06479.toInt()
+            "Gece • Lavanta", "Koyu • Mor" -> 0xFFA78BFA.toInt()
+            else -> 0xFF00A6FF.toInt()
+        }
+    }
+
     private fun updateContentInfo() {
         val baseTitle = intent.getStringExtra("name")?.takeIf { it.isNotBlank() } ?: "Oynatıcı"
         val title = if (isLiveStream) {
@@ -387,7 +399,7 @@ class PlayerActivity : Activity() {
         subtitlePanel = createTrackPanel(C.TRACK_TYPE_TEXT)
         audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
 
-        val optionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        val optionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
         fun optionButton(label: String, sub: String, action: () -> Unit) = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -395,9 +407,9 @@ class PlayerActivity : Activity() {
             isFocusableInTouchMode = true
             isClickable = true
             background = GradientDrawable().apply {
-                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 28 else 4).toFloat()
-                setColor(Color.TRANSPARENT)
-                setStroke(0, Color.TRANSPARENT)
+                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 22 else 3).toFloat()
+                setColor(0xCC202833.toInt())
+                setStroke(dp(1), 0x554F6072)
             }
             addView(TextView(this@PlayerActivity).apply {
                 text = label
@@ -414,9 +426,9 @@ class PlayerActivity : Activity() {
             })
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = GradientDrawable().apply {
-                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 28 else 4).toFloat()
-                    setColor(if (hasFocus) 0xFF087FCA.toInt() else Color.TRANSPARENT)
-                    setStroke(dp(if (hasFocus) 2 else 0), if (hasFocus) 0xFF80C8FF.toInt() else Color.TRANSPARENT)
+                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 22 else 3).toFloat()
+                    setColor(if (hasFocus) playerThemeAccent() else 0xCC202833.toInt())
+                    setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) playerThemeAccent() else 0x554F6072)
                 }
                 v.elevation = if (hasFocus) dp(8).toFloat() else 0f
             }
@@ -441,11 +453,7 @@ class PlayerActivity : Activity() {
         }
         val subtitleButton = trackOption("CC", subtitlePanel!!)
         val audioButton = trackOption("♫", audioPanel!!)
-        val tvButton = optionButton("TV", "") {
-            MainActivity.openTvTabOnResume = true
-            finish()
-        }
-        val episodesButton = optionButton("☷", "") {
+         val episodesButton = optionButton("☷", "") {
             if (episodeNames.isEmpty()) {
                 android.widget.Toast.makeText(this, "Bölüm listesi bulunamadı.", android.widget.Toast.LENGTH_SHORT).show()
             } else {
@@ -455,27 +463,27 @@ class PlayerActivity : Activity() {
                     .show()
             }
         }
-        listOf(tvButton, subtitleButton, audioButton, episodesButton).forEach { button ->
-            optionRow.addView(button, LinearLayout.LayoutParams(0, dp(38), 1f).apply { setMargins(dp(6), 0, dp(6), 0) })
+        listOf(subtitleButton, audioButton, episodesButton).forEach { button ->
+            optionRow.addView(button, LinearLayout.LayoutParams(dp(44), dp(44)).apply { setMargins(dp(4), 0, dp(4), 0) })
         }
         subtitleButtonView = subtitleButton
         audioButtonView = audioButton
-        val optionButtons = listOf(tvButton, subtitleButton, audioButton, episodesButton)
+        val optionButtons = listOf(subtitleButton, audioButton, episodesButton)
         optionButtons.forEachIndexed { index, button ->
             button.id = View.generateViewId()
             button.nextFocusLeftId = optionButtons[(index - 1).coerceAtLeast(0)].id
             button.nextFocusRightId = optionButtons[(index + 1).coerceAtMost(optionButtons.lastIndex)].id
             button.nextFocusUpId = progressBar?.id ?: View.NO_ID
         }
-        centerButtons.forEach { it.nextFocusDownId = tvButton.id }
+        centerButtons.forEach { it.nextFocusDownId = subtitleButton.id }
         optionButtons.forEach { it.nextFocusUpId = playControl.id }
         val optionStack = FrameLayout(this).apply {
             clipChildren = false
             clipToPadding = false
         }
-        optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(38), Gravity.BOTTOM))
-        root.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(280), dp(210), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(118) })
-        root.addView(audioPanel!!, FrameLayout.LayoutParams(dp(280), dp(210), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(118) })
+        optionStack.addView(optionRow, FrameLayout.LayoutParams(-2, dp(44), Gravity.BOTTOM or Gravity.END))
+        root.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(280), dp(210), Gravity.BOTTOM or Gravity.END).apply { rightMargin = dp(28); bottomMargin = dp(116) })
+        root.addView(audioPanel!!, FrameLayout.LayoutParams(dp(280), dp(210), Gravity.BOTTOM or Gravity.END).apply { rightMargin = dp(28); bottomMargin = dp(116) })
         panel.addView(optionStack, LinearLayout.LayoutParams(-1, dp(52)))
         trackControlsView = optionStack
 
@@ -600,7 +608,7 @@ class PlayerActivity : Activity() {
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
             // Start remote navigation on an actual control, not on PlayerView,
             // whose default key handling can swallow DPAD up/down.
-            tvButton.post { tvButton.requestFocus() }
+            subtitleButton.post { subtitleButton.requestFocus() }
             refreshTrackChoices()
             uiHandler.post(uiTicker)
         } catch (e: Exception) {
