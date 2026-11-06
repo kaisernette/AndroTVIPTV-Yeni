@@ -377,8 +377,8 @@ class PlayerActivity : Activity() {
                 setPadding(dp(8), dp(8), dp(8), dp(8))
                 background = GradientDrawable().apply {
                     setColor(0xF018202C.toInt())
-                    cornerRadius = dp(14).toFloat()
-                    setStroke(dp(1), 0xFF168BFF.toInt())
+                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 18 else 5).toFloat()
+                    setStroke(dp(1), playerThemeAccent())
                 }
                 visibility = View.GONE
                 elevation = dp(18).toFloat()
@@ -398,6 +398,29 @@ class PlayerActivity : Activity() {
         }
         subtitlePanel = createTrackPanel(C.TRACK_TYPE_TEXT)
         audioPanel = createTrackPanel(C.TRACK_TYPE_AUDIO)
+        val episodesPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = GradientDrawable().apply {
+                setColor(0xF018202C.toInt())
+                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 18 else 5).toFloat()
+                setStroke(dp(1), playerThemeAccent())
+            }
+            visibility = View.GONE
+            elevation = dp(18).toFloat()
+        }
+        episodesPanel.addView(TextView(this).apply {
+            text = "Bölümler"
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(dp(4), dp(2), dp(4), dp(7))
+        })
+        val episodeOptions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        episodesPanel.addView(ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            addView(episodeOptions)
+        }, LinearLayout.LayoutParams(-1, dp(174)))
 
         val optionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
         fun optionButton(label: String, sub: String, action: () -> Unit) = LinearLayout(this).apply {
@@ -435,6 +458,7 @@ class PlayerActivity : Activity() {
             setOnClickListener { action() }
         }
         fun trackOption(symbol: String, panelView: LinearLayout) = optionButton(symbol, "") {
+            episodesPanel.visibility = View.GONE
             val other = if (panelView === subtitlePanel) audioPanel else subtitlePanel
             other?.visibility = View.GONE
             if (panelView.visibility == View.VISIBLE) {
@@ -453,14 +477,46 @@ class PlayerActivity : Activity() {
         }
         val subtitleButton = trackOption("CC", subtitlePanel!!)
         val audioButton = trackOption("♫", audioPanel!!)
-         val episodesButton = optionButton("☷", "") {
+        val episodesButton = optionButton("☷", "") {
+            subtitlePanel?.visibility = View.GONE
+            audioPanel?.visibility = View.GONE
             if (episodeNames.isEmpty()) {
                 android.widget.Toast.makeText(this, "Bölüm listesi bulunamadı.", android.widget.Toast.LENGTH_SHORT).show()
             } else {
-                AlertDialog.Builder(this)
-                    .setTitle("Bölümler")
-                    .setItems(episodeNames.toTypedArray()) { _, index -> playEpisodeAt(index) }
-                    .show()
+                episodeOptions.removeAllViews()
+                episodeNames.forEachIndexed { index, episodeName ->
+                    val item = TextView(this).apply {
+                        text = episodeName
+                        textSize = 14f
+                        gravity = Gravity.CENTER_VERTICAL
+                        setTextColor(Color.WHITE)
+                        setPadding(dp(10), dp(7), dp(10), dp(7))
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                        background = GradientDrawable().apply {
+                            cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 10 else 3).toFloat()
+                            setColor(Color.TRANSPARENT)
+                        }
+                        setOnFocusChangeListener { focused, hasFocus ->
+                            focused.background = GradientDrawable().apply {
+                                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 10 else 3).toFloat()
+                                setColor(if (hasFocus) playerThemeAccent() else Color.TRANSPARENT)
+                                if (hasFocus) setStroke(dp(2), playerThemeAccent())
+                            }
+                        }
+                        setOnClickListener {
+                            episodesPanel.visibility = View.GONE
+                            playEpisodeAt(index)
+                            showPlaybackControls()
+                        }
+                    }
+                    episodeOptions.addView(item, LinearLayout.LayoutParams(-1, dp(40)))
+                }
+                episodesPanel.visibility = View.VISIBLE
+                episodesPanel.bringToFront()
+                episodeOptions.post { episodeOptions.getChildAt(0)?.requestFocus() }
+                showPlaybackControls()
             }
         }
         listOf(subtitleButton, audioButton, episodesButton).forEach { button ->
@@ -484,6 +540,7 @@ class PlayerActivity : Activity() {
         optionStack.addView(optionRow, FrameLayout.LayoutParams(-2, dp(44), Gravity.BOTTOM or Gravity.END))
         root.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(280), dp(210), Gravity.BOTTOM or Gravity.END).apply { rightMargin = dp(28); bottomMargin = dp(116) })
         root.addView(audioPanel!!, FrameLayout.LayoutParams(dp(280), dp(210), Gravity.BOTTOM or Gravity.END).apply { rightMargin = dp(28); bottomMargin = dp(116) })
+        root.addView(episodesPanel, FrameLayout.LayoutParams(dp(320), dp(210), Gravity.BOTTOM or Gravity.END).apply { rightMargin = dp(28); bottomMargin = dp(116) })
         panel.addView(optionStack, LinearLayout.LayoutParams(-1, dp(52)))
         trackControlsView = optionStack
 
