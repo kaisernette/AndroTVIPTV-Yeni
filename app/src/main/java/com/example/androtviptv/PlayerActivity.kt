@@ -249,11 +249,11 @@ class PlayerActivity : Activity() {
         controlsRoot = root
         contentInfoView = TextView(this).apply {
             text = title
-            textSize = 20f
+            textSize = 17f
             maxLines = 2
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
-            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setPadding(dp(12), dp(7), dp(12), dp(7))
             background = GradientDrawable().apply {
                 cornerRadius = dp(10).toFloat()
                 setColor(0x99101824.toInt())
@@ -275,8 +275,8 @@ class PlayerActivity : Activity() {
         })
 
         val progressLine = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        elapsedLabel = TextView(this).apply { text = "00:00"; textSize = 14f; setTextColor(Color.WHITE); minWidth = dp(58) }
-        durationLabel = TextView(this).apply { text = "00:00"; textSize = 14f; setTextColor(Color.WHITE); gravity = Gravity.RIGHT; minWidth = dp(58) }
+        elapsedLabel = TextView(this).apply { text = "00:00"; textSize = 12f; setTextColor(Color.WHITE); minWidth = dp(42) }
+        durationLabel = TextView(this).apply { text = "00:00"; textSize = 12f; setTextColor(Color.WHITE); gravity = Gravity.RIGHT; minWidth = dp(42) }
         progressBar = SeekBar(this).apply {
             progressTintList = android.content.res.ColorStateList.valueOf(0xFF168BFF.toInt())
             thumbTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
@@ -298,11 +298,11 @@ class PlayerActivity : Activity() {
         val centerControls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(0, dp(8), 0, dp(12))
+            setPadding(0, dp(3), 0, dp(5))
         }
         fun roundControl(symbol: String, label: String, big: Boolean = false, action: () -> Unit) = TextView(this).apply {
             text = if (label.isBlank()) symbol else "$symbol\n$label"
-            textSize = if (big) 23f else 17f
+            textSize = if (big) 20f else 15f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             isFocusable = true
@@ -339,9 +339,9 @@ class PlayerActivity : Activity() {
             else player?.seekToNextMediaItem()
         }
         listOf(previousControl, rewindControl, playControl, forwardControl, nextControl).forEachIndexed { i, button ->
-            val w = if (i == 2) 62 else 54
-            val h = if (i == 2) 60 else 52
-            centerControls.addView(button, LinearLayout.LayoutParams(dp(w), dp(h)).apply { setMargins(dp(7), 0, dp(7), 0) })
+            val w = if (i == 2) 54 else 46
+            val h = if (i == 2) 50 else 44
+            centerControls.addView(button, LinearLayout.LayoutParams(dp(w), dp(h)).apply { setMargins(dp(5), 0, dp(5), 0) })
         }
         val centerButtons = listOf(previousControl, rewindControl, playControl, forwardControl, nextControl)
         centerButtons.forEachIndexed { index, button ->
@@ -403,39 +403,40 @@ class PlayerActivity : Activity() {
                 setTypeface(null, Typeface.BOLD)
                 gravity = Gravity.CENTER
             })
-            addView(TextView(this@PlayerActivity).apply {
+            if (sub.isNotBlank()) addView(TextView(this@PlayerActivity).apply {
                 text = sub
-                textSize = 12f
+                textSize = 10f
                 setTextColor(0xFFB9C4D0.toInt())
                 gravity = Gravity.CENTER
             })
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = GradientDrawable().apply {
-                    cornerRadius = dp(15).toFloat()
-                    setColor(if (hasFocus) 0xFF087FCA.toInt() else 0xCC202833.toInt())
-                    setStroke(dp(if (hasFocus) 3 else 1), if (hasFocus) 0xFF80C8FF.toInt() else 0x554F6072)
+                    cornerRadius = dp(9).toFloat()
+                    setColor(if (hasFocus) 0xFF087FCA.toInt() else Color.TRANSPARENT)
+                    setStroke(dp(if (hasFocus) 2 else 0), if (hasFocus) 0xFF80C8FF.toInt() else Color.TRANSPARENT)
                 }
                 v.elevation = if (hasFocus) dp(8).toFloat() else 0f
             }
             setOnClickListener { action() }
         }
-        fun trackOption(label: String, panelView: LinearLayout) = optionButton(label, if (panelView === subtitlePanel) "Türkçe / Kapalı" else "Türkçe / AAC") {
+        fun trackOption(symbol: String, panelView: LinearLayout) = optionButton(symbol, "") {
             val other = if (panelView === subtitlePanel) audioPanel else subtitlePanel
             other?.visibility = View.GONE
-            panelView.visibility = if (panelView.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-            if (panelView.visibility == View.VISIBLE) {
-                showPlaybackControls()
+            if (panelView.visibility == View.VISIBLE) panelView.visibility = View.GONE else {
+                refreshTrackChoices()
+                panelView.visibility = View.VISIBLE
                 val opts = (panelView.tag as? Pair<*, *>)?.second as? LinearLayout
                 opts?.getChildAt(0)?.post { opts.getChildAt(0)?.requestFocus() }
             }
+            showPlaybackControls()
         }
-        val subtitleButton = trackOption("Altyazı", subtitlePanel!!)
-        val audioButton = trackOption("Ses Dili", audioPanel!!)
-        val tvButton = optionButton("TV", "Kanallar") {
+        val subtitleButton = trackOption("CC", subtitlePanel!!)
+        val audioButton = trackOption("♫", audioPanel!!)
+        val tvButton = optionButton("TV", "") {
             if (isLiveStream) showChannelOverlay()
             else android.widget.Toast.makeText(this, "TV listesi canlı yayınlarda kullanılabilir.", android.widget.Toast.LENGTH_SHORT).show()
         }
-        val episodesButton = optionButton("Bölümler", "Liste") {
+        val episodesButton = optionButton("☷", "") {
             if (episodeNames.isEmpty()) {
                 android.widget.Toast.makeText(this, "Bölüm listesi bulunamadı.", android.widget.Toast.LENGTH_SHORT).show()
             } else {
@@ -446,7 +447,7 @@ class PlayerActivity : Activity() {
             }
         }
         listOf(tvButton, subtitleButton, audioButton, episodesButton).forEach { button ->
-            optionRow.addView(button, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(dp(6), 0, dp(6), 0) })
+            optionRow.addView(button, LinearLayout.LayoutParams(0, dp(38), 1f).apply { setMargins(dp(6), 0, dp(6), 0) })
         }
         subtitleButtonView = subtitleButton
         audioButtonView = audioButton
@@ -457,9 +458,10 @@ class PlayerActivity : Activity() {
             button.nextFocusRightId = optionButtons[(index + 1).coerceAtMost(optionButtons.lastIndex)].id
             button.nextFocusUpId = progressBar?.id ?: View.NO_ID
         }
-        centerButtons.forEach { it.nextFocusDownId = subtitleButton.id }
+        centerButtons.forEach { it.nextFocusDownId = tvButton.id }
+        optionButtons.forEach { it.nextFocusUpId = playControl.id }
         val optionStack = FrameLayout(this)
-        optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(48), Gravity.BOTTOM))
+        optionStack.addView(optionRow, FrameLayout.LayoutParams(-1, dp(38), Gravity.BOTTOM))
         optionStack.addView(subtitlePanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6); bottomMargin = dp(72) })
         optionStack.addView(audioPanel!!, FrameLayout.LayoutParams(dp(220), dp(200), Gravity.BOTTOM or Gravity.LEFT).apply { leftMargin = dp(6 + 0); bottomMargin = dp(72) })
         panel.addView(optionStack, LinearLayout.LayoutParams(-1, dp(52)))
@@ -586,7 +588,7 @@ class PlayerActivity : Activity() {
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
             // Start remote navigation on an actual control, not on PlayerView,
             // whose default key handling can swallow DPAD up/down.
-            playButtonView()?.post { playButtonView()?.requestFocus() }
+            tvButton.post { tvButton.requestFocus() }
             refreshTrackChoices()
             uiHandler.post(uiTicker)
         } catch (e: Exception) {
@@ -654,8 +656,10 @@ class PlayerActivity : Activity() {
                     }
                 }
                 when {
-                    focused === subtitleButtonView -> { subtitleButtonView?.performClick(); return true }
-                    focused === audioButtonView -> { audioButtonView?.performClick(); return true }
+                    focused === subtitleButtonView || focused === audioButtonView ||
+                        (trackControlsView as? FrameLayout)?.getChildAt(0)?.let { row ->
+                            row is ViewGroup && (0 until row.childCount).any { row.getChildAt(it) === focused }
+                        } == true -> { focused?.performClick(); showPlaybackControls(); return true }
                     focused === playButtonView() -> {
                         player?.let { if (it.isPlaying) it.pause() else it.play() }
                         showPlaybackControls()
