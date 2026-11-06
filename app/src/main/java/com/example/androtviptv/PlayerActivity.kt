@@ -380,14 +380,14 @@ class PlayerActivity : Activity() {
             isClickable = true
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 3).toFloat()
+                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 0).toFloat()
                 setColor(if (big) playerThemeAccent() else 0xCC080A0E.toInt())
                 setStroke(dp(if (big) 2 else 1), if (big) playerThemeAccent() else 0x665E6D7D)
             }
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 3).toFloat()
+                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 0).toFloat()
                     setColor(if (hasFocus || big) playerThemeAccent() else 0xCC080A0E.toInt())
                     setStroke(dp(if (hasFocus || big) 3 else 1), if (hasFocus || big) playerThemeAccent() else 0x665E6D7D)
                 }
@@ -432,7 +432,7 @@ class PlayerActivity : Activity() {
                 setPadding(dp(8), dp(8), dp(8), dp(8))
                 background = GradientDrawable().apply {
                     setColor(0xF018202C.toInt())
-                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 18 else 5).toFloat()
+                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 0).toFloat()
                     setStroke(dp(1), playerThemeAccent())
                 }
                 visibility = View.GONE
@@ -458,7 +458,7 @@ class PlayerActivity : Activity() {
             setPadding(dp(8), dp(8), dp(8), dp(8))
             background = GradientDrawable().apply {
                 setColor(0xF018202C.toInt())
-                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 18 else 5).toFloat()
+                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 0).toFloat()
                 setStroke(dp(1), playerThemeAccent())
             }
             visibility = View.GONE
@@ -488,7 +488,7 @@ class PlayerActivity : Activity() {
             isFocusableInTouchMode = true
             isClickable = true
             background = GradientDrawable().apply {
-                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 22 else 3).toFloat()
+                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 0).toFloat()
                 setColor(0xCC080A0E.toInt())
                 setStroke(dp(1), 0x554F6072)
             }
@@ -507,7 +507,7 @@ class PlayerActivity : Activity() {
             })
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = GradientDrawable().apply {
-                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 22 else 3).toFloat()
+                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 0).toFloat()
                     setColor(if (hasFocus) playerThemeAccent() else 0xCC080A0E.toInt())
                     setStroke(dp(if (hasFocus) 2 else 1), if (hasFocus) playerThemeAccent() else 0x554F6072)
                 }
@@ -553,12 +553,12 @@ class PlayerActivity : Activity() {
                         isFocusableInTouchMode = true
                         isClickable = true
                         background = GradientDrawable().apply {
-                            cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 10 else 3).toFloat()
+                            cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 0).toFloat()
                             setColor(Color.TRANSPARENT)
                         }
                         setOnFocusChangeListener { focused, hasFocus ->
                             focused.background = GradientDrawable().apply {
-                                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 10 else 3).toFloat()
+                                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 40 else 0).toFloat()
                                 setColor(if (hasFocus) playerThemeAccent() else Color.TRANSPARENT)
                                 if (hasFocus) setStroke(dp(2), playerThemeAccent())
                             }
