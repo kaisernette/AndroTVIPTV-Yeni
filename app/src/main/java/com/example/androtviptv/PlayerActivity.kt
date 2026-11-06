@@ -272,6 +272,8 @@ class PlayerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyPlayerImmersiveMode()
+        // Keep Android TV from dimming or starting its screensaver while the player is open.
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val title = intent.getStringExtra("name") ?: "Oynatıcı"
         val url = intent.getStringExtra("url") ?: run { finish(); return }
         channelRows = pendingChannelNames
@@ -302,6 +304,7 @@ class PlayerActivity : Activity() {
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val view = PlayerView(this).apply {
+            keepScreenOn = true
             useController = false
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
             isFocusable = true
@@ -1236,6 +1239,6 @@ class PlayerActivity : Activity() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     override fun onPause() { savePlaybackPosition(); super.onPause() }
-    override fun onStop() { savePlaybackPosition(); player?.pause(); super.onStop() }
+    override fun onStop() { savePlaybackPosition(); playerView?.keepScreenOn = false; window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); player?.pause(); super.onStop() }
     override fun onDestroy() { uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
 }
