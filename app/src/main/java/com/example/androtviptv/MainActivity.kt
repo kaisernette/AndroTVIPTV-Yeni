@@ -644,6 +644,8 @@ class MainActivity : Activity() {
         applyThemeSurfaces()
         showPreviousCrashIfAny()
         loadSavedSources()
+        syncWatchNextRows()
+        handleWatchNextIntent(intent)
     }
 
     private fun installCrashLogger() {
@@ -1740,6 +1742,46 @@ class MainActivity : Activity() {
         if (secret) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
     }
     private fun fieldParams() = LinearLayout.LayoutParams(-1, 48).apply { setMargins(0, 3, 0, 3) }
+    private fun persistFavoritesAndSync() {
+        prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+        syncWatchNextRows()
+    }
+
+    private fun syncWatchNextRows() {
+        if (android.os.Build.VERSION.SDK_INT < 26) return
+        val rows = LinkedHashMap<String, WatchNextSync.Entry>()
+        recent.filter { it.type in listOf("Filmler", "Diziler") && it.url.isNotBlank() }.forEach { media ->
+            val key = media.sourceId + "|" + media.id
+            rows[key] = WatchNextSync.Entry(key, media.sourceId, media.id, media.name, media.plot,
+                media.icon, if (media.type == "Diziler") WatchNextSync.KIND_SERIES else WatchNextSync.KIND_MOVIE,
+                WatchNextSync.TYPE_CONTINUE, 0L, 0L)
+        }
+        items.filter { it.type in listOf("Filmler", "Diziler") && favorites.contains(it.favoriteKey) }.forEach { media ->
+            val key = media.sourceId + "|" + media.id
+            if (!rows.containsKey(key)) rows[key] = WatchNextSync.Entry(key, media.sourceId, media.id, media.name,
+                media.plot, media.icon, if (media.type == "Diziler") WatchNextSync.KIND_SERIES else WatchNextSync.KIND_MOVIE,
+                WatchNextSync.TYPE_WATCHLIST, 0L, 0L)
+        }
+        WatchNextSync.sync(this, rows.values.toList())
+    }
+
+    private fun handleWatchNextIntent(sourceIntent: Intent?) {
+        val data = sourceIntent?.data ?: return
+        if (data.scheme != "kaisertv" || data.host != "watch-next") return
+        val sourceId = data.getQueryParameter("source") ?: return
+        val itemId = data.getQueryParameter("id") ?: return
+        val target = items.firstOrNull { it.sourceId == sourceId && it.id == itemId && it.type in listOf("Filmler", "Diziler") }
+        if (target != null) play(target)
+        else android.widget.Toast.makeText(this, "İçerik bulunamadı. KaiserTV+ kaynağını yenile.", android.widget.Toast.LENGTH_LONG).show()
+        setIntent(Intent(this, MainActivity::class.java))
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleWatchNextIntent(intent)
+    }
+
     private fun makeFavoriteButton(item: MediaItem): Button {
         fun updateFavoriteStyle(button: Button, focused: Boolean) {
             val selected = favorites.contains(item.favoriteKey)
@@ -1754,7 +1796,7 @@ class MainActivity : Activity() {
         }
         return makeButton("Favori", false) {
             if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+            persistFavoritesAndSync()
             render()
         }.apply {
             updateFavoriteStyle(this, false)
@@ -2408,7 +2450,7 @@ class MainActivity : Activity() {
         metaScroll.addView(meta)
         info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
         info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
-        info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
+        info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); persistFavoritesAndSync() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
         body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog
         dialog.show()
@@ -3348,7 +3390,7 @@ class MainActivity : Activity() {
                                 favorites.add(item.favoriteKey)
                                 true
                             }
-                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            persistFavoritesAndSync()
                             Toast.makeText(this@MainActivity,
                                 if (added) "${item.name} favorilere eklendi" else "${item.name} favorilerden çıkarıldı",
                                 Toast.LENGTH_SHORT).show()
@@ -3406,7 +3448,7 @@ class MainActivity : Activity() {
                     if (sidebarMode != "search") {
                         actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
                             if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            persistFavoritesAndSync()
                             render()
                         }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                     }
@@ -5264,6 +5306,11 @@ class MainActivity : Activity() {
             val intent = Intent(this, PlayerActivity::class.java)
                 .putExtra("name", item.name)
                 .putExtra("url", item.url)
+                .putExtra("watchNextSource", historyItem.sourceId)
+                .putExtra("watchNextId", historyItem.id)
+                .putExtra("watchNextTitle", if (item.type == "Bölümler") historyItem.name + " • " + item.name else item.name)
+                .putExtra("watchNextPoster", historyItem.icon.ifBlank { item.icon })
+                .putExtra("watchNextKind", if (historyItem.type == "Diziler" || item.type == "Bölümler") WatchNextSync.KIND_SERIES else WatchNextSync.KIND_MOVIE)
                 .putExtra("isLive", item.type == "Canlı TV")
                 .putExtra("bufferMode", prefs.getString("player_buffer", "normal"))
                 .putExtra("aspectMode", prefs.getString("player_aspect", "fit"))
