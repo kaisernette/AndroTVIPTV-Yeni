@@ -1158,8 +1158,9 @@ class MainActivity : Activity() {
                 minHeight = dp(42)
                 id = View.generateViewId()
             }
-            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
-                setMargins(dp(5), dp(4), dp(5), dp(4))
+            target.addView(sidebarButton, LinearLayout.LayoutParams(dp(54), dp(40)).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                setMargins(0, dp(4), 0, dp(4))
             })
             if (selected) selectedSidebarFocusView = sidebarButton
         }
@@ -3081,14 +3082,13 @@ class MainActivity : Activity() {
                         isFocusableInTouchMode = true
                         isClickable = true
                         setPadding(dp(8), dp(8), dp(8), dp(8))
-                        background = roundedDrawable(Color.rgb(30, 31, 44), 12, Color.rgb(43, 51, 68))
+                        // TV channel tiles stay transparent; only the focused tile gets a theme outline.
+                        background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         minimumHeight = dp(126)
                         setOnFocusChangeListener { v, hasFocus ->
                             v.animate().cancel()
-                            v.background = roundedDrawable(
-                                if (hasFocus) Color.rgb(38, 43, 61) else Color.rgb(30, 31, 44),
-                                12, if (hasFocus) accent else Color.rgb(43, 51, 68)
-                            )
+                            v.background = if (hasFocus) roundedDrawable(Color.TRANSPARENT, 12, accent)
+                                else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                             v.elevation = 0f
                             v.translationZ = 0f
                             v.scaleX = 1f
@@ -4312,7 +4312,7 @@ class MainActivity : Activity() {
                 }
             }
             "sources" -> {
-                heading("Kaynaklar", "Kaynak ekle ve kayıtlı bağlantılarını buradan yönet.")
+                // The source form supplies the page title and subtitle; avoid a duplicate heading.
                 // Keep the source-entry form fixed inside the Sources page; do not show a duplicate launch card.
                 showConnectionDialog()
                 if (savedSources.isEmpty()) {
