@@ -1358,7 +1358,7 @@ class MainActivity : Activity() {
                             minHeight = dp(40)
                             isFocusable = true
                             isClickable = true
-                            background = if (source.id == selectedCategorySourceId) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                            background = if (source.id == selectedCategorySourceId) roundedDrawable(accent, if (ovalButtons) 14 else 6) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                             setOnClickListener {
                                 selectedCategorySourceId = source.id
                                 selectedGroup = "Tüm kategoriler"
@@ -1402,7 +1402,7 @@ class MainActivity : Activity() {
                         isFocusable = true
                         isClickable = true
                         val activeCategory = name == (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
-                        background = if (activeCategory) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        background = if (activeCategory) roundedDrawable(accent, if (ovalButtons) 14 else 6) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
                             if (hasFocus) focusedCategoryName = name
                             val highlighted = if (hasFocus) name else (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
@@ -1410,7 +1410,7 @@ class MainActivity : Activity() {
                                 val sibling = categoryPanel.getChildAt(i) as? TextView ?: continue
                                 if (grouped.any { it.first == sibling.text.toString() }) {
                                     val active = sibling.text.toString() == highlighted
-                                    sibling.background = if (active) roundedDrawable(accent, 8) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                                    sibling.background = if (active) roundedDrawable(accent, if (ovalButtons) 14 else 6) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                                     sibling.setTextColor(if (active) Color.WHITE else muted)
                                 }
                             }
