@@ -115,6 +115,9 @@ class PlayerActivity : Activity() {
     private var contentInfoView: TextView? = null
     private var subtitleButtonView: View? = null
     private var audioButtonView: View? = null
+    private var episodesButtonView: View? = null
+    private var episodesPanelView: LinearLayout? = null
+    private var episodeOptionsView: LinearLayout? = null
     private var lastPlaybackFocusView: View? = null
 
     private fun playerThemeAccent(): Int {
@@ -154,11 +157,17 @@ class PlayerActivity : Activity() {
                 }
                 return false
             }
-            if (isInsideControls(focused, centerControlsView) ||
+            if (isInsideControls(focused, episodesPanelView)) {
+                lastPlaybackFocusView = episodesButtonView
+            } else if (isInsideControls(focused, centerControlsView) ||
                 isInsideControls(focused, trackControlsView) ||
                 isInsideControls(focused, progressControlsView)) {
                 lastPlaybackFocusView = focused
             }
+            // Episode/track popups must never remain floating after the controls disappear.
+            episodesPanelView?.visibility = View.GONE
+            subtitlePanel?.visibility = View.GONE
+            audioPanel?.visibility = View.GONE
         }
 
         controlsVisible = visible
@@ -464,8 +473,11 @@ class PlayerActivity : Activity() {
         val episodeOptions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         episodesPanel.addView(ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
+            isFocusable = false
             addView(episodeOptions)
         }, LinearLayout.LayoutParams(-1, dp(174)))
+        episodesPanelView = episodesPanel
+        episodeOptionsView = episodeOptions
 
         val optionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
         fun optionButton(label: String, sub: String, action: () -> Unit) = LinearLayout(this).apply {
@@ -569,6 +581,7 @@ class PlayerActivity : Activity() {
         }
         subtitleButtonView = subtitleButton
         audioButtonView = audioButton
+        episodesButtonView = episodesButton
         val optionButtons = listOf(subtitleButton, audioButton, episodesButton)
         optionButtons.forEachIndexed { index, button ->
             button.id = View.generateViewId()
@@ -725,6 +738,7 @@ class PlayerActivity : Activity() {
 
         val key = event.keyCode
         val focused = currentFocus
+        val episodeMenuOpen = episodesPanelView?.visibility == View.VISIBLE
         val trackMenuOpen = subtitlePanel?.visibility == View.VISIBLE || audioPanel?.visibility == View.VISIBLE
         val centerRow = centerControlsView as? ViewGroup
 
@@ -748,6 +762,12 @@ class PlayerActivity : Activity() {
         when (key) {
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
                 if (channelOverlay != null) { hideChannelOverlay(); return true }
+                if (episodesPanelView?.visibility == View.VISIBLE) {
+                    episodesPanelView?.visibility = View.GONE
+                    episodesButtonView?.requestFocus()
+                    showPlaybackControls()
+                    return true
+                }
                 if (audioPanel?.visibility == View.VISIBLE) {
                     audioPanel?.visibility = View.GONE
                     audioButtonView?.requestFocus()
@@ -769,7 +789,12 @@ class PlayerActivity : Activity() {
 
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                 if (channelOverlay != null) { tuneChannel(highlightedChannelIndex); return true }
-                if (focused === subtitleButtonView || focused === audioButtonView) {
+                if (episodeMenuOpen && focused?.isClickable == true) {
+                    focused.performClick()
+                    showPlaybackControls()
+                    return true
+                }
+                if (focused === subtitleButtonView || focused === audioButtonView || focused === episodesButtonView) {
                     focused?.performClick()
                     showPlaybackControls()
                     return true
@@ -816,6 +841,11 @@ class PlayerActivity : Activity() {
 
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 if (channelOverlay != null) return super.dispatchKeyEvent(event)
+                if (episodeMenuOpen) {
+                    // Episode entries form a vertical list; keep horizontal input inside the popup.
+                    showPlaybackControls()
+                    return true
+                }
 
                 val centerIndex = centerRow?.let { row ->
                     (0 until row.childCount).firstOrNull { row.getChildAt(it) === focused }
@@ -893,6 +923,24 @@ class PlayerActivity : Activity() {
                 }
 
                 showPlaybackControls()
+                if (episodeMenuOpen) {
+                    val options = episodeOptionsView
+                    val count = options?.childCount ?: 0
+                    if (count == 0) return true
+                    val index = (0 until count).firstOrNull { options?.getChildAt(it) === focused }
+                    val next = when {
+                        index == null && key == KeyEvent.KEYCODE_DPAD_DOWN -> 0
+                        index == null -> return true
+                        key == KeyEvent.KEYCODE_DPAD_DOWN -> (index + 1).coerceAtMost(count - 1)
+                        index == 0 -> { episodesButtonView?.requestFocus(); return true }
+                        else -> index - 1
+                    }
+                    val target = options?.getChildAt(next)
+                    target?.requestFocus()
+                    val scroll = episodesPanelView?.getChildAt(1) as? ScrollView
+                    if (target != null) scroll?.post { scroll.smoothScrollTo(0, target.top) }
+                    return true
+                }
                 if (trackMenuOpen) {
                     val options = trackOptions(activeTrackPanel())
                     val count = options?.childCount ?: 0
