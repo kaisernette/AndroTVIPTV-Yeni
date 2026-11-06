@@ -5,7 +5,7 @@
     <application
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:label="KaiserTV+"
-        android:banner="@drawable/banner_kaisertv"
+        android:banner="@drawable/banner_kaisertv_tv"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
