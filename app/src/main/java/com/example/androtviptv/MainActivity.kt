@@ -802,7 +802,7 @@ class MainActivity : Activity() {
             }
         }.apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(18, 14, 18, 12)
+            setPadding(0, 14, 18, 12)
             setBackgroundColor(bg)
         }
 
@@ -811,54 +811,60 @@ class MainActivity : Activity() {
         rootLayout = root
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(6, 12, 6, 10)
+            setPadding(dp(4), 12, dp(6), 10)
             background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
             // Keep rounded category-selection backgrounds fully visible in both themes.
             clipChildren = false
             clipToPadding = false
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(205), -1).apply { setMargins(0, 0, dp(8), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(190), -1).apply { setMargins(0, 0, dp(8), 0) })
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(dp(78), -1)
+            layoutParams = LinearLayout.LayoutParams(dp(180), -1)
         }
         sidebar.addView(primaryMenuColumn)
 
         brandView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(0, dp(2), 0, dp(2))
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            setPadding(dp(2), dp(2), 0, dp(2))
             clipChildren = false
         }
         brandView.addView(TextView(this).apply {
             text = "▶"
-            textSize = 32f
+            textSize = 30f
             setTextColor(Color.rgb(0, 174, 255))
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             includeFontPadding = false
-        }, LinearLayout.LayoutParams(-1, dp(35)))
-        brandView.addView(TextView(this).apply {
+        }, LinearLayout.LayoutParams(dp(38), dp(48)))
+        val brandWords = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(5), 0, 0, 0)
+        }
+        brandWords.addView(TextView(this).apply {
             text = "KAISER"
             textSize = 15f
             setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD)
-            gravity = Gravity.CENTER
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
             includeFontPadding = false
         }, LinearLayout.LayoutParams(-1, dp(22)))
-        brandView.addView(TextView(this).apply {
+        brandWords.addView(TextView(this).apply {
             val tvPlus = android.text.SpannableString("TV+")
             tvPlus.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 2, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             tvPlus.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 2, 3, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = tvPlus
             textSize = 18f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            gravity = Gravity.CENTER
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
             includeFontPadding = false
         }, LinearLayout.LayoutParams(-1, dp(25)))
+        brandView.addView(brandWords, LinearLayout.LayoutParams(0, dp(50), 1f))
         brandView.contentDescription = "KAISER TV+"
-        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(94)))
+        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
@@ -1077,7 +1083,7 @@ class MainActivity : Activity() {
             val params = sidebar.layoutParams
             // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
             // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (showReadableCategories) 232 else 76)
+            val desiredWidth = dp(if (showReadableCategories) 328 else 190)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -1120,7 +1126,7 @@ class MainActivity : Activity() {
                 else -> 0
             }
             val sidebarButton = makeButton(label, selected, action).apply {
-                val iconDrawable = if (iconRes != 0 && label != "▣" && !label.contains("TV")) getDrawable(iconRes)?.mutate() else null
+                val iconDrawable = if (iconRes != 0) getDrawable(iconRes)?.mutate() else null
                 iconDrawable?.setBounds(0, 0, dp(29), dp(29))
                 // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
@@ -1139,29 +1145,34 @@ class MainActivity : Activity() {
                     v.scaleX = 1f
                     v.scaleY = 1f
                 }
-                textSize = if (label == "▣" || label.contains("TV")) 18f else 14f
-                val iconEnd = label.indexOf("  ").takeIf { it in 1..3 } ?: 1
-                text = if (iconDrawable != null) {
-                    android.text.SpannableString(" ").apply {
-                        setSpan(android.text.style.ImageSpan(iconDrawable, android.text.style.ImageSpan.ALIGN_CENTER), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                } else {
-                    android.text.SpannableString(if (label == "▣" || label.contains("TV")) "TV" else label)
+                textSize = 15f
+                text = when {
+                    label == "Ara" -> "Arama"
+                    label.contains("Ana Sayfa") -> "Ana Sayfa"
+                    label.contains("TV") -> "TV"
+                    label.contains("Filmler") -> "Filmler"
+                    label.contains("Diziler") -> "Diziler"
+                    label.contains("Favoriler") -> "Favoriler"
+                    label.contains("İzlediklerim") || label.contains("Geçmiş") -> "İzlediklerim"
+                    label.contains("Ayarlar") -> "Ayarlar"
+                    else -> label
                 }
-                gravity = Gravity.CENTER
+                compoundDrawablePadding = dp(12)
+                setCompoundDrawables(iconDrawable, null, null, null)
+                gravity = Gravity.CENTER_VERTICAL or Gravity.START
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                contentDescription = if (label == "▣" || label.contains("TV")) "TV" else label
+                contentDescription = text.toString()
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(0, 0, 0, 0)
-                minHeight = dp(42)
+                setPadding(dp(10), 0, dp(6), 0)
+                minHeight = dp(46)
                 id = View.generateViewId()
             }
-            target.addView(sidebarButton, LinearLayout.LayoutParams(dp(54), dp(40)).apply {
-                gravity = Gravity.CENTER_HORIZONTAL
-                setMargins(0, dp(4), 0, dp(4))
+            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(46)).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setMargins(0, dp(3), 0, dp(3))
             })
             if (selected) selectedSidebarFocusView = sidebarButton
         }
