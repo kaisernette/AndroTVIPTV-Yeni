@@ -268,19 +268,6 @@ class PlayerActivity : Activity() {
         } else if (pos > 3000L) {
             playbackPrefs.edit().putLong(resumeKey, pos).apply()
         }
-        if (android.os.Build.VERSION.SDK_INT >= 26 && pos > 60_000L) {
-            val sourceId = intent.getStringExtra("watchNextSource").orEmpty()
-            val itemId = intent.getStringExtra("watchNextId").orEmpty()
-            if (sourceId.isNotBlank() && itemId.isNotBlank()) {
-                WatchNextSync.upsert(this, WatchNextSync.Entry(
-                    sourceId + "|" + itemId, sourceId, itemId,
-                    intent.getStringExtra("watchNextTitle") ?: intent.getStringExtra("name").orEmpty(),
-                    "", intent.getStringExtra("watchNextPoster").orEmpty(),
-                    intent.getIntExtra("watchNextKind", WatchNextSync.KIND_MOVIE),
-                    WatchNextSync.TYPE_CONTINUE, pos, exo.duration.takeIf { it > 0L } ?: 0L
-                ))
-            }
-        }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
