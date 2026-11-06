@@ -1340,44 +1340,7 @@ class MainActivity : Activity() {
             if (::categoryPanel.isInitialized && selectedType in listOf("Filmler", "Diziler", "Canlı TV")) {
                 // Apply the same hidden-category rules to the sidebar category column
                 // as the content grid, so hidden TV/movie/series groups disappear everywhere.
-                val allowedSourceIds = prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()
-                val availableCategorySources = savedSources.filter { source ->
-                    (allowedSourceIds.isEmpty() || allowedSourceIds.contains(source.id)) &&
-                        items.any { it.sourceId == source.id && it.type == selectedType }
-                }
-                if (availableCategorySources.size > 1) {
-                    categoryPanel.addView(TextView(this).apply {
-                        text = t("KAYNAKLAR")
-                        textSize = 11f; setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(muted); setPadding(dp(8), 0, 0, dp(8))
-                    })
-                    availableCategorySources.forEach { source ->
-                        val sourceButton = TextView(this).apply {
-                            text = source.name
-                            textSize = 13f
-                            maxLines = 1
-                            ellipsize = android.text.TextUtils.TruncateAt.END
-                            setTextColor(if (source.id == selectedCategorySourceId) Color.WHITE else muted)
-                            gravity = Gravity.CENTER_VERTICAL
-                            setPadding(dp(10), dp(8), dp(6), dp(8))
-                            minHeight = dp(40)
-                            isFocusable = true
-                            isClickable = true
-                            background = if (source.id == selectedCategorySourceId) roundedDrawable(accent, if (ovalButtons) 14 else 6) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                            setOnClickListener {
-                                selectedCategorySourceId = source.id
-                                selectedGroup = "Tüm kategoriler"
-                                expandedCategory = null
-                                focusedCategoryName = null
-                                render()
-                            }
-                        }
-                        sourceButton.id = View.generateViewId()
-                        categoryPanel.addView(sourceButton, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                            setMargins(0, dp(1), 0, dp(1))
-                        })
-                    }
-                }
+                // Kaynak isimleri kategori sütununda gösterilmez; kaynak seçimi Ayarlar bölümündedir.
                 val categorySourceId = selectedCategorySourceId
                 val categoryItems = items.filter {
                     it.type == selectedType &&
