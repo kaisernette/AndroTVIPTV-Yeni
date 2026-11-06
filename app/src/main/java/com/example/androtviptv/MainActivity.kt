@@ -1121,7 +1121,11 @@ class MainActivity : Activity() {
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     val button = v as Button
-                    button.background = if (hasFocus) roundedDrawable(accent, 0) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    button.background = if (hasFocus) GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dp(if (ovalButtons) 18 else 3).toFloat()
+                        setColor(accent)
+                    } else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     button.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
                     iconDrawable?.setTint(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
                     button.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
@@ -1149,7 +1153,9 @@ class MainActivity : Activity() {
                 minHeight = dp(42)
                 id = View.generateViewId()
             }
-            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(46)).apply { setMargins(0, dp(3), 0, dp(3)) })
+            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
+                setMargins(dp(5), dp(4), dp(5), dp(4))
+            })
             if (selected) selectedSidebarFocusView = sidebarButton
         }
 
