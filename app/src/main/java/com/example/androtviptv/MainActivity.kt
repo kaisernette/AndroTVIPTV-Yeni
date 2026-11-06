@@ -830,32 +830,32 @@ class MainActivity : Activity() {
         }
         brandView.addView(TextView(this).apply {
             text = "▶"
-            textSize = 27f
+            textSize = 32f
             setTextColor(Color.rgb(0, 174, 255))
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             includeFontPadding = false
-        }, LinearLayout.LayoutParams(-1, dp(29)))
+        }, LinearLayout.LayoutParams(-1, dp(35)))
         brandView.addView(TextView(this).apply {
             text = "KAISER"
-            textSize = 13.5f
+            textSize = 15f
             setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             includeFontPadding = false
-        }, LinearLayout.LayoutParams(-1, dp(19)))
+        }, LinearLayout.LayoutParams(-1, dp(22)))
         brandView.addView(TextView(this).apply {
             val tvPlus = android.text.SpannableString("TV+")
             tvPlus.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 2, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             tvPlus.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 2, 3, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = tvPlus
-            textSize = 16f
+            textSize = 18f
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             includeFontPadding = false
-        }, LinearLayout.LayoutParams(-1, dp(22)))
+        }, LinearLayout.LayoutParams(-1, dp(25)))
         brandView.contentDescription = "KAISER TV+"
-        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(82)))
+        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(94)))
         navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
