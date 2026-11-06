@@ -758,6 +758,13 @@ class PlayerActivity : Activity() {
                     subtitleButtonView?.requestFocus()
                     return true
                 }
+                // First BACK dismisses the visible playback controls; a second BACK exits.
+                if (controlsVisible) {
+                    setPlaybackControlsVisible(false)
+                    return true
+                }
+                finish()
+                return true
             }
 
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
