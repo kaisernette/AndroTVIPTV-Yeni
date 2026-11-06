@@ -119,7 +119,7 @@ class PlayerActivity : Activity() {
     private fun updateContentInfo() {
         val baseTitle = intent.getStringExtra("name")?.takeIf { it.isNotBlank() } ?: "Oynatıcı"
         val title = if (isLiveStream) {
-            baseTitle
+            channelRows.getOrNull(selectedChannelIndex)?.takeIf { it.isNotBlank() } ?: baseTitle
         } else {
             val episode = episodeNames.getOrNull(selectedEpisodeIndex)
             if (episode != null && episode.isNotBlank() && episode != baseTitle) "$baseTitle  ·  $episode" else baseTitle
@@ -395,7 +395,7 @@ class PlayerActivity : Activity() {
             isFocusableInTouchMode = true
             isClickable = true
             background = GradientDrawable().apply {
-                cornerRadius = dp(10).toFloat()
+                cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 28 else 4).toFloat()
                 setColor(Color.TRANSPARENT)
                 setStroke(0, Color.TRANSPARENT)
             }
@@ -414,7 +414,7 @@ class PlayerActivity : Activity() {
             })
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = GradientDrawable().apply {
-                    cornerRadius = dp(9).toFloat()
+                    cornerRadius = dp(if (getSharedPreferences("androtv", Context.MODE_PRIVATE).getBoolean("oval_buttons", false)) 28 else 4).toFloat()
                     setColor(if (hasFocus) 0xFF087FCA.toInt() else Color.TRANSPARENT)
                     setStroke(dp(if (hasFocus) 2 else 0), if (hasFocus) 0xFF80C8FF.toInt() else Color.TRANSPARENT)
                 }
@@ -442,25 +442,8 @@ class PlayerActivity : Activity() {
         val subtitleButton = trackOption("CC", subtitlePanel!!)
         val audioButton = trackOption("♫", audioPanel!!)
         val tvButton = optionButton("TV", "") {
-            if (recentChannelUrls.isNotEmpty()) {
-                val latestUrl = recentChannelUrls.first()
-                val latestIndex = recentChannelUrls.indexOf(latestUrl).coerceAtLeast(0)
-                pendingChannelNames = recentChannelRows
-                pendingChannelUrls = recentChannelUrls
-                pendingChannelIndex = latestIndex
-                pendingRecentChannelNames = recentChannelRows
-                pendingRecentChannelUrls = recentChannelUrls
-                startActivity(Intent(this, PlayerActivity::class.java)
-                    .putExtra("name", recentChannelRows.getOrNull(latestIndex) ?: "Canlı TV")
-                    .putExtra("url", latestUrl)
-                    .putExtra("isLive", true)
-                    .putExtra("bufferMode", intent.getStringExtra("bufferMode") ?: "normal")
-                    .putExtra("aspectMode", intent.getStringExtra("aspectMode") ?: "fit")
-                    .putExtra("resumeEnabled", false))
-                finish()
-            } else {
-                android.widget.Toast.makeText(this, "Son izlenen kanal bulunamadı.", android.widget.Toast.LENGTH_SHORT).show()
-            }
+            MainActivity.openTvTabOnResume = true
+            finish()
         }
         val episodesButton = optionButton("☷", "") {
             if (episodeNames.isEmpty()) {
@@ -951,6 +934,7 @@ class PlayerActivity : Activity() {
         resumeKey = "position_" + url.hashCode().toString()
         player?.let { exo -> exo.setMediaItem(createStreamMediaItem(url)); exo.prepare(); exo.playWhenReady = true }
         refreshChannelHighlight()
+        updateContentInfo()
         hideChannelOverlay()
     }
 
