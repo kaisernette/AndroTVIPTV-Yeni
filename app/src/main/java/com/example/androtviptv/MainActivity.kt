@@ -1810,8 +1810,13 @@ class MainActivity : Activity() {
 
 
     private fun saveSource(source: SavedSource) {
-        savedSources.removeAll { it.id == source.id }; savedSources.add(source)
-        prefs.edit().putString("last_source_id", source.id).apply()
+        // Normalize every M3U source centrally so every add/edit/save path persists the _plus URL.
+        val sourceToSave = if (source.mode.equals("m3u", ignoreCase = true))
+            source.copy(address = normalizeM3uPlusUrl(source.address))
+        else source
+        savedSources.removeAll { it.id == sourceToSave.id }
+        savedSources.add(sourceToSave)
+        prefs.edit().putString("last_source_id", sourceToSave.id).apply()
         persistSources()
     }
     private fun persistSources() {
