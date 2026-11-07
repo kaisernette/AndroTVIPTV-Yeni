@@ -2586,7 +2586,10 @@ class MainActivity : Activity() {
         // Keep the app immersive after every render/focus-driven UI refresh.
         // Setting SYSTEM_UI_FLAG_VISIBLE here caused system bars to reappear on selection.
         applyKaiserImmersiveMode()
-        if (::heroPanel.isInitialized) heroPanel.visibility = View.GONE
+        if (::heroPanel.isInitialized) {
+            heroPanel.removeAllViews()
+            heroPanel.visibility = View.GONE
+        }
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
@@ -3320,17 +3323,40 @@ class MainActivity : Activity() {
                     clipToPadding = false
                     isFocusable = false
                 }
-                homeHeroImage = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+                homeHeroImage = object : ImageView(this) {
+                    override fun onDraw(canvas: android.graphics.Canvas) {
+                        val image = drawable
+                        if (image != null && image.intrinsicWidth > 0 && image.intrinsicHeight > 0 && width > 0 && height > 0) {
+                            // Fill the banner without distortion: center horizontally and crop only from the bottom.
+                            val scale = maxOf(width.toFloat() / image.intrinsicWidth, height.toFloat() / image.intrinsicHeight)
+                            val dx = (width - image.intrinsicWidth * scale) / 2f
+                            imageMatrix = android.graphics.Matrix().apply {
+                                setScale(scale, scale)
+                                postTranslate(dx, 0f)
+                            }
+                        }
+                        super.onDraw(canvas)
+                    }
+                }.apply { scaleType = ImageView.ScaleType.MATRIX }
                 hero.addView(homeHeroImage, FrameLayout.LayoutParams(-1, -1))
                 // Fade the artwork into the app background: no hard poster edge on the left,
                 // plus a gentle fade upward from the bottom edge.
                 hero.addView(View(this).apply {
                     background = android.graphics.drawable.LayerDrawable(arrayOf(
                         GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                            intArrayOf(Color.rgb(7, 8, 14), Color.argb(238, 7, 8, 14),
-                                Color.argb(115, 7, 8, 14), Color.TRANSPARENT)),
+                            intArrayOf(
+                                Color.argb(250, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(220, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(145, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(35, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.TRANSPARENT
+                            )),
                         GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
-                            intArrayOf(Color.rgb(8, 10, 14), Color.argb(130, 8, 10, 14), Color.TRANSPARENT))
+                            intArrayOf(
+                                Color.argb(235, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(130, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.TRANSPARENT
+                            ))
                     ))
                 }, FrameLayout.LayoutParams(-1, -1))
                 val heroCopy = LinearLayout(this).apply {
@@ -3364,10 +3390,8 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(dp(132), dp(42)).apply { setMargins(0, dp(14), 0, 0) })
                 heroCopy.addView(heroActions)
                 hero.addView(heroCopy, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER_VERTICAL))
-                content.addView(hero, LinearLayout.LayoutParams(-1, dp(390)).apply {
-                    // The home hero sits flush against the top and right edges.
-                    setMargins(-dp(4), 0, 0, dp(14))
-                })
+                heroPanel.addView(hero, LinearLayout.LayoutParams(-1, dp(244)))
+                heroPanel.visibility = View.VISIBLE
                 showHomeHero(heroItem)
             }
 
@@ -3521,7 +3545,7 @@ class MainActivity : Activity() {
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
                         if (weeklyPoster || homeCard) dp(190) else -1,
-                        if (liveCard) dp(88) else if (weeklyPoster || homeCard) dp(112) else if (posterGridMode) dp(210) else dp(210)
+                        if (liveCard) dp(88) else if (weeklyPoster || homeCard) dp(107) else dp(210)
                     )
                 }
                 card.addView(poster)
