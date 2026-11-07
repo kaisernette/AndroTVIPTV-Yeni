@@ -3340,8 +3340,9 @@ class MainActivity : Activity() {
                     override fun onDraw(canvas: android.graphics.Canvas) {
                         val image = drawable
                         if (image != null && image.intrinsicWidth > 0 && image.intrinsicHeight > 0 && width > 0 && height > 0) {
-                            // Fill the banner without distortion: center horizontally and crop only from the bottom.
-                            val scale = maxOf(width.toFloat() / image.intrinsicWidth, height.toFloat() / image.intrinsicHeight)
+                            // Show the complete source artwork without cropping or stretching.
+                            // Fit inside the banner, center horizontally and align to the top.
+                            val scale = minOf(width.toFloat() / image.intrinsicWidth, height.toFloat() / image.intrinsicHeight)
                             val dx = (width - image.intrinsicWidth * scale) / 2f
                             imageMatrix = android.graphics.Matrix().apply {
                                 setScale(scale, scale)
@@ -3358,16 +3359,16 @@ class MainActivity : Activity() {
                     background = android.graphics.drawable.LayerDrawable(arrayOf(
                         GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
                             intArrayOf(
-                                Color.argb(250, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(220, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(145, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(35, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(205, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(155, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(85, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(18, Color.red(bg), Color.green(bg), Color.blue(bg)),
                                 Color.TRANSPARENT
                             )),
                         GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
                             intArrayOf(
-                                Color.argb(235, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(130, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(150, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(65, Color.red(bg), Color.green(bg), Color.blue(bg)),
                                 Color.TRANSPARENT
                             ))
                     ))
@@ -5299,7 +5300,7 @@ class MainActivity : Activity() {
             if (width > 0 && height > 0 && bitmap.width > 0 && bitmap.height > 0) {
                 // Fill the 16:9 tile without stretching; anchor at the top so any
                 // unavoidable vertical crop is taken from the bottom edge.
-                val scale = maxOf(width.toFloat() / bitmap.width, height.toFloat() / bitmap.height)
+                val scale = minOf(width.toFloat() / bitmap.width, height.toFloat() / bitmap.height)
                 val dx = (width - bitmap.width * scale) / 2f
                 target.imageMatrix = android.graphics.Matrix().apply {
                     setScale(scale, scale)
