@@ -1647,8 +1647,7 @@ class MainActivity : Activity() {
                     val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "mac", portal, macValue)
                     saveSource(src)
                     hideKeyboard()
-                    Toast.makeText(this@MainActivity, t("MAC Portal bilgileri kaydedildi. Yayın bağlantısı henüz etkin değil."), Toast.LENGTH_LONG).show()
-                    render()
+                    loadStalker(src, editSource != null)
                 } else {
                     sourceMode.check(modeId)
                     connectButton.performClick()
@@ -1896,7 +1895,7 @@ class MainActivity : Activity() {
                 status.visibility = View.VISIBLE
                 status.text = if (items.isEmpty()) "${sourceToRestore.name}: kayıtlı kaynak yükleniyor…" else "${sourceToRestore.name}: film ve dizi kayıtları tamamlanıyor…"
                 render()
-                if (sourceToRestore.mode == "xtream") loadXtream(sourceToRestore, true) else loadM3u(sourceToRestore, true)
+                when (sourceToRestore.mode) { "xtream" -> loadXtream(sourceToRestore, true); "mac" -> loadStalker(sourceToRestore, true); else -> loadM3u(sourceToRestore, true) }
             } else {
                 render()
             }
@@ -1914,7 +1913,7 @@ class MainActivity : Activity() {
                 if (action == 0) {
                     when (s.mode) {
                         "xtream" -> loadXtream(s, true)
-                        "mac" -> Toast.makeText(this, "MAC Portal kaynak bilgileri kayıtlı; yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
+                        "mac" -> loadStalker(s, true)
                         else -> loadM3u(s, true)
                     }
                 }
@@ -1952,6 +1951,55 @@ class MainActivity : Activity() {
             else -> cleanPath
         }
         return normalizedPath + suffix
+    }
+
+    private fun loadStalker(source: SavedSource, append: Boolean) {
+        val portal = source.address.trim().trimEnd('/')
+        val mac = source.username.trim().uppercase(java.util.Locale.ROOT)
+        if (!(portal.startsWith("http://") || portal.startsWith("https://")) ||
+            !Regex("^[0-9A-F]{2}(:[0-9A-F]{2}){5}$").matches(mac)) {
+            status.text = "Portal adresi veya MAC adresi geçersiz."
+            render()
+            return
+        }
+        prefs.edit().putString("last_source_id", source.id).apply()
+        isLoadingSource = true
+        loadProgress = 5
+        status.visibility = View.VISIBLE
+        status.text = "${source.name}: Portal bağlantısı kuruluyor…"
+        render()
+        thread(name = "kaiser-stalker-load") {
+            try {
+                val channels = StalkerPortalClient(portal, mac).loadChannels()
+                val loaded = channels.map { channel ->
+                    MediaItem(id = channel.id, name = channel.name, url = "stalker://${channel.id}",
+                        group = channel.group.ifBlank { "Diğer" }, type = "Canlı TV",
+                        icon = channel.logo, extension = "", sourceId = source.id)
+                }
+                if (loaded.isEmpty()) throw IllegalStateException("Portal kanal listesi boş.")
+                runOnUiThread {
+                    items.removeAll { it.sourceId == source.id }
+                    items.addAll(loaded)
+                    saveCachedItems()
+                    selectedType = "Canlı TV"
+                    selectedGroup = "Tüm kategoriler"
+                    sidebarMode = "main"
+                    isLoadingSource = false
+                    hasLoadedSource = true
+                    loadProgress = 100
+                    status.text = "${source.name}: ${loaded.size} kanal yüklendi."
+                    render()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    isLoadingSource = false
+                    loadProgress = 0
+                    status.visibility = View.VISIBLE
+                    status.text = "${source.name}: ${e.message ?: friendlyLoadError(e)}"
+                    render()
+                }
+            }
+        }
     }
 
     private fun loadM3u(source: SavedSource, append: Boolean) {
@@ -4663,10 +4711,8 @@ class MainActivity : Activity() {
                                     expandedCategory = null
                                     focusedCategoryName = null
                                     if (source.mode == "xtream") loadXtream(source, false)
-                                    else if (source.mode == "mac") {
-                                        Toast.makeText(this@MainActivity, "MAC Portal yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
-                                        render()
-                                    } else loadM3u(source, false)
+                                    else if (source.mode == "mac") loadStalker(source, false)
+                                    else loadM3u(source, false)
                                 } else {
                                     selectedCategorySourceId = ""
                                     items.clear()
@@ -4677,7 +4723,7 @@ class MainActivity : Activity() {
                         }
                         sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(54), dp(42)))
                         sourceRow.addView(makeButton(t("Yenile"), false) {
-                            if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
+                            when (source.mode) { "xtream" -> loadXtream(source, true); "mac" -> loadStalker(source, true); else -> loadM3u(source, true) }
                         }, LinearLayout.LayoutParams(dp(84), dp(42)).apply {
                             setMargins(dp(2), 0, dp(4), 0)
                         })
@@ -5530,8 +5576,28 @@ class MainActivity : Activity() {
     private var openingPlayer = false
     private var fullscreenPoster: MediaItem? = null
 
-    private fun play(item: MediaItem, startOver: Boolean = false) {
+    private fun play(item: MediaItem, startOver: Boolean = false, streamHeaders: Map<String, String> = emptyMap()) {
         if (openingPlayer) return
+        val owningSource = savedSources.firstOrNull { it.id == item.sourceId }
+        if (owningSource?.mode == "mac" && item.url.startsWith("stalker://")) {
+            openingPlayer = true
+            thread(name = "kaiser-stalker-link") {
+                try {
+                    val result = StalkerPortalClient(owningSource.address, owningSource.username)
+                        .createLink(item.url.removePrefix("stalker://"))
+                    runOnUiThread {
+                        openingPlayer = false
+                        play(item.copy(url = result.first), startOver, result.second)
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread {
+                        openingPlayer = false
+                        Toast.makeText(this, "Yayın bağlantısı alınamadı: ${e.message ?: "Portal hatası"}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            return
+        }
         if (item.type == "Diziler" && item.url.isBlank()) { loadSeriesEpisodes(item); return }
         if (item.url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
@@ -5563,6 +5629,7 @@ class MainActivity : Activity() {
                 .putExtra("aspectMode", prefs.getString("player_aspect", "fit"))
                 .putExtra("resumeEnabled", prefs.getBoolean("player_resume", true))
                 .putExtra("startOver", startOver)
+                .putExtra("streamHeaders", java.util.HashMap(streamHeaders))
             if (item.type == "Bölümler") {
                 // Keep episode navigation metadata in process memory, not Intent extras.
                 val episodeList = pendingSeriesEpisodes
