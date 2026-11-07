@@ -871,11 +871,9 @@ class MainActivity : Activity() {
                             val green = android.graphics.Color.green(pixel)
                             val blue = android.graphics.Color.blue(pixel)
                             val isBlackBackground = red < 22 && green < 22 && blue < 22
-                            val isGreyUnderline = y > transparent.height * 0.68 &&
-                                kotlin.math.abs(red - green) < 20 &&
-                                kotlin.math.abs(green - blue) < 20 &&
-                                red in 45..235
-                            if (isBlackBackground || isGreyUnderline) {
+                            // Remove the thin leftover mark/underline below the logo artwork.
+                            val isBelowLogoArtwork = y >= transparent.height * 0.88
+                            if (isBlackBackground || isBelowLogoArtwork) {
                                 transparent.setPixel(x, y, android.graphics.Color.TRANSPARENT)
                             }
                         }
