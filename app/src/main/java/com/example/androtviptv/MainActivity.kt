@@ -2431,8 +2431,7 @@ class MainActivity : Activity() {
         val body = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(18, 18, 18, 18); background = roundedDrawable(panel, 18, Color.rgb(45, 54, 71)) }
         val poster = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; background = roundedDrawable(Color.rgb(31, 37, 50), 12) }
         body.addView(poster, LinearLayout.LayoutParams(150, 220).apply { setMargins(0, 0, 18, 0) })
-        val cardArtwork = if (homeCard) item.backdrop.ifBlank { item.icon } else item.icon
-                if (cardArtwork.startsWith("http://") || cardArtwork.startsWith("https://")) loadPoster(cardArtwork, poster)
+        if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
         val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         info.addView(TextView(this).apply { text = item.name; textSize = 22f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
         info.addView(TextView(this).apply { text = item.type + "  •  " + item.group.ifBlank { "Diğer" }; textSize = 13f; setTextColor(accent); setPadding(0, 8, 0, 8) })
@@ -3366,7 +3365,6 @@ class MainActivity : Activity() {
                             if (index >= 0) items[index] = updated
                             recent.indices.filter { recent[it].id == item.id && recent[it].type == item.type && recent[it].sourceId == item.sourceId }.forEach { recent[it] = updated }
                             saveCachedItems()
-                            saveRecent()
                             runOnUiThread {
                                 if (homeHeroItem?.id == item.id && homeHeroItem?.sourceId == item.sourceId) {
                                     homeHeroItem = updated
@@ -3624,7 +3622,8 @@ class MainActivity : Activity() {
                 if (focusFirstContentOnRender && item == displayedEntries.firstOrNull()) {
                     card.post { if (card.isAttachedToWindow) card.requestFocus() }
                 }
-                if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
+                val cardArtwork = if (homeCard) item.backdrop.ifBlank { item.icon } else item.icon
+                if (cardArtwork.startsWith("http://") || cardArtwork.startsWith("https://")) loadPoster(cardArtwork, poster)
                 else poster.setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     intArrayOf(Color.rgb(8, 10, 14), Color.rgb(14, 18, 24))))
                 if (weeklyPoster) {
