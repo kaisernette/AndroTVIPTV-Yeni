@@ -1917,7 +1917,18 @@ class MainActivity : Activity() {
         render()
         thread {
             try {
-                val parsed = parseM3u(request(source.address)).map { it.copy(sourceId = source.id) }
+                val parsed = parseM3u(request(source.address)).map { item ->
+                    val logo = item.icon.trim().replace("&amp;", "&")
+                    val resolvedLogo = try {
+                        when {
+                            logo.isBlank() -> ""
+                            logo.startsWith("//") -> "https:$logo"
+                            logo.startsWith("http://", true) || logo.startsWith("https://", true) -> logo
+                            else -> URL(URL(source.address), logo).toString()
+                        }
+                    } catch (_: Exception) { logo }
+                    item.copy(sourceId = source.id, icon = resolvedLogo)
+                }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
@@ -2155,16 +2166,56 @@ class MainActivity : Activity() {
         throw Exception("Sunucuya ulaşılamadı: ${lastError?.message ?: "bağlantı hatası"}")
     }
 
+    private fun m3uAttribute(line: String, key: String): String {
+        val pattern = Regex(
+            "(?:^|\\\\s)" + Regex.escape(key) + "\\\\s*=\\\\s*(?:\\\"([^\\\"]*)\\\"|'([^']*)'|([^\\\\s,]+))",
+            RegexOption.IGNORE_CASE
+        )
+        val match = pattern.find(line) ?: return ""
+        return (1..3).firstNotNullOfOrNull { index -> match.groups[index]?.value }?.trim().orEmpty()
+    }
+
     private fun parseM3u(text: String): List<MediaItem> {
-        val out = mutableListOf<MediaItem>(); var name = "İçerik"; var group = "Diğer"; var icon = ""
-        text.lineSequence().map { it.trim() }.forEach { line ->
-            if (line.startsWith("#EXTINF", true)) {
-                name = line.substringAfterLast(',', "İçerik").trim().ifBlank { "İçerik" }
-                group = Regex("group-title=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: "Diğer"
-                icon = Regex("tvg-logo=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: ""
-            } else if ((line.startsWith("http://") || line.startsWith("https://")) && line.isNotBlank()) {
-                val type = classify(name, group)
-                out.add(MediaItem(line, name, line, group, type, icon)); name = "İçerik"; group = "Diğer"; icon = ""
+        val out = mutableListOf<MediaItem>()
+        var name = "İçerik"
+        var group = ""
+        var pendingGroup = ""
+        var icon = ""
+
+        text.lineSequence().map { it.trim().removePrefix("\\uFEFF") }.forEach { line ->
+            when {
+                line.startsWith("#EXTINF", true) -> {
+                    val comma = line.lastIndexOf(',')
+                    name = if (comma >= 0 && comma < line.lastIndex) {
+                        line.substring(comma + 1).trim().ifBlank { "İçerik" }
+                    } else "İçerik"
+                    group = m3uAttribute(line, "group-title")
+                        .ifBlank { m3uAttribute(line, "tvg-group") }
+                        .ifBlank { m3uAttribute(line, "group") }
+                        .ifBlank { m3uAttribute(line, "category") }
+                    icon = m3uAttribute(line, "tvg-logo")
+                        .ifBlank { m3uAttribute(line, "logo") }
+                        .ifBlank { m3uAttribute(line, "poster") }
+                        .ifBlank { m3uAttribute(line, "cover") }
+                    if (group.isBlank() && pendingGroup.isNotBlank()) group = pendingGroup
+                }
+                line.startsWith("#EXTGRP:", true) -> {
+                    pendingGroup = line.substringAfter(':').trim().trim('"', '\\'')
+                    if (group.isBlank()) group = pendingGroup
+                }
+                line.startsWith("#") || line.isBlank() -> Unit
+                line.startsWith("http://", true) || line.startsWith("https://", true) -> {
+                    val type = classify(name, group)
+                    // If a playlist omits group metadata, use the detected content type
+                    // instead of collapsing every item into the generic "Diğer" bucket.
+                    val finalGroup = group.ifBlank { type }
+                    val url = line.substringBefore("|").trim().ifBlank { line }
+                    out.add(MediaItem(url, name, url, finalGroup, type, icon))
+                    name = "İçerik"
+                    group = ""
+                    icon = ""
+                    pendingGroup = ""
+                }
             }
         }
         return out
