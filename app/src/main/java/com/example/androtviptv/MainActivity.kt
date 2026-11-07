@@ -2169,7 +2169,7 @@ class MainActivity : Activity() {
     private fun m3uAttribute(line: String, key: String): String {
         // M3U attributes may use either single or double quotes.
         val pattern = Regex(
-            """(?:^|\\s)${Regex.escape(key)}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s,]+))""",
+            """(?:^|\s)${Regex.escape(key)}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s,]+))""",
             RegexOption.IGNORE_CASE
         )
         val match = pattern.find(line) ?: return ""
