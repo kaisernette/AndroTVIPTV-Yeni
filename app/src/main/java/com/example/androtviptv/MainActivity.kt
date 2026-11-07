@@ -1754,39 +1754,32 @@ class MainActivity : Activity() {
     }
 
     private fun applyThemeSurfaces() {
-        // Approved KaiserTV+ petrol-blue theme: deep teal base with restrained corner glows.
-        val base = Color.rgb(5, 17, 23)
-        val mid = Color.rgb(7, 48, 62)
-        val deep = Color.rgb(4, 31, 43)
-
-        fun softGlow(centerX: Float, centerY: Float, alpha: Int): GradientDrawable =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.argb(alpha, 0, 145, 174), Color.TRANSPARENT)
-            ).apply {
-                shape = GradientDrawable.OVAL
-                setGradientType(GradientDrawable.RADIAL_GRADIENT)
-                setGradientCenter(centerX, centerY)
-                setGradientRadius(dp(560).toFloat())
-            }
-
-        val petrolBase = if (gradientBackground) {
-            GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(base, mid, deep))
+        val base = bg
+        val blend = Color.rgb(
+            ((Color.red(base) * 0.72f) + (Color.red(accent) * 0.28f)).toInt().coerceIn(0, 255),
+            ((Color.green(base) * 0.72f) + (Color.green(accent) * 0.28f)).toInt().coerceIn(0, 255),
+            ((Color.blue(base) * 0.72f) + (Color.blue(accent) * 0.28f)).toInt().coerceIn(0, 255)
+        )
+        fun shade(color: Int, factor: Float): Int = Color.rgb(
+            (Color.red(color) * factor).toInt().coerceIn(0, 255),
+            (Color.green(color) * factor).toInt().coerceIn(0, 255),
+            (Color.blue(color) * factor).toInt().coerceIn(0, 255)
+        )
+        val rightBase = shade(blend, 0.76f)
+        val themedSurface = if (gradientBackground) {
+            GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(base, blend, rightBase))
         } else {
             GradientDrawable().apply { setColor(base) }
         }
         val layers = mutableListOf<android.graphics.drawable.Drawable>()
-        layers.add(petrolBase)
+        layers.add(themedSurface)
         loadCustomBackground()?.let { layers.add(it) }
-        layers.add(softGlow(0.96f, 0.04f, 34))
-        layers.add(softGlow(0.05f, 0.96f, 24))
-        val surface = android.graphics.drawable.LayerDrawable(layers.toTypedArray())
-        rootLayout.background = surface
+        rootLayout.background = android.graphics.drawable.LayerDrawable(layers.toTypedArray())
         mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
         content.setBackgroundColor(Color.TRANSPARENT)
         sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
-        window.statusBarColor = base
-        window.navigationBarColor = base
+        window.statusBarColor = bg
+        window.navigationBarColor = bg
     }
 
     private fun buttonBackground(color: Int): GradientDrawable =
