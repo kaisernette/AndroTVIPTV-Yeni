@@ -1312,7 +1312,7 @@ class MainActivity : Activity() {
                     "Tümü" -> selectedType == "Tümü"
                     else -> selectedType == key
                 }
-                addSidebarButton(glyph, isSelected, if (key == "Ayarlar") settingsBar else navBar) {
+                addSidebarButton(label, isSelected, if (key == "Ayarlar") settingsBar else navBar) {
                     when (key) {
                         "Ara" -> {
                             detailSeries = null
@@ -1722,7 +1722,14 @@ class MainActivity : Activity() {
             GradientDrawable().apply { setColor(base) }
         }
         rootLayout.background = surface
-        mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
+        // In flat mode, give the right content area a slightly lighter shade
+        // of the selected theme than the left navigation surface.
+        val rightPanel = Color.rgb(
+            ((Color.red(base) * 0.82f) + (Color.red(accent) * 0.18f)).toInt().coerceIn(0, 255),
+            ((Color.green(base) * 0.82f) + (Color.green(accent) * 0.18f)).toInt().coerceIn(0, 255),
+            ((Color.blue(base) * 0.82f) + (Color.blue(accent) * 0.18f)).toInt().coerceIn(0, 255)
+        )
+        mainContentScroll.setBackgroundColor(if (gradientBackground) Color.TRANSPARENT else rightPanel)
         content.setBackgroundColor(Color.TRANSPARENT)
         sidebar.setBackgroundColor(if (transparentMenu) Color.TRANSPARENT else panel)
         window.statusBarColor = bg
