@@ -1975,7 +1975,8 @@ class MainActivity : Activity() {
         render()
         thread {
             try {
-                val parsed = parseM3u(request(source.address)).map { it.copy(sourceId = source.id) }
+                // Stream large M3U playlists line-by-line to avoid allocating one huge response String.
+                val parsed = requestM3u(source.address).map { it.copy(sourceId = source.id) }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
@@ -2213,16 +2214,61 @@ class MainActivity : Activity() {
         throw Exception("Sunucuya ulaşılamadı: ${lastError?.message ?: "bağlantı hatası"}")
     }
 
-    private fun parseM3u(text: String): List<MediaItem> {
-        val out = mutableListOf<MediaItem>(); var name = "İçerik"; var group = "Diğer"; var icon = ""
-        text.lineSequence().map { it.trim() }.forEach { line ->
+    private fun requestM3u(address: String): List<MediaItem> {
+        var lastError: Exception? = null
+        for (attempt in 0..2) {
+            var conn: HttpURLConnection? = null
+            try {
+                conn = (URL(address).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 25000
+                    readTimeout = 60000
+                    setRequestProperty("User-Agent", "KaiserTV+/2.1")
+                    setRequestProperty("Accept", "application/x-mpegURL, audio/x-mpegurl, text/plain, */*")
+                    useCaches = false
+                }
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    val message = try { conn.errorStream?.bufferedReader(Charsets.UTF_8)?.use { it.readLine() } } catch (_: Exception) { null }
+                    if (code == 429 || code >= 500) throw Exception("HTTP $code (yeniden denenecek)")
+                    throw Exception("HTTP $code" + (message?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: ""))
+                }
+                val parsed = conn.inputStream.bufferedReader(Charsets.UTF_8).use { parseM3u(it) }
+                if (parsed.isEmpty()) throw Exception("M3U listesi boş veya desteklenmeyen biçimde.")
+                return parsed
+            } catch (e: Exception) {
+                lastError = e
+                if (attempt < 2) {
+                    try { Thread.sleep(700L * (attempt + 1)) } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        throw Exception("Yükleme iptal edildi")
+                    }
+                }
+            } finally {
+                conn?.disconnect()
+            }
+        }
+        throw Exception("M3U listesi alınamadı: " + (lastError?.message ?: "bağlantı hatası"))
+    }
+
+    private fun parseM3u(reader: java.io.BufferedReader): List<MediaItem> {
+        val out = mutableListOf<MediaItem>()
+        var name = "İçerik"
+        var group = "Diğer"
+        var icon = ""
+        while (true) {
+            val rawLine = reader.readLine() ?: break
+            if (rawLine.length > 256 * 1024) continue
+            val line = rawLine.trim()
             if (line.startsWith("#EXTINF", true)) {
                 name = line.substringAfterLast(',', "İçerik").trim().ifBlank { "İçerik" }
                 group = Regex("group-title=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: "Diğer"
                 icon = Regex("tvg-logo=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: ""
             } else if ((line.startsWith("http://") || line.startsWith("https://")) && line.isNotBlank()) {
                 val type = classify(name, group)
-                out.add(MediaItem(line, name, line, group, type, icon)); name = "İçerik"; group = "Diğer"; icon = ""
+                out.add(MediaItem(line, name, line, group, type, icon))
+                name = "İçerik"
+                group = "Diğer"
+                icon = ""
             }
         }
         return out
