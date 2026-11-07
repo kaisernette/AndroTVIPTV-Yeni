@@ -819,10 +819,7 @@ class MainActivity : Activity() {
             clipToPadding = false
         }
         root.addView(sidebar, LinearLayout.LayoutParams(dp(190), -1))
-        root.addView(View(this).apply {
-            setBackgroundColor(Color.argb(90, Color.red(muted), Color.green(muted), Color.blue(muted)))
-            isFocusable = false
-        }, LinearLayout.LayoutParams(dp(1), -1))
+
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -3340,8 +3337,8 @@ class MainActivity : Activity() {
                     override fun onDraw(canvas: android.graphics.Canvas) {
                         val image = drawable
                         if (image != null && image.intrinsicWidth > 0 && image.intrinsicHeight > 0 && width > 0 && height > 0) {
-                            // Show the complete source artwork without cropping or stretching.
-                            // Fit inside the banner, center horizontally and align to the top.
+                            // Fit the complete artwork inside the hero without cropping or stretching.
+                            // Center horizontally and keep the top edge aligned.
                             val scale = minOf(width.toFloat() / image.intrinsicWidth, height.toFloat() / image.intrinsicHeight)
                             val dx = (width - image.intrinsicWidth * scale) / 2f
                             imageMatrix = android.graphics.Matrix().apply {
@@ -3359,16 +3356,17 @@ class MainActivity : Activity() {
                     background = android.graphics.drawable.LayerDrawable(arrayOf(
                         GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
                             intArrayOf(
-                                Color.argb(205, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(155, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(85, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(18, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(245, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(220, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(165, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(80, Color.red(bg), Color.green(bg), Color.blue(bg)),
                                 Color.TRANSPARENT
                             )),
                         GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
                             intArrayOf(
-                                Color.argb(150, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(65, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(230, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(175, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(90, Color.red(bg), Color.green(bg), Color.blue(bg)),
                                 Color.TRANSPARENT
                             ))
                     ))
@@ -5298,8 +5296,7 @@ class MainActivity : Activity() {
             val width = target.width
             val height = target.height
             if (width > 0 && height > 0 && bitmap.width > 0 && bitmap.height > 0) {
-                // Fill the 16:9 tile without stretching; anchor at the top so any
-                // unavoidable vertical crop is taken from the bottom edge.
+                // Fit the entire image inside its card/poster area without cropping.
                 val scale = minOf(width.toFloat() / bitmap.width, height.toFloat() / bitmap.height)
                 val dx = (width - bitmap.width * scale) / 2f
                 target.imageMatrix = android.graphics.Matrix().apply {
