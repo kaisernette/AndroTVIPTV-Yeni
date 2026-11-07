@@ -1829,8 +1829,13 @@ class MainActivity : Activity() {
             val arr = JSONArray(getSharedPreferences("androtv", MODE_PRIVATE).getString("sources", "[]"))
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
-                savedSources.add(SavedSource(o.optString("id"), o.optString("name"), o.optString("mode"), o.optString("address"), o.optString("username"), o.optString("password")))
+                val mode = o.optString("mode")
+                val storedAddress = o.optString("address")
+                val address = if (mode.equals("m3u", true)) normalizeM3uPlusUrl(storedAddress) else storedAddress
+                savedSources.add(SavedSource(o.optString("id"), o.optString("name"), mode, address, o.optString("username"), o.optString("password")))
             }
+            // Persist migrated legacy M3U addresses immediately so the Sources screen also shows _plus.
+            if (savedSources.any { it.mode.equals("m3u", true) }) persistSources()
         } catch (_: Exception) { }
 
         // Keep a built-in mock source available for the demo. If this is the
@@ -1934,12 +1939,18 @@ class MainActivity : Activity() {
 
     private fun normalizeM3uPlusUrl(rawUrl: String): String {
         val url = rawUrl.trim()
+        if (url.isBlank()) return url
         val boundary = listOf(url.indexOf('?'), url.indexOf('#'))
             .filter { it >= 0 }.minOrNull() ?: url.length
-        val path = url.substring(0, boundary)
-        if (!path.endsWith("m3u", ignoreCase = true) ||
-            path.endsWith("m3u_plus", ignoreCase = true)) return url
-        return path + "_plus" + url.substring(boundary)
+        val prefix = url.substring(0, boundary)
+        val suffix = url.substring(boundary)
+        val cleanPath = prefix.trimEnd('/')
+        val normalizedPath = when {
+            cleanPath.endsWith("_plus", ignoreCase = true) -> cleanPath
+            cleanPath.endsWith(".m3u", ignoreCase = true) -> cleanPath + "_plus"
+            else -> cleanPath
+        }
+        return normalizedPath + suffix
     }
 
     private fun loadM3u(source: SavedSource, append: Boolean) {
