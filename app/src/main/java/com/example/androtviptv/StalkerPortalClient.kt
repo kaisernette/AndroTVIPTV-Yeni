@@ -39,10 +39,28 @@ internal class StalkerPortalClient(
         private const val X_USER_AGENT = "Model: MAG270; Link: Wifi"
     }
 
-    // Keep portal sub-paths such as /c/ and /stalker_portal/server/load.php.
-    private val endpoint = portal.trim().let { value ->
-        if (value.endsWith("/")) value else "$value/"
+    // Stalker providers expose several standard API entry points. Keep the
+    // supplied portal prefix and try its common API routes during handshake.
+    private fun buildEndpointCandidates(value: String): List<String> {
+        val parsed = URL(value.trim())
+        val origin = "${parsed.protocol}://${parsed.authority}"
+        val path = parsed.path.trimEnd('/')
+        val exact = value.trim().trimEnd('/')
+        val candidates = mutableListOf<String>()
+
+        if (path.endsWith(".php", ignoreCase = true) || path.endsWith("load.php", ignoreCase = true)) {
+            candidates += exact
+        } else {
+            if (path.isNotEmpty()) candidates += "$path/portal.php".let { origin + it }
+            candidates += "$origin/stalker_portal/server/load.php"
+            if (path.isNotEmpty()) candidates += "$path/".let { origin + it }
+            candidates += "$origin/portal.php"
+        }
+        return candidates.distinct()
     }
+
+    private val endpointCandidates = buildEndpointCandidates(portal)
+    @Volatile private var activeEndpoint = endpointCandidates.first()
 
     private val baseCookie: String
         get() = "mac=${mac.trim().uppercase(java.util.Locale.ROOT)}; stb_lang=en; timezone=Europe%2FIstanbul"
@@ -65,8 +83,8 @@ internal class StalkerPortalClient(
 
     private fun call(session: Session?, params: List<Pair<String, String>>): ApiResponse {
         val query = params.joinToString("&") { "${encode(it.first)}=${encode(it.second)}" }
-        val separator = if (endpoint.contains("?")) "&" else "?"
-        val connection = (URL(endpoint + separator + query).openConnection() as HttpURLConnection).apply {
+        val separator = if (activeEndpoint.contains("?")) "&" else "?"
+        val connection = (URL(activeEndpoint + separator + query).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 15000
             readTimeout = 25000
@@ -75,7 +93,7 @@ internal class StalkerPortalClient(
             setRequestProperty("User-Agent", USER_AGENT)
             setRequestProperty("X-User-Agent", X_USER_AGENT)
             setRequestProperty("Accept", "*/*")
-            setRequestProperty("Referer", endpoint)
+            setRequestProperty("Referer", activeEndpoint)
             setRequestProperty("Cookie", session?.cookie ?: baseCookie)
             // Stalker middleware commonly reads the token from Authorization, not query params.
             session?.token?.takeIf { it.isNotBlank() }?.let {
@@ -112,18 +130,38 @@ internal class StalkerPortalClient(
      * returning the channel list or a playable link.
      */
     private fun openSession(): Session {
-        val handshake = call(null, listOf(
-            "type" to "stb",
-            "action" to "handshake",
-            "token" to "",
-            "JsHttpRequest" to "1-xml"
-        ))
-        val handshakeJs = handshake.json.optJSONObject("js")
+        var handshake: ApiResponse? = null
+        var lastHandshakeError: Throwable? = null
+        for (candidate in endpointCandidates) {
+            activeEndpoint = candidate
+            try {
+                val response = call(null, listOf(
+                    "type" to "stb",
+                    "action" to "handshake",
+                    "token" to "",
+                    "JsHttpRequest" to "1-xml"
+                ))
+                val tokenValue = response.json.optJSONObject("js")?.optString("token").orEmpty()
+                if (tokenValue.isNotBlank()) {
+                    handshake = response
+                    break
+                }
+                lastHandshakeError = IllegalStateException("Bu portal adresinde oturum anahtarı alınamadı.")
+            } catch (error: Exception) {
+                lastHandshakeError = error
+            }
+        }
+        val handshakeResponse = handshake
+            ?: throw IllegalStateException(
+                "Portal API adresi yanıt vermedi. Sağlayıcının verdiği tam portal adresini kontrol edin. " +
+                    (lastHandshakeError?.message ?: "")
+            )
+        val handshakeJs = handshakeResponse.json.optJSONObject("js")
             ?: throw IllegalStateException("Portal handshake yanıtı geçersiz.")
         val token = handshakeJs.optString("token")
         if (token.isBlank()) throw IllegalStateException("Portal oturum anahtarı vermedi.")
 
-        var session = Session(token, mergeCookies(baseCookie, handshake.setCookies))
+        var session = Session(token, mergeCookies(baseCookie, handshakeResponse.setCookies))
         val profile = call(session, listOf(
             "type" to "stb",
             "action" to "get_profile",

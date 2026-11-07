@@ -3344,12 +3344,7 @@ class MainActivity : Activity() {
         val groups: List<Pair<String, List<MediaItem>>> = if (expandedCategory != null) {
             listOf(expandedCategory!!)
         } else if (selectedType == "Canlı TV") {
-            // Show loaded live channels (including Stalker/MAC channels) in the main content area.
-            visible
-                .filter { it.type == "Canlı TV" && it.url.isNotBlank() }
-                .groupBy { it.group.ifBlank { "Diğer" } }
-                .map { it.key to it.value }
-                .filter { it.second.isNotEmpty() }
+            emptyList()
         } else if (sidebarMode == "search") {
             if (query.isBlank()) emptyList()
             else visible.take(240).groupBy { it.type }.map { (type, entries) -> "$type • Arama sonuçları" to entries }
