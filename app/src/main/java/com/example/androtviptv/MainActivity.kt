@@ -3,6 +3,9 @@ package com.example.androtviptv
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.net.Uri
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.Bitmap
@@ -601,6 +604,7 @@ class MainActivity : Activity() {
     private var transparentMenu = true
     private var ovalButtons = false
     private var gradientBackground = true
+    private var customBackgroundUri: String? = null
     private var selectedCategorySourceId = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -610,6 +614,7 @@ class MainActivity : Activity() {
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         ovalButtons = prefs.getBoolean("oval_buttons", false)
         gradientBackground = prefs.getBoolean("gradient_background", prefs.getBoolean("glass_panel_background", true))
+        customBackgroundUri = prefs.getString("custom_background_uri", null)
         if (!prefs.contains("gradient_background")) prefs.edit().putBoolean("gradient_background", gradientBackground).apply()
         // Restore the selected KaiserTV Global theme before constructing any views.
         if (!prefs.getBoolean("global_themes_initialized", false)) {
@@ -1692,6 +1697,62 @@ class MainActivity : Activity() {
         form.post { if (editSource?.mode == "xtream") xtreamName.requestFocus() else m3uName.requestFocus() }
     }
 
+    private fun openBackgroundPicker() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "image/*"
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        startActivityForResult(intent, 7314)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != 7314 || resultCode != RESULT_OK) return
+        val uri = data?.data ?: return
+        try {
+            val takeFlags = data.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION
+            contentResolver.takePersistableUriPermission(uri, takeFlags)
+        } catch (_: Exception) {
+            // Some document providers grant a temporary read permission only.
+        }
+        customBackgroundUri = uri.toString()
+        prefs.edit().putString("custom_background_uri", customBackgroundUri).apply()
+        applyThemeSurfaces()
+        if (selectedType == "Ayarlar") {
+            settingsPage = "themes"
+            render()
+        }
+    }
+
+    private fun loadCustomBackground(): android.graphics.drawable.Drawable? {
+        val value = customBackgroundUri ?: return null
+        return try {
+            val uri = Uri.parse(value)
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+            val targetW = (resources.displayMetrics.widthPixels * 1.5f).toInt().coerceAtLeast(1)
+            val targetH = (resources.displayMetrics.heightPixels * 1.5f).toInt().coerceAtLeast(1)
+            var sample = 1
+            while (bounds.outWidth / (sample * 2) >= targetW && bounds.outHeight / (sample * 2) >= targetH) sample *= 2
+            val options = BitmapFactory.Options().apply { inSampleSize = sample.coerceAtLeast(1) }
+            val bitmap = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+                ?: return null
+            BitmapDrawable(resources, bitmap).apply { alpha = 118 }
+        } catch (e: Exception) {
+            android.util.Log.w("KaiserTV", "Custom background could not be loaded", e)
+            null
+        }
+    }
+
+    private fun clearCustomBackground() {
+        customBackgroundUri = null
+        prefs.edit().remove("custom_background_uri").apply()
+        applyThemeSurfaces()
+        settingsPage = "themes"
+        render()
+    }
+
     private fun applyThemeSurfaces() {
         // Approved KaiserTV+ petrol-blue theme: deep teal base with restrained corner glows.
         val base = Color.rgb(5, 17, 23)
@@ -1714,11 +1775,12 @@ class MainActivity : Activity() {
         } else {
             GradientDrawable().apply { setColor(base) }
         }
-        val surface = android.graphics.drawable.LayerDrawable(arrayOf(
-            petrolBase,
-            softGlow(0.96f, 0.04f, 34),
-            softGlow(0.05f, 0.96f, 24)
-        ))
+        val layers = mutableListOf<android.graphics.drawable.Drawable>()
+        layers.add(petrolBase)
+        loadCustomBackground()?.let { layers.add(it) }
+        layers.add(softGlow(0.96f, 0.04f, 34))
+        layers.add(softGlow(0.05f, 0.96f, 24))
+        val surface = android.graphics.drawable.LayerDrawable(layers.toTypedArray())
         rootLayout.background = surface
         mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
         content.setBackgroundColor(Color.TRANSPARENT)
@@ -4898,6 +4960,49 @@ class MainActivity : Activity() {
                     }
                 ), LinearLayout.LayoutParams(0, dp(142), 1f).apply { setMargins(dp(4), dp(10), dp(4), dp(6)) })
                 content.addView(settingsRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+                val customBackgroundCard = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(16), dp(12), dp(16), dp(12))
+                    background = roundedDrawable(panel, 14)
+                }
+                customBackgroundCard.addView(TextView(this).apply {
+                    text = "Cihazdan arka plan"
+                    textSize = 16f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                })
+                customBackgroundCard.addView(TextView(this).apply {
+                    text = if (customBackgroundUri != null) "Özel görsel seçildi" else "Galeriden veya cihaz dosyalarından bir görsel seç"
+                    textSize = 12f
+                    setTextColor(muted)
+                    setPadding(0, dp(4), 0, dp(10))
+                })
+                val backgroundActions = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                val chooseBackground = Button(this).apply {
+                    text = "Görsel seç"
+                    isFocusable = true
+                    setOnClickListener { openBackgroundPicker() }
+                }
+                backgroundActions.addView(chooseBackground, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                    setMargins(0, 0, dp(6), 0)
+                })
+                val removeBackground = Button(this).apply {
+                    text = "Varsayılanı kullan"
+                    isFocusable = true
+                    isEnabled = customBackgroundUri != null
+                    setOnClickListener { clearCustomBackground() }
+                }
+                backgroundActions.addView(removeBackground, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                    setMargins(dp(6), 0, 0, 0)
+                })
+                customBackgroundCard.addView(backgroundActions)
+                content.addView(customBackgroundCard, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(4), dp(8), dp(4), dp(10))
+                })
             }
             "about" -> {
                 content.setBackgroundColor(Color.rgb(10, 13, 19))
