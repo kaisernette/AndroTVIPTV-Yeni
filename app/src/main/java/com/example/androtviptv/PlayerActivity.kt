@@ -276,6 +276,8 @@ class PlayerActivity : Activity() {
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val title = intent.getStringExtra("name") ?: "Oynatıcı"
         val url = intent.getStringExtra("url") ?: run { finish(); return }
+        @Suppress("UNCHECKED_CAST")
+        val streamHeaders = (intent.getSerializableExtra("streamHeaders") as? HashMap<String, String>) ?: hashMapOf()
         channelRows = pendingChannelNames
         channelUrls = pendingChannelUrls
         selectedChannelIndex = pendingChannelIndex.coerceIn(0, (channelUrls.size - 1).coerceAtLeast(0))
@@ -649,6 +651,7 @@ class PlayerActivity : Activity() {
                 .setConnectTimeoutMs(15000)
                 .setReadTimeoutMs(30000)
                 .setAllowCrossProtocolRedirects(true)
+                .setDefaultRequestProperties(streamHeaders)
             val mediaSourceFactory = DefaultMediaSourceFactory(this)
                 .setDataSourceFactory(httpFactory)
             val mediaItem = createStreamMediaItem(currentStreamUrl)
