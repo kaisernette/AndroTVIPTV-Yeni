@@ -5498,9 +5498,11 @@ class MainActivity : Activity() {
                 // Keep large channel lists out of Intent extras to avoid Binder transaction crashes.
                 PlayerActivity.pendingChannelNames = channels.map { it.name }
                 PlayerActivity.pendingChannelUrls = channels.map { it.url }
+                PlayerActivity.pendingChannelHeaders = channels.map { it.requestHeaders }
                 PlayerActivity.pendingChannelIndex = channels.indexOfFirst { it.url == item.url }.coerceAtLeast(0)
                 PlayerActivity.pendingRecentChannelNames = recentChannels.map { it.name }
                 PlayerActivity.pendingRecentChannelUrls = recentChannels.map { it.url }
+                PlayerActivity.pendingRecentChannelHeaders = recentChannels.map { it.requestHeaders }
             }
             try {
                 startActivity(intent)
