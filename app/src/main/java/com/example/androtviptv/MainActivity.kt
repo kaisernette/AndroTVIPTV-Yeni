@@ -699,6 +699,7 @@ class MainActivity : Activity() {
     private lateinit var heroSubtitle: TextView
     private lateinit var heroArt: FrameLayout
     private lateinit var navBar: LinearLayout
+    private lateinit var searchBar: LinearLayout
     private lateinit var settingsBar: LinearLayout
     private lateinit var sidebarMenuScroll: ScrollView
     private lateinit var brandView: LinearLayout
@@ -843,6 +844,9 @@ class MainActivity : Activity() {
         }
         sidebar.addView(primaryMenuColumn)
 
+        searchBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        primaryMenuColumn.addView(searchBar, LinearLayout.LayoutParams(-1, dp(44)))
+
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL or Gravity.START
@@ -883,11 +887,15 @@ class MainActivity : Activity() {
         brandView.addView(brandWords, LinearLayout.LayoutParams(0, dp(50), 1f))
         brandView.contentDescription = "KAISER TV+"
         primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
-        navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        navBar = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.BOTTOM
+        }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
-            addView(navBar)
+            isFillViewport = true
+            addView(navBar, ScrollView.LayoutParams(-1, -1))
         }
         primaryMenuColumn.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         settingsBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -1120,6 +1128,7 @@ class MainActivity : Activity() {
             categoryPanel.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         }
         navBar.removeAllViews()
+        if (::searchBar.isInitialized) searchBar.removeAllViews()
         if (::settingsBar.isInitialized) settingsBar.removeAllViews()
         // Re-enable descendant focus immediately after old children are detached.
         // Leaving FOCUS_BLOCK_DESCENDANTS active prevents the remote from entering the sidebar.
@@ -1187,12 +1196,12 @@ class MainActivity : Activity() {
                 minWidth = 0
                 minimumWidth = 0
                 setPadding(dp(10), 0, dp(4), 0)
-                minHeight = dp(46)
+                minHeight = dp(40)
                 id = View.generateViewId()
             }
-            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(46)).apply {
+            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
                 gravity = Gravity.CENTER_VERTICAL
-                setMargins(0, dp(3), 0, dp(3))
+                setMargins(0, dp(1), 0, dp(1))
             })
             if (selected) selectedSidebarFocusView = sidebarButton
         }
@@ -1211,9 +1220,24 @@ class MainActivity : Activity() {
             render()
         }
 
+        // Keep Search anchored at the upper-left; navigation tabs are bottom-aligned.
+        if (sidebarMode in listOf("main", "settings", "search", "context")) {
+            addSidebarButton("Ara", sidebarMode == "search", searchBar) {
+                detailSeries = null
+                detailMovie = null
+                sidebarMode = "search"
+                searchInputFocusPending = true
+                searchQuery = ""
+                selectedType = "Tümü"
+                selectedGroup = "Tüm kategoriler"
+                expandedCategory = null
+                render()
+            }
+        }
+
         // Ana menü normal ekranlarda kalır; TV/Film/Dizi seçilince sol menü kategori listesine dönüşür.
         if (sidebarMode in listOf("main", "settings", "search")) {
-            listOf("Ara", "⌂  Ana Sayfa", "TV  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
+            listOf("⌂  Ana Sayfa", "TV  TV", "▧  Filmler", "▤  Diziler", "♡  Favoriler", "◷  İzlediklerim", "⚙  Ayarlar").forEach { tab ->
                 val normalizedTab = when {
                     tab == "Ara" -> "Ara"
                     tab.endsWith("Ara") -> "Ara"
@@ -1308,7 +1332,6 @@ class MainActivity : Activity() {
             // In TV/Movies/Series, collapse the left rail to icons only.
             // Category filters remain in the main content area on the right.
             val compactTabs = listOf(
-                Triple("⌕", "Ara", "Ara"),
                 Triple("⌂", "Ana Sayfa", "Tümü"),
                 Triple("▣", "TV", "Canlı TV"),
                 Triple("▧", "Filmler", "Filmler"),
