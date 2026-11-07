@@ -1927,7 +1927,19 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun normalizeM3uPlusUrl(rawUrl: String): String {
+        val url = rawUrl.trim()
+        val boundary = listOf(url.indexOf('?'), url.indexOf('#'))
+            .filter { it >= 0 }.minOrNull() ?: url.length
+        val path = url.substring(0, boundary)
+        if (!path.endsWith("m3u", ignoreCase = true) ||
+            path.endsWith("m3u_plus", ignoreCase = true)) return url
+        return path + "_plus" + url.substring(boundary)
+    }
+
     private fun loadM3u(source: SavedSource, append: Boolean) {
+        val normalizedAddress = normalizeM3uPlusUrl(source.address)
+        if (normalizedAddress != source.address) saveSource(source.copy(address = normalizedAddress))
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
         loadProgress = 0
@@ -1935,7 +1947,7 @@ class MainActivity : Activity() {
         render()
         thread {
             try {
-                val parsed = parseM3u(request(source.address)).map { it.copy(sourceId = source.id) }
+                val parsed = parseM3u(request(normalizedAddress)).map { it.copy(sourceId = source.id) }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
