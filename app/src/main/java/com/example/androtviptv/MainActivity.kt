@@ -852,16 +852,32 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(dp(2), dp(2), dp(2), dp(2))
             clipChildren = false
-            setBackgroundColor(Color.BLACK)
+            setBackgroundColor(Color.TRANSPARENT)
         }
         val brandLogo = ImageView(this).apply {
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setBackgroundColor(Color.BLACK)
+            setBackgroundColor(Color.TRANSPARENT)
             contentDescription = "KaiserTV+"
             try {
                 val encoded = assets.open("kaiser_logo.jpg.b64").bufferedReader().use { it.readText().trim() }
                 val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
-                setImageBitmap(android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
+                val source = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (source != null) {
+                    val transparent = source.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
+                    for (y in 0 until transparent.height) {
+                        for (x in 0 until transparent.width) {
+                            val pixel = transparent.getPixel(x, y)
+                            val red = android.graphics.Color.red(pixel)
+                            val green = android.graphics.Color.green(pixel)
+                            val blue = android.graphics.Color.blue(pixel)
+                            if (red < 22 && green < 22 && blue < 22) {
+                                transparent.setPixel(x, y, android.graphics.Color.TRANSPARENT)
+                            }
+                        }
+                    }
+                    setImageBitmap(transparent)
+                    source.recycle()
+                }
             } catch (e: Exception) {
                 android.util.Log.e("KaiserTV", "Sidebar logo could not be loaded", e)
             }
@@ -1144,13 +1160,19 @@ class MainActivity : Activity() {
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     val button = v as Button
-                    button.background = if (hasFocus) GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dp(if (ovalButtons) 24 else 0).toFloat()
-                        setColor(accent)
+                    button.background = if (hasFocus) android.graphics.drawable.LayerDrawable(arrayOf(
+                        android.graphics.drawable.ColorDrawable(Color.TRANSPARENT),
+                        GradientDrawable().apply {
+                            shape = GradientDrawable.RECTANGLE
+                            cornerRadius = dp(2).toFloat()
+                            setColor(accent)
+                        }
+                    )).apply {
+                        // A slim 4dp accent strip on the left; no filled blue selection tile.
+                        setLayerInset(1, 0, dp(7), dp(136), dp(7))
                     } else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                    button.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
-                    iconDrawable?.setTint(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
+                    button.setTextColor(Color.WHITE)
+                    iconDrawable?.setTint(Color.WHITE)
                     button.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
                     v.elevation = 0f
                     v.scaleX = 1f
