@@ -4671,7 +4671,7 @@ class MainActivity : Activity() {
                             setTextColor(Color.WHITE)
                         })
                         sourceInfo.addView(TextView(this).apply {
-                            text = "${if (source.mode == "xtream") "Xtream Codes" else "M3U/M3U8"} • ${source.address}"
+                            text = "${when (source.mode) { "xtream" -> "Xtream Codes"; "mac" -> "MAC Portal"; else -> "M3U/M3U8" }} • ${source.address}"
                             textSize = 11f
                             maxLines = 1
                             ellipsize = android.text.TextUtils.TruncateAt.END
