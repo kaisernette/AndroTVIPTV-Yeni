@@ -2200,7 +2200,7 @@ class MainActivity : Activity() {
                     if (group.isBlank() && pendingGroup.isNotBlank()) group = pendingGroup
                 }
                 line.startsWith("#EXTGRP:", true) -> {
-                    pendingGroup = line.substringAfter(':').trim().trim('"', '\\'')
+                    pendingGroup = line.substringAfter(':').trim().trim('"', '\'')
                     if (group.isBlank()) group = pendingGroup
                 }
                 line.startsWith("#") || line.isBlank() -> Unit
