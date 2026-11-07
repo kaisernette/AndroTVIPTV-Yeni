@@ -3319,10 +3319,16 @@ class MainActivity : Activity() {
                 }
                 homeHeroImage = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
                 hero.addView(homeHeroImage, FrameLayout.LayoutParams(-1, -1))
+                // Fade the artwork into the app background: no hard poster edge on the left,
+                // plus a gentle fade upward from the bottom edge.
                 hero.addView(View(this).apply {
-                    background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                        intArrayOf(Color.rgb(7, 8, 14), Color.argb(235, 7, 8, 14),
-                            Color.argb(100, 7, 8, 14), Color.TRANSPARENT))
+                    background = android.graphics.drawable.LayerDrawable(arrayOf(
+                        GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                            intArrayOf(Color.rgb(7, 8, 14), Color.argb(238, 7, 8, 14),
+                                Color.argb(115, 7, 8, 14), Color.TRANSPARENT)),
+                        GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
+                            intArrayOf(Color.rgb(8, 10, 14), Color.argb(130, 8, 10, 14), Color.TRANSPARENT))
+                    ))
                 }, FrameLayout.LayoutParams(-1, -1))
                 val heroCopy = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
@@ -3355,8 +3361,9 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(dp(132), dp(42)).apply { setMargins(0, dp(14), 0, 0) })
                 heroCopy.addView(heroActions)
                 hero.addView(heroCopy, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER_VERTICAL))
-                content.addView(hero, LinearLayout.LayoutParams(-1, dp(360)).apply {
-                    setMargins(-dp(4), -dp(14), -dp(18), dp(18))
+                content.addView(hero, LinearLayout.LayoutParams(-1, dp(390)).apply {
+                    // Flush to the top and right edge; keep a small breathing gap before rows.
+                    setMargins(-dp(4), 0, -dp(22), dp(14))
                 })
                 showHomeHero(heroItem)
             }
@@ -3389,18 +3396,18 @@ class MainActivity : Activity() {
                         }
                     }
                     val thumb = ImageView(this).apply {
-                        scaleType = ImageView.ScaleType.CENTER_CROP
-                        layoutParams = LinearLayout.LayoutParams(dp(190), dp(108))
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        layoutParams = LinearLayout.LayoutParams(dp(168), dp(94))
                     }
                     watchCard.addView(thumb)
                     if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, thumb)
                     watchCard.addView(TextView(this).apply {
-                        text = item.name; textSize = 13f; maxLines = 2
+                        text = item.name; textSize = 12f; maxLines = 2
                         ellipsize = android.text.TextUtils.TruncateAt.END; setTextColor(Color.WHITE)
                         setPadding(0, dp(5), 0, 0)
-                    }, LinearLayout.LayoutParams(dp(190), ViewGroup.LayoutParams.WRAP_CONTENT))
-                    watchRow.addView(watchCard, LinearLayout.LayoutParams(dp(190), ViewGroup.LayoutParams.WRAP_CONTENT)
-                        .apply { setMargins(dp(4), 0, dp(14), dp(12)) })
+                    }, LinearLayout.LayoutParams(dp(168), ViewGroup.LayoutParams.WRAP_CONTENT))
+                    watchRow.addView(watchCard, LinearLayout.LayoutParams(dp(168), ViewGroup.LayoutParams.WRAP_CONTENT)
+                        .apply { setMargins(dp(4), 0, dp(12), dp(12)) })
                 }
                 content.addView(watchRow)
             }
@@ -3457,9 +3464,9 @@ class MainActivity : Activity() {
                         v.elevation = if (hasFocus) dp(22).toFloat() else 0f
                         v.translationZ = if (hasFocus) dp(22).toFloat() else 0f
                         v.cameraDistance = dp(2200).toFloat()
-                        v.animate().scaleX(if (hasFocus) 1.10f else 1f)
-                            .scaleY(if (hasFocus) 1.10f else 1f)
-                            .translationY(if (hasFocus) -dp(7).toFloat() else 0f)
+                        v.animate().scaleX(if (hasFocus) 1.08f else 1f)
+                            .scaleY(if (hasFocus) 1.08f else 1f)
+                            .translationY(0f)
                             .translationZ(if (hasFocus) dp(22).toFloat() else 0f)
                             .setDuration(180).start()
                         if (hasFocus && selectedType == "Tümü" && item.type in listOf("Filmler", "Diziler")) {
@@ -3502,7 +3509,7 @@ class MainActivity : Activity() {
                 val homeCard = selectedType == "Tümü"
                 val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
                 val poster = ImageView(this).apply {
-                    scaleType = if (liveCard) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+                    scaleType = ImageView.ScaleType.FIT_CENTER
                     contentDescription = item.name
                     background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
@@ -3510,8 +3517,8 @@ class MainActivity : Activity() {
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
-                        if (weeklyPoster || homeCard) dp(232) else -1,
-                        if (liveCard) dp(88) else if (weeklyPoster || homeCard) dp(130) else if (posterGridMode) dp(210) else dp(210)
+                        if (weeklyPoster || homeCard) dp(190) else -1,
+                        if (liveCard) dp(88) else if (weeklyPoster || homeCard) dp(112) else if (posterGridMode) dp(210) else dp(210)
                     )
                 }
                 card.addView(poster)
@@ -3570,9 +3577,9 @@ class MainActivity : Activity() {
                     })
                     expandedPosterCount++
                 } else {
-                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) dp(112) else if (weeklyMovieFeature || homeCard) dp(232) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                        // Landscape cards on home; other sections keep their existing sizing.
-                        setMargins(dp(5), 0, dp(14), dp(10))
+                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) dp(112) else if (weeklyMovieFeature || homeCard) dp(190) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        // Smaller landscape cards on home; other sections keep their existing sizing.
+                        setMargins(dp(5), 0, dp(12), dp(10))
                     })
                 }
             }
