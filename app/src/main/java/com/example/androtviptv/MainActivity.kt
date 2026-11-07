@@ -3480,7 +3480,8 @@ class MainActivity : Activity() {
         // category at once can exhaust memory on older Android TV boxes. Keep the first
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
-        val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) } ?: groups
+        val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
+            ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
