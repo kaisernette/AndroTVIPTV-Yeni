@@ -77,6 +77,10 @@ internal class StalkerPortalClient(
             setRequestProperty("Accept", "*/*")
             setRequestProperty("Referer", endpoint)
             setRequestProperty("Cookie", session?.cookie ?: baseCookie)
+            // Stalker middleware commonly reads the token from Authorization, not query params.
+            session?.token?.takeIf { it.isNotBlank() }?.let {
+                setRequestProperty("Authorization", "Bearer $it")
+            }
         }
 
         try {
@@ -148,8 +152,8 @@ internal class StalkerPortalClient(
         val response = call(session, listOf(
             "type" to "itv",
             "action" to "get_all_channels",
-            "JsHttpRequest" to "1-xml",
-            "token" to session.token
+            "force_ch_link_check" to "",
+            "JsHttpRequest" to "1-xml"
         ))
         val js = response.json.optJSONObject("js")
             ?: throw IllegalStateException("Portal kanal yanıtı geçersiz.")
@@ -159,8 +163,14 @@ internal class StalkerPortalClient(
             is JSONObject -> data.optJSONArray("data")
                 ?: data.optJSONArray("channels")
                 ?: data.optJSONArray("items")
+            is String -> runCatching { JSONArray(data) }.getOrNull()
+                ?: runCatching { JSONObject(data).let { obj ->
+                    obj.optJSONArray("data") ?: obj.optJSONArray("channels") ?: obj.optJSONArray("items")
+                } }.getOrNull()
             else -> null
-        } ?: throw IllegalStateException("Portal kanal listesi döndürmedi.")
+        } ?: throw IllegalStateException(
+            "Portal kanal listesi döndürmedi (yanıt: ${js.toString().take(220)})."
+        )
 
         val genres = loadGenres(session)
         return (0 until array.length()).mapNotNull { index ->
@@ -182,8 +192,7 @@ internal class StalkerPortalClient(
         val response = call(session, listOf(
             "type" to "itv",
             "action" to "get_genres",
-            "JsHttpRequest" to "1-xml",
-            "token" to session.token
+            "JsHttpRequest" to "1-xml"
         ))
         val js = response.json.optJSONObject("js")
         val data = js?.optJSONArray("data")
@@ -207,8 +216,7 @@ internal class StalkerPortalClient(
             "type" to "itv",
             "action" to "create_link",
             "cmd" to "ffmpeg http://localhost/ch/$channelId",
-            "JsHttpRequest" to "1-xml",
-            "token" to session.token
+            "JsHttpRequest" to "1-xml"
         ))
         val js = response.json.optJSONObject("js")
             ?: throw IllegalStateException("Portal yayın yanıtı geçersiz.")
