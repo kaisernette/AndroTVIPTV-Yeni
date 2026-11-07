@@ -2284,11 +2284,14 @@ class MainActivity : Activity() {
             }
 
             if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) {
-                // Back from the tab's category screen returns to that tab's full category view.
-                // Keep context mode active so Live TV continues rendering its channel list.
+                // Back from category browsing returns to the main navigation with TV selected.
                 expandedCategory = null
+                selectedType = "Canlı TV"
                 selectedGroup = "Tüm kategoriler"
                 focusedCategoryName = null
+                sidebarMode = "main"
+                prefs.edit().putString("last_section", "Canlı TV").putString("last_group", "Tüm kategoriler").apply()
+                rebuildNavigation()
                 render()
                 return
             }
@@ -3044,7 +3047,7 @@ class MainActivity : Activity() {
             else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
 
         // Live TV category content: compact logo/name grid; OK opens the channel fullscreen.
-        if (selectedType == "Canlı TV" && sidebarMode == "context") {
+        if (selectedType == "Canlı TV") {
             content.removeAllViews()
             applyThemeSurfaces()
             content.clipChildren = true
