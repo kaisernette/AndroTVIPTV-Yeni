@@ -3289,6 +3289,73 @@ class MainActivity : Activity() {
         // and selecting one shows that category's items.
         val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
             ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups
+
+        // Home hero preview sits above the weekly trending rows.
+        if (selectedType == "Tümü" && sidebarMode != "search" && expandedCategory == null) {
+            val heroItem = recent.firstOrNull { it.type in listOf("Filmler", "Diziler") && it.icon.isNotBlank() }
+                ?: activeSourceItems.firstOrNull { it.type == "Filmler" && it.icon.isNotBlank() }
+                ?: activeSourceItems.firstOrNull { it.type == "Diziler" && it.icon.isNotBlank() }
+            if (heroItem != null) {
+                val hero = FrameLayout(this).apply {
+                    background = roundedDrawable(panel, 18)
+                    clipToOutline = true
+                    isFocusable = false
+                }
+                val heroImage = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+                hero.addView(heroImage, FrameLayout.LayoutParams(-1, -1))
+                loadPoster(heroItem.icon, heroImage)
+                hero.addView(View(this).apply {
+                    background = GradientDrawable(
+                        GradientDrawable.Orientation.LEFT_RIGHT,
+                        intArrayOf(Color.rgb(7, 8, 14), Color.argb(225, 7, 8, 14), Color.TRANSPARENT)
+                    )
+                }, FrameLayout.LayoutParams(-1, -1))
+                val heroCopy = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(24), dp(18), dp(20), dp(18))
+                }
+                heroCopy.addView(TextView(this).apply {
+                    text = heroItem.name
+                    textSize = 25f
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                }, LinearLayout.LayoutParams(dp(440), ViewGroup.LayoutParams.WRAP_CONTENT))
+                val heroMeta = listOf(heroItem.type, heroItem.releaseDate, heroItem.rating.takeIf { it.isNotBlank() }?.let { "★ $it" })
+                    .filterNotNull().filter { it.isNotBlank() }.joinToString("   •   ")
+                if (heroMeta.isNotBlank()) heroCopy.addView(TextView(this).apply {
+                    text = heroMeta
+                    textSize = 14f
+                    setTextColor(accentBright)
+                    setPadding(0, dp(7), 0, dp(5))
+                })
+                if (heroItem.plot.isNotBlank()) heroCopy.addView(TextView(this).apply {
+                    text = heroItem.plot
+                    textSize = 14f
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    setTextColor(Color.LTGRAY)
+                }, LinearLayout.LayoutParams(dp(430), ViewGroup.LayoutParams.WRAP_CONTENT))
+                val heroActions = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                heroActions.addView(makeButton(t("İzle"), true) {
+                    if (heroItem.type == "Diziler") showSeriesDetail(heroItem) else showMovieDetail(heroItem)
+                }, LinearLayout.LayoutParams(dp(112), dp(42)).apply { setMargins(0, dp(12), dp(10), 0) })
+                heroActions.addView(makeButton(t("Detaylar"), false) {
+                    if (heroItem.type == "Diziler") showSeriesDetail(heroItem) else showMovieDetail(heroItem)
+                }, LinearLayout.LayoutParams(dp(132), dp(42)).apply { setMargins(0, dp(12), 0, 0) })
+                heroCopy.addView(heroActions)
+                hero.addView(heroCopy, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER_VERTICAL))
+                content.addView(hero, LinearLayout.LayoutParams(-1, dp(250)).apply {
+                    setMargins(dp(4), dp(2), dp(4), dp(18))
+                })
+            }
+        }
+
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
