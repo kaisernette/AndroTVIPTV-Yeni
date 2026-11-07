@@ -613,7 +613,11 @@ class MainActivity : Activity() {
         if (!prefs.contains("gradient_background")) prefs.edit().putBoolean("gradient_background", gradientBackground).apply()
         // Restore the selected KaiserTV Global theme before constructing any views.
         if (!prefs.getBoolean("global_themes_initialized", false)) {
-            prefs.edit().putString("theme_name", "Antrasit • Mavi").putBoolean("global_themes_initialized", true).apply()
+            prefs.edit().putString("theme_name", "Orman • Zümrüt").putBoolean("global_themes_initialized", true).apply()
+        }
+        if (!prefs.getBoolean("emerald_default_theme_applied", false)) {
+            prefs.edit().putString("theme_name", "Orman • Zümrüt")
+                .putBoolean("emerald_default_theme_applied", true).apply()
         }
         when (prefs.getString("theme_name", "Antrasit • Mavi")) {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
@@ -812,17 +816,17 @@ class MainActivity : Activity() {
         rootLayout = root
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(4), 12, dp(6), 10)
+            setPadding(dp(2), 12, dp(2), 10)
             background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
             // Keep rounded category-selection backgrounds fully visible in both themes.
             clipChildren = false
             clipToPadding = false
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(190), -1).apply { setMargins(0, 0, dp(8), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(158), -1).apply { setMargins(0, 0, dp(8), 0) })
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(dp(180), -1)
+            layoutParams = LinearLayout.LayoutParams(dp(148), -1)
         }
         sidebar.addView(primaryMenuColumn)
 
@@ -893,7 +897,7 @@ class MainActivity : Activity() {
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             addView(categoryPanel, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(138), -1))
+        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(0, -1))
         rebuildNavigation()
 
         val main = LinearLayout(this).apply {
@@ -1085,14 +1089,17 @@ class MainActivity : Activity() {
         if (::sidebar.isInitialized) {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
+            sidebar.getChildAt(0)?.visibility = if (showReadableCategories) View.GONE else View.VISIBLE
             val params = sidebar.layoutParams
-            // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
-            // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (showReadableCategories) 328 else 190)
+            val desiredWidth = dp(if (showReadableCategories) 238 else 158)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
             }
+            categoryListScroll.layoutParams = LinearLayout.LayoutParams(
+                if (showReadableCategories) -1 else 0, -1
+            )
+            categoryPanel.setPadding(dp(12), dp(if (showReadableCategories) 24 else 78), dp(6), dp(8))
         }
         // Drop focus from old navigation children before detaching them. On Android TV,
         // removeAllViews() can synchronously dispatch focus-loss callbacks while rebuilding.
@@ -1132,7 +1139,7 @@ class MainActivity : Activity() {
             }
             val sidebarButton = makeButton(label, selected, action).apply {
                 val iconDrawable = if (iconRes != 0) getDrawable(iconRes)?.mutate() else null
-                iconDrawable?.setBounds(0, 0, dp(25), dp(25))
+                iconDrawable?.setBounds(0, 0, dp(22), dp(22))
                 // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
@@ -1162,7 +1169,7 @@ class MainActivity : Activity() {
                     label.contains("Ayarlar") -> "Ayarlar"
                     else -> label
                 }
-                compoundDrawablePadding = dp(10)
+                compoundDrawablePadding = dp(7)
                 setCompoundDrawables(iconDrawable, null, null, null)
                 gravity = Gravity.CENTER_VERTICAL or Gravity.START
                 isSingleLine = true
@@ -1171,7 +1178,7 @@ class MainActivity : Activity() {
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(dp(10), 0, dp(6), 0)
+                setPadding(dp(6), 0, dp(4), 0)
                 minHeight = dp(44)
                 id = View.generateViewId()
             }
@@ -1214,14 +1221,6 @@ class MainActivity : Activity() {
                     "TV" -> "Canlı TV"
                     "Ana Sayfa" -> "Tümü"
                     else -> normalizedTab
-                }
-                if (normalizedTab == "Ayarlar") {
-                    navBar.addView(View(this).apply {
-                        setBackgroundColor(Color.rgb(76, 87, 105))
-                        isFocusable = false
-                    }, LinearLayout.LayoutParams(-1, dp(1)).apply {
-                        setMargins(dp(10), dp(10), dp(10), dp(10))
-                    })
                 }
                 if (normalizedTab == "Geçmiş") {
                     addSidebarButton(tab, selectedType == "Son İzlenenler") {
@@ -1303,10 +1302,6 @@ class MainActivity : Activity() {
                 Triple("⚙", "Ayarlar", "Ayarlar")
             )
             compactTabs.forEach { (glyph, label, key) ->
-                if (key == "Ayarlar") {
-                    navBar.addView(View(this).apply { setBackgroundColor(Color.rgb(76, 87, 105)); isFocusable = false },
-                        LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(10), dp(10), dp(10)) })
-                }
                 val isSelected = when (key) {
                     "Ara" -> false
                     "Tümü" -> selectedType == "Tümü"
@@ -1426,10 +1421,10 @@ class MainActivity : Activity() {
                     }
                     // Stable IDs and explicit D-pad links for the category column.
                     if (button.id == View.NO_ID) button.id = View.generateViewId()
-                    button.nextFocusLeftId = selectedSidebarFocusView?.id ?: View.NO_ID
+                    button.nextFocusLeftId = if (sidebarMode == "context") View.NO_ID else selectedSidebarFocusView?.id ?: View.NO_ID
                     if (categoryIndex == 0) {
                         firstCategoryFocusView = button
-                        selectedSidebarFocusView?.let { navButton ->
+                        if (sidebarMode != "context") selectedSidebarFocusView?.let { navButton ->
                             button.nextFocusLeftId = navButton.id
                             navButton.nextFocusRightId = button.id
                         }
