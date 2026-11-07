@@ -2567,18 +2567,21 @@ class MainActivity : Activity() {
         if (!detailMode && ::rootLayout.isInitialized && ::mainContentScroll.isInitialized) {
             applyThemeSurfaces()
         }
+        val edgeToEdgeHome = selectedType == "Tümü" && sidebarMode != "search" && !detailMode
         content.setPadding(
             if (detailMode) 0 else dp(18),
-            if (detailMode) 0 else dp(18),
-            if (detailMode) 0 else dp(30),
+            if (detailMode || edgeToEdgeHome) 0 else dp(18),
+            if (detailMode || edgeToEdgeHome) 0 else dp(30),
             if (detailMode) 0 else dp(20)
         )
         val firstEntry = items.isEmpty() && !isLoadingSource
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::rootLayout.isInitialized) {
-            rootLayout.setPadding(if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(14),
-                if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(12))
+            rootLayout.setPadding(if (detailMode) 0 else dp(18),
+                if (detailMode || edgeToEdgeHome) 0 else dp(14),
+                if (detailMode || edgeToEdgeHome) 0 else dp(18),
+                if (detailMode) 0 else dp(12))
         }
         // Keep the app immersive after every render/focus-driven UI refresh.
         // Setting SYSTEM_UI_FLAG_VISIBLE here caused system bars to reappear on selection.
@@ -3362,8 +3365,8 @@ class MainActivity : Activity() {
                 heroCopy.addView(heroActions)
                 hero.addView(heroCopy, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER_VERTICAL))
                 content.addView(hero, LinearLayout.LayoutParams(-1, dp(390)).apply {
-                    // Flush to the top and right edge; keep a small breathing gap before rows.
-                    setMargins(-dp(4), 0, -dp(22), dp(14))
+                    // The home hero sits flush against the top and right edges.
+                    setMargins(-dp(4), 0, 0, dp(14))
                 })
                 showHomeHero(heroItem)
             }
