@@ -625,6 +625,7 @@ class MainActivity : Activity() {
             "Koyu • Mor" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
             else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
         }
+        // The shared dark surface follows the selected theme instead of staying pure black.
         panel = Color.rgb(8, 10, 14)
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
@@ -865,7 +866,10 @@ class MainActivity : Activity() {
         brandView.addView(brandWords, LinearLayout.LayoutParams(0, dp(50), 1f))
         brandView.contentDescription = "KAISER TV+"
         primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
-        navBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        navBar = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.BOTTOM or Gravity.START
+        }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
@@ -1075,8 +1079,9 @@ class MainActivity : Activity() {
 
     private fun rebuildNavigation() {
         if (!::navBar.isInitialized) return
-        // Keep the main navigation icon-only, but expand the sidebar when a
-        // category list is open so full category names remain readable.
+        // Keep the main navigation labels visible and anchor the menu near the lower-left.
+        navBar.gravity = if (sidebarMode == "main") Gravity.BOTTOM or Gravity.START else Gravity.TOP or Gravity.START
+        // Expand the sidebar when a category list is open so full category names remain readable.
         if (::sidebar.isInitialized) {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
@@ -1127,7 +1132,7 @@ class MainActivity : Activity() {
             }
             val sidebarButton = makeButton(label, selected, action).apply {
                 val iconDrawable = if (iconRes != 0) getDrawable(iconRes)?.mutate() else null
-                iconDrawable?.setBounds(0, 0, dp(29), dp(29))
+                iconDrawable?.setBounds(0, 0, dp(25), dp(25))
                 // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
@@ -1145,7 +1150,7 @@ class MainActivity : Activity() {
                     v.scaleX = 1f
                     v.scaleY = 1f
                 }
-                textSize = 15f
+                textSize = 14f
                 text = when {
                     label == "Ara" -> "Arama"
                     label.contains("Ana Sayfa") -> "Ana Sayfa"
@@ -1157,7 +1162,7 @@ class MainActivity : Activity() {
                     label.contains("Ayarlar") -> "Ayarlar"
                     else -> label
                 }
-                compoundDrawablePadding = dp(12)
+                compoundDrawablePadding = dp(10)
                 setCompoundDrawables(iconDrawable, null, null, null)
                 gravity = Gravity.CENTER_VERTICAL or Gravity.START
                 isSingleLine = true
@@ -1167,12 +1172,12 @@ class MainActivity : Activity() {
                 minWidth = 0
                 minimumWidth = 0
                 setPadding(dp(10), 0, dp(6), 0)
-                minHeight = dp(46)
+                minHeight = dp(44)
                 id = View.generateViewId()
             }
-            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(46)).apply {
+            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
                 gravity = Gravity.CENTER_VERTICAL
-                setMargins(0, dp(3), 0, dp(3))
+                setMargins(0, dp(2), 0, dp(2))
             })
             if (selected) selectedSidebarFocusView = sidebarButton
         }
@@ -1692,6 +1697,14 @@ class MainActivity : Activity() {
 
     private fun applyThemeSurfaces() {
         val base = bg
+        // Shared cards, dialogs and panels use a darker shade tinted by the active theme.
+        fun channelMix(baseChannel: Int, accentChannel: Int): Int =
+            ((baseChannel * 0.62f) + (accentChannel * 0.08f)).toInt().coerceIn(0, 255)
+        panel = Color.rgb(
+            channelMix(Color.red(base), Color.red(accent)),
+            channelMix(Color.green(base), Color.green(accent)),
+            channelMix(Color.blue(base), Color.blue(accent))
+        )
         val blend = Color.rgb(
             ((Color.red(base) * 0.72f) + (Color.red(accent) * 0.28f)).toInt().coerceIn(0, 255),
             ((Color.green(base) * 0.72f) + (Color.green(accent) * 0.28f)).toInt().coerceIn(0, 255),
