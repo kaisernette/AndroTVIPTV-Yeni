@@ -7,28 +7,63 @@ import java.net.URL
 import java.net.URLEncoder
 
 /**
- * Minimal MAG/Stalker portal client. Each operation performs its own handshake so
- * short-lived portal tokens are not reused after they expire.
+ * MAG/Stalker portal client.
+ *
+ * A fresh handshake and profile request are made for each operation. Cookies
+ * returned by the portal are retained together with the MAC cookie because
+ * some middleware installations require both for channel and stream requests.
  */
 internal class StalkerPortalClient(
     private val portal: String,
     private val mac: String
 ) {
     data class Channel(val id: String, val name: String, val group: String, val logo: String)
+
     data class Session(val token: String, val cookie: String) {
         fun headers(): Map<String, String> = mapOf(
             "Cookie" to cookie,
-            "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3",
-            "X-User-Agent" to "Model: MAG250; Link: Ethernet",
+            "User-Agent" to USER_AGENT,
+            "X-User-Agent" to X_USER_AGENT,
             "Accept" to "*/*"
         )
     }
 
-    private val endpoint = portal.trim().let { if (it.endsWith("/")) it else "$it/" }
+    private data class ApiResponse(
+        val json: JSONObject,
+        val setCookies: List<String>
+    )
+
+    companion object {
+        private const val USER_AGENT =
+            "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3"
+        private const val X_USER_AGENT = "Model: MAG270; Link: Wifi"
+    }
+
+    // Keep portal sub-paths such as /c/ and /stalker_portal/server/load.php.
+    private val endpoint = portal.trim().let { value ->
+        if (value.endsWith("/")) value else "$value/"
+    }
+
+    private val baseCookie: String
+        get() = "mac=${mac.trim().uppercase(java.util.Locale.ROOT)}; stb_lang=en; timezone=Europe%2FIstanbul"
 
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8")
 
-    private fun call(session: Session?, params: List<Pair<String, String>>): JSONObject {
+    private fun mergeCookies(existing: String, setCookies: List<String>): String {
+        val values = linkedMapOf<String, String>()
+        fun add(cookie: String) {
+            cookie.split(";").firstOrNull()?.trim()?.takeIf { it.contains("=") }?.let { pair ->
+                val name = pair.substringBefore("=").trim()
+                val value = pair.substringAfter("=").trim()
+                if (name.isNotEmpty()) values[name] = value
+            }
+        }
+        existing.split(";").forEach(::add)
+        setCookies.forEach(::add)
+        return values.entries.joinToString("; ") { "${it.key}=${it.value}" }
+    }
+
+    private fun call(session: Session?, params: List<Pair<String, String>>): ApiResponse {
         val query = params.joinToString("&") { "${encode(it.first)}=${encode(it.second)}" }
         val separator = if (endpoint.contains("?")) "&" else "?"
         val connection = (URL(endpoint + separator + query).openConnection() as HttpURLConnection).apply {
@@ -36,53 +71,97 @@ internal class StalkerPortalClient(
             connectTimeout = 15000
             readTimeout = 25000
             useCaches = false
-            setRequestProperty("User-Agent", session?.headers()?.get("User-Agent")
-                ?: "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3")
-            setRequestProperty("X-User-Agent", "Model: MAG250; Link: Ethernet")
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", USER_AGENT)
+            setRequestProperty("X-User-Agent", X_USER_AGENT)
             setRequestProperty("Accept", "*/*")
             setRequestProperty("Referer", endpoint)
-            setRequestProperty("Cookie", session?.cookie ?: "mac=$mac; stb_lang=en; timezone=Europe%2FIstanbul")
+            setRequestProperty("Cookie", session?.cookie ?: baseCookie)
         }
+
         try {
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (code !in 200..299) throw IllegalStateException("Portal HTTP $code")
-            val json = JSONObject(body)
+            val json = try {
+                JSONObject(body)
+            } catch (e: Exception) {
+                throw IllegalStateException("Portal JSON yanıtı geçersiz.", e)
+            }
             val js = json.optJSONObject("js")
             val error = js?.optString("error").orEmpty()
-            if (error.isNotBlank() && error != "0") throw IllegalStateException("Portal: $error")
-            return json
+            if (error.isNotBlank() && error != "0" && error != "false") {
+                throw IllegalStateException("Portal: $error")
+            }
+            val cookies = connection.headerFields.entries
+                .firstOrNull { it.key.equals("Set-Cookie", ignoreCase = true) }
+                ?.value.orEmpty()
+            return ApiResponse(json, cookies)
         } finally {
             connection.disconnect()
         }
     }
 
-    fun handshake(): Session {
-        val response = call(null, listOf(
-            "type" to "stb", "action" to "handshake", "token" to "",
+    /**
+     * Stalker portals commonly expect get_profile after handshake before
+     * returning the channel list or a playable link.
+     */
+    private fun openSession(): Session {
+        val handshake = call(null, listOf(
+            "type" to "stb",
+            "action" to "handshake",
+            "token" to "",
             "JsHttpRequest" to "1-xml"
         ))
-        val js = response.optJSONObject("js") ?: throw IllegalStateException("Portal handshake yanıtı geçersiz.")
-        val token = js.optString("token")
+        val handshakeJs = handshake.json.optJSONObject("js")
+            ?: throw IllegalStateException("Portal handshake yanıtı geçersiz.")
+        val token = handshakeJs.optString("token")
         if (token.isBlank()) throw IllegalStateException("Portal oturum anahtarı vermedi.")
-        val cookie = "mac=$mac; stb_lang=en; timezone=Europe%2FIstanbul"
-        return Session(token, cookie)
+
+        var session = Session(token, mergeCookies(baseCookie, handshake.setCookies))
+        val profile = call(session, listOf(
+            "type" to "stb",
+            "action" to "get_profile",
+            "hd" to "1",
+            "ver" to "ImageDescription: 0.2.18-r23-250",
+            "num" to "1",
+            "stb_type" to "MAG270",
+            "client_type" to "STB",
+            "JsHttpRequest" to "1-xml",
+            "token" to session.token
+        ))
+        val profileJs = profile.json.optJSONObject("js")
+            ?: throw IllegalStateException("Portal profil yanıtı geçersiz.")
+        val profileStatus = profileJs.optString("status")
+        if (profileStatus.equals("0", ignoreCase = true) ||
+            profileStatus.equals("unauthorized", ignoreCase = true) ||
+            profileStatus.equals("blocked", ignoreCase = true)) {
+            throw IllegalStateException("Portal MAC adresini yetkilendirmedi.")
+        }
+        session = session.copy(cookie = mergeCookies(session.cookie, profile.setCookies))
+        return session
     }
 
     fun loadChannels(): List<Channel> {
-        val session = handshake()
+        val session = openSession()
         val response = call(session, listOf(
-            "type" to "itv", "action" to "get_all_channels",
-            "JsHttpRequest" to "1-xml", "token" to session.token
+            "type" to "itv",
+            "action" to "get_all_channels",
+            "JsHttpRequest" to "1-xml",
+            "token" to session.token
         ))
-        val js = response.optJSONObject("js") ?: throw IllegalStateException("Portal kanal yanıtı geçersiz.")
+        val js = response.json.optJSONObject("js")
+            ?: throw IllegalStateException("Portal kanal yanıtı geçersiz.")
         val data = js.opt("data")
         val array = when (data) {
             is JSONArray -> data
-            is JSONObject -> data.optJSONArray("data") ?: data.optJSONArray("channels")
+            is JSONObject -> data.optJSONArray("data")
+                ?: data.optJSONArray("channels")
+                ?: data.optJSONArray("items")
             else -> null
         } ?: throw IllegalStateException("Portal kanal listesi döndürmedi.")
+
         val genres = loadGenres(session)
         return (0 until array.length()).mapNotNull { index ->
             val item = array.optJSONObject(index) ?: return@mapNotNull null
@@ -92,7 +171,8 @@ internal class StalkerPortalClient(
             Channel(
                 id = id,
                 name = item.optString("name").ifBlank { "Kanal $id" },
-                group = genres[genreId] ?: item.optString("genre_title").ifBlank { "Diğer" },
+                group = genres[genreId]
+                    ?: item.optString("genre_title").ifBlank { "Diğer" },
                 logo = item.optString("logo").ifBlank { item.optString("logo_2") }
             )
         }
@@ -100,11 +180,15 @@ internal class StalkerPortalClient(
 
     private fun loadGenres(session: Session): Map<String, String> = try {
         val response = call(session, listOf(
-            "type" to "itv", "action" to "get_genres",
-            "JsHttpRequest" to "1-xml", "token" to session.token
+            "type" to "itv",
+            "action" to "get_genres",
+            "JsHttpRequest" to "1-xml",
+            "token" to session.token
         ))
-        val js = response.optJSONObject("js")
-        val data = js?.optJSONArray("data") ?: JSONArray()
+        val js = response.json.optJSONObject("js")
+        val data = js?.optJSONArray("data")
+            ?: (js?.opt("data") as? JSONObject)?.optJSONArray("data")
+            ?: JSONArray()
         buildMap {
             for (i in 0 until data.length()) {
                 val item = data.optJSONObject(i) ?: continue
@@ -113,16 +197,21 @@ internal class StalkerPortalClient(
                 if (id.isNotBlank() && title.isNotBlank()) put(id, title)
             }
         }
-    } catch (_: Exception) { emptyMap() }
+    } catch (_: Exception) {
+        emptyMap()
+    }
 
     fun createLink(channelId: String): Pair<String, Map<String, String>> {
-        val session = handshake()
+        val session = openSession()
         val response = call(session, listOf(
-            "type" to "itv", "action" to "create_link",
+            "type" to "itv",
+            "action" to "create_link",
             "cmd" to "ffmpeg http://localhost/ch/$channelId",
-            "JsHttpRequest" to "1-xml", "token" to session.token
+            "JsHttpRequest" to "1-xml",
+            "token" to session.token
         ))
-        val js = response.optJSONObject("js") ?: throw IllegalStateException("Portal yayın yanıtı geçersiz.")
+        val js = response.json.optJSONObject("js")
+            ?: throw IllegalStateException("Portal yayın yanıtı geçersiz.")
         val raw = js.optString("cmd").ifBlank { js.optString("link") }
         val link = raw.removePrefix("ffmpeg ").trim()
         if (!link.startsWith("http://") && !link.startsWith("https://")) {
