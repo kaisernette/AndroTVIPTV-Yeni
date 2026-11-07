@@ -849,42 +849,24 @@ class MainActivity : Activity() {
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            setPadding(dp(2), dp(2), 0, dp(2))
-            clipChildren = false
-        }
-        brandView.addView(TextView(this).apply {
-            text = "▶"
-            textSize = 30f
-            setTextColor(Color.rgb(0, 174, 255))
-            setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            includeFontPadding = false
-        }, LinearLayout.LayoutParams(dp(38), dp(48)))
-        val brandWords = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(5), 0, 0, 0)
+            setPadding(dp(2), dp(2), dp(2), dp(2))
+            clipChildren = false
+            setBackgroundColor(Color.BLACK)
         }
-        brandWords.addView(TextView(this).apply {
-            text = "KAISER"
-            textSize = 15f
-            setTextColor(Color.WHITE)
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            includeFontPadding = false
-        }, LinearLayout.LayoutParams(-1, dp(22)))
-        brandWords.addView(TextView(this).apply {
-            val tvPlus = android.text.SpannableString("TV+")
-            tvPlus.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 2, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            tvPlus.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 2, 3, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            text = tvPlus
-            textSize = 18f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            includeFontPadding = false
-        }, LinearLayout.LayoutParams(-1, dp(25)))
-        brandView.addView(brandWords, LinearLayout.LayoutParams(0, dp(50), 1f))
+        val brandLogo = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setBackgroundColor(Color.BLACK)
+            contentDescription = "KaiserTV+"
+            try {
+                val encoded = assets.open("kaiser_logo.jpg.b64").bufferedReader().use { it.readText().trim() }
+                val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
+                setImageBitmap(android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
+            } catch (e: Exception) {
+                android.util.Log.e("KaiserTV", "Sidebar logo could not be loaded", e)
+            }
+        }
+        brandView.addView(brandLogo, LinearLayout.LayoutParams(-1, -1))
         brandView.contentDescription = "KAISER TV+"
         primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
         navBar = LinearLayout(this).apply {
