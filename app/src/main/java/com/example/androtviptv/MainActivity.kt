@@ -870,7 +870,12 @@ class MainActivity : Activity() {
                             val red = android.graphics.Color.red(pixel)
                             val green = android.graphics.Color.green(pixel)
                             val blue = android.graphics.Color.blue(pixel)
-                            if (red < 22 && green < 22 && blue < 22) {
+                            val isBlackBackground = red < 22 && green < 22 && blue < 22
+                            val isGreyUnderline = y > transparent.height * 0.68 &&
+                                kotlin.math.abs(red - green) < 20 &&
+                                kotlin.math.abs(green - blue) < 20 &&
+                                red in 45..235
+                            if (isBlackBackground || isGreyUnderline) {
                                 transparent.setPixel(x, y, android.graphics.Color.TRANSPARENT)
                             }
                         }
@@ -1155,24 +1160,18 @@ class MainActivity : Activity() {
             val sidebarButton = makeButton(label, selected, action).apply {
                 val iconDrawable = if (iconRes != 0) getDrawable(iconRes)?.mutate() else null
                 iconDrawable?.setBounds(0, 0, dp(29), dp(29))
-                // Sidebar rests flat with no surrounding tile; focus uses a square-corner theme fill.
+                // Restore the full accent selection tile for the focused navigation item.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
                 setOnFocusChangeListener { v, hasFocus ->
                     val button = v as Button
-                    button.background = if (hasFocus) android.graphics.drawable.LayerDrawable(arrayOf(
-                        android.graphics.drawable.ColorDrawable(Color.TRANSPARENT),
-                        GradientDrawable().apply {
-                            shape = GradientDrawable.RECTANGLE
-                            cornerRadius = dp(2).toFloat()
-                            setColor(accent)
-                        }
-                    )).apply {
-                        // A slim 4dp accent strip on the left; no filled blue selection tile.
-                        setLayerInset(1, 0, dp(7), dp(136), dp(7))
+                    button.background = if (hasFocus) GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dp(if (ovalButtons) 24 else 0).toFloat()
+                        setColor(accent)
                     } else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                    button.setTextColor(Color.WHITE)
-                    iconDrawable?.setTint(Color.WHITE)
+                    button.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
+                    iconDrawable?.setTint(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
                     button.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
                     v.elevation = 0f
                     v.scaleX = 1f
