@@ -3290,73 +3290,123 @@ class MainActivity : Activity() {
         val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
             ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups
 
-        // Home hero preview sits above the weekly trending rows.
+        // Edge-to-edge home hero; horizontal cards below preview on remote focus.
+        var homeHeroItem: MediaItem? = null
+        var homeHeroImage: ImageView? = null
+        var homeHeroTitle: TextView? = null
+        var homeHeroMeta: TextView? = null
+        var homeHeroPlot: TextView? = null
+        fun showHomeHero(item: MediaItem) {
+            homeHeroItem = item
+            homeHeroTitle?.text = item.name
+            homeHeroMeta?.text = listOf(item.type, item.releaseDate,
+                item.rating.takeIf { it.isNotBlank() }?.let { "★ $it" })
+                .filterNotNull().filter { it.isNotBlank() }.joinToString("   •   ")
+            homeHeroPlot?.text = item.plot
+            if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) {
+                homeHeroImage?.let { loadPoster(item.icon, it) }
+            }
+        }
         if (selectedType == "Tümü" && sidebarMode != "search" && expandedCategory == null) {
             val heroItem = recent.firstOrNull { it.type in listOf("Filmler", "Diziler") && it.icon.isNotBlank() }
                 ?: activeSourceItems.firstOrNull { it.type == "Filmler" && it.icon.isNotBlank() }
                 ?: activeSourceItems.firstOrNull { it.type == "Diziler" && it.icon.isNotBlank() }
             if (heroItem != null) {
                 val hero = FrameLayout(this).apply {
-                    background = roundedDrawable(panel, 18)
-                    clipToOutline = true
+                    clipChildren = false
+                    clipToPadding = false
                     isFocusable = false
                 }
-                val heroImage = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
-                hero.addView(heroImage, FrameLayout.LayoutParams(-1, -1))
-                loadPoster(heroItem.icon, heroImage)
+                homeHeroImage = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+                hero.addView(homeHeroImage, FrameLayout.LayoutParams(-1, -1))
                 hero.addView(View(this).apply {
-                    background = GradientDrawable(
-                        GradientDrawable.Orientation.LEFT_RIGHT,
-                        intArrayOf(Color.rgb(7, 8, 14), Color.argb(225, 7, 8, 14), Color.TRANSPARENT)
-                    )
+                    background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                        intArrayOf(Color.rgb(7, 8, 14), Color.argb(235, 7, 8, 14),
+                            Color.argb(100, 7, 8, 14), Color.TRANSPARENT))
                 }, FrameLayout.LayoutParams(-1, -1))
                 val heroCopy = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(24), dp(18), dp(20), dp(18))
+                    setPadding(dp(30), dp(20), dp(20), dp(20))
                 }
-                heroCopy.addView(TextView(this).apply {
-                    text = heroItem.name
-                    textSize = 25f
-                    maxLines = 2
+                homeHeroTitle = TextView(this).apply {
+                    textSize = 28f; maxLines = 2
                     ellipsize = android.text.TextUtils.TruncateAt.END
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE)
-                }, LinearLayout.LayoutParams(dp(440), ViewGroup.LayoutParams.WRAP_CONTENT))
-                val heroMeta = listOf(heroItem.type, heroItem.releaseDate, heroItem.rating.takeIf { it.isNotBlank() }?.let { "★ $it" })
-                    .filterNotNull().filter { it.isNotBlank() }.joinToString("   •   ")
-                if (heroMeta.isNotBlank()) heroCopy.addView(TextView(this).apply {
-                    text = heroMeta
-                    textSize = 14f
-                    setTextColor(accentBright)
-                    setPadding(0, dp(7), 0, dp(5))
-                })
-                if (heroItem.plot.isNotBlank()) heroCopy.addView(TextView(this).apply {
-                    text = heroItem.plot
-                    textSize = 14f
-                    maxLines = 2
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                    setTextColor(Color.LTGRAY)
-                }, LinearLayout.LayoutParams(dp(430), ViewGroup.LayoutParams.WRAP_CONTENT))
+                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                }
+                heroCopy.addView(homeHeroTitle, LinearLayout.LayoutParams(dp(500), ViewGroup.LayoutParams.WRAP_CONTENT))
+                homeHeroMeta = TextView(this).apply {
+                    textSize = 15f; setTextColor(accentBright); setPadding(0, dp(8), 0, dp(6))
+                }
+                heroCopy.addView(homeHeroMeta)
+                homeHeroPlot = TextView(this).apply {
+                    textSize = 15f; maxLines = 3
+                    ellipsize = android.text.TextUtils.TruncateAt.END; setTextColor(Color.LTGRAY)
+                }
+                heroCopy.addView(homeHeroPlot, LinearLayout.LayoutParams(dp(500), ViewGroup.LayoutParams.WRAP_CONTENT))
                 val heroActions = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
                 }
                 heroActions.addView(makeButton(t("İzle"), true) {
-                    if (heroItem.type == "Diziler") showSeriesDetail(heroItem) else showMovieDetail(heroItem)
-                }, LinearLayout.LayoutParams(dp(112), dp(42)).apply { setMargins(0, dp(12), dp(10), 0) })
+                    homeHeroItem?.let { if (it.type == "Diziler") showSeriesDetail(it) else showMovieDetail(it) }
+                }, LinearLayout.LayoutParams(dp(112), dp(42)).apply { setMargins(0, dp(14), dp(10), 0) })
                 heroActions.addView(makeButton(t("Detaylar"), false) {
-                    if (heroItem.type == "Diziler") showSeriesDetail(heroItem) else showMovieDetail(heroItem)
-                }, LinearLayout.LayoutParams(dp(132), dp(42)).apply { setMargins(0, dp(12), 0, 0) })
+                    homeHeroItem?.let { if (it.type == "Diziler") showSeriesDetail(it) else showMovieDetail(it) }
+                }, LinearLayout.LayoutParams(dp(132), dp(42)).apply { setMargins(0, dp(14), 0, 0) })
                 heroCopy.addView(heroActions)
                 hero.addView(heroCopy, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER_VERTICAL))
-                content.addView(hero, LinearLayout.LayoutParams(-1, dp(250)).apply {
-                    setMargins(dp(4), dp(2), dp(4), dp(18))
+                content.addView(hero, LinearLayout.LayoutParams(-1, dp(360)).apply {
+                    setMargins(-dp(4), -dp(14), -dp(18), dp(18))
                 })
+                showHomeHero(heroItem)
+            }
+
+            val watchNextItems = (recent.filter { it.type in listOf("Filmler", "Diziler") } +
+                activeSourceItems.filter { it.type in listOf("Filmler", "Diziler") && favorites.contains(it.favoriteKey) })
+                .distinctBy { it.favoriteKey }.take(20)
+            if (watchNextItems.isNotEmpty()) {
+                content.addView(TextView(this).apply {
+                    text = "Sırada Oynat"; textSize = 20f
+                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                    setPadding(dp(4), dp(4), 0, dp(8))
+                })
+                val watchRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    clipChildren = false; clipToPadding = false
+                }
+                watchNextItems.forEach { item ->
+                    val watchCard = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        isFocusable = true; isFocusableInTouchMode = true
+                        setOnFocusChangeListener { view, focused ->
+                            view.animate().cancel()
+                            view.animate().scaleX(if (focused) 1.08f else 1f)
+                                .scaleY(if (focused) 1.08f else 1f).setDuration(150).start()
+                            if (focused) showHomeHero(item)
+                        }
+                        setOnClickListener {
+                            if (item.type == "Diziler") showSeriesDetail(item) else showMovieDetail(item)
+                        }
+                    }
+                    val thumb = ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        layoutParams = LinearLayout.LayoutParams(dp(190), dp(108))
+                    }
+                    watchCard.addView(thumb)
+                    if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, thumb)
+                    watchCard.addView(TextView(this).apply {
+                        text = item.name; textSize = 13f; maxLines = 2
+                        ellipsize = android.text.TextUtils.TruncateAt.END; setTextColor(Color.WHITE)
+                        setPadding(0, dp(5), 0, 0)
+                    }, LinearLayout.LayoutParams(dp(190), ViewGroup.LayoutParams.WRAP_CONTENT))
+                    watchRow.addView(watchCard, LinearLayout.LayoutParams(dp(190), ViewGroup.LayoutParams.WRAP_CONTENT)
+                        .apply { setMargins(dp(4), 0, dp(14), dp(12)) })
+                }
+                content.addView(watchRow)
             }
         }
 
-        groupsToRender.forEach { (groupName, entries) ->
+                groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
             val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")
@@ -3401,17 +3451,20 @@ class MainActivity : Activity() {
                     background = roundedDrawable(Color.TRANSPARENT, 10)
                     isFocusable = true; isFocusableInTouchMode = true
                     setOnFocusChangeListener { v, hasFocus ->
-                        // Focus lifts the card above siblings; no glow or focus border is drawn.
+                        // Focus lifts the card and previews it in the hero on the home screen.
                         v.animate().cancel()
                         v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         v.elevation = if (hasFocus) dp(22).toFloat() else 0f
                         v.translationZ = if (hasFocus) dp(22).toFloat() else 0f
                         v.cameraDistance = dp(2200).toFloat()
-                        v.animate().scaleX(if (hasFocus) 1.15f else 1f)
-                            .scaleY(if (hasFocus) 1.15f else 1f)
-                            .translationY(if (hasFocus) -dp(10).toFloat() else 0f)
+                        v.animate().scaleX(if (hasFocus) 1.10f else 1f)
+                            .scaleY(if (hasFocus) 1.10f else 1f)
+                            .translationY(if (hasFocus) -dp(7).toFloat() else 0f)
                             .translationZ(if (hasFocus) dp(22).toFloat() else 0f)
                             .setDuration(180).start()
+                        if (hasFocus && selectedType == "Tümü" && item.type in listOf("Filmler", "Diziler")) {
+                            showHomeHero(item)
+                        }
                     }
                     setOnClickListener {
                         // Search results for live channels should start playback immediately.
@@ -3457,8 +3510,8 @@ class MainActivity : Activity() {
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
-                        if (weeklyPoster) dp(140) else -1,
-                        if (liveCard) dp(88) else if (weeklyPoster) dp(210) else if (posterGridMode) dp(210) else if (homeCard) 230 else 210
+                        if (weeklyPoster || homeCard) dp(232) else -1,
+                        if (liveCard) dp(88) else if (weeklyPoster || homeCard) dp(130) else if (posterGridMode) dp(210) else dp(210)
                     )
                 }
                 card.addView(poster)
@@ -3517,9 +3570,9 @@ class MainActivity : Activity() {
                     })
                     expandedPosterCount++
                 } else {
-                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) dp(112) else if (weeklyMovieFeature) featureCardWidth else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                        // Consistent TV-friendly breathing room between poster cards.
-                        setMargins(dp(5), 0, if (weeklyMovieFeature) dp(20) else dp(14), dp(10))
+                    row.addView(card, LinearLayout.LayoutParams(if (liveCard) dp(112) else if (weeklyMovieFeature || homeCard) dp(232) else 232, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        // Landscape cards on home; other sections keep their existing sizing.
+                        setMargins(dp(5), 0, dp(14), dp(10))
                     })
                 }
             }
