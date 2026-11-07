@@ -1596,7 +1596,7 @@ class MainActivity : Activity() {
                     address.trimEnd('/'), username.text.toString().trim(), password.text.toString())
                 saveSource(src); hideKeyboard(); render(); loadXtream(src, editSource != null)
             } else {
-                val address = playlistUrl.text.toString().trim()
+                val address = normalizeM3uPlusUrl(playlistUrl.text.toString().trim())
                 if (!address.startsWith("http://") && !address.startsWith("https://")) {
                     Toast.makeText(this, t("Geçerli bir M3U/M3U8 URL'si gir."), Toast.LENGTH_LONG).show()
                     return@makeButton
@@ -2780,7 +2780,7 @@ class MainActivity : Activity() {
                     hideKeyboard()
                     loadXtream(src, false)
                 } else {
-                    val address = playlistUrl.text.toString().trim()
+                    val address = normalizeM3uPlusUrl(playlistUrl.text.toString().trim())
                     if (!address.startsWith("http://") && !address.startsWith("https://")) {
                         Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
                         return@makeButton
