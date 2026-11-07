@@ -817,11 +817,11 @@ class MainActivity : Activity() {
             clipChildren = false
             clipToPadding = false
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(190), -1).apply { setMargins(0, 0, dp(8), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(150), -1).apply { setMargins(0, 0, dp(8), 0) })
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(dp(180), -1)
+            layoutParams = LinearLayout.LayoutParams(dp(140), -1)
         }
         sidebar.addView(primaryMenuColumn)
 
@@ -1083,7 +1083,7 @@ class MainActivity : Activity() {
             val params = sidebar.layoutParams
             // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
             // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (showReadableCategories) 328 else 190)
+            val desiredWidth = dp(if (showReadableCategories) 288 else 150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -1159,14 +1159,14 @@ class MainActivity : Activity() {
                 }
                 compoundDrawablePadding = dp(12)
                 setCompoundDrawables(iconDrawable, null, null, null)
-                gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                gravity = Gravity.CENTER
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 contentDescription = text.toString()
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(dp(10), 0, dp(6), 0)
+                setPadding(dp(4), 0, dp(4), 0)
                 minHeight = dp(46)
                 id = View.generateViewId()
             }
@@ -2554,7 +2554,7 @@ class MainActivity : Activity() {
             if (detailMode) 0 else dp(20)
         )
         val firstEntry = items.isEmpty() && !isLoadingSource
-        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
+        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode || expandedCategory != null) View.GONE else View.VISIBLE
         if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::rootLayout.isInitialized) {
             rootLayout.setPadding(if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(14),
