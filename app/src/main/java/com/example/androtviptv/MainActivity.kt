@@ -566,6 +566,8 @@ class MainActivity : Activity() {
     private var categoryFocusRestoreKey: String? = null
     // Render live channels in small batches to avoid first-open freezes on Android TV.
     private var liveChannelsLimit = 72
+    // Limit poster-card creation per render; large M3U categories can contain thousands of entries.
+    private var mediaItemsLimit = 40
     private var expandedCategory: Pair<String, List<MediaItem>>? = null
     private lateinit var categoryPanel: LinearLayout
     private lateinit var categoryListScroll: ScrollView
@@ -1432,6 +1434,7 @@ class MainActivity : Activity() {
                         setOnClickListener {
                             selectedGroup = name
                             expandedCategory = name to entries
+                            mediaItemsLimit = 40
                             focusFirstContentOnRender = true
                             render()
                         }
@@ -3157,6 +3160,7 @@ class MainActivity : Activity() {
         groupsAvailable.take(40).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
+                mediaItemsLimit = 40
                 render()
             }.apply {
                 textSize = 11f; minWidth = 0; minimumWidth = 0
@@ -3440,7 +3444,11 @@ class MainActivity : Activity() {
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(140) // Kart genişliği afişle aynı
-            val displayedEntries = if (posterGridMode || weeklyMovieFeature) entries else entries.take(5)
+            val displayedEntries = when {
+                posterGridMode -> entries.take(mediaItemsLimit)
+                weeklyMovieFeature -> entries.take(24)
+                else -> entries.take(5)
+            }
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
             displayedEntries.forEachIndexed { itemIndex, item ->
@@ -3585,6 +3593,16 @@ class MainActivity : Activity() {
 
             if (posterGridMode) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                if (displayedEntries.size < entries.size) {
+                    content.addView(makeButton(
+                        "Daha fazla içerik göster  (${displayedEntries.size}/${entries.size})", false
+                    ) {
+                        mediaItemsLimit = (mediaItemsLimit + 40).coerceAtMost(entries.size)
+                        render()
+                    }, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                        setMargins(dp(8), dp(4), dp(8), dp(16))
+                    })
+                }
             } else {
                 content.addView(HorizontalScrollView(this).apply {
                     isHorizontalScrollBarEnabled = false
