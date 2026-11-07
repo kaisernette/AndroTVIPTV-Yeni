@@ -874,6 +874,7 @@ class MainActivity : Activity() {
         primaryMenuColumn.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         settingsBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         primaryMenuColumn.addView(settingsBar, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        primaryMenuColumn.tag = "primary-navigation"
         categoryPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(8), dp(78), dp(4), dp(8))
@@ -1080,10 +1081,11 @@ class MainActivity : Activity() {
         if (::sidebar.isInitialized) {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
+            sidebar.findViewWithTag<View>("primary-navigation")?.visibility = if (showReadableCategories) View.GONE else View.VISIBLE
             val params = sidebar.layoutParams
             // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
             // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (showReadableCategories) 288 else 150)
+            val desiredWidth = dp(if (showReadableCategories) 160 else 150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -1297,7 +1299,7 @@ class MainActivity : Activity() {
                 Triple("◷", "İzlediklerim", "Son İzlenenler"),
                 Triple("⚙", "Ayarlar", "Ayarlar")
             )
-            compactTabs.forEach { (glyph, label, key) ->
+            compactTabs.forEach { (_, label, key) ->
                 if (key == "Ayarlar") {
                     navBar.addView(View(this).apply { setBackgroundColor(Color.rgb(76, 87, 105)); isFocusable = false },
                         LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(10), dp(10), dp(10)) })
@@ -1307,7 +1309,7 @@ class MainActivity : Activity() {
                     "Tümü" -> selectedType == "Tümü"
                     else -> selectedType == key
                 }
-                addSidebarButton(glyph, isSelected, if (key == "Ayarlar") settingsBar else navBar) {
+                addSidebarButton(label, isSelected, if (key == "Ayarlar") settingsBar else navBar) {
                     when (key) {
                         "Ara" -> {
                             detailSeries = null
@@ -2277,6 +2279,14 @@ class MainActivity : Activity() {
 
             if (expandedCategory != null) {
                 expandedCategory = null
+                render()
+                return
+            }
+
+            if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) {
+                sidebarMode = "main"
+                selectedGroup = "Tüm kategoriler"
+                focusedCategoryName = null
                 render()
                 return
             }
@@ -3279,6 +3289,7 @@ class MainActivity : Activity() {
             }
             sectionHeader.addView(TextView(this).apply {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
             }, LinearLayout.LayoutParams(0, -2, 1f))
             val sectionCountView = TextView(this).apply {
                 id = View.generateViewId()
