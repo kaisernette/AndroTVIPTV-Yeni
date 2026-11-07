@@ -2293,20 +2293,52 @@ class MainActivity : Activity() {
         var name = "İçerik"
         var group = "Diğer"
         var icon = ""
+
+        fun attribute(line: String, key: String): String {
+            val pattern = Regex("""(?:^|\s)\${Regex.escape(key)}\s*=\s*(?:"([^"]*)"|'([^']*)')""", RegexOption.IGNORE_CASE)
+            val match = pattern.find(line) ?: return ""
+            return match.groupValues.getOrElse(1) { "" }.ifBlank {
+                match.groupValues.getOrElse(2) { "" }
+            }.trim()
+        }
+
+        // EXTINF metadata can contain commas inside quoted values. The channel
+        // name starts at the first comma outside quotes, not the last comma.
+        fun displayName(line: String): String {
+            var quote: Char? = null
+            for (index in line.indices) {
+                val ch = line[index]
+                if ((ch == '"' || ch == '\'') && (quote == null || quote == ch)) {
+                    quote = if (quote == null) ch else null
+                } else if (ch == ',' && quote == null) {
+                    return line.substring(index + 1).trim()
+                }
+            }
+            return attribute(line, "tvg-name").ifBlank { "İçerik" }
+        }
+
         while (true) {
             val rawLine = reader.readLine() ?: break
             if (rawLine.length > 256 * 1024) continue
-            val line = rawLine.trim()
-            if (line.startsWith("#EXTINF", true)) {
-                name = line.substringAfterLast(',', "İçerik").trim().ifBlank { "İçerik" }
-                group = Regex("group-title=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: "Diğer"
-                icon = Regex("tvg-logo=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: ""
-            } else if ((line.startsWith("http://") || line.startsWith("https://")) && line.isNotBlank()) {
-                val type = classify(name, group)
-                out.add(MediaItem(line, name, line, group, type, icon))
-                name = "İçerik"
-                group = "Diğer"
-                icon = ""
+            val line = rawLine.trim().removePrefix("\uFEFF")
+            when {
+                line.startsWith("#EXTINF", true) -> {
+                    name = displayName(line).ifBlank { attribute(line, "tvg-name") }.ifBlank { "İçerik" }
+                    group = attribute(line, "group-title").ifBlank { "Diğer" }
+                    icon = attribute(line, "tvg-logo")
+                }
+                line.startsWith("#EXTGRP:", true) -> {
+                    val extGroup = line.substringAfter(':').trim()
+                    if (extGroup.isNotBlank()) group = extGroup
+                }
+                line.startsWith("#") || line.isBlank() -> Unit
+                line.startsWith("http://", true) || line.startsWith("https://", true) -> {
+                    val type = classify(name, group)
+                    out.add(MediaItem(line, name, line, group, type, icon))
+                    name = "İçerik"
+                    group = "Diğer"
+                    icon = ""
+                }
             }
         }
         return out
