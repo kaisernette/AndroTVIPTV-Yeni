@@ -33,7 +33,7 @@ private data class SavedSource(val id: String, val name: String, val mode: Strin
 
 private data class MediaItem(
     val id: String, val name: String, val url: String, val group: String,
-    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = "", val sourceId: String = "", val plot: String = "", val actors: String = "", val rating: String = "", val releaseDate: String = "", val genre: String = ""
+    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = "", val sourceId: String = "", val plot: String = "", val actors: String = "", val rating: String = "", val releaseDate: String = "", val genre: String = "", val backdrop: String = ""
 ) {
     val favoriteKey: String get() = "$type:$id:$url"
 }
@@ -633,7 +633,7 @@ class MainActivity : Activity() {
             val saved = JSONArray(getSharedPreferences("androtv", MODE_PRIVATE).getString("recent", "[]"))
             for (i in 0 until saved.length()) {
                 val o = saved.optJSONObject(i) ?: continue
-                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors"), o.optString("rating"), o.optString("releaseDate"), o.optString("genre")))
+                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors"), o.optString("rating"), o.optString("releaseDate"), o.optString("genre"), o.optString("backdrop")))
             }
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
@@ -2048,6 +2048,17 @@ class MainActivity : Activity() {
                             ).ifBlank { if (type == "Canlı TV") "ts" else "mp4" }
                             val plot = o.optString("plot", o.optString("description", ""))
                             val actors = o.optString("cast", o.optString("actors", ""))
+                            val rawBackdropValue = o.opt("backdrop_path") ?: o.opt("backdrop") ?: o.opt("backdrop_url")
+                            val rawBackdrop = when (rawBackdropValue) {
+                                is JSONArray -> (0 until rawBackdropValue.length()).asSequence().map { rawBackdropValue.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                                is String -> rawBackdropValue.trim()
+                                else -> ""
+                            }
+                            val backdrop = when {
+                                rawBackdrop.startsWith("//") -> "https:$rawBackdrop"
+                                rawBackdrop.startsWith("/") -> "$base$rawBackdrop"
+                                else -> rawBackdrop
+                            }
 
                             // Xtream providers use different artwork keys by content type.
                             // Prefer stream_icon for live/VOD and cover for series, then
@@ -2080,7 +2091,7 @@ class MainActivity : Activity() {
                                     source.id, plot, actors,
                                     o.optString("rating", o.optString("vote_average", "")),
                                     o.optString("releaseDate", o.optString("year", "")),
-                                    o.optString("genre", "")
+                                    o.optString("genre", ""), backdrop
                                 )
                             )
                             if (i % 250 == 0) {
@@ -2220,7 +2231,7 @@ class MainActivity : Activity() {
                             .put("type", x.type).put("icon", x.icon).put("extension", x.extension)
                             .put("seriesId", x.seriesId).put("sourceId", x.sourceId).put("plot", x.plot)
                             .put("actors", x.actors).put("rating", x.rating).put("releaseDate", x.releaseDate)
-                            .put("genre", x.genre)
+                            .put("genre", x.genre).put("backdrop", x.backdrop)
                         writer.write(obj.toString())
                         if (index % 250 == 0) writer.flush()
                     }
@@ -2254,7 +2265,7 @@ class MainActivity : Activity() {
             val restored = ArrayList<MediaItem>(arr.length())
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
-                restored.add(MediaItem(o.optString("id"),o.optString("name"),o.optString("url"),o.optString("group"),o.optString("type"),o.optString("icon"),o.optString("extension"),o.optString("seriesId"),o.optString("sourceId"),o.optString("plot"),o.optString("actors"),o.optString("rating"),o.optString("releaseDate"),o.optString("genre")))
+                restored.add(MediaItem(o.optString("id"),o.optString("name"),o.optString("url"),o.optString("group"),o.optString("type"),o.optString("icon"),o.optString("extension"),o.optString("seriesId"),o.optString("sourceId"),o.optString("plot"),o.optString("actors"),o.optString("rating"),o.optString("releaseDate"),o.optString("genre"),o.optString("backdrop")))
             }
             items.clear()
             items.addAll(restored)
@@ -2420,7 +2431,8 @@ class MainActivity : Activity() {
         val body = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(18, 18, 18, 18); background = roundedDrawable(panel, 18, Color.rgb(45, 54, 71)) }
         val poster = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; background = roundedDrawable(Color.rgb(31, 37, 50), 12) }
         body.addView(poster, LinearLayout.LayoutParams(150, 220).apply { setMargins(0, 0, 18, 0) })
-        if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) loadPoster(item.icon, poster)
+        val cardArtwork = if (homeCard) item.backdrop.ifBlank { item.icon } else item.icon
+                if (cardArtwork.startsWith("http://") || cardArtwork.startsWith("https://")) loadPoster(cardArtwork, poster)
         val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         info.addView(TextView(this).apply { text = item.name; textSize = 22f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
         info.addView(TextView(this).apply { text = item.type + "  •  " + item.group.ifBlank { "Diğer" }; textSize = 13f; setTextColor(accent); setPadding(0, 8, 0, 8) })
@@ -3312,6 +3324,7 @@ class MainActivity : Activity() {
         var homeHeroTitle: TextView? = null
         var homeHeroMeta: TextView? = null
         var homeHeroPlot: TextView? = null
+        val backdropRequests = ConcurrentHashMap.newKeySet<String>()
         fun showHomeHero(item: MediaItem) {
             homeHeroItem = item
             homeHeroTitle?.text = item.name
@@ -3319,8 +3332,52 @@ class MainActivity : Activity() {
                 item.rating.takeIf { it.isNotBlank() }?.let { "★ $it" })
                 .filterNotNull().filter { it.isNotBlank() }.joinToString("   •   ")
             homeHeroPlot?.text = item.plot
-            if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) {
-                homeHeroImage?.let { loadPoster(item.icon, it) }
+            val heroArtwork = item.backdrop.ifBlank { item.icon }
+            if (heroArtwork.startsWith("http://") || heroArtwork.startsWith("https://")) {
+                homeHeroImage?.let { loadPoster(heroArtwork, it) }
+            }
+            // Fetch a wide image from Xtream detail info when list data has only a poster.
+            if (item.backdrop.isBlank() && item.sourceId.isNotBlank() &&
+                (item.type == "Filmler" || item.type == "Diziler") &&
+                backdropRequests.add(item.sourceId + ":" + item.type + ":" + item.id)) {
+                val source = savedSources.firstOrNull { it.id == item.sourceId && it.mode == "xtream" }
+                if (source != null) thread(name = "kaiser-backdrop") {
+                    try {
+                        val u = URLEncoder.encode(source.username, "UTF-8")
+                        val p = URLEncoder.encode(source.password, "UTF-8")
+                        val api = source.address.trimEnd('/') + "/player_api.php?username=" + u + "&password=" + p
+                        val action = if (item.type == "Diziler") "get_series_info&series_id=" else "get_vod_info&vod_id="
+                        val rootInfo = JSONObject(request(api + "&action=" + action + URLEncoder.encode(item.id, "UTF-8")))
+                        val info = rootInfo.optJSONObject("info") ?: rootInfo.optJSONObject("movie_data") ?: rootInfo
+                        val value = info.opt("backdrop_path") ?: info.opt("backdrop") ?: info.opt("backdrop_url")
+                        val raw = when (value) {
+                            is JSONArray -> (0 until value.length()).asSequence().map { value.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                            is String -> value.trim()
+                            else -> ""
+                        }
+                        val wide = when {
+                            raw.startsWith("//") -> "https:$raw"
+                            raw.startsWith("/") -> source.address.trimEnd('/') + raw
+                            else -> raw
+                        }
+                        if (wide.startsWith("http://") || wide.startsWith("https://")) {
+                            val updated = item.copy(backdrop = wide)
+                            val index = items.indexOfFirst { it.id == item.id && it.type == item.type && it.sourceId == item.sourceId }
+                            if (index >= 0) items[index] = updated
+                            recent.indices.filter { recent[it].id == item.id && recent[it].type == item.type && recent[it].sourceId == item.sourceId }.forEach { recent[it] = updated }
+                            saveCachedItems()
+                            saveRecent()
+                            runOnUiThread {
+                                if (homeHeroItem?.id == item.id && homeHeroItem?.sourceId == item.sourceId) {
+                                    homeHeroItem = updated
+                                    homeHeroImage?.let { loadPoster(wide, it) }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("KaiserTV", "Wide backdrop unavailable for " + item.name, e)
+                    }
+                }
             }
         }
         if (selectedType == "Tümü" && sidebarMode != "search" && expandedCategory == null) {
@@ -5431,7 +5488,7 @@ class MainActivity : Activity() {
 
     private fun persistRecentHistory() {
         val arr = JSONArray()
-        recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId).put("sourceId", r.sourceId)) }
+        recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId).put("sourceId", r.sourceId).put("backdrop", r.backdrop)) }
         getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
     }
 
