@@ -1159,16 +1159,16 @@ class MainActivity : Activity() {
                     label.contains("Ayarlar") -> "Ayarlar"
                     else -> label
                 }
-                compoundDrawablePadding = dp(12)
+                compoundDrawablePadding = dp(7)
                 setCompoundDrawables(iconDrawable, null, null, null)
-                gravity = Gravity.CENTER
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 contentDescription = text.toString()
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(dp(4), 0, dp(4), 0)
+                setPadding(dp(10), 0, dp(4), 0)
                 minHeight = dp(46)
                 id = View.generateViewId()
             }
@@ -2284,7 +2284,9 @@ class MainActivity : Activity() {
             }
 
             if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) {
-                sidebarMode = "main"
+                // Back from the tab's category screen returns to that tab's full category view.
+                // Keep context mode active so Live TV continues rendering its channel list.
+                expandedCategory = null
                 selectedGroup = "Tüm kategoriler"
                 focusedCategoryName = null
                 render()
