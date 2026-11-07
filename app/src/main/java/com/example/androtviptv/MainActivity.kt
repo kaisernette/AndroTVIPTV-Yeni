@@ -646,11 +646,12 @@ class MainActivity : Activity() {
         // Show the app's own loading UI immediately. Disk cache parsing can be expensive
         // on low-memory Android TV devices, so never perform it on the main thread.
         isLoadingSource = true
-        status.text = "KaiserTV+ hazırlanıyor…"
         // Start on Home every time; the user's last section remains saved for history only.
         selectedType = "Tümü"
         selectedGroup = "Tüm kategoriler"
         buildUi()
+        // status is a lateinit view created by buildUi(); update it only after initialization.
+        status.text = "KaiserTV+ hazırlanıyor…"
         applyThemeSurfaces()
         showPreviousCrashIfAny()
         thread(name = "kaiser-startup-cache") {
