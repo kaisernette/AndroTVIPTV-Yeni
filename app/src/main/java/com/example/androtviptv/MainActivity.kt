@@ -1635,8 +1635,7 @@ class MainActivity : Activity() {
                     val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "mac", portal, macValue)
                     saveSource(src)
                     hideKeyboard()
-                    Toast.makeText(this@MainActivity, t("MAC Portal bilgileri kaydedildi. Yayın bağlantısı henüz etkin değil."), Toast.LENGTH_LONG).show()
-                    render()
+                    loadMacPortal(src)
                 } else {
                     sourceMode.check(modeId)
                     connectButton.performClick()
