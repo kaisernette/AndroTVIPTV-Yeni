@@ -813,12 +813,16 @@ class MainActivity : Activity() {
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(4), 12, dp(6), 10)
-            background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
-            // Keep rounded category-selection backgrounds fully visible in both themes.
+            // Sidebar and content share one continuous app surface.
+            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
             clipChildren = false
             clipToPadding = false
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(190), -1).apply { setMargins(0, 0, dp(8), 0) })
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(190), -1))
+        root.addView(View(this).apply {
+            setBackgroundColor(Color.argb(90, Color.red(muted), Color.green(muted), Color.blue(muted)))
+            isFocusable = false
+        }, LinearLayout.LayoutParams(dp(1), -1))
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -949,13 +953,14 @@ class MainActivity : Activity() {
 
         main.addView(mainHeader)
 
+        // Empty, transparent host for the full-bleed home hero.
+        // The artwork itself owns the visual treatment; no nested frame or inset.
         val hero = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(26, 18, 18, 18)
-            background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(Color.rgb(33, 42, 59), Color.rgb(12, 17, 28))).apply {
-                cornerRadius = 0f; setStroke(1, Color.rgb(54, 64, 82))
-            }
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 0, 0, 0)
+            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            clipChildren = false
+            clipToPadding = false
         }
         val heroCopy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         heroCopy.addView(TextView(this).apply {
@@ -979,8 +984,8 @@ class MainActivity : Activity() {
         hero.addView(heroCopy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
         heroArt = FrameLayout(this).apply {
-            background = roundedDrawable(Color.rgb(25, 33, 48), 18, Color.rgb(60, 70, 89))
-            clipToOutline = true
+            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            clipToOutline = false
         }
         heroArt.addView(TextView(this).apply {
             text = "K"; textSize = 88f; setTextColor(accent)
