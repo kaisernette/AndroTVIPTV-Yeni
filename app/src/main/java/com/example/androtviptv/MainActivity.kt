@@ -36,7 +36,7 @@ private data class SavedSource(val id: String, val name: String, val mode: Strin
 
 private data class MediaItem(
     val id: String, val name: String, val url: String, val group: String,
-    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = "", val sourceId: String = "", val plot: String = "", val actors: String = "", val rating: String = "", val releaseDate: String = "", val genre: String = ""
+    val type: String, val icon: String = "", val extension: String = "", val seriesId: String = "", val sourceId: String = "", val plot: String = "", val actors: String = "", val rating: String = "", val releaseDate: String = "", val genre: String = "", val requestHeaders: String = ""
 ) {
     val favoriteKey: String get() = "$type:$id:$url"
 }
@@ -2293,22 +2293,21 @@ class MainActivity : Activity() {
         var name = "İçerik"
         var group = "Diğer"
         var icon = ""
+        val headers = linkedMapOf<String, String>()
 
         fun attribute(line: String, key: String): String {
-            val pattern = Regex("""(?:^|\s)\${Regex.escape(key)}\s*=\s*(?:"([^"]*)"|'([^']*)')""", RegexOption.IGNORE_CASE)
+            val pattern = Regex("""(?:^|\\s)${Regex.escape(key)}\\s*=\\s*(?:"([^"]*)"|'([^']*)')""", RegexOption.IGNORE_CASE)
             val match = pattern.find(line) ?: return ""
             return match.groupValues.getOrElse(1) { "" }.ifBlank {
                 match.groupValues.getOrElse(2) { "" }
             }.trim()
         }
 
-        // EXTINF metadata can contain commas inside quoted values. The channel
-        // name starts at the first comma outside quotes, not the last comma.
         fun displayName(line: String): String {
             var quote: Char? = null
             for (index in line.indices) {
                 val ch = line[index]
-                if ((ch == '"' || ch == '\'') && (quote == null || quote == ch)) {
+                if ((ch == '"' || ch == '\\'') && (quote == null || quote == ch)) {
                     quote = if (quote == null) ch else null
                 } else if (ch == ',' && quote == null) {
                     return line.substring(index + 1).trim()
@@ -2317,27 +2316,72 @@ class MainActivity : Activity() {
             return attribute(line, "tvg-name").ifBlank { "İçerik" }
         }
 
+        fun headerName(raw: String): String = when (raw.trim().lowercase()) {
+            "http-user-agent", "user-agent" -> "User-Agent"
+            "http-referrer", "http-referer", "referer", "referrer" -> "Referer"
+            else -> raw.trim()
+        }
+
         while (true) {
             val rawLine = reader.readLine() ?: break
             if (rawLine.length > 256 * 1024) continue
-            val line = rawLine.trim().removePrefix("\uFEFF")
+            val line = rawLine.trim().removePrefix("\\uFEFF")
             when {
                 line.startsWith("#EXTINF", true) -> {
                     name = displayName(line).ifBlank { attribute(line, "tvg-name") }.ifBlank { "İçerik" }
                     group = attribute(line, "group-title").ifBlank { "Diğer" }
                     icon = attribute(line, "tvg-logo")
+                    headers.clear()
                 }
                 line.startsWith("#EXTGRP:", true) -> {
                     val extGroup = line.substringAfter(':').trim()
                     if (extGroup.isNotBlank()) group = extGroup
                 }
+                line.startsWith("#EXTVLCOPT:", true) -> {
+                    val option = line.substringAfter(':').trim()
+                    val key = option.substringBefore('=', "")
+                    val value = option.substringAfter('=', "").trim()
+                    if (key.startsWith("http-", true) && value.isNotBlank()) {
+                        headers[headerName(key)] = value
+                    }
+                }
+                line.startsWith("#EXTHTTP:", true) -> {
+                    val jsonText = line.substringAfter(':').trim()
+                    try {
+                        val json = JSONObject(jsonText)
+                        val keys = json.keys()
+                        while (keys.hasNext()) {
+                            val key = keys.next()
+                            val value = json.optString(key).trim()
+                            if (value.isNotBlank()) headers[headerName(key)] = value
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("KaiserTV", "Invalid EXTHTTP headers for $name", e)
+                    }
+                }
                 line.startsWith("#") || line.isBlank() -> Unit
                 line.startsWith("http://", true) || line.startsWith("https://", true) -> {
+                    // Some playlists append request headers after a pipe:
+                    // stream-url|User-Agent=...&Referer=...
+                    val streamUrl = line.substringBefore('|').trim()
+                    val pipeOptions = line.substringAfter('|', "").trim()
+                    if (pipeOptions.isNotBlank()) {
+                        pipeOptions.split('&').forEach { part ->
+                            val key = part.substringBefore('=', "").trim()
+                            val value = part.substringAfter('=', "").trim()
+                            if (key.isNotBlank() && value.isNotBlank()) {
+                                val decoded = try { java.net.URLDecoder.decode(value, "UTF-8") } catch (_: Exception) { value }
+                                headers[headerName(key)] = decoded
+                            }
+                        }
+                    }
                     val type = classify(name, group)
-                    out.add(MediaItem(line, name, line, group, type, icon))
+                    val headerJson = if (headers.isEmpty()) "" else JSONObject(headers as Map<*, *>).toString()
+                    out.add(MediaItem(streamUrl, name, streamUrl, group, type, icon, requestHeaders = headerJson))
                     name = "İçerik"
                     group = "Diğer"
                     icon = ""
+                    headers.clear()
                 }
             }
         }
@@ -2372,7 +2416,7 @@ class MainActivity : Activity() {
                             .put("type", x.type).put("icon", x.icon).put("extension", x.extension)
                             .put("seriesId", x.seriesId).put("sourceId", x.sourceId).put("plot", x.plot)
                             .put("actors", x.actors).put("rating", x.rating).put("releaseDate", x.releaseDate)
-                            .put("genre", x.genre)
+                            .put("genre", x.genre).put("requestHeaders", x.requestHeaders)
                         writer.write(obj.toString())
                         if (index % 250 == 0) writer.flush()
                     }
@@ -2419,6 +2463,7 @@ class MainActivity : Activity() {
                         var rating = ""
                         var releaseDate = ""
                         var genre = ""
+                        var requestHeaders = ""
                         reader.beginObject()
                         while (reader.hasNext()) {
                             val key = reader.nextName()
@@ -2448,12 +2493,13 @@ class MainActivity : Activity() {
                                 "rating" -> rating = value
                                 "releaseDate" -> releaseDate = value
                                 "genre" -> genre = value
+                                "requestHeaders" -> requestHeaders = value
                             }
                         }
                         reader.endObject()
                         if (url.isNotBlank()) {
                             restored.add(MediaItem(id, name, url, group, type, icon, extension, seriesId,
-                                sourceId, plot, actors, rating, releaseDate, genre))
+                                sourceId, plot, actors, rating, releaseDate, genre, requestHeaders))
                         }
                     }
                 }
@@ -5424,6 +5470,7 @@ class MainActivity : Activity() {
             val intent = Intent(this, PlayerActivity::class.java)
                 .putExtra("name", item.name)
                 .putExtra("url", item.url)
+                .putExtra("requestHeaders", item.requestHeaders)
                 .putExtra("isLive", item.type == "Canlı TV")
                 .putExtra("bufferMode", prefs.getString("player_buffer", "normal"))
                 .putExtra("aspectMode", prefs.getString("player_aspect", "fit"))
