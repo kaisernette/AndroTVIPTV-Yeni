@@ -1867,7 +1867,11 @@ class MainActivity : Activity() {
                 status.visibility = View.VISIBLE
                 status.text = if (items.isEmpty()) "${sourceToRestore.name}: kayıtlı kaynak yükleniyor…" else "${sourceToRestore.name}: film ve dizi kayıtları tamamlanıyor…"
                 render()
-                if (sourceToRestore.mode == "xtream") loadXtream(sourceToRestore, true) else loadM3u(sourceToRestore, true)
+                when (sourceToRestore.mode) {
+                    "xtream" -> loadXtream(sourceToRestore, true)
+                    "mac" -> loadMacPortal(sourceToRestore)
+                    else -> loadM3u(sourceToRestore, true)
+                }
             } else {
                 render()
             }
@@ -1885,7 +1889,7 @@ class MainActivity : Activity() {
                 if (action == 0) {
                     when (s.mode) {
                         "xtream" -> loadXtream(s, true)
-                        "mac" -> Toast.makeText(this, "MAC Portal kaynak bilgileri kayıtlı; yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
+                        "mac" -> loadMacPortal(s)
                         else -> loadM3u(s, true)
                     }
                 }
@@ -1947,6 +1951,155 @@ class MainActivity : Activity() {
                 render()
             } }
         }
+    }
+
+
+    private fun stalkerJs(root: JSONObject): JSONObject {
+        val value = root.opt("js")
+        return when (value) {
+            is JSONObject -> value
+            is String -> runCatching { JSONObject(value) }.getOrElse { root }
+            else -> root
+        }
+    }
+
+    private fun stalkerData(root: JSONObject): JSONArray {
+        val js = stalkerJs(root)
+        return js.optJSONArray("data") ?: root.optJSONArray("data") ?: JSONArray()
+    }
+
+    private fun stalkerEndpoints(address: String): List<String> {
+        val base = address.trim().trimEnd('/')
+        if (base.endsWith(".php", true)) return listOf(base)
+        return listOf("$base/server/load.php", "$base/portal.php",
+            "$base/stalker_portal/server/load.php", "$base/c/portal.php").distinct()
+    }
+
+    private fun stalkerCall(endpoint: String, source: SavedSource, params: Map<String, String>, token: String = ""): JSONObject {
+        val query = params.entries.joinToString("&") { (k, v) ->
+            URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")
+        }
+        val conn = (URL(endpoint + (if (endpoint.contains("?")) "&" else "?") + query).openConnection() as HttpURLConnection)
+        try {
+            conn.connectTimeout = 18000
+            conn.readTimeout = 30000
+            conn.instanceFollowRedirects = true
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (QtEmbedded; U; Linux; C) MAG250")
+            conn.setRequestProperty("X-User-Agent", "Model: MAG250; Link: Ethernet")
+            conn.setRequestProperty("Accept", "*/*")
+            conn.setRequestProperty("Referer", source.address.trimEnd('/') + "/c/")
+            conn.setRequestProperty("Cookie", "mac=${source.username}; stb_lang=en; timezone=Europe%2FIstanbul")
+            if (token.isNotBlank()) conn.setRequestProperty("Authorization", "Bearer $token")
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) throw Exception("Portal HTTP $code")
+            if (body.isBlank()) throw Exception("Portal boş yanıt döndürdü")
+            return JSONObject(body)
+        } finally { conn.disconnect() }
+    }
+
+    private fun stalkerHandshake(source: SavedSource): Pair<String, String> {
+        var last: Exception? = null
+        for (endpoint in stalkerEndpoints(source.address)) {
+            try {
+                val root = stalkerCall(endpoint, source, mapOf(
+                    "type" to "stb", "action" to "handshake", "token" to "", "JsHttpRequest" to "1-xml"
+                ))
+                val token = stalkerJs(root).optString("token").ifBlank { root.optString("token") }
+                if (token.isNotBlank()) return endpoint to token
+                last = Exception("Portal token döndürmedi")
+            } catch (e: Exception) { last = e }
+        }
+        throw Exception("Stalker/MAG bağlantısı kurulamadı: ${last?.message ?: "handshake başarısız"}")
+    }
+
+    private fun loadMacPortal(source: SavedSource) {
+        prefs.edit().putString("last_source_id", source.id).apply()
+        isLoadingSource = true
+        status.text = "${source.name}: portal bağlantısı kuruluyor…"
+        render()
+        thread(name = "kaiser-stalker-load") {
+            try {
+                val (endpoint, token) = stalkerHandshake(source)
+                val genres = stalkerData(stalkerCall(endpoint, source, mapOf(
+                    "type" to "itv", "action" to "get_genres", "JsHttpRequest" to "1-xml"
+                ), token))
+                val categoryMap = linkedMapOf<String, String>()
+                for (i in 0 until genres.length()) {
+                    val g = genres.optJSONObject(i) ?: continue
+                    val id = g.optString("id").ifBlank { g.optString("category_id") }
+                    val name = g.optString("title").ifBlank { g.optString("name") }
+                    if (id.isNotBlank() && name.isNotBlank()) categoryMap[id] = name
+                }
+                val loaded = mutableListOf<MediaItem>()
+                val categories = listOf("0" to "Tüm Kanallar") + categoryMap.toList()
+                categories.forEach { (genreId, genreName) ->
+                    var page = 1
+                    var more = true
+                    while (more && page <= 40) {
+                        val root = stalkerCall(endpoint, source, mapOf(
+                            "type" to "itv", "action" to "get_ordered_list",
+                            "genre" to genreId, "p" to page.toString(), "JsHttpRequest" to "1-xml"
+                        ), token)
+                        val data = stalkerData(root)
+                        if (data.length() == 0) break
+                        for (i in 0 until data.length()) {
+                            val c = data.optJSONObject(i) ?: continue
+                            val id = c.optString("id")
+                            if (id.isBlank()) continue
+                            val channelGenre = c.optString("tv_genre_id")
+                            loaded.add(MediaItem(
+                                id = id, name = c.optString("name").ifBlank { "İsimsiz kanal" },
+                                url = "stalker://$id", group = categoryMap[channelGenre] ?: genreName,
+                                type = "Canlı TV",
+                                icon = c.optString("logo").ifBlank { c.optString("screenshot_uri") },
+                                extension = c.optString("cmd").ifBlank { c.optString("url") },
+                                sourceId = source.id
+                            ))
+                        }
+                        val total = stalkerJs(root).optInt("total_items", 0)
+                        more = data.length() >= 14 && (total == 0 || page * data.length() < total)
+                        page++
+                    }
+                }
+                val unique = loaded.distinctBy { it.id }
+                if (unique.isEmpty()) throw Exception("Portal kanal veya kategori döndürmedi.")
+                runOnUiThread {
+                    items.removeAll { it.sourceId == source.id }
+                    items.addAll(unique)
+                    selectedType = "Canlı TV"
+                    selectedGroup = "Tüm kategoriler"
+                    selectedCategorySourceId = source.id
+                    expandedCategory = null
+                    sidebarMode = "context"
+                    isLoadingSource = false
+                    hasLoadedSource = true
+                    saveCachedItems()
+                    status.text = "${source.name}: ${unique.size} kanal yüklendi."
+                    render()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    isLoadingSource = false
+                    status.text = "${source.name}: ${friendlyLoadError(e)}"
+                    render()
+                }
+            }
+        }
+    }
+
+    private fun resolveStalkerStream(item: MediaItem, source: SavedSource): String {
+        val (endpoint, token) = stalkerHandshake(source)
+        val root = stalkerCall(endpoint, source, mapOf(
+            "type" to "itv", "action" to "create_link", "cmd" to item.extension,
+            "series" to "", "forced_storage" to "", "disable_ad" to "0", "JsHttpRequest" to "1-xml"
+        ), token)
+        val command = stalkerJs(root).optString("cmd").ifBlank { root.optString("cmd") }.trim()
+        val stream = command.removePrefix("ffmpeg ").trim()
+        if (!stream.startsWith("http://") && !stream.startsWith("https://"))
+            throw Exception("Portal geçerli yayın adresi döndürmedi.")
+        return stream
     }
 
     private fun loadXtream(source: SavedSource, append: Boolean) {
@@ -2194,6 +2347,7 @@ class MainActivity : Activity() {
                         .ifBlank { m3uAttribute(line, "tvg-group") }
                         .ifBlank { m3uAttribute(line, "group") }
                         .ifBlank { m3uAttribute(line, "category") }
+                        .ifBlank { m3uAttribute(line, "tvg-category") }
                     icon = m3uAttribute(line, "tvg-logo")
                         .ifBlank { m3uAttribute(line, "logo") }
                         .ifBlank { m3uAttribute(line, "poster") }
@@ -2222,10 +2376,10 @@ class MainActivity : Activity() {
         return out
     }
     private fun classify(name: String, group: String): String {
-        val s = "$name $group".lowercase()
+        val s = "$name $group".lowercase(java.util.Locale.ROOT)
         return when {
-            listOf("series", "dizi", "tv show", "season", "sezon", "episode", "bölüm").any { it in s } -> "Diziler"
-            listOf("movie", "film", "cinema", "vod", "4k film").any { it in s } -> "Filmler"
+            listOf("series", "serie", "dizi", "tv show", "season", "sezon", "episode", "bölüm", "tv series").any { it in s } -> "Diziler"
+            listOf("movie", "movies", "film", "films", "cinema", "vod", "4k film", "sinema").any { it in s } -> "Filmler"
             else -> "Canlı TV"
         }
     }
@@ -3327,8 +3481,7 @@ class MainActivity : Activity() {
         // category at once can exhaust memory on older Android TV boxes. Keep the first
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
-        val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
-            ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups
+        val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) } ?: groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
@@ -4451,10 +4604,8 @@ class MainActivity : Activity() {
                                     expandedCategory = null
                                     focusedCategoryName = null
                                     if (source.mode == "xtream") loadXtream(source, false)
-                                    else if (source.mode == "mac") {
-                                        Toast.makeText(this@MainActivity, "MAC Portal yayın bağlantısı henüz etkin değil.", Toast.LENGTH_LONG).show()
-                                        render()
-                                    } else loadM3u(source, false)
+                                    else if (source.mode == "mac") loadMacPortal(source)
+                                    else loadM3u(source, false)
                                 } else {
                                     selectedCategorySourceId = ""
                                     items.clear()
@@ -4465,7 +4616,11 @@ class MainActivity : Activity() {
                         }
                         sourceRow.addView(sourceSelect, LinearLayout.LayoutParams(dp(54), dp(42)))
                         sourceRow.addView(makeButton(t("Yenile"), false) {
-                            if (source.mode == "xtream") loadXtream(source, true) else loadM3u(source, true)
+                            when (source.mode) {
+                                "xtream" -> loadXtream(source, true)
+                                "mac" -> loadMacPortal(source)
+                                else -> loadM3u(source, true)
+                            }
                         }, LinearLayout.LayoutParams(dp(84), dp(42)).apply {
                             setMargins(dp(2), 0, dp(4), 0)
                         })
@@ -5298,6 +5453,29 @@ class MainActivity : Activity() {
 
     private fun play(item: MediaItem, startOver: Boolean = false) {
         if (openingPlayer) return
+        if (item.url.startsWith("stalker://")) {
+            val source = savedSources.firstOrNull { it.id == item.sourceId && it.mode == "mac" }
+            if (source == null) {
+                Toast.makeText(this, "MAC Portal kaynağı bulunamadı.", Toast.LENGTH_LONG).show()
+                return
+            }
+            openingPlayer = true
+            thread(name = "kaiser-stalker-link") {
+                try {
+                    val streamUrl = resolveStalkerStream(item, source)
+                    runOnUiThread {
+                        openingPlayer = false
+                        play(item.copy(url = streamUrl), startOver)
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread {
+                        openingPlayer = false
+                        Toast.makeText(this, "${source.name}: ${friendlyLoadError(e)}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            return
+        }
         if (item.type == "Diziler" && item.url.isBlank()) { loadSeriesEpisodes(item); return }
         if (item.url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
