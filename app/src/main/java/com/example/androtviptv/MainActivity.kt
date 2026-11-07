@@ -2336,24 +2336,77 @@ class MainActivity : Activity() {
     private fun loadCachedItems() {
         try {
             val file = cachedItemsFile()
-            // Parsing a large JSON string plus JSONArray duplicates memory usage and
-            // can crash low-memory Mi TV Stick devices on the next launch.
-            // A valid 1000-item cache can exceed 2 MB due to URLs and metadata.
-            // Do not delete it on startup just because it crosses the old tiny limit.
-            if (file.exists() && file.length() > 20L * 1024L * 1024L) {
-                android.util.Log.w("KaiserTV", "Media cache exceeds safe size; skipping disk cache.")
+            if (!file.exists() || file.length() <= 0L) return
+            if (file.length() > 64L * 1024L * 1024L) {
+                android.util.Log.w("KaiserTV", "Media cache exceeds hard safety limit; skipping restore.")
                 return
             }
-            val raw = if (file.exists() && file.length() > 0L) file.readText(Charsets.UTF_8) else "[]"
-            val arr = JSONArray(raw)
-            val restored = ArrayList<MediaItem>(arr.length())
-            for (i in 0 until arr.length()) {
-                val o = arr.optJSONObject(i) ?: continue
-                restored.add(MediaItem(o.optString("id"),o.optString("name"),o.optString("url"),o.optString("group"),o.optString("type"),o.optString("icon"),o.optString("extension"),o.optString("seriesId"),o.optString("sourceId"),o.optString("plot"),o.optString("actors"),o.optString("rating"),o.optString("releaseDate"),o.optString("genre")))
+            // Stream the cache instead of readText()+JSONArray, which duplicated
+            // the complete IPTV catalogue in memory and could crash at startup.
+            val restored = ArrayList<MediaItem>(minOf(12000, (file.length() / 180).toInt().coerceAtLeast(64)))
+            java.io.BufferedReader(java.io.InputStreamReader(file.inputStream(), Charsets.UTF_8)).use { input ->
+                android.util.JsonReader(input).use { reader ->
+                    reader.beginArray()
+                    while (reader.hasNext() && restored.size < 12000) {
+                        var id = ""
+                        var name = ""
+                        var url = ""
+                        var group = "Diğer"
+                        var type = "Canlı TV"
+                        var icon = ""
+                        var extension = ""
+                        var seriesId = ""
+                        var sourceId = ""
+                        var plot = ""
+                        var actors = ""
+                        var rating = ""
+                        var releaseDate = ""
+                        var genre = ""
+                        reader.beginObject()
+                        while (reader.hasNext()) {
+                            val key = reader.nextName()
+                            val value = if (reader.peek() == android.util.JsonToken.NULL) {
+                                reader.nextNull()
+                                ""
+                            } else if (reader.peek() == android.util.JsonToken.STRING ||
+                                reader.peek() == android.util.JsonToken.NUMBER ||
+                                reader.peek() == android.util.JsonToken.BOOLEAN) {
+                                reader.nextString()
+                            } else {
+                                reader.skipValue()
+                                ""
+                            }
+                            when (key) {
+                                "id" -> id = value
+                                "name" -> name = value
+                                "url" -> url = value
+                                "group" -> group = value
+                                "type" -> type = value
+                                "icon" -> icon = value
+                                "extension" -> extension = value
+                                "seriesId" -> seriesId = value
+                                "sourceId" -> sourceId = value
+                                "plot" -> plot = value
+                                "actors" -> actors = value
+                                "rating" -> rating = value
+                                "releaseDate" -> releaseDate = value
+                                "genre" -> genre = value
+                            }
+                        }
+                        reader.endObject()
+                        if (url.isNotBlank()) {
+                            restored.add(MediaItem(id, name, url, group, type, icon, extension, seriesId,
+                                sourceId, plot, actors, rating, releaseDate, genre))
+                        }
+                    }
+                }
             }
             items.clear()
             items.addAll(restored)
-        } catch (_: Exception) { }
+            android.util.Log.i("KaiserTV", "Restored " + restored.size + " cached media items.")
+        } catch (e: Exception) {
+            android.util.Log.e("KaiserTV", "Media cache restore failed", e)
+        }
     }
 
     @Suppress("DEPRECATION")
