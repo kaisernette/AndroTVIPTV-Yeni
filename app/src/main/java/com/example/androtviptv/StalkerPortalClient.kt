@@ -24,7 +24,7 @@ internal class StalkerPortalClient(
         )
     }
 
-    private val endpoint = portal.trim().trimEnd('/')
+    private val endpoint = portal.trim().let { if (it.endsWith("/")) it else "$it/" }
 
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8")
 
