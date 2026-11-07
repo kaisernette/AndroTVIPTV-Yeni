@@ -1978,24 +1978,33 @@ class MainActivity : Activity() {
                 }
                 if (loaded.isEmpty()) throw IllegalStateException("Portal kanal listesi boş.")
                 runOnUiThread {
-                    items.removeAll { it.sourceId == source.id }
-                    items.addAll(loaded)
-                    saveCachedItems()
-                    selectedType = "Canlı TV"
-                    selectedGroup = "Tüm kategoriler"
-                    sidebarMode = "main"
-                    isLoadingSource = false
-                    hasLoadedSource = true
-                    loadProgress = 100
-                    status.text = "${source.name}: ${loaded.size} kanal yüklendi."
-                    render()
+                    try {
+                        items.removeAll { it.sourceId == source.id }
+                        items.addAll(loaded)
+                        saveCachedItems()
+                        selectedType = "Canlı TV"
+                        selectedGroup = "Tüm kategoriler"
+                        sidebarMode = "main"
+                        isLoadingSource = false
+                        hasLoadedSource = true
+                        loadProgress = 100
+                        status.text = "${source.name}: ${loaded.size} kanal yüklendi."
+                        render()
+                    } catch (uiError: Throwable) {
+                        android.util.Log.e("KaiserTV-Stalker", "Kanal listesi ekrana aktarılırken hata", uiError)
+                        isLoadingSource = false
+                        loadProgress = 0
+                        status.visibility = View.VISIBLE
+                        status.text = "Kanallar alındı ancak ekran oluşturulamadı: ${uiError.message ?: uiError.javaClass.simpleName}"
+                    }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                android.util.Log.e("KaiserTV-Stalker", "MAC Portal kanal yükleme başarısız", e)
                 runOnUiThread {
                     isLoadingSource = false
                     loadProgress = 0
                     status.visibility = View.VISIBLE
-                    status.text = "${source.name}: ${e.message ?: friendlyLoadError(e)}"
+                    status.text = "${source.name}: ${e.message ?: e.javaClass.simpleName}"
                     render()
                 }
             }
