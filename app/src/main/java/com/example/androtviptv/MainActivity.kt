@@ -895,7 +895,7 @@ class MainActivity : Activity() {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             isFillViewport = true
-            addView(navBar, ScrollView.LayoutParams(-1, -1))
+            addView(navBar, android.widget.FrameLayout.LayoutParams(-1, -1))
         }
         primaryMenuColumn.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         settingsBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
