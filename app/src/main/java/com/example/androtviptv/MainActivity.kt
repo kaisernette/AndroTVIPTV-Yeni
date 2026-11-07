@@ -988,7 +988,7 @@ class MainActivity : Activity() {
         }, FrameLayout.LayoutParams(-1, -1))
         hero.addView(heroArt, LinearLayout.LayoutParams(164, 150).apply { setMargins(16, 0, 0, 0) })
         heroPanel = hero
-        main.addView(hero, LinearLayout.LayoutParams(-1, 220).apply { setMargins(0, 0, 0, 10) })
+        main.addView(hero, LinearLayout.LayoutParams(-1, dp(244)).apply { setMargins(0, 0, 0, dp(8)) })
         hero.visibility = View.VISIBLE
 
         quickAccessScroll = HorizontalScrollView(this).apply {
