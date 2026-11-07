@@ -3550,7 +3550,9 @@ class MainActivity : Activity() {
                 val homeCard = selectedType == "Tümü"
                 val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
                 val poster = ImageView(this).apply {
-                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    // Home/trending tiles are landscape 16:9. Preserve aspect ratio,
+                    // keep the top visible and crop only from the bottom if needed.
+                    scaleType = if (homeCard) ImageView.ScaleType.MATRIX else ImageView.ScaleType.FIT_CENTER
                     contentDescription = item.name
                     background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
@@ -5289,11 +5291,31 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun applyTopAlignedCrop(target: ImageView, bitmap: Bitmap) {
+        if (target.scaleType != ImageView.ScaleType.MATRIX) return
+        val update = {
+            val width = target.width
+            val height = target.height
+            if (width > 0 && height > 0 && bitmap.width > 0 && bitmap.height > 0) {
+                // Fill the 16:9 tile without stretching; anchor at the top so any
+                // unavoidable vertical crop is taken from the bottom edge.
+                val scale = maxOf(width.toFloat() / bitmap.width, height.toFloat() / bitmap.height)
+                val dx = (width - bitmap.width * scale) / 2f
+                target.imageMatrix = android.graphics.Matrix().apply {
+                    setScale(scale, scale)
+                    postTranslate(dx, 0f)
+                }
+            }
+        }
+        if (target.width > 0 && target.height > 0) update() else target.post { update() }
+    }
+
     private fun loadPoster(address: String, target: ImageView) {
         if (address.isBlank()) return
         target.tag = address
         posterCache.get(address)?.let {
             target.setImageBitmap(it)
+            applyTopAlignedCrop(target, it)
             return
         }
 
@@ -5374,7 +5396,10 @@ class MainActivity : Activity() {
             if (result != null) runOnUiThread {
                 targets.forEach { ref ->
                     val image = ref.get()
-                    if (image != null && image.tag == address) image.setImageBitmap(result)
+                    if (image != null && image.tag == address) {
+                        image.setImageBitmap(result)
+                        applyTopAlignedCrop(image, result)
+                    }
                 }
             }
         }
