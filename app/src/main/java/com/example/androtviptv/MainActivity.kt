@@ -641,14 +641,24 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) { }
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
-        loadCachedItems()
+        // Show the app's own loading UI immediately. Disk cache parsing can be expensive
+        // on low-memory Android TV devices, so never perform it on the main thread.
+        isLoadingSource = true
+        status.text = "KaiserTV+ hazırlanıyor…"
         // Start on Home every time; the user's last section remains saved for history only.
         selectedType = "Tümü"
         selectedGroup = "Tüm kategoriler"
         buildUi()
         applyThemeSurfaces()
         showPreviousCrashIfAny()
-        loadSavedSources()
+        thread(name = "kaiser-startup-cache") {
+            loadCachedItems()
+            runOnUiThread {
+                isLoadingSource = false
+                loadSavedSources()
+                if (savedSources.isEmpty()) render()
+            }
+        }
     }
 
     private fun installCrashLogger() {
