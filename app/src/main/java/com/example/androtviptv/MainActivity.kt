@@ -2284,13 +2284,13 @@ class MainActivity : Activity() {
             }
 
             if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) {
-                // Back from category browsing returns to the main navigation with TV selected.
+                // Return to the main navigation while preserving the tab the user entered from.
+                val returnTab = selectedType
                 expandedCategory = null
-                selectedType = "Canlı TV"
                 selectedGroup = "Tüm kategoriler"
                 focusedCategoryName = null
                 sidebarMode = "main"
-                prefs.edit().putString("last_section", "Canlı TV").putString("last_group", "Tüm kategoriler").apply()
+                prefs.edit().putString("last_section", returnTab).putString("last_group", "Tüm kategoriler").apply()
                 rebuildNavigation()
                 render()
                 return
