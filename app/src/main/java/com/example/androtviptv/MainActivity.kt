@@ -3387,23 +3387,13 @@ class MainActivity : Activity() {
                     clipChildren = false
                     clipToPadding = false
                     isFocusable = false
+                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    clipToOutline = false
                 }
-                homeHeroImage = object : ImageView(this) {
-                    override fun onDraw(canvas: android.graphics.Canvas) {
-                        val image = drawable
-                        if (image != null && image.intrinsicWidth > 0 && image.intrinsicHeight > 0 && width > 0 && height > 0) {
-                            // Fit the complete artwork inside the hero without cropping or stretching.
-                            // Center horizontally and keep the top edge aligned.
-                            val scale = minOf(width.toFloat() / image.intrinsicWidth, height.toFloat() / image.intrinsicHeight)
-                            val dx = (width - image.intrinsicWidth * scale) / 2f
-                            imageMatrix = android.graphics.Matrix().apply {
-                                setScale(scale, scale)
-                                postTranslate(dx, 0f)
-                            }
-                        }
-                        super.onDraw(canvas)
-                    }
-                }.apply { scaleType = ImageView.ScaleType.MATRIX }
+                homeHeroImage = ImageView(this).apply {
+                    scaleType = ImageView.ScaleType.FIT_XY
+                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                }
                 hero.addView(homeHeroImage, FrameLayout.LayoutParams(-1, -1))
                 // Fade the artwork into the app background: no hard poster edge on the left,
                 // plus a gentle fade upward from the bottom edge.
@@ -3419,9 +3409,15 @@ class MainActivity : Activity() {
                             )),
                         GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
                             intArrayOf(
-                                Color.argb(230, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(175, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                                Color.argb(90, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(235, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(185, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(105, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.TRANSPARENT
+                            )),
+                        GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT,
+                            intArrayOf(
+                                Color.argb(225, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                                Color.argb(125, Color.red(bg), Color.green(bg), Color.blue(bg)),
                                 Color.TRANSPARENT
                             ))
                     ))
@@ -3429,7 +3425,7 @@ class MainActivity : Activity() {
                 val heroCopy = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(30), dp(20), dp(20), dp(20))
+                    setPadding(dp(30), dp(14), dp(20), dp(12))
                 }
                 homeHeroTitle = TextView(this).apply {
                     textSize = 28f; maxLines = 2
@@ -3451,13 +3447,18 @@ class MainActivity : Activity() {
                 }
                 heroActions.addView(makeButton(t("İzle"), true) {
                     homeHeroItem?.let { if (it.type == "Diziler") showSeriesDetail(it) else showMovieDetail(it) }
-                }, LinearLayout.LayoutParams(dp(112), dp(42)).apply { setMargins(0, dp(14), dp(10), 0) })
+                }.apply { gravity = Gravity.CENTER; textAlignment = View.TEXT_ALIGNMENT_CENTER; includeFontPadding = false },
+                    LinearLayout.LayoutParams(dp(100), dp(36)).apply { setMargins(0, dp(20), dp(8), 0) })
                 heroActions.addView(makeButton(t("Detaylar"), false) {
                     homeHeroItem?.let { if (it.type == "Diziler") showSeriesDetail(it) else showMovieDetail(it) }
-                }, LinearLayout.LayoutParams(dp(132), dp(42)).apply { setMargins(0, dp(14), 0, 0) })
+                }.apply { gravity = Gravity.CENTER; textAlignment = View.TEXT_ALIGNMENT_CENTER; includeFontPadding = false },
+                    LinearLayout.LayoutParams(dp(116), dp(36)).apply { setMargins(0, dp(20), 0, 0) })
                 heroCopy.addView(heroActions)
                 hero.addView(heroCopy, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER_VERTICAL))
-                heroPanel.addView(hero, LinearLayout.LayoutParams(-1, dp(244)))
+                heroPanel.setPadding(0, 0, 0, 0)
+                heroPanel.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                heroPanel.clipToOutline = false
+                heroPanel.addView(hero, LinearLayout.LayoutParams(-1, dp(216)))
                 heroPanel.visibility = View.VISIBLE
                 showHomeHero(heroItem)
             }
@@ -3606,7 +3607,7 @@ class MainActivity : Activity() {
                 val poster = ImageView(this).apply {
                     // Home/trending tiles are landscape 16:9. Preserve aspect ratio,
                     // keep the top visible and crop only from the bottom if needed.
-                    scaleType = if (homeCard) ImageView.ScaleType.MATRIX else ImageView.ScaleType.FIT_CENTER
+                    scaleType = ImageView.ScaleType.FIT_XY
                     contentDescription = item.name
                     background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
