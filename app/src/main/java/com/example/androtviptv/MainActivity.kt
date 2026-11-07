@@ -903,8 +903,9 @@ class MainActivity : Activity() {
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, 0)
-            clipChildren = false
-            clipToPadding = false
+            // Keep the scrolling content inside its own lower viewport.
+            clipChildren = true
+            clipToPadding = true
         }
         root.addView(main, LinearLayout.LayoutParams(0, -1, 1f))
 
@@ -992,7 +993,13 @@ class MainActivity : Activity() {
             setTypeface(null, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
         }, FrameLayout.LayoutParams(-1, -1))
         hero.addView(heroArt, LinearLayout.LayoutParams(164, 150).apply { setMargins(16, 0, 0, 0) })
-        heroPanel = hero
+        heroPanel = hero.apply {
+            // Keep the fixed hero above the independently scrolling card viewport.
+            elevation = dp(40).toFloat()
+            translationZ = dp(40).toFloat()
+            clipChildren = true
+            clipToPadding = true
+        }
         main.addView(hero, LinearLayout.LayoutParams(-1, dp(244)).apply { setMargins(0, 0, 0, dp(8)) })
         hero.visibility = View.VISIBLE
 
@@ -1065,10 +1072,11 @@ class MainActivity : Activity() {
         mainContentScroll = ScrollView(this).apply {
             isFillViewport = true
             isFocusable = false
-            // Keep scrolling posters inside the content viewport. Cards may still
-            // scale within the viewport, but must never draw over the fixed header.
+            // Strict viewport clipping: rows scroll below the fixed hero, never over it.
             clipChildren = true
             clipToPadding = true
+            elevation = 0f
+            translationZ = 0f
         }
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -3493,8 +3501,9 @@ class MainActivity : Activity() {
                         // Focus lifts the card and previews it in the hero on the home screen.
                         v.animate().cancel()
                         v.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                        v.elevation = if (hasFocus) dp(22).toFloat() else 0f
-                        v.translationZ = if (hasFocus) dp(22).toFloat() else 0f
+                        // Scale the focused card without raising it above the scrolling layer.
+                        v.elevation = 0f
+                        v.translationZ = 0f
                         v.cameraDistance = dp(2200).toFloat()
                         v.animate().scaleX(if (hasFocus) 1.08f else 1f)
                             .scaleY(if (hasFocus) 1.08f else 1f)
