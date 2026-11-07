@@ -3402,8 +3402,14 @@ class MainActivity : Activity() {
         // category at once can exhaust memory on older Android TV boxes. Keep the first
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
+        // Large live-TV portals may return thousands of channels and hundreds of groups.
+        // Bound the number of views created in one render to protect low-memory Android TV devices.
         val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
-            ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups
+            ?: when {
+                selectedType == "Canlı TV" -> groups.take(12)
+                selectedType in listOf("Filmler", "Diziler") -> groups.take(1)
+                else -> groups
+            }
 
         // Edge-to-edge home hero; horizontal cards below preview on remote focus.
         var homeHeroItem: MediaItem? = null
@@ -3631,7 +3637,12 @@ class MainActivity : Activity() {
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(140) // Kart genişliği afişle aynı
-            val displayedEntries = if (posterGridMode || weeklyMovieFeature) entries else entries.take(5)
+            // Never inflate every channel card at once; TextViews and image views are costly on TV boxes.
+            val displayedEntries = when {
+                selectedType == "Canlı TV" -> entries.take(80)
+                posterGridMode || weeklyMovieFeature -> entries.take(120)
+                else -> entries.take(5)
+            }
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
             displayedEntries.forEachIndexed { itemIndex, item ->
