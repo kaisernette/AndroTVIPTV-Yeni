@@ -35,9 +35,11 @@ class PlayerActivity : Activity() {
     companion object {
         @Volatile var pendingChannelNames: List<String> = emptyList()
         @Volatile var pendingChannelUrls: List<String> = emptyList()
+        @Volatile var pendingChannelHeaders: List<String> = emptyList()
         @Volatile var pendingChannelIndex: Int = 0
         @Volatile var pendingRecentChannelNames: List<String> = emptyList()
         @Volatile var pendingRecentChannelUrls: List<String> = emptyList()
+        @Volatile var pendingRecentChannelHeaders: List<String> = emptyList()
         @Volatile var pendingEpisodeNames: List<String> = emptyList()
         @Volatile var pendingEpisodeUrls: List<String> = emptyList()
         @Volatile var pendingEpisodeIndex: Int = 0
@@ -230,14 +232,42 @@ class PlayerActivity : Activity() {
     private var channelOverlay: LinearLayout? = null
     private var channelRows: List<String> = emptyList()
     private var channelUrls: List<String> = emptyList()
+    private var channelHeaders: List<String> = emptyList()
     private var selectedChannelIndex = 0
     private var highlightedChannelIndex = 0
     private var recentChannelRows: List<String> = emptyList()
     private var recentChannelUrls: List<String> = emptyList()
+    private var recentChannelHeaders: List<String> = emptyList()
     private var overlayIsRecent = false
     private var savedChannelRows: List<String> = emptyList()
     private var savedChannelUrls: List<String> = emptyList()
+    private var savedChannelHeaders: List<String> = emptyList()
+    private var currentRequestHeaders: Map<String, String> = emptyMap()
+    private var httpDataSourceFactory: DefaultHttpDataSource.Factory? = null
     private val playbackPrefs by lazy { getSharedPreferences("androtv_playback", Context.MODE_PRIVATE) }
+
+    private fun parseRequestHeaders(json: String): Map<String, String> {
+        if (json.isBlank()) return emptyMap()
+        return try {
+            val obj = org.json.JSONObject(json)
+            buildMap {
+                val keys = obj.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val value = obj.optString(key).trim()
+                    if (key.isNotBlank() && value.isNotBlank()) put(key, value)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("KaiserTVPlayer", "Invalid stream request headers", e)
+            emptyMap()
+        }
+    }
+
+    private fun applyRequestHeaders(json: String) {
+        currentRequestHeaders = parseRequestHeaders(json)
+        httpDataSourceFactory?.setDefaultRequestProperties(currentRequestHeaders)
+    }
 
     private fun createStreamMediaItem(url: String): MediaItem {
         val cleanUrl = url.substringBefore("?").lowercase()
@@ -278,14 +308,18 @@ class PlayerActivity : Activity() {
         val url = intent.getStringExtra("url") ?: run { finish(); return }
         channelRows = pendingChannelNames
         channelUrls = pendingChannelUrls
+        channelHeaders = pendingChannelHeaders
         selectedChannelIndex = pendingChannelIndex.coerceIn(0, (channelUrls.size - 1).coerceAtLeast(0))
         highlightedChannelIndex = selectedChannelIndex
         recentChannelRows = pendingRecentChannelNames
         recentChannelUrls = pendingRecentChannelUrls
         pendingChannelNames = emptyList()
         pendingChannelUrls = emptyList()
+        pendingChannelHeaders = emptyList()
         pendingRecentChannelNames = emptyList()
         pendingRecentChannelUrls = emptyList()
+        recentChannelHeaders = pendingRecentChannelHeaders
+        pendingRecentChannelHeaders = emptyList()
         episodeNames = pendingEpisodeNames
         episodeUrls = pendingEpisodeUrls
         selectedEpisodeIndex = pendingEpisodeIndex.coerceIn(0, (episodeUrls.size - 1).coerceAtLeast(0))
@@ -295,6 +329,7 @@ class PlayerActivity : Activity() {
         pendingChannelIndex = 0
         currentStreamUrl = url.trim()
         originalStreamUrl = currentStreamUrl
+        applyRequestHeaders(intent.getStringExtra("requestHeaders") ?: channelHeaders.getOrNull(selectedChannelIndex).orEmpty())
         triedHlsFallback = false
         usingHlsFallback = false
         isLiveStream = intent.getBooleanExtra("isLive", false)
@@ -645,10 +680,12 @@ class PlayerActivity : Activity() {
         }
         try {
             val httpFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent("KaiserTv+/3.0 (Android TV)")
+                .setUserAgent(currentRequestHeaders["User-Agent"] ?: currentRequestHeaders["user-agent"] ?: "KaiserTv+/3.0 (Android TV)")
                 .setConnectTimeoutMs(15000)
                 .setReadTimeoutMs(30000)
                 .setAllowCrossProtocolRedirects(true)
+                .setDefaultRequestProperties(currentRequestHeaders)
+            httpDataSourceFactory = httpFactory
             val mediaSourceFactory = DefaultMediaSourceFactory(this)
                 .setDataSourceFactory(httpFactory)
             val mediaItem = createStreamMediaItem(currentStreamUrl)
@@ -1003,9 +1040,12 @@ class PlayerActivity : Activity() {
         }
         savedChannelRows = channelRows
         savedChannelUrls = channelUrls
+        savedChannelHeaders = channelHeaders
         val currentUrl = channelUrls.getOrNull(selectedChannelIndex)
         channelRows = recentChannelRows
         channelUrls = recentChannelUrls
+        channelHeaders = recentChannelHeaders
+        applyRequestHeaders(channelHeaders.getOrNull(channelUrls.indexOf(currentUrl).coerceAtLeast(0)).orEmpty())
         selectedChannelIndex = channelUrls.indexOf(currentUrl).coerceAtLeast(0)
         highlightedChannelIndex = selectedChannelIndex
         overlayIsRecent = true
@@ -1095,6 +1135,7 @@ class PlayerActivity : Activity() {
         selectedChannelIndex = index
         currentStreamUrl = url
         originalStreamUrl = url
+        applyRequestHeaders(channelHeaders.getOrNull(index).orEmpty())
         triedHlsFallback = false
         usingHlsFallback = false
         retryCount = 0
@@ -1115,7 +1156,9 @@ class PlayerActivity : Activity() {
             val currentUrl = channelUrls.getOrNull(selectedChannelIndex)
             channelRows = savedChannelRows
             channelUrls = savedChannelUrls
+            channelHeaders = savedChannelHeaders
             selectedChannelIndex = channelUrls.indexOf(currentUrl).coerceAtLeast(0)
+            applyRequestHeaders(channelHeaders.getOrNull(selectedChannelIndex).orEmpty())
             highlightedChannelIndex = selectedChannelIndex
             overlayIsRecent = false
         }
