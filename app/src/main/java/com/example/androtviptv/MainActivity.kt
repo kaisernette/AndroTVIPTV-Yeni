@@ -592,6 +592,7 @@ class MainActivity : Activity() {
     private lateinit var password: EditText
     private lateinit var sourceMode: RadioGroup
     private var selectedType = "Tümü"
+    private var selectedHistoryType = "Canlı TV"
     private var xtreamUser = ""
     private var xtreamPass = ""
     private var xtreamBase = ""
@@ -886,7 +887,7 @@ class MainActivity : Activity() {
             clipChildren = false
             setBackgroundColor(Color.TRANSPARENT)
         }
-        brandView.addView(makeKaiserLogoView(), LinearLayout.LayoutParams(-1, -1))
+        brandView.addView(makeKaiserLogoView(23f), LinearLayout.LayoutParams(-1, -1))
         brandView.contentDescription = "KAISER TV+"
         primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 58 else 58)))
         navBar = LinearLayout(this).apply {
@@ -1761,25 +1762,21 @@ class MainActivity : Activity() {
         m3uFields.gravity = Gravity.TOP
         xtreamFields.gravity = Gravity.TOP
 
-        val cardHeight = dp(360)
-        val m3uCard = makeSourceCard("▤  M3U / M3U8", m3u.id, editSource?.mode != "xtream", m3uFields)
-        val xtreamCard = makeSourceCard("▣  Xtream Codes", xtream.id, editSource?.mode == "xtream", xtreamFields)
-        val macCard = makeSourceCard("▱  MAC Portal", -1, false, macFields, true)
-        listOf(m3uCard, macCard, xtreamCard).forEach { card ->
-            columns.addView(card, LinearLayout.LayoutParams(0, cardHeight, 1f).apply {
-                setMargins(dp(3), dp(3), dp(3), dp(3))
-            })
-        }
+        // Temporarily expose only the working Xtream Codes connection method.
+        // Keep the existing M3U/MAC parsing code intact for a later reintroduction.
+        sourceMode.check(xtream.id)
+        sourceMode.visibility = View.GONE
+        val cardHeight = dp(238)
+        val xtreamCard = makeSourceCard("▣  Xtream Codes", xtream.id, true, xtreamFields)
+        columns.addView(xtreamCard, LinearLayout.LayoutParams(-1, cardHeight).apply {
+            setMargins(dp(3), dp(3), dp(3), dp(3))
+        })
         form.addView(columns, LinearLayout.LayoutParams(-1, cardHeight + dp(6)))
-        sourceMode.setOnCheckedChangeListener { _, _ ->
-            m3uCard.background = roundedDrawable(panel, corner, outline)
-            xtreamCard.background = roundedDrawable(panel, corner, outline)
-        }
         form.addView(sourceMode)
         content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             setMargins(dp(4), dp(5), dp(4), dp(8))
         })
-        form.post { if (editSource?.mode == "xtream") xtreamName.requestFocus() else m3uName.requestFocus() }
+        form.post { xtreamName.requestFocus() }
     }
 
     private fun openBackgroundPicker() {
@@ -2711,7 +2708,7 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(10), dp(12), dp(10))
             background = roundedDrawable(Color.rgb(13, 20, 33), 18, accent)
         }
-        exitPanel.addView(makeKaiserLogoView(), LinearLayout.LayoutParams(dp(250), dp(54)).apply {
+        exitPanel.addView(makeKaiserLogoView(25f), LinearLayout.LayoutParams(dp(176), dp(40)).apply {
             gravity = Gravity.CENTER
         })
         exitPanel.addView(TextView(this).apply {
@@ -2916,19 +2913,21 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun makeKaiserLogoView(): ImageView {
-        return ImageView(this).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
+    private fun makeKaiserLogoView(textSizeSp: Float = 30f): TextView {
+        val label = android.text.SpannableString("KaiserTV+")
+        label.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 0, 6, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        label.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 160, 255)), 6, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        label.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 205, 0)), 8, 9, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        return TextView(this).apply {
+            text = label
+            textSize = textSizeSp
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            letterSpacing = -0.035f
+            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD_ITALIC)
             setBackgroundColor(Color.TRANSPARENT)
             contentDescription = "KaiserTV+"
-            try {
-                val encoded = assets.open("kaisertv_logo.jpg.b64").bufferedReader().use { it.readText().trim() }
-                val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
-                val logo = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                if (logo != null) setImageBitmap(logo)
-            } catch (e: Exception) {
-                android.util.Log.e("KaiserTV", "KaiserTV logo could not be loaded", e)
-            }
+            maxLines = 1
         }
     }
 
@@ -2977,7 +2976,7 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
-            welcome.addView(makeKaiserLogoView(), LinearLayout.LayoutParams(dp(440), dp(110)).apply {
+            welcome.addView(makeKaiserLogoView(38f), LinearLayout.LayoutParams(dp(260), dp(70)).apply {
                 gravity = Gravity.CENTER
             })
             welcome.addView(TextView(this).apply {
@@ -3144,7 +3143,7 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
-            loadingPanel.addView(makeKaiserLogoView(), LinearLayout.LayoutParams(dp(340), dp(110)).apply {
+            loadingPanel.addView(makeKaiserLogoView(34f), LinearLayout.LayoutParams(dp(230), dp(64)).apply {
                 gravity = Gravity.CENTER
             })
             loadingPanel.addView(TextView(this).apply {
@@ -5206,7 +5205,7 @@ class MainActivity : Activity() {
                     setPadding(dp(28), dp(24), dp(28), dp(24))
                     background = roundedDrawable(Color.rgb(10, 13, 19), 18)
                 }
-                aboutPanel.addView(makeKaiserLogoView(), LinearLayout.LayoutParams(dp(300), dp(90)).apply {
+                aboutPanel.addView(makeKaiserLogoView(31f), LinearLayout.LayoutParams(dp(190), dp(58)).apply {
                     gravity = Gravity.CENTER
                     bottomMargin = dp(34)
                 })
@@ -5284,94 +5283,150 @@ class MainActivity : Activity() {
                 actions.addView(clearAll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(dp(4), 0, dp(4), 0) })
                 content.addView(actions, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-                val historyColumns = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.TOP
-                }
                 val historySections = listOf(
                     Triple("Canlı TV", "▣", "TV"),
                     Triple("Filmler", "▰", "Filmler"),
                     Triple("Diziler", "▤", "Diziler")
                 )
+                val historyTabs = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
                 historySections.forEach { section ->
                     val sectionType = section.first
-                    val entries = recent.filter { it.type == sectionType }
-                    val column = LinearLayout(this).apply {
+                    val count = recent.count { it.type == sectionType }
+                    val selected = selectedHistoryType == sectionType
+                    val tab = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
-                        setPadding(dp(3), dp(3), dp(3), dp(3))
-                        background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                    }
-                    column.addView(TextView(this).apply {
-                        text = "${section.second}  ${t(section.third)}"
-                        textSize = 21f
-                        setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(accentBright)
                         gravity = Gravity.CENTER
-                        setPadding(dp(2), dp(12), dp(2), dp(12))
-                    }, LinearLayout.LayoutParams(-1, dp(58)).apply { bottomMargin = dp(5) })
-                    if (entries.isEmpty()) {
-                        column.addView(TextView(this).apply {
-                            text = t("Henüz içerik yok")
-                            textSize = 13f
-                            setTextColor(muted)
-                            gravity = Gravity.CENTER
-                            setPadding(dp(3), dp(10), dp(3), dp(10))
-                        })
-                    }
-                    entries.forEach { item ->
-                        val row = LinearLayout(this).apply {
-                            orientation = LinearLayout.HORIZONTAL
-                            gravity = Gravity.CENTER_VERTICAL
-                            setPadding(dp(7), dp(5), dp(7), dp(5))
-                            isFocusable = true
-                            isFocusableInTouchMode = true
-                            isClickable = true
-                        }
-                        val check = CheckBox(this).apply {
-                            isClickable = false
-                            isFocusable = false
-                            buttonTintList = android.content.res.ColorStateList(
-                                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                                intArrayOf(accentBright, muted)
+                        setPadding(dp(8), dp(9), dp(8), dp(9))
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                        background = roundedDrawable(
+                            if (selected) accent else panel,
+                            13,
+                            if (selected) accentBright else Color.rgb(58, 69, 88)
+                        )
+                        setOnFocusChangeListener { v, focused ->
+                            if (!selected) v.background = roundedDrawable(
+                                if (focused) panel else panel,
+                                13,
+                                if (focused) accent else Color.rgb(58, 69, 88)
                             )
-                            isChecked = false
+                            v.scaleX = if (focused) 1.025f else 1f
+                            v.scaleY = if (focused) 1.025f else 1f
                         }
-                        row.addView(check, LinearLayout.LayoutParams(dp(34), dp(38)))
-                        row.addView(TextView(this).apply {
-                            text = item.name
-                            textSize = 14f
-                            maxLines = 2
-                            ellipsize = android.text.TextUtils.TruncateAt.END
-                            gravity = Gravity.CENTER_VERTICAL
-                            setTextColor(Color.WHITE)
-                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                        fun updateSelection(focused: Boolean = row.hasFocus()) {
-                            val selected = selectedHistoryKeys.contains(item.favoriteKey)
-                            check.isChecked = selected
-                            row.background = roundedDrawable(
-                                if (selected) panel else if (focused) panel else Color.TRANSPARENT,
-                                if (ovalButtons) 12 else 5,
-                                if (selected || focused) accent else Color.rgb(48, 57, 73)
-                            )
+                        setOnClickListener {
+                            selectedHistoryType = sectionType
+                            selectedHistoryKeys.clear()
+                            render()
                         }
-                        row.setOnFocusChangeListener { _, focused -> updateSelection(focused) }
-                        row.setOnClickListener {
-                            if (!selectedHistoryKeys.add(item.favoriteKey)) selectedHistoryKeys.remove(item.favoriteKey)
-                            updateSelection()
-                        }
-                        row.setOnLongClickListener {
-                            if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item) else play(item)
-                            true
-                        }
-                        column.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                            setMargins(0, 0, 0, dp(5))
-                        })
                     }
-                    historyColumns.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        setMargins(dp(3), 0, dp(3), 0)
+                    tab.addView(TextView(this).apply {
+                        text = "${section.second}  ${t(section.third)}"
+                        textSize = 16f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(if (selected) Color.WHITE else muted)
+                        gravity = Gravity.CENTER
+                    })
+                    tab.addView(TextView(this).apply {
+                        text = "$count içerik"
+                        textSize = 11f
+                        setTextColor(if (selected) Color.WHITE else muted)
+                        gravity = Gravity.CENTER
+                        setPadding(0, dp(3), 0, 0)
+                    })
+                    historyTabs.addView(tab, LinearLayout.LayoutParams(0, dp(66), 1f).apply {
+                        setMargins(dp(4), dp(2), dp(4), dp(8))
                     })
                 }
-                content.addView(historyColumns, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                content.addView(historyTabs, LinearLayout.LayoutParams(-1, dp(76)))
+                val selectedEntries = recent.filter { it.type == selectedHistoryType }
+                val selectedHeading = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(8), dp(5), dp(8), dp(8))
+                }
+                selectedHeading.addView(TextView(this).apply {
+                    text = t(when (selectedHistoryType) {
+                        "Canlı TV" -> "İzlenen TV kanalları"
+                        "Filmler" -> "İzlenen filmler"
+                        else -> "İzlenen diziler"
+                    })
+                    textSize = 17f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                selectedHeading.addView(TextView(this).apply {
+                    text = selectedEntries.size.toString()
+                    textSize = 13f
+                    setTextColor(accentBright)
+                })
+                content.addView(selectedHeading)
+                val historyList = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(4), dp(4), dp(4), dp(4))
+                    background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
+                }
+                if (selectedEntries.isEmpty()) {
+                    historyList.addView(TextView(this).apply {
+                        text = t("Henüz içerik yok")
+                        textSize = 14f
+                        setTextColor(muted)
+                        gravity = Gravity.CENTER
+                        setPadding(dp(8), dp(24), dp(8), dp(24))
+                    })
+                }
+                selectedEntries.forEach { item ->
+                    val row = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(8), dp(6), dp(8), dp(6))
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                    }
+                    val check = CheckBox(this).apply {
+                        isClickable = false
+                        isFocusable = false
+                        buttonTintList = android.content.res.ColorStateList(
+                            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                            intArrayOf(accentBright, muted)
+                        )
+                    }
+                    row.addView(check, LinearLayout.LayoutParams(dp(34), dp(40)))
+                    row.addView(TextView(this).apply {
+                        text = item.name
+                        textSize = 14f
+                        maxLines = 2
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        gravity = Gravity.CENTER_VERTICAL
+                        setTextColor(Color.WHITE)
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    fun updateSelection(focused: Boolean = row.hasFocus()) {
+                        val isSelected = selectedHistoryKeys.contains(item.favoriteKey)
+                        check.isChecked = isSelected
+                        row.background = roundedDrawable(
+                            if (isSelected || focused) panel else Color.TRANSPARENT,
+                            10,
+                            if (isSelected || focused) accent else Color.rgb(48, 57, 73)
+                        )
+                    }
+                    row.setOnFocusChangeListener { _, focused -> updateSelection(focused) }
+                    row.setOnClickListener {
+                        if (!selectedHistoryKeys.add(item.favoriteKey)) selectedHistoryKeys.remove(item.favoriteKey)
+                        updateSelection()
+                    }
+                    row.setOnLongClickListener {
+                        if (item.type == "Diziler" && item.url.isBlank()) showSeriesDetail(item) else play(item)
+                        true
+                    }
+                    historyList.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(0, 0, 0, dp(4))
+                    })
+                }
+                content.addView(historyList, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
         }
     }
