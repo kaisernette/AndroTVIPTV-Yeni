@@ -2297,26 +2297,6 @@ class MainActivity : Activity() {
                 val loaded = mutableListOf<MediaItem>()
                 val failedParts = mutableListOf<String>()
 
-                // Category endpoints are useful for readable names, but a category
-                // endpoint failure must not prevent the actual media lists loading.
-                fun categoryMap(action: String, label: String): Map<String, String> {
-                    return try {
-                        val arr = JSONArray(request("$api&action=$action"))
-                        buildMap {
-                            for (i in 0 until arr.length()) {
-                                val item = arr.optJSONObject(i) ?: continue
-                                val id = item.optString("category_id")
-                                val name = item.optString("category_name")
-                                if (id.isNotBlank() && name.isNotBlank()) put(id, name)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        failedParts.add("$label kategorileri")
-                        android.util.Log.w("KaiserTV", "$label category list failed", e)
-                        emptyMap()
-                    }
-                }
-
                 var firstBatchApplied = false
                 var totalLoaded = 0
 
@@ -2340,7 +2320,7 @@ class MainActivity : Activity() {
                     }
                 }
 
-                val sections = listOf(
+                val sections: List<Triple<String, String, Pair<String, String>>> = listOf(
                     Triple("get_live_streams", "Canlı TV", "get_live_categories" to "TV"),
                     Triple("get_vod_streams", "Filmler", "get_vod_categories" to "Film"),
                     Triple("get_series", "Diziler", "get_series_categories" to "Dizi")
