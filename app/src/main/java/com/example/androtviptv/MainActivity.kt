@@ -854,8 +854,8 @@ class MainActivity : Activity() {
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(dp(2), dp(2), dp(2), dp(2))
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            setPadding(dp(2), 0, dp(2), 0)
             clipChildren = false
             setBackgroundColor(Color.TRANSPARENT)
         }
@@ -892,7 +892,7 @@ class MainActivity : Activity() {
         }
         brandView.addView(brandLogo, LinearLayout.LayoutParams(-1, -1))
         brandView.contentDescription = "KAISER TV+"
-        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 88 else 76)))
+        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 58 else 58)))
         navBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
@@ -1114,11 +1114,11 @@ class MainActivity : Activity() {
         if (::sidebar.isInitialized) {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
-            sidebar.findViewWithTag<View>("primary-navigation")?.visibility = if (showReadableCategories && !isMobileLayout) View.GONE else View.VISIBLE
+            sidebar.findViewWithTag<View>("primary-navigation")?.visibility = View.VISIBLE
             val params = sidebar.layoutParams
             // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
             // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (isMobileLayout) 142 else 150)
+            val desiredWidth = dp(if (isMobileLayout) 142 else if (showReadableCategories) 290 else 150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -1446,7 +1446,13 @@ class MainActivity : Activity() {
                         val activeCategory = name == (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                         background = if (activeCategory) roundedDrawable(accent, if (ovalButtons) 14 else 6) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
-                            if (hasFocus) focusedCategoryName = name
+                            if (hasFocus) {
+                                focusedCategoryName = name
+                                if (!isMobileLayout) {
+                                    navBar.visibility = View.GONE
+                                    sidebar.layoutParams = sidebar.layoutParams.apply { width = dp(150) }
+                                }
+                            }
                             val highlighted = if (hasFocus) name else (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                             for (i in 0 until categoryPanel.childCount) {
                                 val sibling = categoryPanel.getChildAt(i) as? TextView ?: continue
@@ -1472,6 +1478,16 @@ class MainActivity : Activity() {
                                     }
                                 }
                             }
+                        }
+                        setOnKeyListener { _, keyCode, event ->
+                            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event.action == android.view.KeyEvent.ACTION_DOWN) {
+                                if (!isMobileLayout) {
+                                    navBar.visibility = View.VISIBLE
+                                    sidebar.layoutParams = sidebar.layoutParams.apply { width = dp(290) }
+                                    selectedSidebarFocusView?.post { selectedSidebarFocusView?.requestFocus() }
+                                }
+                                true
+                            } else false
                         }
                         setOnClickListener {
                             selectedGroup = name
@@ -2730,7 +2746,7 @@ class MainActivity : Activity() {
         exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
             setMargins(0, 0, dp(10), 0)
         })
-        exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(54), 1f).apply {
+        exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
             setMargins(dp(10), 0, 0, 0)
         })
         exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(42)))
