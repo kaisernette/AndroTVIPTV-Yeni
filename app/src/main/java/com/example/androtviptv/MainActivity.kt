@@ -1170,7 +1170,8 @@ class MainActivity : Activity() {
         // Keep the main navigation icon-only, but expand the sidebar when a
         // category list is open so full category names remain readable.
         if (::sidebar.isInitialized) {
-            val hasContext = sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")
+            val detailMode = detailSeries != null || detailMovie != null
+            val hasContext = !detailMode && sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val desiredWidth = dp(if (isMobileLayout) 142 else 150)
             val params = sidebar.layoutParams
             if (params != null && params.width != desiredWidth) {
@@ -1198,7 +1199,8 @@ class MainActivity : Activity() {
         navBar.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
         firstCategoryFocusView = null
         if (::categoryPanel.isInitialized) {
-            categoryListScroll.visibility = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler") && contextNavigationStage == 1) View.VISIBLE else View.GONE
+            val detailMode = detailSeries != null || detailMovie != null
+            categoryListScroll.visibility = if (!detailMode && sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler") && contextNavigationStage == 1) View.VISIBLE else View.GONE
             categoryPanel.removeAllViews()
             categoryPanel.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             categoryListScroll.scrollTo(0, 0)
@@ -3773,7 +3775,10 @@ class MainActivity : Activity() {
                 clipToPadding = false
                 if (posterGridMode) setPadding(0, dp(14), 0, dp(8))
             }
-            val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
+            // Use localized display labels for comparison so the weekly poster layout
+            // remains identical in every app language.
+            val weeklyMovieFeature = selectedType == "Tümü" &&
+                (groupName == t("Haftanın Filmleri") || groupName == t("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(if (isMobileLayout) 156 else 140) // Kart genişliği afişle aynı
