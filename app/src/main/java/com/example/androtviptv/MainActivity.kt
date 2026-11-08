@@ -141,6 +141,10 @@ class MainActivity : Activity() {
             "en" to mapOf("Kaynak ekle ve kayıtlı bağlantılarını buradan yönet." to "Add and manage your saved connections here.",
                 "Henüz içerik yok" to "No content yet",
                 "Cihaz dili" to "Device language",
+                "Geri" to "Back", "içerik" to "items", "İzlenen TV kanalları" to "Watched TV channels",
+                "İzlenen filmler" to "Watched movies", "İzlenen diziler" to "Watched series",
+                "Canlı TV" to "Live TV", "Kaynaklar" to "Sources", "Kaynak adı (ör. Ev Xtream)" to "Source name (e.g. Home Xtream)",
+                "Yasal kullanım hakkına sahip olduğun yayın adreslerini ekle yönet." to "Add and manage streaming sources you are authorized to use.",
                 "Menü" to "Menu",
                 "Buton" to "Button",
                 "Arkaplan" to "Background",
@@ -1196,26 +1200,28 @@ class MainActivity : Activity() {
                 }
                 textSize = if (isMobileLayout) 12f else 15f
                 text = when {
-                    isMobileLayout -> when {
-                        label == "Ara" -> "Arama"
+                    isMobileLayout -> t(when {
+                        label == "Ara" -> "Ara"
                         label.contains("Ana Sayfa") -> "Ana Sayfa"
                         label.contains("TV") -> "TV"
                         label.contains("Filmler") -> "Filmler"
                         label.contains("Diziler") -> "Diziler"
                         label.contains("Favoriler") -> "Favoriler"
-                        label.contains("İzlediklerim") || label.contains("Geçmiş") -> "Geçmiş"
+                        label.contains("İzlediklerim") || label.contains("Geçmiş") -> "İzlediklerim"
                         label.contains("Ayarlar") -> "Ayarlar"
                         else -> label
-                    }
-                    label == "Ara" -> "Arama"
-                    label.contains("Ana Sayfa") -> "Ana Sayfa"
-                    label.contains("TV") -> "TV"
-                    label.contains("Filmler") -> "Filmler"
-                    label.contains("Diziler") -> "Diziler"
-                    label.contains("Favoriler") -> "Favoriler"
-                    label.contains("İzlediklerim") || label.contains("Geçmiş") -> "İzlediklerim"
-                    label.contains("Ayarlar") -> "Ayarlar"
-                    else -> label
+                    })
+                    else -> t(when {
+                        label == "Ara" -> "Ara"
+                        label.contains("Ana Sayfa") -> "Ana Sayfa"
+                        label.contains("TV") -> "TV"
+                        label.contains("Filmler") -> "Filmler"
+                        label.contains("Diziler") -> "Diziler"
+                        label.contains("Favoriler") -> "Favoriler"
+                        label.contains("İzlediklerim") || label.contains("Geçmiş") -> "İzlediklerim"
+                        label.contains("Ayarlar") -> "Ayarlar"
+                        else -> label
+                    })
                 }
                 compoundDrawablePadding = dp(if (isMobileLayout) 5 else 7)
                 setCompoundDrawables(iconDrawable, null, null, null)
@@ -1584,13 +1590,25 @@ class MainActivity : Activity() {
             setPadding(0, dp(4), 0, dp(4))
             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
-        form.addView(TextView(this).apply {
+        val sourceHeader = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        sourceHeader.addView(TextView(this).apply {
             text = t("Kaynaklar")
             textSize = 20f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
             setPadding(dp(2), 0, 0, dp(4))
-        })
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        sourceHeader.addView(makeButton("←  ${t("Geri")}", false) {
+            if (settingsPage == "sources") {
+                settingsPage = "main"
+                prefs.edit().putString("last_settings_page", settingsPage).apply()
+            }
+            render()
+        }.apply { minWidth = 0; textSize = 12f }, LinearLayout.LayoutParams(dp(100), dp(38)))
+        form.addView(sourceHeader, LinearLayout.LayoutParams(-1, dp(42)))
         form.addView(TextView(this).apply {
             text = t("Yasal kullanım hakkına sahip olduğun yayın adreslerini ekle yönet.")
             textSize = 13f
@@ -5328,7 +5346,7 @@ class MainActivity : Activity() {
                         gravity = Gravity.CENTER
                     })
                     tab.addView(TextView(this).apply {
-                        text = "$count içerik"
+                        text = "$count ${t("içerik")}"
                         textSize = 11f
                         setTextColor(if (selected) Color.WHITE else muted)
                         gravity = Gravity.CENTER
@@ -5363,7 +5381,8 @@ class MainActivity : Activity() {
                 content.addView(selectedHeading)
                 val historyList = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(dp(4), dp(4), dp(4), dp(4))
+                    setPadding(dp(8), dp(8), dp(8), dp(8))
+                    clipToPadding = false
                     background = roundedDrawable(panel, 14, Color.rgb(48, 57, 73))
                 }
                 if (selectedEntries.isEmpty()) {
@@ -5423,7 +5442,9 @@ class MainActivity : Activity() {
                         setMargins(0, 0, 0, dp(4))
                     })
                 }
-                content.addView(historyList, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                content.addView(historyList, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(2), dp(8), dp(2), dp(8))
+                })
             }
         }
     }
