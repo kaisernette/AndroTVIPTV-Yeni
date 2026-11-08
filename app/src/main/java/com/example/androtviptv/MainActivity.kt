@@ -580,7 +580,7 @@ class MainActivity : Activity() {
     // Bound background poster work: an unbounded queue can exhaust small TV boxes.
     private val posterExecutor = ThreadPoolExecutor(
         2, 2, 30L, TimeUnit.SECONDS, ArrayBlockingQueue<Runnable>(32),
-        ThreadPoolExecutor.DiscardPolicy()
+        ThreadPoolExecutor.AbortPolicy()
     )
     // A single coalescing writer prevents concurrent cache writes and duplicate snapshots.
     private val cacheExecutor = Executors.newSingleThreadExecutor()
