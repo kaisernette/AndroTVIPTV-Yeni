@@ -1397,6 +1397,9 @@ class MainActivity : Activity() {
                         prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
                         rebuildNavigation()
                         render()
+                        // Home weekly rows always start from the same vertical origin.
+                        // The shared ScrollView otherwise preserves the previous tab's offset.
+                        if (key == "Tümü") mainContentScroll.post { mainContentScroll.scrollTo(0, 0) }
                     }
                 }
                 if (normalizedTab == "Ana Sayfa") {
@@ -3803,7 +3806,10 @@ class MainActivity : Activity() {
             val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")
             val liveTvEightColumnGrid = selectedType == "Canlı TV"
             val sectionHeader = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, dp(4), 2, dp(6))
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(42)
+                setPadding(2, dp(4), 2, dp(6))
             }
             sectionHeader.addView(TextView(this).apply {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
