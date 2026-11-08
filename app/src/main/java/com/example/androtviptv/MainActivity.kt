@@ -5528,7 +5528,7 @@ class MainActivity : Activity() {
         if (eligible.isEmpty() && recent.isEmpty()) return
 
         val weekly = eligible.sortedByDescending {
-            it.rating.toFloatOrNull() ?: it.releaseDate.filter { ch -> ch.isDigit() }.toFloatOrNull() ?: 0f
+            it.rating.toFloatOrNull() ?: 0f
         }.take(8)
         val newest = eligible.asReversed().take(12)
         val watched = recent.filter { it.type == "Filmler" || it.type == "Diziler" }.take(12)
@@ -5537,10 +5537,14 @@ class MainActivity : Activity() {
         fun addGroup(label: String, list: List<MediaItem>) {
             list.forEach { item ->
                 entries.add(TvHomeEntry(
-                    key = item.favoriteKey,
+                    key = tvHomeStableKey(item),
                     title = item.name,
                     description = "$label • ${item.plot.ifBlank { item.genre }}",
-                    posterUri = item.icon,
+                    posterUri = item.icon.takeIf { poster ->
+                        poster.isNotBlank() &&
+                            (xtreamUser.isBlank() || !poster.contains(xtreamUser, ignoreCase = true)) &&
+                            (xtreamPass.isBlank() || !poster.contains(xtreamPass))
+                    } ?: "",
                     isSeries = item.type == "Diziler"
                 ))
             }
@@ -5554,9 +5558,15 @@ class MainActivity : Activity() {
         }.start()
     }
 
+    private fun tvHomeStableKey(item: MediaItem): String {
+        return java.security.MessageDigest.getInstance("SHA-256")
+            .digest(item.favoriteKey.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+
     private fun tryOpenPendingTvHomeItem() {
         val key = pendingTvHomeItemKey ?: return
-        val item = items.firstOrNull { it.favoriteKey == key } ?: return
+        val item = items.firstOrNull { tvHomeStableKey(it) == key } ?: return
         pendingTvHomeItemKey = null
         when (item.type) {
             "Canlı TV" -> play(item)
