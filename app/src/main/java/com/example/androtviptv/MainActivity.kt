@@ -2317,73 +2317,87 @@ class MainActivity : Activity() {
                     }
                 }
 
-                runOnUiThread {
-                    loadProgress = 10
-                    status.text = "${source.name}: kategori bilgileri alınıyor…"
+                var firstBatchApplied = false
+                var totalLoaded = 0
+
+                // Fetch and publish one catalogue section at a time. Once Live TV is ready,
+                // the user can navigate while Movies and Series continue loading in background.
+                fun categoryMap(action: String, label: String): Map<String, String> {
+                    return try {
+                        val arr = JSONArray(request("$api&action=$action"))
+                        buildMap {
+                            for (i in 0 until arr.length()) {
+                                val item = arr.optJSONObject(i) ?: continue
+                                val id = item.optString("category_id")
+                                val name = item.optString("category_name")
+                                if (id.isNotBlank() && name.isNotBlank()) put(id, name)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        failedParts.add("$label kategorileri")
+                        android.util.Log.w("KaiserTV", "$label category list failed", e)
+                        emptyMap()
+                    }
                 }
-                val liveCategories = categoryMap("get_live_categories", "TV")
-                val vodCategories = categoryMap("get_vod_categories", "Film")
-                val seriesCategories = categoryMap("get_series_categories", "Dizi")
-                val actions = listOf(
-                    Triple("get_live_streams", "Canlı TV", liveCategories),
-                    Triple("get_vod_streams", "Filmler", vodCategories),
-                    Triple("get_series", "Diziler", seriesCategories)
+
+                val sections = listOf(
+                    Triple("get_live_streams", "Canlı TV", "get_live_categories" to "TV"),
+                    Triple("get_vod_streams", "Filmler", "get_vod_categories" to "Film"),
+                    Triple("get_series", "Diziler", "get_series_categories" to "Dizi")
                 )
 
-                actions.forEachIndexed { actionIndex, (action, type, categories) ->
-                    runOnUiThread {
-                        loadProgress = 40 + actionIndex * 18
-                        status.text = "${source.name}: $type yükleniyor…"
-                    }
+                sections.forEachIndexed { sectionIndex, (action, type, categorySpec) ->
                     try {
+                        val sectionStart = 12 + sectionIndex * 29
+                        runOnUiThread {
+                            loadProgress = sectionStart
+                            status.text = "${source.name}: $type kategorileri alınıyor…"
+                        }
+                        val categories = categoryMap(categorySpec.first, categorySpec.second)
+                        runOnUiThread {
+                            loadProgress = sectionStart + 8
+                            status.text = "${source.name}: $type yükleniyor…"
+                        }
+
                         val response = request("$api&action=$action")
                         val arr = JSONArray(response)
                         val count = arr.length()
+                        val sectionItems = ArrayList<MediaItem>(count.coerceAtMost(12000))
                         for (i in 0 until count) {
                             val o = arr.optJSONObject(i) ?: continue
                             val id = o.optString(
-                                if (action == "get_series") "series_id" else "stream_id",
-                                ""
+                                if (action == "get_series") "series_id" else "stream_id", ""
                             ).trim()
                             if (id.isBlank()) continue
 
                             val name = o.optString("name", "İsimsiz içerik").ifBlank { "İsimsiz içerik" }
                             val categoryId = o.optString("category_id")
                             val group = o.optString("category_name").takeIf { it.isNotBlank() }
-                                ?: categories[categoryId]
-                                ?: "Diğer"
+                                ?: categories[categoryId] ?: "Diğer"
                             val ext = o.optString(
-                                "container_extension",
-                                if (type == "Canlı TV") "ts" else "mp4"
+                                "container_extension", if (type == "Canlı TV") "ts" else "mp4"
                             ).ifBlank { if (type == "Canlı TV") "ts" else "mp4" }
                             val plot = o.optString("plot", o.optString("description", ""))
                             val actors = o.optString("cast", o.optString("actors", ""))
-
-                            // Xtream providers use different artwork keys by content type.
-                            // Prefer stream_icon for live/VOD and cover for series, then
-                            // fall back through the common provider-specific alternatives.
                             val artworkKeys = when (type) {
                                 "Canlı TV" -> listOf("stream_icon", "cover", "cover_big", "movie_image", "logo")
                                 "Filmler" -> listOf("stream_icon", "movie_image", "cover_big", "cover", "poster")
                                 else -> listOf("cover", "cover_big", "stream_icon", "movie_image", "poster")
                             }
-                            val rawArtwork = artworkKeys
-                                .asSequence()
+                            val rawArtwork = artworkKeys.asSequence()
                                 .map { key -> o.optString(key, "").trim() }
-                                .firstOrNull { it.isNotBlank() && it != "null" }
-                                .orEmpty()
+                                .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
                             val artwork = when {
                                 rawArtwork.startsWith("//") -> "https:$rawArtwork"
                                 rawArtwork.startsWith("/") -> "$base$rawArtwork"
                                 else -> rawArtwork
                             }
-
                             val streamUrl = when (type) {
                                 "Canlı TV" -> "$base/live/$u/$p/$id.$ext"
                                 "Filmler" -> "$base/movie/$u/$p/$id.$ext"
                                 else -> ""
                             }
-                            loaded.add(
+                            sectionItems.add(
                                 MediaItem(
                                     id, name, streamUrl, group, type, artwork,
                                     ext, if (type == "Diziler") id else "",
@@ -2393,20 +2407,46 @@ class MainActivity : Activity() {
                                     o.optString("genre", "")
                                 )
                             )
-                            // Large Xtream catalogues can contain thousands of entries.
-                            // Posting a UI update every 250 records floods the main-thread queue
-                            // while parsing and makes D-pad navigation feel unresponsive.
-                            // Update progress less frequently and never for the first record.
-                            if (i > 0 && i % 1000 == 0) {
-                                val within = if (count == 0) 0 else (i * 16 / count)
-                                val progress = (40 + actionIndex * 18 + within).coerceIn(1, 98)
+                            if (i > 0 && i % 1500 == 0) {
+                                val progress = (sectionStart + 8 + (i * 18 / count.coerceAtLeast(1)))
+                                    .coerceIn(sectionStart + 8, sectionStart + 27)
                                 runOnUiThread {
-                                    if (isLoadingSource) {
-                                        loadProgress = progress
-                                        status.text = "${source.name}: $type yükleniyor… %$progress"
-                                    }
+                                    loadProgress = progress
+                                    status.text = "${source.name}: $type yükleniyor… %$progress"
                                 }
                             }
+                        }
+
+                        // Publish each finished section promptly instead of retaining all three
+                        // catalogues in memory until the very end of the load.
+                        runOnUiThread {
+                            if (!firstBatchApplied) {
+                                items.removeAll { it.sourceId == source.id }
+                                firstBatchApplied = true
+                                selectedType = "Tümü"
+                                selectedGroup = "Tüm kategoriler"
+                                expandedCategory = null
+                                sidebarMode = "main"
+                                xtreamBase = base
+                                xtreamUser = user
+                                xtreamPass = pass
+                            }
+                            items.addAll(sectionItems)
+                            totalLoaded += sectionItems.size
+                            saveCachedItems()
+
+                            if (type == "Canlı TV") {
+                                // Unlock navigation as soon as the first section is ready.
+                                isLoadingSource = false
+                                hasLoadedSource = true
+                                render()
+                                publishHomeChannel()
+                                tryOpenPendingTvHomeItem()
+                            } else if (selectedType == type || selectedType == "Tümü") {
+                                // Refresh only when the visible tab can benefit from this batch.
+                                render()
+                            }
+                            status.text = "${source.name}: $type hazır (${sectionItems.size} içerik)."
                         }
                     } catch (e: Exception) {
                         failedParts.add(type)
@@ -2414,36 +2454,19 @@ class MainActivity : Activity() {
                     }
                 }
 
-                if (loaded.isEmpty()) {
-                    throw Exception(
-                        if (failedParts.isEmpty()) "Kaynak boş içerik döndürdü."
-                        else "İçerik listeleri alınamadı: ${failedParts.distinct().joinToString()}"
-                    )
-                }
-
                 runOnUiThread {
-                    items.removeAll { it.sourceId == source.id }
-                    items.addAll(loaded)
-                    saveCachedItems()
-                    selectedType = "Tümü"
-                    selectedGroup = "Tüm kategoriler"
-                    expandedCategory = null
-                    sidebarMode = "main"
-                    xtreamBase = base
-                    xtreamUser = user
-                    xtreamPass = pass
                     isLoadingSource = false
-                    hasLoadedSource = true
+                    if (!firstBatchApplied) {
+                        throw IllegalStateException("Kaynakta kullanılabilir içerik bulunamadı: ${failedParts.distinct().joinToString()}")
+                    }
                     loadProgress = 100
                     status.visibility = View.VISIBLE
                     status.text = if (failedParts.isEmpty()) {
-                        "${source.name}: ${loaded.size} içerik yüklendi."
+                        "${source.name}: ${totalLoaded} içerik yüklendi."
                     } else {
-                        "${source.name}: ${loaded.size} içerik yüklendi. Eksik yanıt: ${failedParts.distinct().joinToString()}."
+                        "${source.name}: ${totalLoaded} içerik yüklendi. Eksik yanıt: ${failedParts.distinct().joinToString()}."
                     }
-                    render()
-                    publishHomeChannel()
-                    tryOpenPendingTvHomeItem()
+                    if (selectedType == "Tümü") render()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
