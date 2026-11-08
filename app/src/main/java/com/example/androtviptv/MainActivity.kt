@@ -2006,10 +2006,11 @@ class MainActivity : Activity() {
     }
 
     private fun showConnectionError(sourceName: String, message: String) {
+        val dialog = AlertDialog.Builder(this).create()
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(18), dp(22), dp(12))
-            background = roundedDrawable(panel, 16, accent)
+            setPadding(dp(22), dp(18), dp(22), dp(18))
+            background = roundedDrawable(panel, 18, accent)
         }
         panel.addView(TextView(this).apply {
             text = "⚠  ${t("Bağlantı hatası")}"
@@ -2029,16 +2030,24 @@ class MainActivity : Activity() {
             textSize = 14f
             setTextColor(muted)
         })
-        AlertDialog.Builder(this)
-            .setView(panel)
-            .setPositiveButton(t("Tekrar dene")) { _, _ ->
-                val source = savedSources.firstOrNull { it.name == sourceName }
-                if (source != null) {
-                    if (source.mode == "xtream") loadXtream(source, false) else loadM3u(source, false)
-                }
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            setPadding(0, dp(20), 0, 0)
+        }
+        actions.addView(makeButton(t("Kapat"), false) { dialog.dismiss() },
+            LinearLayout.LayoutParams(dp(112), dp(44)).apply { setMargins(dp(6), 0, 0, 0) })
+        actions.addView(makeButton(t("Tekrar dene"), true) {
+            dialog.dismiss()
+            val source = savedSources.firstOrNull { it.name == sourceName }
+            if (source != null) {
+                if (source.mode == "xtream") loadXtream(source, false) else loadM3u(source, false)
             }
-            .setNegativeButton(t("Kapat"), null)
-            .show()
+        }, LinearLayout.LayoutParams(dp(154), dp(44)).apply { setMargins(dp(6), 0, 0, 0) })
+        panel.addView(actions)
+        dialog.setView(panel)
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
     private fun loadM3u(source: SavedSource, append: Boolean) {
@@ -4494,32 +4503,42 @@ class MainActivity : Activity() {
         categoryScroll.visibility = View.GONE
         mainContentScroll.visibility = View.VISIBLE
         content.removeAllViews()
+        content.setBackgroundColor(Color.TRANSPARENT)
+        mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
         mainContentScroll.scrollTo(0, 0)
-        val settingsTopBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(8), dp(8), dp(2))
-        }
-        settingsTopBar.addView(View(this), LinearLayout.LayoutParams(0, dp(42), 1f))
-        settingsTopBar.addView(makeButton("←  ${t("Geri")}", false) {
+        fun goBackFromSettings() {
             if (settingsPage != "main") {
                 settingsPage = "main"
                 prefs.edit().putString("last_settings_page", settingsPage).apply()
                 renderSettingsScreen()
             } else {
                 sidebarMode = "main"
+                settingsPage = "main"
+                prefs.edit().putString("last_settings_page", settingsPage).apply()
                 rebuildNavigation()
             }
-        }, LinearLayout.LayoutParams(dp(118), dp(42)))
-        content.addView(settingsTopBar, LinearLayout.LayoutParams(-1, dp(50)))
+        }
         fun heading(title: String, subtitle: String) {
-            content.addView(TextView(this).apply {
+            val header = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(8), dp(16), dp(8), dp(16))
+            }
+            val headingText = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            headingText.addView(TextView(this).apply {
                 text = t(title); textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.WHITE); setPadding(dp(8), dp(16), dp(8), dp(4))
+                setTextColor(Color.WHITE)
             })
-            content.addView(TextView(this).apply {
-                text = t(subtitle); textSize = 14f; setTextColor(muted); setPadding(dp(8), 0, dp(8), dp(16))
+            headingText.addView(TextView(this).apply {
+                text = t(subtitle); textSize = 14f; setTextColor(muted); setPadding(0, dp(4), 0, 0)
             })
+            header.addView(headingText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            header.addView(makeButton("←  ${t("Geri")}", false) { goBackFromSettings() },
+                LinearLayout.LayoutParams(dp(118), dp(42)))
+            content.addView(header, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         var settingsGridRow: LinearLayout? = null
         var settingsGridCount = 0
@@ -5147,7 +5166,6 @@ class MainActivity : Activity() {
 
             }
             "about" -> {
-                content.setBackgroundColor(Color.rgb(10, 13, 19))
                 val aboutPanel = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
