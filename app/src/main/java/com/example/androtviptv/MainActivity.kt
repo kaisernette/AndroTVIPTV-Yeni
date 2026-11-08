@@ -2457,16 +2457,21 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     isLoadingSource = false
                     if (!firstBatchApplied) {
-                        throw IllegalStateException("Kaynakta kullanılabilir içerik bulunamadı: ${failedParts.distinct().joinToString()}")
-                    }
-                    loadProgress = 100
-                    status.visibility = View.VISIBLE
-                    status.text = if (failedParts.isEmpty()) {
-                        "${source.name}: ${totalLoaded} içerik yüklendi."
+                        loadProgress = 0
+                        status.visibility = View.VISIBLE
+                        status.text = "${source.name}: kullanılabilir içerik bulunamadı."
+                        render()
+                        showConnectionError(source.name, "İçerik listeleri alınamadı: ${failedParts.distinct().joinToString()}")
                     } else {
-                        "${source.name}: ${totalLoaded} içerik yüklendi. Eksik yanıt: ${failedParts.distinct().joinToString()}."
+                        loadProgress = 100
+                        status.visibility = View.VISIBLE
+                        status.text = if (failedParts.isEmpty()) {
+                            "${source.name}: ${totalLoaded} içerik yüklendi."
+                        } else {
+                            "${source.name}: ${totalLoaded} içerik yüklendi. Eksik yanıt: ${failedParts.distinct().joinToString()}."
+                        }
+                        if (selectedType == "Tümü") render()
                     }
-                    if (selectedType == "Tümü") render()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
