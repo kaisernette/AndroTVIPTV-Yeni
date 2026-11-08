@@ -3079,6 +3079,14 @@ class MainActivity : Activity() {
         if (::navBar.isInitialized) navBar.visibility =
             if (firstEntry || isLoadingSource || detailSeries != null) View.GONE else View.VISIBLE
         if (::sidebar.isInitialized && sidebarMode == "context") showContextNavigationStage(contextNavigationStage)
+        // Context navigation can re-show its category rail during render.
+        // Detail pages must always be edge-to-edge, for BOTH movies and series.
+        if (detailMode) {
+            if (::sidebar.isInitialized) sidebar.visibility = View.GONE
+            if (::categoryListScroll.isInitialized) categoryListScroll.visibility = View.GONE
+            if (::navBar.isInitialized) navBar.visibility = View.GONE
+            if (::brandView.isInitialized) brandView.visibility = View.GONE
+        }
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
             if (firstEntry || isLoadingSource || detailMode || selectedType == "Ayarlar") View.GONE else View.VISIBLE
