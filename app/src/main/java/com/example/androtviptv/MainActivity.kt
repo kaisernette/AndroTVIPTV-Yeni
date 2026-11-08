@@ -1498,7 +1498,7 @@ class MainActivity : Activity() {
                     isClickable = true
                     background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     setOnFocusChangeListener { view, hasFocus ->
-                        view.setTextColor(if (hasFocus) accentBright else muted)
+                        (view as TextView).setTextColor(if (hasFocus) accentBright else muted)
                     }
                     setOnClickListener {
                         detailSeries = null
