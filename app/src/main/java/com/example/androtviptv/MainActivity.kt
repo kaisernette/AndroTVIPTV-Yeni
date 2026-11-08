@@ -10,6 +10,8 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.Bitmap
 import android.util.LruCache
+import android.util.JsonReader
+import android.util.JsonToken
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -26,6 +28,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
+import java.io.InputStreamReader
 import kotlin.concurrent.thread
 import java.util.concurrent.Executors
 import java.util.concurrent.ConcurrentHashMap
@@ -569,6 +572,11 @@ class MainActivity : Activity() {
     }
     // Android TV cihazlarında aynı anda daha az görsel işi yürüt; RAM'e göre güvenli bitmap bütçesi kullan.
     private val posterExecutor = Executors.newFixedThreadPool(2)
+    // A single coalescing writer prevents concurrent cache writes and duplicate snapshots.
+    private val cacheExecutor = Executors.newSingleThreadExecutor()
+    private val cacheWriteLock = Any()
+    private var pendingCacheSnapshot: List<MediaItem>? = null
+    private var cacheWriterRunning = false
     private val posterCache = object : LruCache<String, Bitmap>(
         (Runtime.getRuntime().maxMemory() / 8L).coerceAtMost(24L * 1024L * 1024L).coerceAtLeast(8L * 1024L * 1024L).toInt()
     ) {
@@ -2306,16 +2314,14 @@ class MainActivity : Activity() {
                 // Fetch and publish one catalogue section at a time. Once Live TV is ready,
                 // the user can navigate while Movies and Series continue loading in background.
                 fun categoryMap(action: String, label: String): Map<String, String> {
+                    val result = LinkedHashMap<String, String>()
                     return try {
-                        val arr = JSONArray(request("$api&action=$action"))
-                        buildMap {
-                            for (i in 0 until arr.length()) {
-                                val item = arr.optJSONObject(i) ?: continue
-                                val id = item.optString("category_id")
-                                val name = item.optString("category_name")
-                                if (id.isNotBlank() && name.isNotBlank()) put(id, name)
-                            }
+                        forEachXtreamJsonObject("$api&action=$action", onAttemptStart = { result.clear() }) { item ->
+                            val id = item.optString("category_id")
+                            val name = item.optString("category_name")
+                            if (id.isNotBlank() && name.isNotBlank()) result[id] = name
                         }
+                        result
                     } catch (e: Exception) {
                         failedParts.add("$label kategorileri")
                         android.util.Log.w("KaiserTV", "$label category list failed", e)
@@ -2342,95 +2348,104 @@ class MainActivity : Activity() {
                             status.text = "${source.name}: $type yükleniyor…"
                         }
 
-                        val response = request("$api&action=$action")
-                        val arr = JSONArray(response)
-                        val count = arr.length()
-                        val sectionItems = ArrayList<MediaItem>(count.coerceAtMost(12000))
-                        for (i in 0 until count) {
-                            val o = arr.optJSONObject(i) ?: continue
-                            val id = o.optString(
-                                if (action == "get_series") "series_id" else "stream_id", ""
-                            ).trim()
-                            if (id.isBlank()) continue
+                        var sectionCount = 0
+                        var batch = ArrayList<MediaItem>(500)
 
-                            val name = o.optString("name", "İsimsiz içerik").ifBlank { "İsimsiz içerik" }
-                            val categoryId = o.optString("category_id")
-                            val group = o.optString("category_name").takeIf { it.isNotBlank() }
-                                ?: categories[categoryId] ?: "Diğer"
-                            val ext = o.optString(
-                                "container_extension", if (type == "Canlı TV") "ts" else "mp4"
-                            ).ifBlank { if (type == "Canlı TV") "ts" else "mp4" }
-                            val plot = o.optString("plot", o.optString("description", ""))
-                            val actors = o.optString("cast", o.optString("actors", ""))
-                            val artworkKeys = when (type) {
-                                "Canlı TV" -> listOf("stream_icon", "cover", "cover_big", "movie_image", "logo")
-                                "Filmler" -> listOf("stream_icon", "movie_image", "cover_big", "cover", "poster")
-                                else -> listOf("cover", "cover_big", "stream_icon", "movie_image", "poster")
-                            }
-                            val rawArtwork = artworkKeys.asSequence()
-                                .map { key -> o.optString(key, "").trim() }
-                                .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
-                            val artwork = when {
-                                rawArtwork.startsWith("//") -> "https:$rawArtwork"
-                                rawArtwork.startsWith("/") -> "$base$rawArtwork"
-                                else -> rawArtwork
-                            }
-                            val streamUrl = when (type) {
-                                "Canlı TV" -> "$base/live/$u/$p/$id.$ext"
-                                "Filmler" -> "$base/movie/$u/$p/$id.$ext"
-                                else -> ""
-                            }
-                            sectionItems.add(
-                                MediaItem(
-                                    id, name, streamUrl, group, type, artwork,
-                                    ext, if (type == "Diziler") id else "",
-                                    source.id, plot, actors,
-                                    o.optString("rating", o.optString("vote_average", "")),
-                                    o.optString("releaseDate", o.optString("year", "")),
-                                    o.optString("genre", "")
-                                )
-                            )
-                            if (i > 0 && i % 1500 == 0) {
-                                val progress = (sectionStart + 8 + (i * 18 / count.coerceAtLeast(1)))
-                                    .coerceIn(sectionStart + 8, sectionStart + 27)
-                                runOnUiThread {
-                                    loadProgress = progress
-                                    status.text = "${source.name}: $type yükleniyor… %$progress"
+                        fun publishBatch(finalBatch: Boolean) {
+                            val published = batch.toList()
+                            batch.clear()
+                            val isFirstBatch = !firstBatchApplied
+                            if (isFirstBatch) firstBatchApplied = true
+                            totalLoaded += published.size
+                            val loadedInSection = sectionCount
+                            runOnUiThread {
+                                if (isFirstBatch) {
+                                    items.removeAll { it.sourceId == source.id }
+                                    selectedType = "Tümü"
+                                    selectedGroup = "Tüm kategoriler"
+                                    expandedCategory = null
+                                    sidebarMode = "main"
+                                    xtreamBase = base
+                                    xtreamUser = user
+                                    xtreamPass = pass
+                                }
+                                if (published.isNotEmpty()) items.addAll(published)
+                                if (finalBatch) saveCachedItems()
+
+                                if (type == "Canlı TV" && finalBatch) {
+                                    // Make TV available as soon as its streamed catalogue is complete.
+                                    isLoadingSource = false
+                                    hasLoadedSource = true
+                                    render()
+                                    publishHomeChannel()
+                                    tryOpenPendingTvHomeItem()
+                                } else if (published.isNotEmpty() && (selectedType == type || selectedType == "Tümü")) {
+                                    render()
+                                }
+                                if (finalBatch) {
+                                    status.text = "${source.name}: $type hazır (${sectionCount} içerik)."
+                                } else {
+                                    status.text = "${source.name}: $type yükleniyor… ${loadedInSection} içerik"
                                 }
                             }
                         }
 
-                        // Publish each finished section promptly instead of retaining all three
-                        // catalogues in memory until the very end of the load.
-                        runOnUiThread {
-                            if (!firstBatchApplied) {
-                                items.removeAll { it.sourceId == source.id }
-                                firstBatchApplied = true
-                                selectedType = "Tümü"
-                                selectedGroup = "Tüm kategoriler"
-                                expandedCategory = null
-                                sidebarMode = "main"
-                                xtreamBase = base
-                                xtreamUser = user
-                                xtreamPass = pass
+                        forEachXtreamJsonObject("$api&action=$action") { o ->
+                            val id = o.optString(
+                                if (action == "get_series") "series_id" else "stream_id", ""
+                            ).trim()
+                            if (id.isNotBlank()) {
+                                val name = o.optString("name", "İsimsiz içerik").ifBlank { "İsimsiz içerik" }
+                                val categoryId = o.optString("category_id")
+                                val group = o.optString("category_name").takeIf { it.isNotBlank() }
+                                    ?: categories[categoryId] ?: "Diğer"
+                                val ext = o.optString(
+                                    "container_extension", if (type == "Canlı TV") "ts" else "mp4"
+                                ).ifBlank { if (type == "Canlı TV") "ts" else "mp4" }
+                                val plot = o.optString("plot", o.optString("description", ""))
+                                val actors = o.optString("cast", o.optString("actors", ""))
+                                val artworkKeys = when (type) {
+                                    "Canlı TV" -> listOf("stream_icon", "cover", "cover_big", "movie_image", "logo")
+                                    "Filmler" -> listOf("stream_icon", "movie_image", "cover_big", "cover", "poster")
+                                    else -> listOf("cover", "cover_big", "stream_icon", "movie_image", "poster")
+                                }
+                                val rawArtwork = artworkKeys.asSequence()
+                                    .map { key -> o.optString(key, "").trim() }
+                                    .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                                val artwork = when {
+                                    rawArtwork.startsWith("//") -> "https:$rawArtwork"
+                                    rawArtwork.startsWith("/") -> "$base$rawArtwork"
+                                    else -> rawArtwork
+                                }
+                                val streamUrl = when (type) {
+                                    "Canlı TV" -> "$base/live/$u/$p/$id.$ext"
+                                    "Filmler" -> "$base/movie/$u/$p/$id.$ext"
+                                    else -> ""
+                                }
+                                batch.add(
+                                    MediaItem(
+                                        id, name, streamUrl, group, type, artwork,
+                                        ext, if (type == "Diziler") id else "",
+                                        source.id, plot, actors,
+                                        o.optString("rating", o.optString("vote_average", "")),
+                                        o.optString("releaseDate", o.optString("year", "")),
+                                        o.optString("genre", "")
+                                    )
+                                )
+                                sectionCount++
+                                if (batch.size >= 500) publishBatch(finalBatch = false)
+                                if (sectionCount % 1500 == 0) {
+                                    val progress = (sectionStart + 8 + (sectionCount / 1500))
+                                        .coerceIn(sectionStart + 8, sectionStart + 27)
+                                    runOnUiThread {
+                                        loadProgress = progress
+                                        status.text = "${source.name}: $type yükleniyor… ${sectionCount} içerik"
+                                    }
+                                }
                             }
-                            items.addAll(sectionItems)
-                            totalLoaded += sectionItems.size
-                            saveCachedItems()
-
-                            if (type == "Canlı TV") {
-                                // Unlock navigation as soon as the first section is ready.
-                                isLoadingSource = false
-                                hasLoadedSource = true
-                                render()
-                                publishHomeChannel()
-                                tryOpenPendingTvHomeItem()
-                            } else if (selectedType == type || selectedType == "Tümü") {
-                                // Refresh only when the visible tab can benefit from this batch.
-                                render()
-                            }
-                            status.text = "${source.name}: $type hazır (${sectionItems.size} içerik)."
                         }
+                        // Flush the last partial batch and persist once per completed section.
+                        publishBatch(finalBatch = true)
                     } catch (e: Exception) {
                         failedParts.add(type)
                         android.util.Log.e("KaiserTV", "$type list failed", e)
@@ -2467,6 +2482,78 @@ class MainActivity : Activity() {
                 }
             }
         }
+    }
+
+    /**
+     * Stream Xtream JSON arrays one object at a time. This avoids keeping the complete
+     * provider response string and a JSONArray copy in memory at the same time.
+     */
+    private fun forEachXtreamJsonObject(
+        address: String,
+        onAttemptStart: () -> Unit = {},
+        onItem: (JSONObject) -> Unit
+    ) {
+        var lastError: Exception? = null
+        for (attempt in 0..2) {
+            var conn: HttpURLConnection? = null
+            var parsedAny = false
+            try {
+                onAttemptStart()
+                conn = (URL(address).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 25000
+                    readTimeout = 60000
+                    setRequestProperty("User-Agent", "KaiserTV+/2.1")
+                    setRequestProperty("Accept", "application/json, text/plain, */*")
+                    useCaches = false
+                }
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    if (code == 429 || code >= 500) throw Exception("HTTP $code (yeniden denenecek)")
+                    throw Exception("HTTP $code")
+                }
+                val stream = conn.inputStream
+                InputStreamReader(stream, Charsets.UTF_8).use { input ->
+                    JsonReader(input).use { reader ->
+                        reader.isLenient = true
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            val item = JSONObject()
+                            reader.beginObject()
+                            while (reader.hasNext()) {
+                                val key = reader.nextName()
+                                when (reader.peek()) {
+                                    JsonToken.STRING, JsonToken.NUMBER -> item.put(key, reader.nextString())
+                                    JsonToken.BOOLEAN -> item.put(key, reader.nextBoolean())
+                                    JsonToken.NULL -> {
+                                        reader.nextNull()
+                                        item.put(key, JSONObject.NULL)
+                                    }
+                                    else -> reader.skipValue()
+                                }
+                            }
+                            reader.endObject()
+                            parsedAny = true
+                            onItem(item)
+                        }
+                        reader.endArray()
+                    }
+                }
+                return
+            } catch (e: Exception) {
+                lastError = e
+                // Once any item was delivered, retrying would duplicate already published chunks.
+                if (parsedAny || attempt == 2) throw e
+                if (attempt < 2) {
+                    try { Thread.sleep(700L * (attempt + 1)) } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        throw Exception("Yükleme iptal edildi")
+                    }
+                }
+            } finally {
+                conn?.disconnect()
+            }
+        }
+        throw Exception("Sunucuya ulaşılamadı: ${lastError?.message ?: "bağlantı hatası"}")
     }
 
     private fun request(address: String): String {
@@ -2654,38 +2741,53 @@ class MainActivity : Activity() {
     private fun cachedItemsFile() = java.io.File(filesDir, "kaisertv_media_cache.json")
 
     private fun saveCachedItems() {
-        // Keep every loaded item in the disk cache; write entries incrementally
-        // so large IPTV libraries do not require one giant JSON string in memory.
-        val snapshot = try {
-            items.toList()
-        } catch (_: Exception) { return }
-        thread(name = "kaisertv-cache-writer") {
-            val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
-            try {
-                temp.bufferedWriter(Charsets.UTF_8).use { writer ->
-                    writer.write("[")
-                    snapshot.forEachIndexed { index, x ->
-                        if (index > 0) writer.write(",")
-                        val obj = JSONObject()
-                            .put("id", x.id).put("name", x.name).put("url", x.url).put("group", x.group)
-                            .put("type", x.type).put("icon", x.icon).put("extension", x.extension)
-                            .put("seriesId", x.seriesId).put("sourceId", x.sourceId).put("plot", x.plot)
-                            .put("actors", x.actors).put("rating", x.rating).put("releaseDate", x.releaseDate)
-                            .put("genre", x.genre).put("requestHeaders", x.requestHeaders)
-                        writer.write(obj.toString())
-                        if (index % 250 == 0) writer.flush()
+        // Keep only the newest pending snapshot; never queue multiple full-library copies.
+        val snapshot = try { items.toList() } catch (_: Exception) { return }
+        synchronized(cacheWriteLock) {
+            pendingCacheSnapshot = snapshot
+            if (cacheWriterRunning) return
+            cacheWriterRunning = true
+        }
+        try {
+            cacheExecutor.execute {
+                while (true) {
+                    val next = synchronized(cacheWriteLock) {
+                        val value = pendingCacheSnapshot
+                        pendingCacheSnapshot = null
+                        if (value == null) cacheWriterRunning = false
+                        value
+                    } ?: break
+                    val temp = java.io.File(filesDir, "kaisertv_media_cache.tmp")
+                    try {
+                        temp.bufferedWriter(Charsets.UTF_8).use { writer ->
+                            writer.write("[")
+                            next.forEachIndexed { index, x ->
+                                if (index > 0) writer.write(",")
+                                val obj = JSONObject()
+                                    .put("id", x.id).put("name", x.name).put("url", x.url).put("group", x.group)
+                                    .put("type", x.type).put("icon", x.icon).put("extension", x.extension)
+                                    .put("seriesId", x.seriesId).put("sourceId", x.sourceId).put("plot", x.plot)
+                                    .put("actors", x.actors).put("rating", x.rating).put("releaseDate", x.releaseDate)
+                                    .put("genre", x.genre).put("requestHeaders", x.requestHeaders)
+                                writer.write(obj.toString())
+                                if (index % 250 == 0) writer.flush()
+                            }
+                            writer.write("]")
+                        }
+                        val target = cachedItemsFile()
+                        if (!temp.renameTo(target)) {
+                            temp.copyTo(target, overwrite = true)
+                            temp.delete()
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("KaiserTV", "Media cache write failed", e)
+                        try { temp.delete() } catch (_: Exception) { }
                     }
-                    writer.write("]")
                 }
-                val target = cachedItemsFile()
-                if (!temp.renameTo(target)) {
-                    temp.copyTo(target, overwrite = true)
-                    temp.delete()
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("KaiserTV", "Media cache write failed", e)
-                try { temp.delete() } catch (_: Exception) { }
             }
+        } catch (e: Exception) {
+            synchronized(cacheWriteLock) { cacheWriterRunning = false }
+            android.util.Log.e("KaiserTV", "Media cache writer could not start", e)
         }
     }
 
@@ -5782,6 +5884,7 @@ class MainActivity : Activity() {
         previewPlayer?.release()
         previewPlayer = null
         posterExecutor.shutdownNow()
+        cacheExecutor.shutdownNow()
         super.onDestroy()
     }
 
