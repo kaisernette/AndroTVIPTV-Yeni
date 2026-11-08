@@ -298,6 +298,12 @@ class MainActivity : Activity() {
     }
 
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openHomeProgramIfRequested()
+    }
+
     private fun openHomeProgramIfRequested() {
         if (intent?.action != "com.example.androtviptv.OPEN_HOME_PROGRAM") return
         val key = intent.getStringExtra("home_item_key") ?: return
