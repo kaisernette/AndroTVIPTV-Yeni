@@ -2296,7 +2296,7 @@ class MainActivity : Activity() {
         val headers = linkedMapOf<String, String>()
 
         fun attribute(line: String, key: String): String {
-            val pattern = Regex("""(?:^|\\s)${Regex.escape(key)}\\s*=\\s*(?:"([^"]*)"|'([^']*)')""", RegexOption.IGNORE_CASE)
+            val pattern = Regex("""(?:^|\s)${Regex.escape(key)}\s*=\s*(?:"([^"]*)"|'([^']*)')""", RegexOption.IGNORE_CASE)
             val match = pattern.find(line) ?: return ""
             return match.groupValues.getOrElse(1) { "" }.ifBlank {
                 match.groupValues.getOrElse(2) { "" }
@@ -2307,7 +2307,7 @@ class MainActivity : Activity() {
             var quote: Char? = null
             for (index in line.indices) {
                 val ch = line[index]
-                if ((ch == '"' || ch == '\\'') && (quote == null || quote == ch)) {
+                if ((ch == '"' || ch == '\'') && (quote == null || quote == ch)) {
                     quote = if (quote == null) ch else null
                 } else if (ch == ',' && quote == null) {
                     return line.substring(index + 1).trim()
@@ -2325,7 +2325,7 @@ class MainActivity : Activity() {
         while (true) {
             val rawLine = reader.readLine() ?: break
             if (rawLine.length > 256 * 1024) continue
-            val line = rawLine.trim().removePrefix("\\uFEFF")
+            val line = rawLine.trim().removePrefix("\uFEFF")
             when {
                 line.startsWith("#EXTINF", true) -> {
                     name = displayName(line).ifBlank { attribute(line, "tvg-name") }.ifBlank { "İçerik" }
