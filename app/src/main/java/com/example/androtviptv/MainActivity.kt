@@ -3801,6 +3801,7 @@ class MainActivity : Activity() {
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
             displayedEntries.forEachIndexed { itemIndex, item ->
+                val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(0, 0, 0, 0)
@@ -3815,7 +3816,8 @@ class MainActivity : Activity() {
                         v.cameraDistance = dp(2200).toFloat()
                         v.animate().scaleX(if (hasFocus) 1.15f else 1f)
                             .scaleY(if (hasFocus) 1.15f else 1f)
-                            .translationY(if (hasFocus) -dp(10).toFloat() else 0f)
+                            // Weekly home posters must never move vertically when focus changes.
+                            .translationY(if (weeklyPoster) 0f else if (hasFocus) -dp(10).toFloat() else 0f)
                             .translationZ(if (hasFocus) dp(22).toFloat() else 0f)
                             .setDuration(180).start()
                     }
@@ -3853,9 +3855,7 @@ class MainActivity : Activity() {
                 }
                 val liveCard = item.type == "Canlı TV"
                 val homeCard = selectedType == "Tümü"
-                val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
-                // Weekly poster cards scale from their top edge so remote focus never
-                // shifts one poster vertically relative to the others.
+                // Scale weekly posters from the top edge; their top coordinates stay fixed.
                 if (weeklyPoster) card.pivotY = 0f
                 val poster = ImageView(this).apply {
                     scaleType = if (liveCard) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
