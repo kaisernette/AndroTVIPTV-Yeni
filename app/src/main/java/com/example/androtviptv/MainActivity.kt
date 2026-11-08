@@ -1602,7 +1602,7 @@ class MainActivity : Activity() {
         val outline = Color.rgb(48, 57, 73)
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(4), 0, dp(4))
+            setPadding(0, 0, 0, 0)
             background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
         val sourceHeader = LinearLayout(this).apply {
