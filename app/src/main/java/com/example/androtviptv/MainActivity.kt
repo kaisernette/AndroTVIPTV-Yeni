@@ -4660,9 +4660,8 @@ class MainActivity : Activity() {
             })
             header.addView(headingText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             val settingsBackButton = makeButton("←  ${t("Geri")}", false) { goBackFromSettings() }
-            settingsBackButton.translationY = dp(12).toFloat()
             header.addView(settingsBackButton,
-                LinearLayout.LayoutParams(dp(118), dp(42)).apply { gravity = Gravity.BOTTOM })
+                LinearLayout.LayoutParams(dp(118), dp(42)).apply { gravity = Gravity.CENTER_VERTICAL })
             content.addView(header, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         var settingsGridRow: LinearLayout? = null
