@@ -884,41 +884,11 @@ class MainActivity : Activity() {
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(2), dp(2), dp(2), dp(2))
+            setPadding(0, 0, 0, 0)
             clipChildren = false
             setBackgroundColor(Color.TRANSPARENT)
         }
-        val brandLogo = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            setBackgroundColor(Color.TRANSPARENT)
-            contentDescription = "KaiserTV+"
-            try {
-                val encoded = assets.open("kaiser_logo.jpg.b64").bufferedReader().use { it.readText().trim() }
-                val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
-                val source = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                if (source != null) {
-                    val transparent = source.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
-                    for (y in 0 until transparent.height) {
-                        for (x in 0 until transparent.width) {
-                            val pixel = transparent.getPixel(x, y)
-                            val red = android.graphics.Color.red(pixel)
-                            val green = android.graphics.Color.green(pixel)
-                            val blue = android.graphics.Color.blue(pixel)
-                            val isBlackBackground = red < 22 && green < 22 && blue < 22
-                            // Remove the thin leftover mark/underline below the logo artwork.
-                            val isBelowLogoArtwork = y >= transparent.height * 0.88
-                            if (isBlackBackground || isBelowLogoArtwork) {
-                                transparent.setPixel(x, y, android.graphics.Color.TRANSPARENT)
-                            }
-                        }
-                    }
-                    setImageBitmap(transparent)
-                    source.recycle()
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("KaiserTV", "Sidebar logo could not be loaded", e)
-            }
-        }
+        val brandLogo = createKaiserLogoView()
         brandView.addView(brandLogo, LinearLayout.LayoutParams(-1, -1))
         brandView.contentDescription = "KAISER TV+"
         primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 42 else 58)))
@@ -1200,7 +1170,7 @@ class MainActivity : Activity() {
                     val button = v as Button
                     button.background = if (hasFocus) GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dp(if (ovalButtons) 24 else 0).toFloat()
+                        cornerRadius = dp(18).toFloat()
                         setColor(accent)
                     } else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                     button.setTextColor(if (hasFocus) Color.rgb(8, 13, 22) else Color.WHITE)
@@ -1463,7 +1433,7 @@ class MainActivity : Activity() {
                         isFocusable = true
                         isClickable = true
                         val activeCategory = name == (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
-                        background = if (activeCategory) roundedDrawable(accent, if (ovalButtons) 14 else 6) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        background = if (activeCategory) roundedDrawable(accent, 16) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                         setOnFocusChangeListener { v, hasFocus ->
                             if (hasFocus) focusedCategoryName = name
                             val highlighted = if (hasFocus) name else (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
@@ -1565,7 +1535,7 @@ class MainActivity : Activity() {
     }
 
     private fun showConnectionDialog(editSource: SavedSource? = null) {
-        val corner = if (ovalButtons) 22 else 8
+        val corner = 18
         val outline = Color.rgb(48, 57, 73)
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1865,7 +1835,7 @@ class MainActivity : Activity() {
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
-            cornerRadius = dp(if (ovalButtons) 24 else radiusDp).toFloat()
+            cornerRadius = dp(maxOf(14, radiusDp)).toFloat()
             if (strokeColor != null) {
                 setStroke((2 * resources.displayMetrics.density).toInt().coerceAtLeast(1), strokeColor)
             }
@@ -5124,7 +5094,7 @@ class MainActivity : Activity() {
                             isFocusableInTouchMode = true
                             isClickable = true
                             background = GradientDrawable().apply {
-                                cornerRadius = dp(if (ovalButtons) 28 else 12).toFloat()
+                                cornerRadius = dp(18).toFloat()
                                 setColor(theme.second)
                                 setStroke(dp(if (isSelected) 3 else 1), if (isSelected) theme.third else 0x553B4658)
                             }
