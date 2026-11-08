@@ -65,8 +65,8 @@ object TvHomeChannelPublisher {
             // Refresh this app's row without creating duplicates.
             context.contentResolver.delete(
                 TvContractCompat.buildProgramsUriForChannel(channelId),
-                null,
-                null
+                "${TvContractCompat.PreviewPrograms.COLUMN_CHANNEL_ID} = ?",
+                arrayOf(channelId.toString())
             )
 
             entries.take(45).forEachIndexed { index, entry ->
@@ -77,9 +77,10 @@ object TvHomeChannelPublisher {
                 }
                 val program = PreviewProgram.Builder()
                     .setChannelId(channelId)
-                    .setType(if (entry.isSeries) PreviewProgram.TYPE_TV_EPISODE else PreviewProgram.TYPE_MOVIE)
+                    .setType(if (entry.isSeries) TvContractCompat.PreviewPrograms.TYPE_TV_EPISODE else TvContractCompat.PreviewPrograms.TYPE_MOVIE)
                     .setTitle(entry.title.take(180))
                     .setDescription(entry.description.take(500))
+                    .setGenre(if (entry.description.startsWith("Haftanın Seçkisi")) "Haftanın Seçkisi" else if (entry.description.startsWith("Yeni Eklenenler")) "Yeni Eklenenler" else "Son İzlenenler")
                     .setIntentUri(Uri.parse(launchIntent.toUri(Intent.URI_INTENT_SCHEME)))
                     .setInternalProviderId(entry.key.take(200))
                     .setWeight(1000 - index)
