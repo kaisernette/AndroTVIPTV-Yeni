@@ -3,7 +3,7 @@ name: Build Kaisertv APK
 on:
   workflow_dispatch:
   push:
-    branches: [design/sidebar-refinement, main, '1.0', kaisertv-global, kaisertv-final, kaisertv-redesign, series-fullscreen-detail, tv-channel-menu-home, kaisertv-purple-ui, kaisertv-lite-design, demo/xtream-222, playtest]
+    branches: [design/sidebar-refinement, main, '1.0', kaisertv-global, kaisertv-final, kaisertv-redesign, series-fullscreen-detail, tv-channel-menu-home, kaisertv-purple-ui, kaisertv-lite-design, demo/xtream-222, playtest, back-button-fix-9bb1d29]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
