@@ -814,6 +814,20 @@ class MainActivity : Activity() {
             }
 
             override fun focusSearch(focused: View, direction: Int): View? {
+                // A channel click can rebuild the sidebar while Android is still moving
+                // focus from the old button. Never pass a detached view to ViewGroup.focusSearch.
+                if (!focused.isAttachedToWindow || !isDescendantView(this, focused)) {
+                    fun firstFocusable(group: ViewGroup): View? {
+                        for (index in 0 until group.childCount) {
+                            val child = group.getChildAt(index)
+                            if (!child.isAttachedToWindow || !child.isShown || !child.isEnabled) continue
+                            if (child.isFocusable) return child
+                            if (child is ViewGroup) firstFocusable(child)?.let { return it }
+                        }
+                        return null
+                    }
+                    return firstFocusable(this) ?: focused
+                }
                 if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) {
                     if (direction == View.FOCUS_RIGHT && contextNavigationStage == 0 &&
                         ::sidebar.isInitialized && isDescendantView(sidebar, focused) &&
