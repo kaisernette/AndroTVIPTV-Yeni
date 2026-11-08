@@ -555,7 +555,17 @@ class MainActivity : Activity() {
             )
             else -> emptyMap()
         }
-        return translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
+        val dynamicLabels = when (language) {
+            "en" -> mapOf("Haftanın Filmleri" to "Movies of the Week", "Haftanın Dizileri" to "Series of the Week", "Çıkış Yap" to "Exit", "Vazgeç" to "Cancel")
+            "de" -> mapOf("Haftanın Filmleri" to "Filme der Woche", "Haftanın Dizileri" to "Serien der Woche", "Çıkış Yap" to "Beenden", "Vazgeç" to "Abbrechen")
+            "fr" -> mapOf("Haftanın Filmleri" to "Films de la semaine", "Haftanın Dizileri" to "Séries de la semaine", "Çıkış Yap" to "Quitter", "Vazgeç" to "Annuler")
+            "it" -> mapOf("Haftanın Filmleri" to "Film della settimana", "Haftanın Dizileri" to "Serie della settimana", "Çıkış Yap" to "Esci", "Vazgeç" to "Annulla")
+            "es" -> mapOf("Haftanın Filmleri" to "Películas de la semana", "Haftanın Dizileri" to "Series de la semana", "Çıkış Yap" to "Salir", "Vazgeç" to "Cancelar")
+            "ru" -> mapOf("Haftanın Filmleri" to "Фильмы недели", "Haftanın Dizileri" to "Сериалы недели", "Çıkış Yap" to "Выйти", "Vazgeç" to "Отмена")
+            "ar" -> mapOf("Haftanın Filmleri" to "أفلام الأسبوع", "Haftanın Dizileri" to "مسلسلات الأسبوع", "Çıkış Yap" to "خروج", "Vazgeç" to "إلغاء")
+            else -> emptyMap()
+        }
+        return dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
     }
     private val posterExecutor = Executors.newFixedThreadPool(3)
     private val posterCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
@@ -3706,8 +3716,8 @@ class MainActivity : Activity() {
                 return ranked
             }
             listOf(
-                "Türkiye Trendleri • Haftanın Filmleri" to rankedByTrend(activeSourceItems.filter { it.type == "Filmler" }, trendingMovies).take(24),
-                "Türkiye Trendleri • Haftanın Dizileri" to rankedByTrend(activeSourceItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
+                t("Haftanın Filmleri") to rankedByTrend(activeSourceItems.filter { it.type == "Filmler" }, trendingMovies).take(24),
+                t("Haftanın Dizileri") to rankedByTrend(activeSourceItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
             ).filter { it.second.isNotEmpty() }
         } else if (selectedType == "Filmler" || selectedType == "Diziler") {
             // Trend rows are shown on the home screen only; category screens list categories directly.
