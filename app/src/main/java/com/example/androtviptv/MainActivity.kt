@@ -805,6 +805,13 @@ class MainActivity : Activity() {
 
             override fun focusSearch(focused: View, direction: Int): View? {
                 if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) {
+                    if (direction == View.FOCUS_RIGHT && contextNavigationStage == 0 &&
+                        ::sidebar.isInitialized && isDescendantView(sidebar, focused) &&
+                        sidebar.findViewWithTag<View>("primary-navigation")?.let { isDescendantView(it, focused) } == true) {
+                        showContextNavigationStage(1)
+                        firstCategoryFocusView?.post { firstCategoryFocusView?.requestFocus() }
+                        return firstCategoryFocusView ?: focused
+                    }
                     if (direction == View.FOCUS_LEFT && contextNavigationStage == 2 &&
                         ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)) {
                         showContextNavigationStage(1)
