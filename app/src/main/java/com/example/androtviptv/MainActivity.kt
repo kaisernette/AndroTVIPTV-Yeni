@@ -567,8 +567,11 @@ class MainActivity : Activity() {
         }
         return dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
     }
-    private val posterExecutor = Executors.newFixedThreadPool(3)
-    private val posterCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
+    // Android TV cihazlarında aynı anda daha az görsel işi yürüt; RAM'e göre güvenli bitmap bütçesi kullan.
+    private val posterExecutor = Executors.newFixedThreadPool(2)
+    private val posterCache = object : LruCache<String, Bitmap>(
+        (Runtime.getRuntime().maxMemory() / 8L).coerceAtMost(24L * 1024L * 1024L).coerceAtLeast(8L * 1024L * 1024L).toInt()
+    ) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
@@ -5622,7 +5625,14 @@ class MainActivity : Activity() {
         return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
     }
 
-    private fun trimPosterDiskCache(maxBytes: Long = 300L * 1024L * 1024L) {
+    @Volatile private var lastPosterDiskTrimAt = 0L
+
+    @Synchronized
+    private fun trimPosterDiskCache(maxBytes: Long = 180L * 1024L * 1024L) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        // Her afiş indirmesinde tüm klasörü taramak yerine en fazla beş dakikada bir temizle.
+        if (now - lastPosterDiskTrimAt < 5L * 60L * 1000L) return
+        lastPosterDiskTrimAt = now
         try {
             val directory = java.io.File(filesDir, "poster_cache")
             val files = directory.listFiles()?.filter { it.isFile } ?: return
@@ -5660,7 +5670,7 @@ class MainActivity : Activity() {
             var bitmap: Bitmap? = null
             try {
                 val diskFile = posterFile(address)
-                if (diskFile.isFile && diskFile.length() > 0L) {
+                if (diskFile.isFile && diskFile.length() > 0L && diskFile.length() <= 8L * 1024L * 1024L) {
                     try {
                         bitmap = decodePoster(diskFile.readBytes())
                         if (bitmap == null) diskFile.delete()
@@ -5669,6 +5679,8 @@ class MainActivity : Activity() {
                         android.util.Log.w("KaiserTV", "Cached poster unreadable; redownloading", e)
                         diskFile.delete()
                     }
+                } else if (diskFile.isFile && diskFile.length() > 8L * 1024L * 1024L) {
+                    diskFile.delete()
                 }
 
                 if (bitmap == null) {
