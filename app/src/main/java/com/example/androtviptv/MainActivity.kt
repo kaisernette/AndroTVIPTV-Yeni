@@ -2076,7 +2076,7 @@ class MainActivity : Activity() {
                     publishHomeChannel()
                     tryOpenPendingTvHomeItem()
                 }
-            } catch (e: Exception) {
+            } catch (e: Exception) { runOnUiThread {
                 loadProgress = 0
                 isLoadingSource = false
                 status.text = "${source.name}: ${friendlyLoadError(e)}"
