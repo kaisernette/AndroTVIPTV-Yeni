@@ -2928,7 +2928,7 @@ class MainActivity : Activity() {
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
             if (firstEntry || isLoadingSource || detailMode || selectedType == "Ayarlar") View.GONE else View.VISIBLE
-        if (::status.isInitialized) status.visibility = if (firstEntry || isLoadingSource || detailMode || selectedType == "Tümü" || selectedType == "Filmler" || selectedType == "Diziler" || (selectedType == "Canlı TV" && sidebarMode == "context")) View.GONE else View.VISIBLE
+        if (::status.isInitialized) status.visibility = View.GONE // İçerik sayısı/kaynak adı üst başlıkta gösterilmez.
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
             mainContentScroll.visibility = View.VISIBLE
