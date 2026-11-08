@@ -1609,25 +1609,25 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        sourceHeader.addView(TextView(this).apply {
+        val sourceHeadingText = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        sourceHeadingText.addView(TextView(this).apply {
             text = t("Kaynaklar")
             textSize = 22f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
             setPadding(dp(2), 0, 0, dp(4))
-        }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-        form.addView(sourceHeader, LinearLayout.LayoutParams(-1, dp(42)))
-        val sourceSubtitleRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        sourceSubtitleRow.addView(TextView(this).apply {
+        })
+        sourceHeadingText.addView(TextView(this).apply {
             text = t("Yasal kullanım hakkına sahip olduğun yayın adreslerini ekle yönet.")
             textSize = 13f
             setTextColor(muted)
-            setPadding(dp(2), 0, dp(8), dp(9))
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        sourceSubtitleRow.addView(makeButton("←  ${t("Geri")}", false) {
+            setPadding(dp(2), dp(4), dp(8), 0)
+        })
+        sourceHeader.addView(sourceHeadingText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        sourceHeader.addView(makeButton("←  ${t("Geri")}", false) {
             if (settingsPage == "sources") {
                 settingsPage = "main"
                 prefs.edit().putString("last_settings_page", settingsPage).apply()
@@ -1636,7 +1636,7 @@ class MainActivity : Activity() {
         }.apply { minWidth = 0; textSize = 12f }, LinearLayout.LayoutParams(dp(118), dp(42)).apply {
             gravity = Gravity.CENTER_VERTICAL
         })
-        form.addView(sourceSubtitleRow, LinearLayout.LayoutParams(-1, dp(48)))
+        form.addView(sourceHeader, LinearLayout.LayoutParams(-1, dp(90)))
 
         val xtreamName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(if (editSource?.mode == "xtream") editSource.name else "") }
         val m3uName = edit(t("Kaynak adı (ör. Ev TV)"), false).apply { setText(if (editSource?.mode == "m3u") editSource.name else "") }
