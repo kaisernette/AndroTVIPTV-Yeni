@@ -26,6 +26,7 @@ object TvHomeChannelPublisher {
     private const val PREF_CHANNEL_ID = "tv_home_preview_channel_id"
     private const val CHANNEL_PROVIDER_ID = "kaisertv-preview-channel-v1"
 
+    @Synchronized
     fun publish(context: Context, entries: List<TvHomeEntry>) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         if (!context.packageManager.hasSystemFeature("android.software.leanback")) return
@@ -77,7 +78,7 @@ object TvHomeChannelPublisher {
                 }
                 val program = PreviewProgram.Builder()
                     .setChannelId(channelId)
-                    .setType(if (entry.isSeries) TvContractCompat.PreviewPrograms.TYPE_TV_EPISODE else TvContractCompat.PreviewPrograms.TYPE_MOVIE)
+                    .setType(if (entry.isSeries) TvContractCompat.PreviewPrograms.TYPE_TV_SERIES else TvContractCompat.PreviewPrograms.TYPE_MOVIE)
                     .setTitle(entry.title.take(180))
                     .setDescription(entry.description.take(500))
                     .setGenre(if (entry.description.startsWith("Haftanın Seçkisi")) "Haftanın Seçkisi" else if (entry.description.startsWith("Yeni Eklenenler")) "Yeni Eklenenler" else "Son İzlenenler")
