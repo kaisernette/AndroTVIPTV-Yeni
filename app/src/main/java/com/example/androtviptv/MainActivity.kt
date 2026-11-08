@@ -166,7 +166,7 @@ class MainActivity : Activity() {
                 "Gece • Lavanta" to "Night • Lavender",
                 "Antrasit • Mavi" to "Anthracite • Blue",
                 "Gece • Altın" to "Night • Gold",
-                "Gece • Buzul" to "Night • Glacier",
+                "Gece • Siyah" to "Night • Black",
                 "Daha önce izlediğin içerikler" to "Previously watched content",
                 "Önce içerik seç." to "Select content first.",
                 "Geçmiş zaten boş." to "History is already empty.",
@@ -458,7 +458,7 @@ class MainActivity : Activity() {
                 "Köşeli" to "Abgerundet", "Oval" to "Oval", "Düz" to "Einfarbig", "Gradyan" to "Verlauf",
                 "Seçili tema" to "Ausgewähltes Design", "Zemin ve vurgu rengi" to "Hintergrund- und Akzentfarbe",
                 "Orman • Zümrüt" to "Wald • Smaragd", "Gece • Yakut" to "Nacht • Rubin", "Gece • Lavanta" to "Nacht • Lavendel",
-                "Antrasit • Mavi" to "Anthrazit • Blau", "Gece • Altın" to "Nacht • Gold", "Gece • Buzul" to "Nacht • Gletscher",
+                "Antrasit • Mavi" to "Anthrazit • Blau", "Gece • Altın" to "Nacht • Gold", "Gece • Siyah" to "Nacht • Schwarz",
                 "Kaynak adı (ör. Ev TV)" to "Quellenname (z. B. Zuhause TV)", "Kaynak adı (ör. Ev Portal)" to "Quellenname (z. B. Zuhause Portal)",
                 "Portal URL (https://...)" to "Portal-URL (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "MAC-Adresse (00:1A:79:XX:XX:XX)",
                 "KAYNAKLAR" to "QUELLEN", "Kaynak adı girin" to "Quellennamen eingeben", "İzleme kaynağını ekleyerek başla" to "Beginne mit dem Hinzufügen einer Quelle",
@@ -476,7 +476,7 @@ class MainActivity : Activity() {
                 "Köşeli" to "Arrondi", "Oval" to "Ovale", "Düz" to "Uni", "Gradyan" to "Dégradé",
                 "Seçili tema" to "Thème sélectionné", "Zemin ve vurgu rengi" to "Arrière-plan et couleur d’accent",
                 "Orman • Zümrüt" to "Forêt • Émeraude", "Gece • Yakut" to "Nuit • Rubis", "Gece • Lavanta" to "Nuit • Lavande",
-                "Antrasit • Mavi" to "Anthracite • Bleu", "Gece • Altın" to "Nuit • Or", "Gece • Buzul" to "Nuit • Glacier",
+                "Antrasit • Mavi" to "Anthracite • Bleu", "Gece • Altın" to "Nuit • Or", "Gece • Siyah" to "Nuit • Noir",
                 "Kaynak adı (ör. Ev TV)" to "Nom de la source (ex. TV maison)", "Kaynak adı (ör. Ev Portal)" to "Nom de la source (ex. Portail maison)",
                 "Portal URL (https://...)" to "URL du portail (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "Adresse MAC (00:1A:79:XX:XX:XX)",
                 "KAYNAKLAR" to "SOURCES", "Kaynak adı girin" to "Saisir le nom de la source", "İzleme kaynağını ekleyerek başla" to "Commencez par ajouter une source",
@@ -493,7 +493,7 @@ class MainActivity : Activity() {
                 "Köşeli" to "Arrotondato", "Oval" to "Ovale", "Düz" to "Tinta unita", "Gradyan" to "Sfumatura",
                 "Seçili tema" to "Tema selezionato", "Zemin ve vurgu rengi" to "Sfondo e colore di accento",
                 "Orman • Zümrüt" to "Foresta • Smeraldo", "Gece • Yakut" to "Notte • Rubino", "Gece • Lavanta" to "Notte • Lavanda",
-                "Antrasit • Mavi" to "Antracite • Blu", "Gece • Altın" to "Notte • Oro", "Gece • Buzul" to "Notte • Ghiacciaio",
+                "Antrasit • Mavi" to "Antracite • Blu", "Gece • Altın" to "Notte • Oro", "Gece • Siyah" to "Notte • Nero",
                 "Kaynak adı (ör. Ev TV)" to "Nome sorgente (es. TV casa)", "Kaynak adı (ör. Ev Portal)" to "Nome sorgente (es. Portale casa)",
                 "Portal URL (https://...)" to "URL del portale (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "Indirizzo MAC (00:1A:79:XX:XX:XX)",
                 "KAYNAKLAR" to "SORGENTI", "Kaynak adı girin" to "Inserisci il nome della sorgente", "İzleme kaynağını ekleyerek başla" to "Inizia aggiungendo una sorgente",
@@ -510,7 +510,7 @@ class MainActivity : Activity() {
                 "Köşeli" to "Redondeado", "Oval" to "Ovalado", "Düz" to "Liso", "Gradyan" to "Degradado",
                 "Seçili tema" to "Tema seleccionado", "Zemin ve vurgu rengi" to "Fondo y color de acento",
                 "Orman • Zümrüt" to "Bosque • Esmeralda", "Gece • Yakut" to "Noche • Rubí", "Gece • Lavanta" to "Noche • Lavanda",
-                "Antrasit • Mavi" to "Antracita • Azul", "Gece • Altın" to "Noche • Oro", "Gece • Buzul" to "Noche • Glaciar",
+                "Antrasit • Mavi" to "Antracita • Azul", "Gece • Altın" to "Noche • Oro", "Gece • Siyah" to "Noche • Negro",
                 "Kaynak adı (ör. Ev TV)" to "Nombre de fuente (p. ej., TV casa)", "Kaynak adı (ör. Ev Portal)" to "Nombre de fuente (p. ej., Portal casa)",
                 "Portal URL (https://...)" to "URL del portal (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "Dirección MAC (00:1A:79:XX:XX:XX)",
                 "KAYNAKLAR" to "FUENTES", "Kaynak adı girin" to "Introduce el nombre de la fuente", "İzleme kaynağını ekleyerek başla" to "Empieza añadiendo una fuente",
@@ -527,7 +527,7 @@ class MainActivity : Activity() {
                 "Köşeli" to "Скруглённые", "Oval" to "Овальные", "Düz" to "Сплошной", "Gradyan" to "Градиент",
                 "Seçili tema" to "Выбранная тема", "Zemin ve vurgu rengi" to "Цвет фона и акцента",
                 "Orman • Zümrüt" to "Лес • Изумруд", "Gece • Yakut" to "Ночь • Рубин", "Gece • Lavanta" to "Ночь • Лаванда",
-                "Antrasit • Mavi" to "Антрацит • Синий", "Gece • Altın" to "Ночь • Золото", "Gece • Buzul" to "Ночь • Ледник",
+                "Antrasit • Mavi" to "Антрацит • Синий", "Gece • Altın" to "Ночь • Золото", "Gece • Siyah" to "Ночь • Чёрная",
                 "Kaynak adı (ör. Ev TV)" to "Имя источника (например, Дом ТВ)", "Kaynak adı (ör. Ev Portal)" to "Имя источника (например, Домашний портал)",
                 "Portal URL (https://...)" to "URL портала (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "MAC-адрес (00:1A:79:XX:XX:XX)",
                 "KAYNAKLAR" to "ИСТОЧНИКИ", "Kaynak adı girin" to "Введите имя источника", "İzleme kaynağını ekleyerek başla" to "Начните с добавления источника",
@@ -544,7 +544,7 @@ class MainActivity : Activity() {
                 "Köşeli" to "مستدير", "Oval" to "بيضاوي", "Düz" to "لون موحد", "Gradyan" to "تدرج",
                 "Seçili tema" to "السمة المحددة", "Zemin ve vurgu rengi" to "لون الخلفية والإبراز",
                 "Orman • Zümrüt" to "الغابة • الزمرد", "Gece • Yakut" to "الليل • الياقوت", "Gece • Lavanta" to "الليل • اللافندر",
-                "Antrasit • Mavi" to "فحمي • أزرق", "Gece • Altın" to "الليل • ذهبي", "Gece • Buzul" to "الليل • جليدي",
+                "Antrasit • Mavi" to "فحمي • أزرق", "Gece • Altın" to "الليل • ذهبي", "Gece • Siyah" to "الليل • أسود",
                 "Kaynak adı (ör. Ev TV)" to "اسم المصدر (مثال: تلفاز المنزل)", "Kaynak adı (ör. Ev Portal)" to "اسم المصدر (مثال: بوابة المنزل)",
                 "Portal URL (https://...)" to "رابط البوابة (https://...)", "MAC adresi (00:1A:79:XX:XX:XX)" to "عنوان MAC (00:1A:79:XX:XX:XX)",
                 "KAYNAKLAR" to "المصادر", "Kaynak adı girin" to "أدخل اسم المصدر", "İzleme kaynağını ekleyerek başla" to "ابدأ بإضافة مصدر",
@@ -647,7 +647,7 @@ class MainActivity : Activity() {
         }
         when (prefs.getString("theme_name", "Antrasit • Mavi")) {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
-            "Gece • Buzul" -> { bg = Color.rgb(16, 24, 32); accent = Color.rgb(84, 198, 217); accentBright = accent }
+            "Gece • Siyah" -> { bg = Color.rgb(0, 0, 0); accent = Color.rgb(84, 198, 217); accentBright = accent }
             "Orman • Zümrüt" -> { bg = Color.rgb(16, 27, 24); accent = Color.rgb(32, 201, 151); accentBright = accent }
             "Gece • Yakut" -> { bg = Color.rgb(25, 20, 23); accent = Color.rgb(240, 100, 121); accentBright = accent }
             "Gece • Lavanta" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
@@ -5284,7 +5284,7 @@ class MainActivity : Activity() {
                 val themes = listOf(
                     Triple("Antrasit • Mavi", Color.rgb(17, 20, 25), Color.rgb(0, 166, 255)),
                     Triple("Gece • Altın", Color.rgb(15, 16, 20), Color.rgb(224, 184, 95)),
-                    Triple("Gece • Buzul", Color.rgb(16, 24, 32), Color.rgb(84, 198, 217)),
+                    Triple("Gece • Siyah", Color.rgb(0, 0, 0), Color.rgb(84, 198, 217)),
                     Triple("Orman • Zümrüt", Color.rgb(16, 27, 24), Color.rgb(32, 201, 151)),
                     Triple("Gece • Yakut", Color.rgb(25, 20, 23), Color.rgb(240, 100, 121)),
                     Triple("Gece • Lavanta", Color.rgb(23, 21, 29), Color.rgb(167, 139, 250))
