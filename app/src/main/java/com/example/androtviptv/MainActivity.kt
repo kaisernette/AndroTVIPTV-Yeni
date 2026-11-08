@@ -33,6 +33,10 @@ import java.net.URL
 import java.io.InputStreamReader
 import kotlin.concurrent.thread
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.lang.ref.WeakReference
@@ -573,14 +577,18 @@ class MainActivity : Activity() {
         return dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
     }
     // Android TV cihazlarında aynı anda daha az görsel işi yürüt; RAM'e göre güvenli bitmap bütçesi kullan.
-    private val posterExecutor = Executors.newFixedThreadPool(2)
+    // Bound background poster work: an unbounded queue can exhaust small TV boxes.
+    private val posterExecutor = ThreadPoolExecutor(
+        2, 2, 30L, TimeUnit.SECONDS, ArrayBlockingQueue<Runnable>(32),
+        ThreadPoolExecutor.DiscardPolicy()
+    )
     // A single coalescing writer prevents concurrent cache writes and duplicate snapshots.
     private val cacheExecutor = Executors.newSingleThreadExecutor()
     private val cacheWriteLock = Any()
     private var pendingCacheSnapshot: List<MediaItem>? = null
     private var cacheWriterRunning = false
     private val posterCache = object : LruCache<String, Bitmap>(
-        (Runtime.getRuntime().maxMemory() / 8L).coerceAtMost(24L * 1024L * 1024L).coerceAtLeast(8L * 1024L * 1024L).toInt()
+        (Runtime.getRuntime().maxMemory() / 16L).coerceAtMost(12L * 1024L * 1024L).coerceAtLeast(4L * 1024L * 1024L).toInt()
     ) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
@@ -2381,7 +2389,7 @@ class MainActivity : Activity() {
                                     render()
                                     publishHomeChannel()
                                     tryOpenPendingTvHomeItem()
-                                } else if (published.isNotEmpty() && (selectedType == type || selectedType == "Tümü")) {
+                                } else if (finalBatch && published.isNotEmpty() && (selectedType == type || selectedType == "Tümü")) {
                                     render()
                                 }
                                 if (finalBatch) {
@@ -3903,7 +3911,7 @@ class MainActivity : Activity() {
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
         val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
-            ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups
+            ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups.take(8)
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
@@ -3948,7 +3956,7 @@ class MainActivity : Activity() {
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(if (isMobileLayout) 156 else 140) // Kart genişliği afişle aynı
             val displayedEntries = when {
-                posterGridMode -> entries.take(mediaItemsLimit)
+                posterGridMode -> entries.take(if (selectedType == "Canlı TV" && !showingExpandedCategory) 16 else mediaItemsLimit)
                 weeklyMovieFeature -> entries.take(24)
                 else -> entries.take(5)
             }
@@ -5786,7 +5794,8 @@ class MainActivity : Activity() {
             return
         }
 
-        posterExecutor.execute {
+        try {
+            posterExecutor.execute {
             var bitmap: Bitmap? = null
             try {
                 val diskFile = posterFile(address)
@@ -5860,6 +5869,10 @@ class MainActivity : Activity() {
                     if (image != null && image.tag == address) image.setImageBitmap(result)
                 }
             }
+            }
+        } catch (_: RejectedExecutionException) {
+            // Queue is full: leave the poster as a placeholder rather than stalling the TV.
+            posterRequests.remove(address)
         }
     }
 
