@@ -1674,7 +1674,7 @@ class MainActivity : Activity() {
             setText(if (editSource?.mode == "mac") editSource.username else "")
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
         }
-remove old mac fields        val playlistFrame = inputFrame(playlistUrl)
+        val playlistFrame = inputFrame(playlistUrl)
         val serverFrame = inputFrame(server)
         val usernameFrame = inputFrame(username)
         val passwordFrame = inputFrame(password)
