@@ -611,9 +611,8 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestedOrientation = if (isTelevisionDevice)
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        // Keep the TV-style horizontal interface on phones too; use available landscape width.
+        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         applyKaiserImmersiveMode()
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
@@ -719,7 +718,7 @@ class MainActivity : Activity() {
     private val isTelevisionDevice: Boolean
         get() = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
     private val isMobileLayout: Boolean
-        get() = !isTelevisionDevice
+        get() = !isTelevisionDevice && resources.configuration.screenWidthDp < 600
     private var settingsPage = "main"
     private var historyType = "Canlı TV"
     private val hiddenCategories = mutableSetOf<String>()
@@ -1144,11 +1143,11 @@ class MainActivity : Activity() {
         if (::sidebar.isInitialized) {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
-            sidebar.findViewWithTag<View>("primary-navigation")?.visibility = if (showReadableCategories && !isMobileLayout) View.GONE else View.VISIBLE
+            // Keep TV/Movies/Series tabs visible beside the category list.
+            sidebar.findViewWithTag<View>("primary-navigation")?.visibility = View.VISIBLE
             val params = sidebar.layoutParams
-            // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
-            // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (isMobileLayout) 66 else if (showReadableCategories) 150 else 150)
+            // Main navigation rail + category rail when a content tab is active.
+            val desiredWidth = dp(if (showReadableCategories) 290 else if (isMobileLayout) 66 else 150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
