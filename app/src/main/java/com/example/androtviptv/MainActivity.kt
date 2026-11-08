@@ -3075,7 +3075,9 @@ class MainActivity : Activity() {
         applyKaiserImmersiveMode()
         if (::heroPanel.isInitialized) heroPanel.visibility = View.GONE
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
-        if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        // A series detail is a full-screen page: keep the left category/navigation rail hidden.
+        if (::navBar.isInitialized) navBar.visibility =
+            if (firstEntry || isLoadingSource || detailSeries != null) View.GONE else View.VISIBLE
         if (::sidebar.isInitialized && sidebarMode == "context") showContextNavigationStage(contextNavigationStage)
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
