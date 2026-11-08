@@ -882,20 +882,16 @@ class MainActivity : Activity() {
                 val crossesBoundary = (focusIsInSidebar && candidate != null && !candidateIsInSidebar) ||
                     (focusIsInContent && candidateIsInSidebar)
                 if (crossesBoundary && !crossingAllowed) {
-                    // Keep navigation in its current area unless the user presses the
-                    // direction that explicitly crosses between sidebar and content.
-                    return directionalFallback(focused, direction, focusIsInSidebar) ?: focused
+                    // Keep focus in its current area; avoid a full view-tree geometry scan on every D-pad press.
+                    return focused
                 }
-                if (candidate != null && candidate.isShown && candidate.isFocusable &&
-                    isAhead(focused, candidate, direction) &&
+                if (candidate != null && candidate.isAttachedToWindow && candidate.isShown &&
+                    candidate.isEnabled && candidate.isFocusable &&
                     (!crossesBoundary || crossingAllowed)) return candidate
 
-                val sidebarOnly = when {
-                    focusIsInSidebar && direction != View.FOCUS_RIGHT -> true
-                    focusIsInContent && direction != View.FOCUS_LEFT -> false
-                    else -> null
-                }
-                return directionalFallback(focused, direction, sidebarOnly) ?: candidate ?: focused
+                // Android's native focus search is sufficient for ordinary navigation.
+                // A recursive scan with getLocationOnScreen() on every key press made TV menus lag.
+                return focused
             }
         }.apply {
             orientation = LinearLayout.HORIZONTAL
