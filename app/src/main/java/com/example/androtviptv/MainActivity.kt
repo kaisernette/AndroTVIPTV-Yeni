@@ -1608,6 +1608,7 @@ class MainActivity : Activity() {
         val sourceHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(16), dp(8), dp(16))
         }
         val sourceHeadingText = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1615,16 +1616,15 @@ class MainActivity : Activity() {
         }
         sourceHeadingText.addView(TextView(this).apply {
             text = t("Kaynaklar")
-            textSize = 22f
+            textSize = 27f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
-            setPadding(dp(2), 0, 0, dp(4))
         })
         sourceHeadingText.addView(TextView(this).apply {
             text = t("Yasal kullanım hakkına sahip olduğun yayın adreslerini ekle yönet.")
-            textSize = 13f
+            textSize = 14f
             setTextColor(muted)
-            setPadding(dp(2), dp(4), dp(8), 0)
+            setPadding(0, dp(4), 0, 0)
         })
         sourceHeader.addView(sourceHeadingText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         sourceHeader.addView(makeButton("←  ${t("Geri")}", false) {
@@ -1636,7 +1636,7 @@ class MainActivity : Activity() {
         }.apply { minWidth = 0; textSize = 12f }, LinearLayout.LayoutParams(dp(118), dp(42)).apply {
             gravity = Gravity.CENTER_VERTICAL
         })
-        form.addView(sourceHeader, LinearLayout.LayoutParams(-1, dp(90)))
+        form.addView(sourceHeader, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         val xtreamName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(if (editSource?.mode == "xtream") editSource.name else "") }
         val m3uName = edit(t("Kaynak adı (ör. Ev TV)"), false).apply { setText(if (editSource?.mode == "m3u") editSource.name else "") }
