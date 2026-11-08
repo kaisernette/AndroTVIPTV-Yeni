@@ -2393,12 +2393,18 @@ class MainActivity : Activity() {
                                     o.optString("genre", "")
                                 )
                             )
-                            if (i % 250 == 0) {
+                            // Large Xtream catalogues can contain thousands of entries.
+                            // Posting a UI update every 250 records floods the main-thread queue
+                            // while parsing and makes D-pad navigation feel unresponsive.
+                            // Update progress less frequently and never for the first record.
+                            if (i > 0 && i % 1000 == 0) {
                                 val within = if (count == 0) 0 else (i * 16 / count)
                                 val progress = (40 + actionIndex * 18 + within).coerceIn(1, 98)
                                 runOnUiThread {
-                                    loadProgress = progress
-                                    status.text = "${source.name}: $type yükleniyor… %$progress"
+                                    if (isLoadingSource) {
+                                        loadProgress = progress
+                                        status.text = "${source.name}: $type yükleniyor… %$progress"
+                                    }
                                 }
                             }
                         }
