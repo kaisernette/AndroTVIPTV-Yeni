@@ -1848,6 +1848,21 @@ class MainActivity : Activity() {
             "mac" -> mac.id
             else -> xtream.id
         })
+
+        // On the Settings > Sources page, render the form inline. Other entry
+        // points (first launch / add / edit) keep the same form in a dialog.
+        if (selectedType == "Ayarlar" && settingsPage == "sources" && editSource == null) {
+            content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        } else {
+            val dialog = AlertDialog.Builder(this).setView(form).create()
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                dialog.window?.setDimAmount(0.72f)
+                dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.72f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+            dialog.show()
+        }
         form.post { sourceName.requestFocus() }
     }
 
@@ -4598,19 +4613,26 @@ class MainActivity : Activity() {
         mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
         mainContentScroll.scrollTo(0, 0)
         fun goBackFromSettings() {
+            // Back from a settings subsection returns to the settings hub first.
+            if (settingsPage != "main") {
+                settingsPage = "main"
+                prefs.edit().putString("last_settings_page", "main").apply()
+                render()
+                return
+            }
+            // Only Back on the settings hub leaves Settings for the home screen.
             detailSeries = null
             detailMovie = null
             seriesEpisodeRows = emptyList()
             seriesEpisodesLoading = false
             seriesEpisodesError = ""
-            settingsPage = "main"
             sidebarMode = "main"
             selectedType = "Tümü"
             selectedGroup = "Tüm kategoriler"
             expandedCategory = null
             focusedCategoryName = null
             prefs.edit()
-                .putString("last_settings_page", settingsPage)
+                .putString("last_settings_page", "main")
                 .putString("last_section", selectedType)
                 .putString("last_group", selectedGroup)
                 .apply()
