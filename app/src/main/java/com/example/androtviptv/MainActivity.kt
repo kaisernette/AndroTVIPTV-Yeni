@@ -1098,7 +1098,8 @@ class MainActivity : Activity() {
         navBar.gravity = if (sidebarMode == "main") Gravity.BOTTOM or Gravity.START else Gravity.TOP or Gravity.START
         // Expand the sidebar when a category list is open so full category names remain readable.
         if (::sidebar.isInitialized) {
-            val showReadableCategories = sidebarMode == "context" &&
+            val detailMode = detailSeries != null || detailMovie != null
+            val showReadableCategories = !detailMode && sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
             val primaryColumn = sidebar.getChildAt(0)
             primaryColumn?.visibility = if (showReadableCategories) View.GONE else View.VISIBLE
@@ -1129,7 +1130,8 @@ class MainActivity : Activity() {
         navBar.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
         firstCategoryFocusView = null
         if (::categoryPanel.isInitialized) {
-            categoryListScroll.visibility = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) View.VISIBLE else View.GONE
+            val detailMode = detailSeries != null || detailMovie != null
+            categoryListScroll.visibility = if (!detailMode && sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) View.VISIBLE else View.GONE
             categoryPanel.removeAllViews()
             categoryPanel.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             categoryListScroll.scrollTo(0, 0)
@@ -2694,7 +2696,7 @@ class MainActivity : Activity() {
             heroPanel.visibility = View.GONE
         }
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
-        if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
             if (firstEntry || isLoadingSource || detailMode || selectedType == "Ayarlar") View.GONE else View.VISIBLE
