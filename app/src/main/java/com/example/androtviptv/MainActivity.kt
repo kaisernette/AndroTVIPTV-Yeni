@@ -2005,6 +2005,42 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun showConnectionError(sourceName: String, message: String) {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(18), dp(22), dp(12))
+            background = roundedDrawable(panel, 16, accent)
+        }
+        panel.addView(TextView(this).apply {
+            text = "⚠  ${t("Bağlantı hatası")}"
+            textSize = 21f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+        })
+        panel.addView(TextView(this).apply {
+            text = sourceName
+            textSize = 15f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(accentBright)
+            setPadding(0, dp(12), 0, dp(5))
+        })
+        panel.addView(TextView(this).apply {
+            text = message
+            textSize = 14f
+            setTextColor(muted)
+        })
+        AlertDialog.Builder(this)
+            .setView(panel)
+            .setPositiveButton(t("Tekrar dene")) { _, _ ->
+                val source = savedSources.firstOrNull { it.name == sourceName }
+                if (source != null) {
+                    if (source.mode == "xtream") loadXtream(source, false) else loadM3u(source, false)
+                }
+            }
+            .setNegativeButton(t("Kapat"), null)
+            .show()
+    }
+
     private fun loadM3u(source: SavedSource, append: Boolean) {
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
@@ -2031,6 +2067,7 @@ class MainActivity : Activity() {
                 isLoadingSource = false
                 status.text = "${source.name}: ${friendlyLoadError(e)}"
                 render()
+                showConnectionError(source.name, friendlyLoadError(e))
             } }
         }
     }
@@ -2209,6 +2246,7 @@ class MainActivity : Activity() {
                     status.visibility = View.VISIBLE
                     status.text = "${source.name}: ${friendlyLoadError(e)}"
                     render()
+                    showConnectionError(source.name, friendlyLoadError(e))
                 }
             }
         }
@@ -4457,6 +4495,23 @@ class MainActivity : Activity() {
         mainContentScroll.visibility = View.VISIBLE
         content.removeAllViews()
         mainContentScroll.scrollTo(0, 0)
+        val settingsTopBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(8), dp(8), dp(2))
+        }
+        settingsTopBar.addView(View(this), LinearLayout.LayoutParams(0, dp(42), 1f))
+        settingsTopBar.addView(makeButton("←  ${t("Geri")}", false) {
+            if (settingsPage != "main") {
+                settingsPage = "main"
+                prefs.edit().putString("last_settings_page", settingsPage).apply()
+                renderSettingsScreen()
+            } else {
+                sidebarMode = "main"
+                rebuildNavigation()
+            }
+        }, LinearLayout.LayoutParams(dp(118), dp(42)))
+        content.addView(settingsTopBar, LinearLayout.LayoutParams(-1, dp(50)))
         fun heading(title: String, subtitle: String) {
             content.addView(TextView(this).apply {
                 text = t(title); textSize = 27f; setTypeface(null, android.graphics.Typeface.BOLD)
@@ -4707,7 +4762,18 @@ class MainActivity : Activity() {
                                     } else loadM3u(source, false)
                                 } else {
                                     selectedCategorySourceId = ""
+                                    selectedGroup = "Tüm kategoriler"
+                                    expandedCategory = null
+                                    focusedCategoryName = null
+                                    selectedType = "Tümü"
+                                    focusFirstCategoryOnRender = false
+                                    focusFirstContentOnRender = false
                                     items.clear()
+                                    prefs.edit()
+                                        .putString("last_group", selectedGroup)
+                                        .putString("last_section", selectedType)
+                                        .putString("last_source_id", "")
+                                        .apply()
                                     saveCachedItems()
                                     render()
                                 }
