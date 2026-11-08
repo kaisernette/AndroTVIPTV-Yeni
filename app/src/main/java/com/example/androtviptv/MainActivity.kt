@@ -714,7 +714,7 @@ class MainActivity : Activity() {
     private var previewChannel: MediaItem? = null
     private var sidebarMode = "main"
     private val isMobileLayout: Boolean
-        get() = resources.configuration.screenWidthDp < 600
+        get() = !isTelevisionDevice
     private var settingsPage = "main"
     private var historyType = "Canlı TV"
     private val hiddenCategories = mutableSetOf<String>()
