@@ -840,12 +840,12 @@ class MainActivity : Activity() {
             clipChildren = false
             clipToPadding = false
         }
-        val initialSidebarWidth = if (isMobileLayout) 66 else 150
+        val initialSidebarWidth = if (isMobileLayout) 126 else 150
         root.addView(sidebar, LinearLayout.LayoutParams(dp(initialSidebarWidth), -1).apply { setMargins(0, 0, dp(if (isMobileLayout) 3 else 8), 0) })
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(dp(if (isMobileLayout) 54 else 140), -1)
+            layoutParams = LinearLayout.LayoutParams(dp(if (isMobileLayout) 112 else 140), -1)
         }
         sidebar.addView(primaryMenuColumn)
 
@@ -1118,7 +1118,7 @@ class MainActivity : Activity() {
             val params = sidebar.layoutParams
             // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
             // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (isMobileLayout) 66 else if (showReadableCategories) 150 else 150)
+            val desiredWidth = dp(if (isMobileLayout) 126 else 150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -1163,7 +1163,7 @@ class MainActivity : Activity() {
             }
             val sidebarButton = makeButton(label, selected, action).apply {
                 val iconDrawable = if (iconRes != 0) getDrawable(iconRes)?.mutate() else null
-                iconDrawable?.setBounds(0, 0, dp(if (isMobileLayout) 25 else 29), dp(if (isMobileLayout) 25 else 29))
+                iconDrawable?.setBounds(0, 0, dp(if (isMobileLayout) 20 else 29), dp(if (isMobileLayout) 20 else 29))
                 // Restore the full accent selection tile for the focused navigation item.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
@@ -1181,9 +1181,19 @@ class MainActivity : Activity() {
                     v.scaleX = 1f
                     v.scaleY = 1f
                 }
-                textSize = 15f
+                textSize = if (isMobileLayout) 12f else 15f
                 text = when {
-                    isMobileLayout -> ""
+                    isMobileLayout -> when {
+                        label == "Ara" -> "Arama"
+                        label.contains("Ana Sayfa") -> "Ana Sayfa"
+                        label.contains("TV") -> "TV"
+                        label.contains("Filmler") -> "Filmler"
+                        label.contains("Diziler") -> "Diziler"
+                        label.contains("Favoriler") -> "Favoriler"
+                        label.contains("İzlediklerim") || label.contains("Geçmiş") -> "Geçmiş"
+                        label.contains("Ayarlar") -> "Ayarlar"
+                        else -> label
+                    }
                     label == "Ara" -> "Arama"
                     label.contains("Ana Sayfa") -> "Ana Sayfa"
                     label.contains("TV") -> "TV"
@@ -1194,20 +1204,20 @@ class MainActivity : Activity() {
                     label.contains("Ayarlar") -> "Ayarlar"
                     else -> label
                 }
-                compoundDrawablePadding = dp(if (isMobileLayout) 0 else 7)
+                compoundDrawablePadding = dp(if (isMobileLayout) 5 else 7)
                 setCompoundDrawables(iconDrawable, null, null, null)
-                gravity = if (isMobileLayout) Gravity.CENTER else Gravity.START or Gravity.CENTER_VERTICAL
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 contentDescription = text.toString()
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(if (isMobileLayout) 0 else dp(10), 0, if (isMobileLayout) 0 else dp(4), 0)
-                minHeight = dp(if (isMobileLayout) 44 else 40)
+                setPadding(if (isMobileLayout) dp(6) else dp(10), 0, dp(4), 0)
+                minHeight = dp(if (isMobileLayout) 38 else 40)
                 id = View.generateViewId()
             }
-            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 44 else 40)).apply {
+            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 38 else 40)).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 setMargins(0, dp(1), 0, dp(1))
             })
@@ -2664,7 +2674,7 @@ class MainActivity : Activity() {
         val exitPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(dp(18), dp(14), dp(18), dp(14))
+            setPadding(dp(12), dp(10), dp(12), dp(10))
             background = roundedDrawable(Color.rgb(13, 20, 33), 18, accent)
         }
         val brand = TextView(this).apply {
@@ -2674,7 +2684,7 @@ class MainActivity : Activity() {
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 9, 11, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 11, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = logo
-            textSize = 28f
+            textSize = 20f
             gravity = Gravity.CENTER
             setTypeface(null, android.graphics.Typeface.BOLD)
         }
@@ -2682,10 +2692,10 @@ class MainActivity : Activity() {
         exitPanel.addView(brand, LinearLayout.LayoutParams(-1, dp(42)))
         exitPanel.addView(TextView(this).apply {
             text = t("Uygulamadan çıkmak istiyor musunuz?")
-            textSize = 17f
+            textSize = 15f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
-            setPadding(0, dp(4), 0, dp(12))
+            setPadding(0, dp(2), 0, dp(8))
         }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         val exitActions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -2695,7 +2705,7 @@ class MainActivity : Activity() {
         fun exitActionButton(label: String, fillColor: Int, textColor: Int, onClick: () -> Unit): TextView =
             TextView(this).apply {
                 text = t(label)
-                textSize = 18f
+                textSize = 15f
                 gravity = Gravity.CENTER
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(textColor)
@@ -2717,18 +2727,18 @@ class MainActivity : Activity() {
         val cancelButton = exitActionButton("Vazgeç", Color.rgb(27, 33, 45), Color.WHITE) {
             exitDialog.dismiss()
         }
-        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(54), 1f).apply {
+        exitActions.addView(exitButton, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
             setMargins(0, 0, dp(10), 0)
         })
         exitActions.addView(cancelButton, LinearLayout.LayoutParams(0, dp(54), 1f).apply {
             setMargins(dp(10), 0, 0, 0)
         })
-        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(54)))
+        exitPanel.addView(exitActions, LinearLayout.LayoutParams(-1, dp(42)))
         exitDialog.setOnShowListener {
             exitDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
             exitDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             exitDialog.window?.setDimAmount(0.78f)
-            exitDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.56f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+            exitDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.46f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
             cancelButton.post { cancelButton.requestFocus() }
         }
         exitDialog.show()
@@ -3367,6 +3377,11 @@ class MainActivity : Activity() {
         }
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
         categoryBar.removeAllViews()
+        categoryScroll.visibility = if (!firstEntry && !isLoadingSource && !detailMode && selectedType in listOf("Tümü", "Canlı TV", "Filmler", "Diziler") && groupsAvailable.isNotEmpty()) View.VISIBLE else View.GONE
+        if (selectedGroup == "Tüm kategoriler") {
+            categoryBar.addView(makeButton("Tümü", true) { selectedGroup = "Tüm kategoriler"; render() },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
+        }
         groupsAvailable.take(40).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
@@ -3653,7 +3668,7 @@ class MainActivity : Activity() {
             val weeklyMovieFeature = selectedType == "Tümü" && (groupName.contains("Haftanın Filmleri") || groupName.contains("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
-            val featureCardWidth = dp(140) // Kart genişliği afişle aynı
+            val featureCardWidth = dp(if (isMobileLayout) 156 else 140) // Kart genişliği afişle aynı
             val displayedEntries = when {
                 posterGridMode -> entries.take(mediaItemsLimit)
                 weeklyMovieFeature -> entries.take(24)
@@ -3724,8 +3739,8 @@ class MainActivity : Activity() {
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
-                        if (weeklyPoster) dp(140) else -1,
-                        if (liveCard) dp(88) else if (weeklyPoster) dp(210) else if (posterGridMode) dp(210) else if (homeCard) 230 else 210
+                        if (weeklyPoster) dp(if (isMobileLayout) 156 else 140) else -1,
+                        if (liveCard) dp(if (isMobileLayout) 96 else 88) else if (weeklyPoster) dp(if (isMobileLayout) 234 else 210) else if (posterGridMode) dp(if (isMobileLayout) 224 else 210) else if (homeCard) 230 else 210
                     )
                 }
                 card.addView(poster)
@@ -3791,7 +3806,7 @@ class MainActivity : Activity() {
                 }
             }
             // Keep the final poster row aligned to the same five-column grid.
-            val finalGridColumns = if (liveTvEightColumnGrid) 8 else if (fiveColumnMediaGrid) 5 else 4
+            val finalGridColumns = if (liveTvEightColumnGrid) { if (isMobileLayout) 4 else 8 } else if (fiveColumnMediaGrid) { if (isMobileLayout) 3 else 5 } else 4
             if (posterGridMode && expandedPosterCount > 0 && expandedPosterCount % finalGridColumns != 0) {
                 val remainingSlots = finalGridColumns - (expandedPosterCount % finalGridColumns)
                 repeat(remainingSlots) {
