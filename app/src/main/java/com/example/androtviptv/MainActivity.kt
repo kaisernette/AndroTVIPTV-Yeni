@@ -840,12 +840,12 @@ class MainActivity : Activity() {
             clipChildren = false
             clipToPadding = false
         }
-        val initialSidebarWidth = if (isMobileLayout) 126 else 150
+        val initialSidebarWidth = if (isMobileLayout) 142 else 150
         root.addView(sidebar, LinearLayout.LayoutParams(dp(initialSidebarWidth), -1).apply { setMargins(0, 0, dp(if (isMobileLayout) 3 else 8), 0) })
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(dp(if (isMobileLayout) 112 else 140), -1)
+            layoutParams = LinearLayout.LayoutParams(dp(if (isMobileLayout) 128 else 140), -1)
         }
         sidebar.addView(primaryMenuColumn)
 
@@ -892,7 +892,7 @@ class MainActivity : Activity() {
         }
         brandView.addView(brandLogo, LinearLayout.LayoutParams(-1, -1))
         brandView.contentDescription = "KAISER TV+"
-        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
+        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 88 else 76)))
         navBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
@@ -1118,7 +1118,7 @@ class MainActivity : Activity() {
             val params = sidebar.layoutParams
             // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
             // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (isMobileLayout) 126 else 150)
+            val desiredWidth = dp(if (isMobileLayout) 142 else 150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -2738,7 +2738,7 @@ class MainActivity : Activity() {
             exitDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
             exitDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             exitDialog.window?.setDimAmount(0.78f)
-            exitDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.46f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+            exitDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.42f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
             cancelButton.post { cancelButton.requestFocus() }
         }
         exitDialog.show()
@@ -3378,10 +3378,8 @@ class MainActivity : Activity() {
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
         categoryBar.removeAllViews()
         categoryScroll.visibility = if (!firstEntry && !isLoadingSource && !detailMode && selectedType in listOf("Tümü", "Canlı TV", "Filmler", "Diziler") && groupsAvailable.isNotEmpty()) View.VISIBLE else View.GONE
-        if (selectedGroup == "Tüm kategoriler") {
-            categoryBar.addView(makeButton("Tümü", true) { selectedGroup = "Tüm kategoriler"; render() },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
-        }
+        categoryBar.addView(makeButton("Tümü", selectedGroup == "Tüm kategoriler") { selectedGroup = "Tüm kategoriler"; render() },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
         groupsAvailable.take(40).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
