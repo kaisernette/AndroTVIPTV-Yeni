@@ -3780,7 +3780,8 @@ class MainActivity : Activity() {
             content.addView(sectionHeader)
             val row = LinearLayout(this).apply {
                 orientation = if (posterGridMode) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
-                gravity = if (posterGridMode) Gravity.TOP or Gravity.START else Gravity.CENTER_VERTICAL
+                // Keep every poster/card anchored to the same top edge, even when title heights differ.
+                gravity = Gravity.TOP or Gravity.START
                 clipChildren = false
                 clipToPadding = false
                 if (posterGridMode) setPadding(0, dp(14), 0, dp(8))
