@@ -624,7 +624,10 @@ class MainActivity : Activity() {
         pendingTvHomeItemKey = intent?.getStringExtra(EXTRA_TV_HOME_ITEM_KEY)
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
-        ovalButtons = prefs.getBoolean("oval_buttons", false)
+        if (!prefs.getBoolean("global_oval_style_applied", false)) {
+            prefs.edit().putBoolean("oval_buttons", true).putBoolean("global_oval_style_applied", true).apply()
+        }
+        ovalButtons = prefs.getBoolean("oval_buttons", true)
         gradientBackground = prefs.getBoolean("gradient_background", prefs.getBoolean("glass_panel_background", true))
         customBackgroundUri = prefs.getString("custom_background_uri", null)
         if (!prefs.contains("gradient_background")) prefs.edit().putBoolean("gradient_background", gradientBackground).apply()
@@ -1682,9 +1685,15 @@ class MainActivity : Activity() {
         }
         val m3u = RadioButton(this).apply { id = View.generateViewId(); text = "M3U / M3U8" }
         val xtream = RadioButton(this).apply { id = View.generateViewId(); text = "Xtream Codes" }
-        sourceMode.addView(m3u)
+        val mac = RadioButton(this).apply { id = View.generateViewId(); text = "Stalker Portal" }
         sourceMode.addView(xtream)
-        sourceMode.check(if (editSource?.mode == "xtream") xtream.id else m3u.id)
+        sourceMode.addView(m3u)
+        sourceMode.addView(mac)
+        sourceMode.check(when (editSource?.mode) {
+            "xtream" -> xtream.id
+            "mac" -> mac.id
+            else -> m3u.id
+        })
 
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1695,6 +1704,21 @@ class MainActivity : Activity() {
             textSize = 13f
         }
         val connectButton = makeButton(t(if (editSource == null) "Bağlan" else "Kaydet"), true) {
+            if (sourceMode.checkedRadioButtonId == mac.id) {
+                val portal = macPortal.text.toString().trim().trimEnd('/')
+                val macValue = macAddress.text.toString().trim().uppercase(java.util.Locale.ROOT)
+                val validMac = Regex("^[0-9A-F]{2}(:[0-9A-F]{2}){5}$").matches(macValue)
+                if (!(portal.startsWith("http://") || portal.startsWith("https://")) || !validMac) {
+                    Toast.makeText(this, t("Portal URL ve geçerli MAC adresini girin (00:1A:79:XX:XX:XX)."), Toast.LENGTH_LONG).show()
+                    return@makeButton
+                }
+                val label = sourceName.text.toString().trim().ifBlank { "MAC Portal ${savedSources.size + 1}" }
+                val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "mac", portal, macValue)
+                saveSource(src); hideKeyboard()
+                Toast.makeText(this, t("MAC Portal bilgileri kaydedildi. Yayın bağlantısı henüz etkin değil."), Toast.LENGTH_LONG).show()
+                render()
+                return@makeButton
+            }
             val useXtream = sourceMode.checkedRadioButtonId == xtream.id
             if (useXtream) {
                 val address = server.text.toString().trim()
@@ -1719,94 +1743,105 @@ class MainActivity : Activity() {
             }
         }.apply { minWidth = 0; textSize = 13f }
 
-        val columns = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.TOP
-        }
-        fun makeSourceCard(title: String, modeId: Int, selected: Boolean, fields: LinearLayout, mac: Boolean = false): LinearLayout {
-            val card = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(8), dp(7), dp(8), dp(7))
-                background = roundedDrawable(panel, corner, outline)
-                isFocusable = false
-                isFocusableInTouchMode = false
-                clipChildren = false
-                clipToPadding = false
-            }
-            card.addView(TextView(this).apply {
-                text = title
-                textSize = 15f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setTextColor(if (selected) accentBright else Color.WHITE)
-            }, LinearLayout.LayoutParams(-1, dp(32)))
-            card.addView(fields, LinearLayout.LayoutParams(-1, 0, 1f))
-            val footer = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER
-            }
-            val connect = makeButton(t(if (editSource == null) "Bağlan" else "Kaydet"), true) {
-                if (mac) {
-                    val portal = macPortal.text.toString().trim().trimEnd('/')
-                    val macValue = macAddress.text.toString().trim().uppercase(java.util.Locale.ROOT)
-                    val validMac = Regex("^[0-9A-F]{2}(:[0-9A-F]{2}){5}$").matches(macValue)
-                    if (!(portal.startsWith("http://") || portal.startsWith("https://")) || !validMac) {
-                        Toast.makeText(this@MainActivity, t("Portal URL ve geçerli MAC adresini girin (00:1A:79:XX:XX:XX)."), Toast.LENGTH_LONG).show()
-                        return@makeButton
-                    }
-                    val label = macName.text.toString().trim().ifBlank { "MAC Portal ${savedSources.size + 1}" }
-                    val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "mac", portal, macValue)
-                    saveSource(src)
-                    hideKeyboard()
-                    Toast.makeText(this@MainActivity, t("MAC Portal bilgileri kaydedildi. Yayın bağlantısı henüz etkin değil."), Toast.LENGTH_LONG).show()
-                    render()
-                } else {
-                    sourceMode.check(modeId)
-                    connectButton.performClick()
-                }
-            }.apply { minWidth = 0; textSize = 12f }
-            footer.addView(connect, LinearLayout.LayoutParams(-1, dp(36)))
-            card.addView(footer, LinearLayout.LayoutParams(-1, dp(40)))
-            return card
-        }
-
+        val m3uNameFrame = inputFrame(sourceName)
         val m3uFields = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.BOTTOM
+            addView(m3uNameFrame, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
             addView(playlistFrame, LinearLayout.LayoutParams(-1, dp(48)))
         }
         val xtreamFields = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.BOTTOM
-            addView(serverFrame, LinearLayout.LayoutParams(-1, dp(38)).apply { bottomMargin = dp(4) })
-            addView(usernameFrame, LinearLayout.LayoutParams(-1, dp(38)).apply { bottomMargin = dp(4) })
-            addView(passwordFrame, LinearLayout.LayoutParams(-1, dp(38)))
+            addView(inputFrame(sourceName), LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+            addView(serverFrame, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+            addView(usernameFrame, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+            addView(passwordFrame, LinearLayout.LayoutParams(-1, dp(48)))
         }
-        // Each card has its own source-name field and starts at the same top alignment.
-        val m3uName = edit(t("Kaynak adı (ör. Ev TV)"), false).apply { setText(if (editSource?.mode == "m3u") editSource.name else "") }
-        val xtreamName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(if (editSource?.mode == "xtream") editSource.name else "") }
-        val m3uNameFrame = inputFrame(m3uName)
-        val xtreamNameFrame = inputFrame(xtreamName)
-        m3uFields.addView(m3uNameFrame, 0, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(7) })
-        xtreamFields.addView(xtreamNameFrame, 0, LinearLayout.LayoutParams(-1, dp(38)).apply { bottomMargin = dp(4) })
-        m3uFields.gravity = Gravity.TOP
-        xtreamFields.gravity = Gravity.TOP
-
-        // Temporarily expose only the working Xtream Codes connection method.
-        // Keep the existing M3U/MAC parsing code intact for a later reintroduction.
-        sourceMode.check(xtream.id)
-        sourceMode.visibility = View.GONE
-        val cardHeight = dp(260)
-        val xtreamCard = makeSourceCard("▣  Xtream Codes", xtream.id, true, xtreamFields)
-        columns.addView(xtreamCard, LinearLayout.LayoutParams(-1, cardHeight).apply {
-            setMargins(dp(3), dp(3), dp(3), dp(3))
+        val macFields = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(inputFrame(sourceName), LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+            addView(inputFrame(macPortal), LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+            addView(inputFrame(macAddress), LinearLayout.LayoutParams(-1, dp(48)))
+        }
+        val modeCards = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val sourceFormPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = roundedDrawable(panel, 24, outline)
+        }
+        fun selectSourceMode(modeId: Int) {
+            sourceMode.check(modeId)
+            m3uFields.visibility = if (modeId == m3u.id) View.VISIBLE else View.GONE
+            xtreamFields.visibility = if (modeId == xtream.id) View.VISIBLE else View.GONE
+            macFields.visibility = if (modeId == mac.id) View.VISIBLE else View.GONE
+            for (index in 0 until modeCards.childCount) {
+                val card = modeCards.getChildAt(index) as? LinearLayout ?: continue
+                val active = card.tag == modeId
+                card.background = roundedDrawable(if (active) Color.rgb(3, 25, 43) else panel, 26,
+                    if (active) accent else outline)
+                card.elevation = if (active) dp(5).toFloat() else 0f
+                (card.getChildAt(1) as? LinearLayout)?.let { labels ->
+                    (labels.getChildAt(0) as? TextView)?.setTextColor(if (active) accentBright else Color.WHITE)
+                    (labels.getChildAt(1) as? TextView)?.setTextColor(muted)
+                }
+            }
+        }
+        fun addModeCard(modeId: Int, title: String, subtitle: String, symbol: String) {
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(10), dp(8), dp(7), dp(8))
+                tag = modeId
+                isFocusable = true
+                isFocusableInTouchMode = true
+                isClickable = true
+                background = roundedDrawable(panel, 26, outline)
+                setOnClickListener { selectSourceMode(modeId) }
+                setOnFocusChangeListener { view, focused ->
+                    if (focused) selectSourceMode(modeId)
+                    view.scaleX = if (focused) 1.025f else 1f
+                    view.scaleY = if (focused) 1.025f else 1f
+                }
+            }
+            card.addView(TextView(this).apply {
+                text = symbol; textSize = 25f; gravity = Gravity.CENTER; setTextColor(accentBright)
+            }, LinearLayout.LayoutParams(dp(38), dp(48)))
+            val labels = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL }
+            labels.addView(TextView(this).apply {
+                text = title; textSize = 13f; setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE); maxLines = 1
+            })
+            labels.addView(TextView(this).apply {
+                text = subtitle; textSize = 10f; setTextColor(muted); maxLines = 2
+                setPadding(0, dp(3), 0, 0)
+            })
+            card.addView(labels, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            modeCards.addView(card, LinearLayout.LayoutParams(0, dp(82), 1f).apply {
+                setMargins(dp(3), dp(3), dp(3), dp(8))
+            })
+        }
+        addModeCard(xtream.id, "Xtream Codes", t("Kullanıcı adı ve şifre ile bağlan"), "▤")
+        addModeCard(m3u.id, "M3U / M3U8", t("Playlist bağlantısı ekle"), "▧")
+        addModeCard(mac.id, "Stalker Portal", t("Portal adresi ile bağlan"), "▣")
+        sourceFormPanel.addView(xtreamFields)
+        sourceFormPanel.addView(m3uFields)
+        sourceFormPanel.addView(macFields)
+        sourceFormPanel.addView(connectButton, LinearLayout.LayoutParams(-1, dp(54)).apply {
+            topMargin = dp(12)
         })
-        form.addView(columns, LinearLayout.LayoutParams(-1, cardHeight + dp(6)))
+        form.addView(modeCards, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        form.addView(sourceFormPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(dp(3), dp(2), dp(3), dp(8))
+        })
         form.addView(sourceMode)
-        content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            setMargins(dp(4), dp(5), dp(4), dp(8))
+        selectSourceMode(when (editSource?.mode) {
+            "m3u" -> m3u.id
+            "mac" -> mac.id
+            else -> xtream.id
         })
-        form.post { xtreamName.requestFocus() }
+        form.post { sourceName.requestFocus() }
     }
 
     private fun openBackgroundPicker() {
@@ -1903,7 +1938,7 @@ class MainActivity : Activity() {
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
-            cornerRadius = dp(if (ovalButtons) 24 else radiusDp).toFloat()
+            cornerRadius = dp(if (ovalButtons) 28 else radiusDp).toFloat()
             if (strokeColor != null) {
                 setStroke((2 * resources.displayMetrics.density).toInt().coerceAtLeast(1), strokeColor)
             }
@@ -1912,7 +1947,7 @@ class MainActivity : Activity() {
     private fun edit(hintText: String, secret: Boolean): EditText = EditText(this).apply {
         hint = hintText; textSize = 14f; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(muted)
         setPadding(12, 0, 12, 0)
-        background = roundedDrawable(panel, 10, Color.rgb(48, 57, 73))
+        background = roundedDrawable(panel, 24, Color.rgb(48, 57, 73))
         if (android.os.Build.VERSION.SDK_INT >= 24) imeHintLocales = android.os.LocaleList.getDefault()
         if (android.os.Build.VERSION.SDK_INT >= 29) textCursorDrawable?.setTint(accent)
         if (secret) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -4596,7 +4631,7 @@ class MainActivity : Activity() {
             })
             header.addView(headingText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             header.addView(makeButton("←  ${t("Geri")}", false) { goBackFromSettings() },
-                LinearLayout.LayoutParams(dp(118), dp(42)))
+                LinearLayout.LayoutParams(dp(118), dp(42)).apply { gravity = Gravity.BOTTOM })
             content.addView(header, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         var settingsGridRow: LinearLayout? = null
