@@ -1636,9 +1636,7 @@ class MainActivity : Activity() {
         }.apply { minWidth = 0; textSize = 12f }, LinearLayout.LayoutParams(dp(118), dp(42)).apply {
             gravity = Gravity.CENTER_VERTICAL
         })
-        form.addView(sourceSubtitleRow, LinearLayout.LayoutParams(-1, dp(48)).apply {
-            bottomMargin = dp(16)
-        })
+        form.addView(sourceSubtitleRow, LinearLayout.LayoutParams(-1, dp(48)))
 
         val xtreamName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(if (editSource?.mode == "xtream") editSource.name else "") }
         val m3uName = edit(t("Kaynak adı (ör. Ev TV)"), false).apply { setText(if (editSource?.mode == "m3u") editSource.name else "") }
