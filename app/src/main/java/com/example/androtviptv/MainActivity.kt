@@ -3004,21 +3004,20 @@ class MainActivity : Activity() {
                 id = View.generateViewId()
                 orientation = RadioGroup.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
+                visibility = View.GONE
             }
             val inlineM3u = RadioButton(this).apply {
                 id = View.generateViewId(); text = "M3U / M3U8"
                 setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent)
-                isChecked = true
             }
             val inlineXtream = RadioButton(this).apply {
                 id = View.generateViewId(); text = "Xtream Codes"
                 setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent)
+                isChecked = true
             }
-            inlineM3u.id = View.generateViewId()
-            inlineXtream.id = View.generateViewId()
             sourceMode.addView(inlineM3u)
             sourceMode.addView(inlineXtream)
-            inlineForm.addView(sourceMode, LinearLayout.LayoutParams(-1, dp(42)))
+            sourceMode.check(inlineXtream.id)
             playlistUrl = edit("URL adresini girin", false).apply {
                 id = View.generateViewId()
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
@@ -3058,13 +3057,11 @@ class MainActivity : Activity() {
             })
             inlineForm.addView(inlineCredentials)
             fun updateInlineFields() {
-                val useXtream = sourceMode.checkedRadioButtonId == inlineXtream.id
-                playlistLabel.visibility = if (useXtream) View.GONE else View.VISIBLE
-                playlistUrl.visibility = if (useXtream) View.GONE else View.VISIBLE
-                server.visibility = if (useXtream) View.VISIBLE else View.GONE
-                inlineCredentials.visibility = if (useXtream) View.VISIBLE else View.GONE
+                playlistLabel.visibility = View.GONE
+                playlistUrl.visibility = View.GONE
+                server.visibility = View.VISIBLE
+                inlineCredentials.visibility = View.VISIBLE
             }
-            sourceMode.setOnCheckedChangeListener { _, _ -> updateInlineFields() }
             updateInlineFields()
 
             // Keep keyboard Enter and TV-remote Down navigation in the same visual order.
