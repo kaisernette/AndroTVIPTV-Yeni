@@ -10,6 +10,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
+import android.net.Uri
+import android.os.Build
+import android.content.ContentUris
+import android.content.pm.PackageManager
+import androidx.tvprovider.media.tv.Channel
+import androidx.tvprovider.media.tv.PreviewProgram
+import androidx.tvprovider.media.tv.TvContractCompat
 import android.widget.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -39,6 +46,8 @@ class MainActivity : Activity() {
     private lateinit var password: EditText
     private lateinit var sourceMode: RadioGroup
     private var selectedType = "Canlı TV"
+    private val tvChannelPrefs by lazy { getSharedPreferences("tv_home_channel", MODE_PRIVATE) }
+    private val tvChannelName = "KaiserTV+"
     private var xtreamUser = ""
     private var xtreamPass = ""
     private var xtreamBase = ""
@@ -59,6 +68,7 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) { }
         buildUi()
+        openHomeProgramIfRequested()
     }
 
     private fun buildUi() {
@@ -97,6 +107,14 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 48).apply { setMargins(0, 3, 0, 8) })
         status = TextView(this).apply { text = "Kendi M3U listen veya Xtream hesap bilgilerinle bağlan."; textSize = 13f; setTextColor(muted); setPadding(0, 3, 0, 8) }
         root.addView(status)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
+            root.addView(makeButton("⌂  ANA EKRANA EKLE / GÜNCELLE", false) {
+                publishOrRefreshHomeChannel()
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 44).apply {
+                setMargins(0, 2, 0, 8)
+            })
+        }
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         listOf("Canlı TV", "Filmler", "Diziler", "Favoriler", "Son İzlenenler", "Tümü").forEach { tab ->
             tabs.addView(makeButton(tab, false) { selectedType = tab; selectedGroup = "Tüm kategoriler"; render() }, LinearLayout.LayoutParams(0, 42, 1f).apply { setMargins(2, 0, 2, 0) })
@@ -276,6 +294,120 @@ class MainActivity : Activity() {
         val arr = JSONArray()
         recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId)) }
         getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
+        refreshExistingHomeChannel()
+    }
+
+
+    private fun openHomeProgramIfRequested() {
+        if (intent?.action != "com.example.androtviptv.OPEN_HOME_PROGRAM") return
+        val key = intent.getStringExtra("home_item_key") ?: return
+        val item = recent.firstOrNull { it.favoriteKey.hashCode().toString() == key }
+        if (item != null && item.url.isNotBlank()) {
+            play(item)
+        } else {
+            Toast.makeText(this, "İçerik geçmişte bulunamadı. KaiserTV+ içinden tekrar seçebilirsin.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun publishOrRefreshHomeChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            !packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
+            Toast.makeText(this, "Bu cihaz Android TV ana ekran kanallarını desteklemiyor.", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (recent.isEmpty()) {
+            Toast.makeText(this, "Önce KaiserTV+ içinde bir içerik izle. Son izlenenler burada görünecek.", Toast.LENGTH_LONG).show()
+            return
+        }
+        thread {
+            try {
+                val channelId = findOrCreateHomeChannel()
+                publishRecentPrograms(channelId)
+                runOnUiThread {
+                    Toast.makeText(this, "KaiserTV+ ana ekran kanalı hazır. Android TV ana ekranında kanal satırını kontrol et.", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, "Ana ekran kanalı oluşturulamadı: ${e.message ?: "TV sağlayıcısı desteklenmiyor"}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun refreshExistingHomeChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            !packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) return
+        thread {
+            try {
+                val id = tvChannelPrefs.getLong("channel_id", -1L)
+                if (id > 0L) publishRecentPrograms(id)
+            } catch (_: Exception) { }
+        }
+    }
+
+    private fun findOrCreateHomeChannel(): Long {
+        val savedId = tvChannelPrefs.getLong("channel_id", -1L)
+        if (savedId > 0L) return savedId
+
+        val projection = arrayOf(TvContractCompat.Channels._ID)
+        val selection = "${TvContractCompat.Channels.COLUMN_PACKAGE_NAME}=? AND ${TvContractCompat.Channels.COLUMN_DISPLAY_NAME}=?"
+        contentResolver.query(
+            TvContractCompat.Channels.CONTENT_URI,
+            projection,
+            selection,
+            arrayOf(packageName, tvChannelName),
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val existingId = cursor.getLong(0)
+                tvChannelPrefs.edit().putLong("channel_id", existingId).apply()
+                return existingId
+            }
+        }
+
+        val appIntent = Intent(this, MainActivity::class.java)
+        val channel = Channel.Builder()
+            .setType(TvContractCompat.Channels.TYPE_PREVIEW)
+            .setDisplayName(tvChannelName)
+            .setDescription("KaiserTV+ son izlenen içeriklerin")
+            .setAppLinkIntent(appIntent)
+            .build()
+        val uri = contentResolver.insert(TvContractCompat.Channels.CONTENT_URI, channel.toContentValues())
+            ?: throw IllegalStateException("TV kanalı kaydedilemedi")
+        val id = ContentUris.parseId(uri)
+        tvChannelPrefs.edit().putLong("channel_id", id).apply()
+        TvContractCompat.requestChannelBrowsable(this, id)
+        return id
+    }
+
+    private fun publishRecentPrograms(channelId: Long) {
+        val programsUri = TvContractCompat.buildPreviewProgramsUriForChannel(channelId)
+        contentResolver.delete(programsUri, null, null)
+
+        recent.distinctBy { it.favoriteKey }.take(20).forEachIndexed { index, item ->
+            if (item.url.isBlank()) return@forEachIndexed
+            val playIntent = Intent(this, MainActivity::class.java)
+                .setAction("com.example.androtviptv.OPEN_HOME_PROGRAM")
+                .putExtra("home_item_key", item.favoriteKey.hashCode().toString())
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            val builder = PreviewProgram.Builder()
+                .setChannelId(channelId)
+                .setType(
+                    if (item.type == "Filmler") TvContractCompat.PreviewPrograms.TYPE_MOVIE
+                    else if (item.type == "Canlı TV") TvContractCompat.PreviewPrograms.TYPE_CLIP
+                    else TvContractCompat.PreviewPrograms.TYPE_TV_EPISODE
+                )
+                .setTitle(item.name)
+                .setDescription(item.group.ifBlank { item.type })
+                .setIntentUri(Uri.parse(playIntent.toUri(Intent.URI_INTENT_SCHEME)))
+                .setInternalProviderId(item.favoriteKey.hashCode().toString())
+                .setWeight(100 - index)
+            if (item.icon.startsWith("http://") || item.icon.startsWith("https://")) {
+                builder.setPosterArtUri(Uri.parse(item.icon))
+                builder.setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3)
+            }
+            contentResolver.insert(TvContractCompat.PreviewPrograms.CONTENT_URI, builder.build().toContentValues())
+        }
     }
 
     private fun play(item: MediaItem) {
