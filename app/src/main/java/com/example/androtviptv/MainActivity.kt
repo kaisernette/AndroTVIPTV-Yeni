@@ -713,6 +713,8 @@ class MainActivity : Activity() {
     private var previewUrl: String = ""
     private var previewChannel: MediaItem? = null
     private var sidebarMode = "main"
+    private val isTelevisionDevice: Boolean
+        get() = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
     private val isMobileLayout: Boolean
         get() = !isTelevisionDevice
     private var settingsPage = "main"
