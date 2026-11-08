@@ -730,6 +730,7 @@ class MainActivity : Activity() {
     private var searchInputFocusPending = false
     private var focusFirstContentOnRender = false
     private var focusFirstCategoryOnRender = false
+    private var contextNavigationStage = 0 // 0=main menu, 1=categories, 2=content
     private var firstCategoryFocusView: View? = null
     private var selectedSidebarFocusView: View? = null
     private var firstRightContentFocusView: View? = null
@@ -803,6 +804,20 @@ class MainActivity : Activity() {
             }
 
             override fun focusSearch(focused: View, direction: Int): View? {
+                if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) {
+                    if (direction == View.FOCUS_LEFT && contextNavigationStage == 2 &&
+                        ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)) {
+                        showContextNavigationStage(1)
+                        firstCategoryFocusView?.post { firstCategoryFocusView?.requestFocus() }
+                        return firstCategoryFocusView ?: focused
+                    }
+                    if (direction == View.FOCUS_RIGHT && contextNavigationStage == 1 &&
+                        ::categoryListScroll.isInitialized && isDescendantView(categoryListScroll, focused)) {
+                        showContextNavigationStage(2)
+                        firstRightContentFocusView?.post { firstRightContentFocusView?.requestFocus() }
+                        return firstRightContentFocusView ?: focused
+                    }
+                }
                 val focusIsInSidebar = ::sidebar.isInitialized && isDescendantView(sidebar, focused)
                 val focusIsInContent = ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)
                 val candidate = super.focusSearch(focused, direction)
@@ -1081,22 +1096,38 @@ class MainActivity : Activity() {
         render()
     }
 
+    private fun showContextNavigationStage(stage: Int) {
+        contextNavigationStage = stage.coerceIn(0, 2)
+        if (!::sidebar.isInitialized) return
+        val primary = sidebar.findViewWithTag<View>("primary-navigation")
+        val hasContext = sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")
+        primary?.visibility = if (!hasContext || contextNavigationStage == 0) View.VISIBLE else View.GONE
+        if (::categoryListScroll.isInitialized) {
+            categoryListScroll.visibility = if (hasContext && contextNavigationStage == 1) View.VISIBLE else View.GONE
+        }
+        sidebar.visibility = if (hasContext && contextNavigationStage == 2) View.GONE else View.VISIBLE
+        val width = when {
+            hasContext && contextNavigationStage == 1 -> dp(150)
+            isMobileLayout -> dp(142)
+            else -> dp(150)
+        }
+        sidebar.layoutParams = sidebar.layoutParams.apply { this.width = width }
+    }
+
     private fun rebuildNavigation() {
         if (!::navBar.isInitialized) return
         // Keep the main navigation icon-only, but expand the sidebar when a
         // category list is open so full category names remain readable.
         if (::sidebar.isInitialized) {
-            val showReadableCategories = sidebarMode == "context" &&
-                selectedType in listOf("Canlı TV", "Filmler", "Diziler")
-            sidebar.findViewWithTag<View>("primary-navigation")?.visibility = View.VISIBLE
+            val hasContext = sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")
+            val desiredWidth = dp(if (isMobileLayout) 142 else 150)
             val params = sidebar.layoutParams
-            // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
-            // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (showReadableCategories) 280 else if (isMobileLayout) 142 else 150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
             }
+            sidebar.findViewWithTag<View>("primary-navigation")?.visibility =
+                if (!hasContext || contextNavigationStage == 0) View.VISIBLE else View.GONE
         }
         // Drop focus from old navigation children before detaching them. On Android TV,
         // removeAllViews() can synchronously dispatch focus-loss callbacks while rebuilding.
@@ -1116,7 +1147,7 @@ class MainActivity : Activity() {
         navBar.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
         firstCategoryFocusView = null
         if (::categoryPanel.isInitialized) {
-            categoryListScroll.visibility = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) View.VISIBLE else View.GONE
+            categoryListScroll.visibility = if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler") && contextNavigationStage == 1) View.VISIBLE else View.GONE
             categoryPanel.removeAllViews()
             categoryPanel.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             categoryListScroll.scrollTo(0, 0)
@@ -1308,6 +1339,7 @@ class MainActivity : Activity() {
                         expandedCategory = null
                         selectedType = key
                         sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
+                        contextNavigationStage = 0
                         prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
                         rebuildNavigation()
                         render()
@@ -1378,6 +1410,7 @@ class MainActivity : Activity() {
                             focusedCategoryName = null
                             expandedCategory = null
                             sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
+                            contextNavigationStage = 0
                             prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
                             if (key in listOf("Favoriler", "Son İzlenenler")) rebuildNavigation()
                         }
@@ -1422,8 +1455,7 @@ class MainActivity : Activity() {
                         setOnFocusChangeListener { v, hasFocus ->
                             if (hasFocus) {
                                 focusedCategoryName = name
-                                sidebar.findViewWithTag<View>("primary-navigation")?.visibility = View.GONE
-                                sidebar.layoutParams = sidebar.layoutParams.apply { width = dp(150) }
+                                showContextNavigationStage(1)
                             }
                             val highlighted = if (hasFocus) name else (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                             for (i in 0 until categoryPanel.childCount) {
@@ -1452,10 +1484,15 @@ class MainActivity : Activity() {
                             }
                         }
                         setOnKeyListener { _, keyCode, event ->
-                            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event.action == android.view.KeyEvent.ACTION_DOWN) {
-                                sidebar.findViewWithTag<View>("primary-navigation")?.visibility = View.VISIBLE
-                                sidebar.layoutParams = sidebar.layoutParams.apply { width = dp(if (isMobileLayout) 280 else 290) }
+                            if (event.action == android.view.KeyEvent.ACTION_DOWN &&
+                                keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                                showContextNavigationStage(0)
                                 selectedSidebarFocusView?.post { selectedSidebarFocusView?.requestFocus() }
+                                true
+                            } else if (event.action == android.view.KeyEvent.ACTION_DOWN &&
+                                keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
+                                showContextNavigationStage(2)
+                                firstRightContentFocusView?.post { firstRightContentFocusView?.requestFocus() }
                                 true
                             } else false
                         }
@@ -2920,8 +2957,7 @@ class MainActivity : Activity() {
         if (::heroPanel.isInitialized) heroPanel.visibility = View.GONE
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
-        if (::sidebar.isInitialized && sidebar.findViewWithTag<View>("primary-navigation")?.visibility == View.GONE &&
-            categoryListScroll.hasFocus()) sidebar.findViewWithTag<View>("primary-navigation")?.visibility = View.GONE
+        if (::sidebar.isInitialized && sidebarMode == "context") showContextNavigationStage(contextNavigationStage)
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
             if (firstEntry || isLoadingSource || detailMode || selectedType == "Ayarlar") View.GONE else View.VISIBLE
