@@ -713,6 +713,8 @@ class MainActivity : Activity() {
     private var previewUrl: String = ""
     private var previewChannel: MediaItem? = null
     private var sidebarMode = "main"
+    private val isMobileLayout: Boolean
+        get() = resources.configuration.screenWidthDp < 600
     private var settingsPage = "main"
     private var historyType = "Canlı TV"
     private val hiddenCategories = mutableSetOf<String>()
@@ -836,11 +838,12 @@ class MainActivity : Activity() {
             clipChildren = false
             clipToPadding = false
         }
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(150), -1).apply { setMargins(0, 0, dp(8), 0) })
+        val initialSidebarWidth = if (isMobileLayout) 66 else 150
+        root.addView(sidebar, LinearLayout.LayoutParams(dp(initialSidebarWidth), -1).apply { setMargins(0, 0, dp(if (isMobileLayout) 3 else 8), 0) })
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(dp(140), -1)
+            layoutParams = LinearLayout.LayoutParams(dp(if (isMobileLayout) 54 else 140), -1)
         }
         sidebar.addView(primaryMenuColumn)
 
@@ -917,7 +920,8 @@ class MainActivity : Activity() {
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             addView(categoryPanel, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(138), -1))
+        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(if (isMobileLayout) 0 else 138), -1))
+        if (isMobileLayout) categoryListScroll.visibility = View.GONE
         rebuildNavigation()
 
         val main = LinearLayout(this).apply {
@@ -1108,11 +1112,11 @@ class MainActivity : Activity() {
         if (::sidebar.isInitialized) {
             val showReadableCategories = sidebarMode == "context" &&
                 selectedType in listOf("Canlı TV", "Filmler", "Diziler")
-            sidebar.findViewWithTag<View>("primary-navigation")?.visibility = if (showReadableCategories) View.GONE else View.VISIBLE
+            sidebar.findViewWithTag<View>("primary-navigation")?.visibility = if (showReadableCategories && !isMobileLayout) View.GONE else View.VISIBLE
             val params = sidebar.layoutParams
             // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
             // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (showReadableCategories) 160 else 150)
+            val desiredWidth = dp(if (isMobileLayout) 66 else if (showReadableCategories) 150 else 150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -1157,7 +1161,7 @@ class MainActivity : Activity() {
             }
             val sidebarButton = makeButton(label, selected, action).apply {
                 val iconDrawable = if (iconRes != 0) getDrawable(iconRes)?.mutate() else null
-                iconDrawable?.setBounds(0, 0, dp(29), dp(29))
+                iconDrawable?.setBounds(0, 0, dp(if (isMobileLayout) 25 else 29), dp(if (isMobileLayout) 25 else 29))
                 // Restore the full accent selection tile for the focused navigation item.
                 background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 setTextColor(Color.WHITE)
@@ -1177,6 +1181,7 @@ class MainActivity : Activity() {
                 }
                 textSize = 15f
                 text = when {
+                    isMobileLayout -> ""
                     label == "Ara" -> "Arama"
                     label.contains("Ana Sayfa") -> "Ana Sayfa"
                     label.contains("TV") -> "TV"
@@ -1187,20 +1192,20 @@ class MainActivity : Activity() {
                     label.contains("Ayarlar") -> "Ayarlar"
                     else -> label
                 }
-                compoundDrawablePadding = dp(7)
+                compoundDrawablePadding = dp(if (isMobileLayout) 0 else 7)
                 setCompoundDrawables(iconDrawable, null, null, null)
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                gravity = if (isMobileLayout) Gravity.CENTER else Gravity.START or Gravity.CENTER_VERTICAL
                 isSingleLine = true
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 contentDescription = text.toString()
                 includeFontPadding = false
                 minWidth = 0
                 minimumWidth = 0
-                setPadding(dp(10), 0, dp(4), 0)
-                minHeight = dp(40)
+                setPadding(if (isMobileLayout) 0 else dp(10), 0, if (isMobileLayout) 0 else dp(4), 0)
+                minHeight = dp(if (isMobileLayout) 44 else 40)
                 id = View.generateViewId()
             }
-            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
+            target.addView(sidebarButton, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 44 else 40)).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 setMargins(0, dp(1), 0, dp(1))
             })
@@ -4507,16 +4512,26 @@ class MainActivity : Activity() {
         mainContentScroll.setBackgroundColor(Color.TRANSPARENT)
         mainContentScroll.scrollTo(0, 0)
         fun goBackFromSettings() {
-            if (settingsPage != "main") {
-                settingsPage = "main"
-                prefs.edit().putString("last_settings_page", settingsPage).apply()
-                renderSettingsScreen()
-            } else {
-                sidebarMode = "main"
-                settingsPage = "main"
-                prefs.edit().putString("last_settings_page", settingsPage).apply()
-                rebuildNavigation()
-            }
+            detailSeries = null
+            detailMovie = null
+            seriesEpisodeRows = emptyList()
+            seriesEpisodesLoading = false
+            seriesEpisodesError = ""
+            settingsPage = "main"
+            sidebarMode = "main"
+            selectedType = "Tümü"
+            selectedGroup = "Tüm kategoriler"
+            expandedCategory = null
+            focusedCategoryName = null
+            prefs.edit()
+                .putString("last_settings_page", settingsPage)
+                .putString("last_section", selectedType)
+                .putString("last_group", selectedGroup)
+                .apply()
+            if (::sidebar.isInitialized) sidebar.visibility = View.VISIBLE
+            if (::brandView.isInitialized) brandView.visibility = View.VISIBLE
+            rebuildNavigation()
+            render()
         }
         fun heading(title: String, subtitle: String) {
             val header = LinearLayout(this).apply {
@@ -5166,6 +5181,7 @@ class MainActivity : Activity() {
 
             }
             "about" -> {
+                heading("Hakkında", "KaiserTV+ uygulama bilgileri")
                 val aboutPanel = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
