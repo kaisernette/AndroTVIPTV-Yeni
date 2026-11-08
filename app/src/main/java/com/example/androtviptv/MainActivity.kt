@@ -895,7 +895,7 @@ class MainActivity : Activity() {
         primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 58 else 58)))
         navBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.BOTTOM
+            gravity = Gravity.TOP
         }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
@@ -922,8 +922,7 @@ class MainActivity : Activity() {
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             addView(categoryPanel, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(if (isMobileLayout) 0 else 138), -1))
-        if (isMobileLayout) categoryListScroll.visibility = View.GONE
+        sidebar.addView(categoryListScroll, LinearLayout.LayoutParams(dp(138), -1))
         rebuildNavigation()
 
         val main = LinearLayout(this).apply {
@@ -1118,7 +1117,7 @@ class MainActivity : Activity() {
             val params = sidebar.layoutParams
             // 78dp icon rail + 138dp category rail + 12dp sidebar padding,
             // with a small safety margin so right rounded corners are never clipped.
-            val desiredWidth = dp(if (isMobileLayout) 142 else if (showReadableCategories) 290 else 150)
+            val desiredWidth = dp(if (showReadableCategories) 280 else if (isMobileLayout) 142 else 150)
             if (params != null && params.width != desiredWidth) {
                 params.width = desiredWidth
                 sidebar.layoutParams = params
@@ -1448,10 +1447,8 @@ class MainActivity : Activity() {
                         setOnFocusChangeListener { v, hasFocus ->
                             if (hasFocus) {
                                 focusedCategoryName = name
-                                if (!isMobileLayout) {
-                                    navBar.visibility = View.GONE
-                                    sidebar.layoutParams = sidebar.layoutParams.apply { width = dp(150) }
-                                }
+                                sidebar.findViewWithTag<View>("primary-navigation")?.visibility = View.GONE
+                                sidebar.layoutParams = sidebar.layoutParams.apply { width = dp(150) }
                             }
                             val highlighted = if (hasFocus) name else (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                             for (i in 0 until categoryPanel.childCount) {
@@ -1481,11 +1478,9 @@ class MainActivity : Activity() {
                         }
                         setOnKeyListener { _, keyCode, event ->
                             if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event.action == android.view.KeyEvent.ACTION_DOWN) {
-                                if (!isMobileLayout) {
-                                    navBar.visibility = View.VISIBLE
-                                    sidebar.layoutParams = sidebar.layoutParams.apply { width = dp(290) }
-                                    selectedSidebarFocusView?.post { selectedSidebarFocusView?.requestFocus() }
-                                }
+                                sidebar.findViewWithTag<View>("primary-navigation")?.visibility = View.VISIBLE
+                                sidebar.layoutParams = sidebar.layoutParams.apply { width = dp(if (isMobileLayout) 280 else 290) }
+                                selectedSidebarFocusView?.post { selectedSidebarFocusView?.requestFocus() }
                                 true
                             } else false
                         }
@@ -2928,7 +2923,7 @@ class MainActivity : Activity() {
             if (detailMode) 0 else dp(20)
         )
         val firstEntry = items.isEmpty() && !isLoadingSource
-        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode || expandedCategory != null) View.GONE else View.VISIBLE
+        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::rootLayout.isInitialized) {
             rootLayout.setPadding(if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(14),
@@ -2940,6 +2935,8 @@ class MainActivity : Activity() {
         if (::heroPanel.isInitialized) heroPanel.visibility = View.GONE
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
         if (::navBar.isInitialized) navBar.visibility = if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+        if (::sidebar.isInitialized && sidebar.findViewWithTag<View>("primary-navigation")?.visibility == View.GONE &&
+            categoryListScroll.hasFocus()) sidebar.findViewWithTag<View>("primary-navigation")?.visibility = View.GONE
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
             if (firstEntry || isLoadingSource || detailMode || selectedType == "Ayarlar") View.GONE else View.VISIBLE
@@ -3393,7 +3390,7 @@ class MainActivity : Activity() {
         }
         val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
         categoryBar.removeAllViews()
-        categoryScroll.visibility = if (!firstEntry && !isLoadingSource && !detailMode && selectedType in listOf("Tümü", "Canlı TV", "Filmler", "Diziler") && groupsAvailable.isNotEmpty()) View.VISIBLE else View.GONE
+        categoryScroll.visibility = if (!firstEntry && !isLoadingSource && !detailMode && selectedType == "Tümü" && groupsAvailable.isNotEmpty()) View.VISIBLE else View.GONE
         categoryBar.addView(makeButton("Tümü", selectedGroup == "Tüm kategoriler") { selectedGroup = "Tüm kategoriler"; render() },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
         groupsAvailable.take(40).forEach { group ->
