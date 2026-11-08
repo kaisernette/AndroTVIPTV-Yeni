@@ -611,6 +611,9 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = if (isTelevisionDevice)
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         applyKaiserImmersiveMode()
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
@@ -713,8 +716,10 @@ class MainActivity : Activity() {
     private var previewUrl: String = ""
     private var previewChannel: MediaItem? = null
     private var sidebarMode = "main"
+    private val isTelevisionDevice: Boolean
+        get() = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
     private val isMobileLayout: Boolean
-        get() = resources.configuration.screenWidthDp < 600
+        get() = !isTelevisionDevice
     private var settingsPage = "main"
     private var historyType = "Canlı TV"
     private val hiddenCategories = mutableSetOf<String>()
@@ -738,6 +743,33 @@ class MainActivity : Activity() {
             current = current.parent as? View
         }
         return false
+    }
+
+    private fun createKaiserLogoView(): ImageView {
+        return ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setBackgroundColor(Color.TRANSPARENT)
+            try {
+                val encoded = assets.open("kaiser_logo.jpg.b64").bufferedReader().use { it.readText().trim() }
+                val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
+                val source = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (source != null) {
+                    val transparent = source.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
+                    for (y in 0 until transparent.height) {
+                        for (x in 0 until transparent.width) {
+                            val pixel = transparent.getPixel(x, y)
+                            val darkBackground = Color.red(pixel) < 22 && Color.green(pixel) < 22 && Color.blue(pixel) < 22
+                            val lowerLine = y >= transparent.height * 0.88
+                            if (darkBackground || lowerLine) transparent.setPixel(x, y, Color.TRANSPARENT)
+                        }
+                    }
+                    setImageBitmap(transparent)
+                    source.recycle()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("KaiserTV", "KaiserTV+ logo could not be loaded", e)
+            }
+        }
     }
 
     private fun buildUi() {
@@ -848,7 +880,7 @@ class MainActivity : Activity() {
         sidebar.addView(primaryMenuColumn)
 
         searchBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        primaryMenuColumn.addView(searchBar, LinearLayout.LayoutParams(-1, dp(44)))
+        primaryMenuColumn.addView(searchBar, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 40 else 38)))
 
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -890,7 +922,7 @@ class MainActivity : Activity() {
         }
         brandView.addView(brandLogo, LinearLayout.LayoutParams(-1, -1))
         brandView.contentDescription = "KAISER TV+"
-        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(76)))
+        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 42 else 58)))
         navBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
@@ -2924,19 +2956,11 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
-            val welcomeLogo = TextView(this).apply {
-                val logo = android.text.SpannableString("▶ KaiserIPTV+")
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.WHITE), 2, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 174, 255)), 8, 12, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                logo.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 12, 13, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                text = logo
-                textSize = 38f; gravity = Gravity.CENTER
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setPadding(0, dp(16), 0, dp(20))
-                setShadowLayer(dp(8).toFloat(), 0f, 0f, Color.rgb(0, 80, 190))
+            val welcomeLogo = createKaiserLogoView().apply {
+                contentDescription = "KaiserTV+"
+                setPadding(dp(12), dp(4), dp(12), dp(8))
             }
-            welcome.addView(welcomeLogo, LinearLayout.LayoutParams(-1, dp(110)))
+            welcome.addView(welcomeLogo, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 78 else 96)))
             welcome.addView(TextView(this).apply {
                 text = t("İzleme kaynağını ekleyerek başla")
                 textSize = 16f; setTextColor(muted); gravity = Gravity.CENTER
@@ -3101,37 +3125,11 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(24), dp(24), dp(24))
             }
-            val logoLine = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER
+            val logoLine = createKaiserLogoView().apply {
+                contentDescription = "KaiserTV+"
+                setPadding(dp(12), dp(4), dp(12), dp(4))
             }
-            logoLine.addView(TextView(this).apply {
-                text = "▶"
-                textSize = 30f
-                setTextColor(Color.rgb(0, 190, 255))
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setShadowLayer(dp(12).toFloat(), 0f, 0f, Color.rgb(0, 120, 255))
-            })
-            logoLine.addView(TextView(this).apply {
-                text = "Kaiser"
-                textSize = 34f
-                setTextColor(Color.WHITE)
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setShadowLayer(dp(5).toFloat(), 0f, dp(1).toFloat(), Color.rgb(35, 80, 145))
-            })
-            logoLine.addView(TextView(this).apply {
-                val brand = android.text.SpannableString("IPTV+")
-                brand.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(0, 170, 255)), 0, 4, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                brand.setSpan(android.text.style.ForegroundColorSpan(Color.rgb(255, 196, 0)), 4, 5, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                text = brand
-                textSize = 34f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setShadowLayer(dp(7).toFloat(), 0f, 0f, Color.rgb(0, 100, 255))
-            })
-            loadingPanel.addView(logoLine)
+            loadingPanel.addView(logoLine, LinearLayout.LayoutParams(dp(if (isMobileLayout) 220 else 300), dp(if (isMobileLayout) 68 else 82)))
             loadingPanel.addView(TextView(this).apply {
                 text = status.text.toString().ifBlank { "Kaynak yükleniyor…" }
                 textSize = 18f; setTextColor(muted); gravity = Gravity.CENTER
