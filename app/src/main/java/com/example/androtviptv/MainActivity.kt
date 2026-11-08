@@ -112,6 +112,7 @@ private class WrappingRowLayout(context: Context) : ViewGroup(context) {
 class MainActivity : Activity() {
     companion object {
         @Volatile var openTvTabOnResume: Boolean = false
+        const val EXTRA_TV_HOME_ITEM_KEY = "kaisertv_tv_home_item_key"
     }
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("androtv", Context.MODE_PRIVATE)
@@ -555,6 +556,7 @@ class MainActivity : Activity() {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
+    private var pendingTvHomeItemKey: String? = null
     private val posterRequests = ConcurrentHashMap<String, CopyOnWriteArrayList<WeakReference<ImageView>>>()
     private val savedSources = mutableListOf<SavedSource>()
     private lateinit var sourceName: EditText
@@ -612,6 +614,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyKaiserImmersiveMode()
+        pendingTvHomeItemKey = intent?.getStringExtra(EXTRA_TV_HOME_ITEM_KEY)
         installCrashLogger()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         ovalButtons = prefs.getBoolean("oval_buttons", false)
@@ -659,6 +662,8 @@ class MainActivity : Activity() {
             runOnUiThread {
                 isLoadingSource = false
                 loadSavedSources()
+                publishHomeChannel()
+                tryOpenPendingTvHomeItem()
                 if (savedSources.isEmpty()) render()
             }
         }
@@ -2068,8 +2073,10 @@ class MainActivity : Activity() {
                     hasLoadedSource = true
                     sidebarMode = "main"
                     render()
+                    publishHomeChannel()
+                    tryOpenPendingTvHomeItem()
                 }
-            } catch (e: Exception) { runOnUiThread {
+            } catch (e: Exception) {
                 loadProgress = 0
                 isLoadingSource = false
                 status.text = "${source.name}: ${friendlyLoadError(e)}"
@@ -2245,6 +2252,8 @@ class MainActivity : Activity() {
                         "${source.name}: ${loaded.size} içerik yüklendi. Eksik yanıt: ${failedParts.distinct().joinToString()}."
                     }
                     render()
+                    publishHomeChannel()
+                    tryOpenPendingTvHomeItem()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -5504,12 +5513,65 @@ class MainActivity : Activity() {
         recent.add(0, item)
         while (recent.size > 20) recent.removeAt(recent.lastIndex)
         persistRecentHistory()
+        publishHomeChannel()
     }
 
     private var pendingSeriesEpisodes: List<MediaItem> = emptyList()
 
     private var openingPlayer = false
     private var fullscreenPoster: MediaItem? = null
+
+
+    private fun publishHomeChannel() {
+        if (!packageManager.hasSystemFeature("android.software.leanback") || android.os.Build.VERSION.SDK_INT < 26) return
+        val eligible = items.filter { it.type == "Filmler" || it.type == "Diziler" }
+        if (eligible.isEmpty() && recent.isEmpty()) return
+
+        val weekly = eligible.sortedByDescending {
+            it.rating.toFloatOrNull() ?: it.releaseDate.filter { ch -> ch.isDigit() }.toFloatOrNull() ?: 0f
+        }.take(8)
+        val newest = eligible.asReversed().take(12)
+        val watched = recent.filter { it.type == "Filmler" || it.type == "Diziler" }.take(12)
+
+        val entries = mutableListOf<TvHomeEntry>()
+        fun addGroup(label: String, list: List<MediaItem>) {
+            list.forEach { item ->
+                entries.add(TvHomeEntry(
+                    key = item.favoriteKey,
+                    title = item.name,
+                    description = "$label • ${item.plot.ifBlank { item.genre }}",
+                    posterUri = item.icon,
+                    isSeries = item.type == "Diziler"
+                ))
+            }
+        }
+        addGroup("Haftanın Seçkisi", weekly)
+        addGroup("Yeni Eklenenler", newest)
+        addGroup("Son İzlenenler", watched)
+
+        Thread {
+            TvHomeChannelPublisher.publish(applicationContext, entries.distinctBy { it.key })
+        }.start()
+    }
+
+    private fun tryOpenPendingTvHomeItem() {
+        val key = pendingTvHomeItemKey ?: return
+        val item = items.firstOrNull { it.favoriteKey == key } ?: return
+        pendingTvHomeItemKey = null
+        when (item.type) {
+            "Canlı TV" -> play(item)
+            "Diziler" -> showSeriesDetail(item)
+            "Filmler" -> showMovieDetail(item)
+            else -> showItemDetails(item)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingTvHomeItemKey = intent.getStringExtra(EXTRA_TV_HOME_ITEM_KEY)
+        tryOpenPendingTvHomeItem()
+    }
 
     private fun play(item: MediaItem, startOver: Boolean = false) {
         if (openingPlayer) return
