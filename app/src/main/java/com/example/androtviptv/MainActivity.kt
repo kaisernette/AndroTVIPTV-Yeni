@@ -718,7 +718,7 @@ class MainActivity : Activity() {
     private val isTelevisionDevice: Boolean
         get() = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
     private val isMobileLayout: Boolean
-        get() = !isTelevisionDevice && resources.configuration.screenWidthDp < 600 && resources.configuration.screenWidthDp < 600
+        get() = !isTelevisionDevice
     private var settingsPage = "main"
     private var historyType = "Canlı TV"
     private val hiddenCategories = mutableSetOf<String>()
@@ -891,7 +891,7 @@ class MainActivity : Activity() {
         val brandLogo = createKaiserLogoView()
         brandView.addView(brandLogo, LinearLayout.LayoutParams(-1, -1))
         brandView.contentDescription = "KAISER TV+"
-        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 42 else 58)))
+        primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 42 else 54)))
         navBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
@@ -1829,7 +1829,7 @@ class MainActivity : Activity() {
     private fun buttonBackground(color: Int): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
-            cornerRadius = dp(if (ovalButtons) 24 else 0).toFloat()
+            cornerRadius = dp(18).toFloat()
         }
 
     private fun roundedDrawable(color: Int, radiusDp: Int, strokeColor: Int? = null): GradientDrawable =
@@ -2927,9 +2927,9 @@ class MainActivity : Activity() {
             }
             val welcomeLogo = createKaiserLogoView().apply {
                 contentDescription = "KaiserTV+"
-                setPadding(dp(12), dp(4), dp(12), dp(8))
+                setPadding(0, 0, 0, 0)
             }
-            welcome.addView(welcomeLogo, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 78 else 96)))
+            welcome.addView(welcomeLogo, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 72 else 84)))
             welcome.addView(TextView(this).apply {
                 text = t("İzleme kaynağını ekleyerek başla")
                 textSize = 16f; setTextColor(muted); gravity = Gravity.CENTER
