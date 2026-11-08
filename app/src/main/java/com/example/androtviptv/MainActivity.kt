@@ -1612,11 +1612,11 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
             background = roundedDrawable(panel, corner, outline)
-            setPadding(dp(7), 0, dp(7), 0)
+            setPadding(dp(6), 0, dp(6), 0)
             input.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-            input.setPadding(dp(5), 0, dp(5), 0)
-            input.textSize = 13f
-            addView(input, LinearLayout.LayoutParams(-1, dp(43)))
+            input.setPadding(dp(4), 0, dp(4), 0)
+            input.textSize = 12.5f
+            addView(input, LinearLayout.LayoutParams(-1, dp(38)))
             input.setOnFocusChangeListener { _, focused ->
                 background = roundedDrawable(panel, corner, if (focused) accent else outline)
             }
@@ -1696,7 +1696,7 @@ class MainActivity : Activity() {
         fun makeSourceCard(title: String, modeId: Int, selected: Boolean, fields: LinearLayout, mac: Boolean = false): LinearLayout {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(9), dp(9), dp(9), dp(9))
+                setPadding(dp(8), dp(7), dp(8), dp(7))
                 background = roundedDrawable(panel, corner, outline)
                 isFocusable = false
                 isFocusableInTouchMode = false
@@ -1709,7 +1709,7 @@ class MainActivity : Activity() {
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 gravity = Gravity.CENTER
                 setTextColor(if (selected) accentBright else Color.WHITE)
-            }, LinearLayout.LayoutParams(-1, dp(42)))
+            }, LinearLayout.LayoutParams(-1, dp(32)))
             card.addView(fields, LinearLayout.LayoutParams(-1, 0, 1f))
             val footer = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -1735,8 +1735,8 @@ class MainActivity : Activity() {
                     connectButton.performClick()
                 }
             }.apply { minWidth = 0; textSize = 12f }
-            footer.addView(connect, LinearLayout.LayoutParams(-1, dp(46)))
-            card.addView(footer, LinearLayout.LayoutParams(-1, dp(50)))
+            footer.addView(connect, LinearLayout.LayoutParams(-1, dp(36)))
+            card.addView(footer, LinearLayout.LayoutParams(-1, dp(40)))
             return card
         }
 
@@ -1748,9 +1748,9 @@ class MainActivity : Activity() {
         val xtreamFields = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
-            addView(serverFrame, LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
-            addView(usernameFrame, LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
-            addView(passwordFrame, LinearLayout.LayoutParams(-1, dp(43)))
+            addView(serverFrame, LinearLayout.LayoutParams(-1, dp(38)).apply { bottomMargin = dp(4) })
+            addView(usernameFrame, LinearLayout.LayoutParams(-1, dp(38)).apply { bottomMargin = dp(4) })
+            addView(passwordFrame, LinearLayout.LayoutParams(-1, dp(38)))
         }
         // Each card has its own source-name field and starts at the same top alignment.
         val m3uName = edit(t("Kaynak adı (ör. Ev TV)"), false).apply { setText(if (editSource?.mode == "m3u") editSource.name else "") }
@@ -1758,7 +1758,7 @@ class MainActivity : Activity() {
         val m3uNameFrame = inputFrame(m3uName)
         val xtreamNameFrame = inputFrame(xtreamName)
         m3uFields.addView(m3uNameFrame, 0, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(7) })
-        xtreamFields.addView(xtreamNameFrame, 0, LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
+        xtreamFields.addView(xtreamNameFrame, 0, LinearLayout.LayoutParams(-1, dp(38)).apply { bottomMargin = dp(4) })
         m3uFields.gravity = Gravity.TOP
         xtreamFields.gravity = Gravity.TOP
 
@@ -1766,7 +1766,7 @@ class MainActivity : Activity() {
         // Keep the existing M3U/MAC parsing code intact for a later reintroduction.
         sourceMode.check(xtream.id)
         sourceMode.visibility = View.GONE
-        val cardHeight = dp(238)
+        val cardHeight = dp(260)
         val xtreamCard = makeSourceCard("▣  Xtream Codes", xtream.id, true, xtreamFields)
         columns.addView(xtreamCard, LinearLayout.LayoutParams(-1, cardHeight).apply {
             setMargins(dp(3), dp(3), dp(3), dp(3))
