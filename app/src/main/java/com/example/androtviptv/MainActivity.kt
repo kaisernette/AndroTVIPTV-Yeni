@@ -718,7 +718,7 @@ class MainActivity : Activity() {
     private val isTelevisionDevice: Boolean
         get() = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
     private val isMobileLayout: Boolean
-        get() = !isTelevisionDevice && resources.configuration.screenWidthDp < 600
+        get() = !isTelevisionDevice && resources.configuration.screenWidthDp < 600 && resources.configuration.screenWidthDp < 600
     private var settingsPage = "main"
     private var historyType = "Canlı TV"
     private val hiddenCategories = mutableSetOf<String>()
