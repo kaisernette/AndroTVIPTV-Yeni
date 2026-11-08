@@ -1633,8 +1633,8 @@ class MainActivity : Activity() {
                 prefs.edit().putString("last_settings_page", settingsPage).apply()
             }
             render()
-        }.apply { minWidth = 0; textSize = 12f }, LinearLayout.LayoutParams(dp(112), dp(40)).apply {
-            gravity = Gravity.BOTTOM
+        }.apply { minWidth = 0; textSize = 12f }, LinearLayout.LayoutParams(dp(118), dp(42)).apply {
+            gravity = Gravity.CENTER_VERTICAL
         })
         form.addView(sourceSubtitleRow, LinearLayout.LayoutParams(-1, dp(48)))
 
