@@ -3854,6 +3854,9 @@ class MainActivity : Activity() {
                 val liveCard = item.type == "Canlı TV"
                 val homeCard = selectedType == "Tümü"
                 val weeklyPoster = weeklyMovieFeature && !showingExpandedCategory
+                // Weekly poster cards scale from their top edge so remote focus never
+                // shifts one poster vertically relative to the others.
+                if (weeklyPoster) card.pivotY = 0f
                 val poster = ImageView(this).apply {
                     scaleType = if (liveCard) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
                     contentDescription = item.name
