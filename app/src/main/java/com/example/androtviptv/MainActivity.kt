@@ -869,7 +869,7 @@ class MainActivity : Activity() {
         primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 58 else 58)))
         navBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.TOP
+            gravity = Gravity.BOTTOM
         }
         sidebarMenuScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
@@ -2880,20 +2880,8 @@ class MainActivity : Activity() {
             try {
                 val encoded = assets.open("kaisertv_logo.jpg.b64").bufferedReader().use { it.readText().trim() }
                 val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
-                val source = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                if (source != null) {
-                    val bitmap = source.copy(Bitmap.Config.ARGB_8888, true)
-                    for (y in 0 until bitmap.height) {
-                        for (x in 0 until bitmap.width) {
-                            val pixel = bitmap.getPixel(x, y)
-                            val darkBackground = Color.red(pixel) < 22 && Color.green(pixel) < 22 && Color.blue(pixel) < 22
-                            val oldUnderline = y >= bitmap.height * 0.88
-                            if (darkBackground || oldUnderline) bitmap.setPixel(x, y, Color.TRANSPARENT)
-                        }
-                    }
-                    setImageBitmap(bitmap)
-                    source.recycle()
-                }
+                val logo = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (logo != null) setImageBitmap(logo)
             } catch (e: Exception) {
                 android.util.Log.e("KaiserTV", "KaiserTV logo could not be loaded", e)
             }
