@@ -1611,27 +1611,35 @@ class MainActivity : Activity() {
         }
         sourceHeader.addView(TextView(this).apply {
             text = t("Kaynaklar")
-            textSize = 20f
+            textSize = 22f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
             setPadding(dp(2), 0, 0, dp(4))
+        }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        form.addView(sourceHeader, LinearLayout.LayoutParams(-1, dp(42)))
+        val sourceSubtitleRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        sourceSubtitleRow.addView(TextView(this).apply {
+            text = t("Yasal kullanım hakkına sahip olduğun yayın adreslerini ekle yönet.")
+            textSize = 13f
+            setTextColor(muted)
+            setPadding(dp(2), 0, dp(8), dp(9))
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        sourceHeader.addView(makeButton("←  ${t("Geri")}", false) {
+        sourceSubtitleRow.addView(makeButton("←  ${t("Geri")}", false) {
             if (settingsPage == "sources") {
                 settingsPage = "main"
                 prefs.edit().putString("last_settings_page", settingsPage).apply()
             }
             render()
-        }.apply { minWidth = 0; textSize = 12f }, LinearLayout.LayoutParams(dp(100), dp(38)))
-        form.addView(sourceHeader, LinearLayout.LayoutParams(-1, dp(42)))
-        form.addView(TextView(this).apply {
-            text = t("Yasal kullanım hakkına sahip olduğun yayın adreslerini ekle yönet.")
-            textSize = 13f
-            setTextColor(muted)
-            setPadding(dp(2), 0, 0, dp(9))
+        }.apply { minWidth = 0; textSize = 12f }, LinearLayout.LayoutParams(dp(112), dp(40)).apply {
+            gravity = Gravity.BOTTOM
         })
+        form.addView(sourceSubtitleRow, LinearLayout.LayoutParams(-1, dp(48)))
 
-        sourceName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(editSource?.name.orEmpty()) }
+        val xtreamName = edit(t("Kaynak adı (ör. Ev Xtream)"), false).apply { setText(if (editSource?.mode == "xtream") editSource.name else "") }
+        val m3uName = edit(t("Kaynak adı (ör. Ev TV)"), false).apply { setText(if (editSource?.mode == "m3u") editSource.name else "") }
         playlistUrl = edit(t("M3U / M3U8 oynatma listesi URL'si"), false).apply {
             setText(if (editSource?.mode == "m3u") editSource.address else "")
         }
@@ -1666,15 +1674,7 @@ class MainActivity : Activity() {
             setText(if (editSource?.mode == "mac") editSource.username else "")
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
         }
-        val macFields = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.TOP
-            addView(inputFrame(macName), LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
-            addView(inputFrame(macPortal), LinearLayout.LayoutParams(-1, dp(43)).apply { bottomMargin = dp(5) })
-            addView(inputFrame(macAddress), LinearLayout.LayoutParams(-1, dp(43)))
-        }
-
-        val playlistFrame = inputFrame(playlistUrl)
+remove old mac fields        val playlistFrame = inputFrame(playlistUrl)
         val serverFrame = inputFrame(server)
         val usernameFrame = inputFrame(username)
         val passwordFrame = inputFrame(password)
@@ -1704,6 +1704,11 @@ class MainActivity : Activity() {
             textSize = 13f
         }
         val connectButton = makeButton(t(if (editSource == null) "Bağlan" else "Kaydet"), true) {
+            sourceName = when (sourceMode.checkedRadioButtonId) {
+                m3u.id -> m3uName
+                mac.id -> macName
+                else -> xtreamName
+            }
             if (sourceMode.checkedRadioButtonId == mac.id) {
                 val portal = macPortal.text.toString().trim().trimEnd('/')
                 val macValue = macAddress.text.toString().trim().uppercase(java.util.Locale.ROOT)
@@ -1743,7 +1748,8 @@ class MainActivity : Activity() {
             }
         }.apply { minWidth = 0; textSize = 13f }
 
-        val m3uNameFrame = inputFrame(sourceName)
+        val m3uNameFrame = inputFrame(m3uName)
+        val xtreamNameFrame = inputFrame(xtreamName)
         val m3uFields = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(m3uNameFrame, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
@@ -1751,14 +1757,14 @@ class MainActivity : Activity() {
         }
         val xtreamFields = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(inputFrame(sourceName), LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+            addView(xtreamNameFrame, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
             addView(serverFrame, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
             addView(usernameFrame, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
             addView(passwordFrame, LinearLayout.LayoutParams(-1, dp(48)))
         }
         val macFields = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(inputFrame(sourceName), LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+            addView(inputFrame(macName), LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
             addView(inputFrame(macPortal), LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
             addView(inputFrame(macAddress), LinearLayout.LayoutParams(-1, dp(48)))
         }
@@ -1773,6 +1779,7 @@ class MainActivity : Activity() {
         }
         fun selectSourceMode(modeId: Int) {
             sourceMode.check(modeId)
+            sourceName = when (modeId) { m3u.id -> m3uName; mac.id -> macName; else -> xtreamName }
             m3uFields.visibility = if (modeId == m3u.id) View.VISIBLE else View.GONE
             xtreamFields.visibility = if (modeId == xtream.id) View.VISIBLE else View.GONE
             macFields.visibility = if (modeId == mac.id) View.VISIBLE else View.GONE
