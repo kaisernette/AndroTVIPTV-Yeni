@@ -1,5 +1,7 @@
 package com.example.androtviptv
 
+// Stream Xtream catalogues in bounded batches; keep the original UI unchanged.
+
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
