@@ -4659,7 +4659,9 @@ class MainActivity : Activity() {
                 text = t(subtitle); textSize = 14f; setTextColor(muted); setPadding(0, dp(4), 0, 0)
             })
             header.addView(headingText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            header.addView(makeButton("←  ${t("Geri")}", false) { goBackFromSettings() },
+            val settingsBackButton = makeButton("←  ${t("Geri")}", false) { goBackFromSettings() }
+            settingsBackButton.translationY = dp(12).toFloat()
+            header.addView(settingsBackButton,
                 LinearLayout.LayoutParams(dp(118), dp(42)).apply { gravity = Gravity.BOTTOM })
             content.addView(header, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
