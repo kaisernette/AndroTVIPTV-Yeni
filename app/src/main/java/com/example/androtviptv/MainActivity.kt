@@ -1489,9 +1489,35 @@ class MainActivity : Activity() {
                 // The first category receives focus, but opens only after explicit selection.
                 val selectedName = expandedCategory?.first ?: grouped.firstOrNull()?.first
                 categoryPanel.addView(TextView(this).apply {
-                    text = t("KATEGORİLER")
-                    textSize = 11f; setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(muted); setPadding(dp(8), 0, 0, dp(10))
+                    text = "←  ${t("Geri")}"
+                    textSize = 11f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(muted)
+                    setPadding(dp(8), 0, 0, dp(10))
+                    isFocusable = true
+                    isClickable = true
+                    background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                    setOnFocusChangeListener { view, hasFocus ->
+                        view.setTextColor(if (hasFocus) accentBright else muted)
+                    }
+                    setOnClickListener {
+                        detailSeries = null
+                        detailMovie = null
+                        seriesEpisodeRows = emptyList()
+                        seriesEpisodesLoading = false
+                        seriesEpisodesError = ""
+                        expandedCategory = null
+                        focusedCategoryName = null
+                        selectedType = "Tümü"
+                        selectedGroup = "Tüm kategoriler"
+                        sidebarMode = "main"
+                        searchQuery = ""
+                        prefs.edit().putString("last_section", "Tümü")
+                            .putString("last_group", "Tüm kategoriler").apply()
+                        rebuildNavigation()
+                        render()
+                        selectedSidebarFocusView?.post { selectedSidebarFocusView?.requestFocus() }
+                    }
                 })
                 grouped.forEachIndexed { categoryIndex, (name, entries) ->
                     val selected = name == (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
