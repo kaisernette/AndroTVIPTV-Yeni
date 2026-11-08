@@ -64,9 +64,9 @@ object TvHomeChannelPublisher {
 
             // Refresh this app's row without creating duplicates.
             context.contentResolver.delete(
-                TvContractCompat.buildProgramsUriForChannel(channelId),
-                "${TvContractCompat.PreviewPrograms.COLUMN_CHANNEL_ID} = ?",
-                arrayOf(channelId.toString())
+                TvContractCompat.buildPreviewProgramsUriForChannel(channelId),
+                null,
+                null
             )
 
             entries.take(45).forEachIndexed { index, entry ->
