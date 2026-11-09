@@ -2741,52 +2741,23 @@ class MainActivity : Activity() {
                                     }
                                 }
                             } else {
-                                // VOD/Series portals differ: some are zero-based (p=0),
-                                // some are one-based (p=1), and some map both to the same first page.
-                                // Probe both first pages and compare their item IDs before continuing.
+                                // This portal's diagnostics confirmed p=0 and p=1 return
+                                // the same first page. Use p=1 directly to avoid doubling
+                                // every category request during startup.
                                 var reportedTotalItems = -1
                                 var reportedPageSize = -1
                                 val capturePageMeta: (Int, Int) -> Unit = { total, pageSize ->
                                     if (total > 0) reportedTotalItems = total
                                     if (pageSize > 0) reportedPageSize = pageSize
                                 }
-                                val page0 = requestList(categoryId, 0, capturePageMeta)
-                                val page1 = requestList(categoryId, 1, capturePageMeta)
-                                val keys0 = pageKeys(page0)
-                                val keys1 = pageKeys(page1)
-                                if (sectionDiagnostics.count { it.startsWith("$type pagination probe") } < 8) {
-                                    sectionDiagnostics.add(
-                                        "$type pagination probe kategori=${categoryId ?: "*"}: " +
-                                            "p0=${page0.length()} kayıt, p1=${page1.length()} kayıt, " +
-                                            "aynı=${keys0.isNotEmpty() && keys0 == keys1}"
-                                    )
-                                }
-
+                                val firstPage = requestList(categoryId, 1, capturePageMeta)
+                                if (firstPage.length() == 0) continue
+                                val firstPageKey = pageKeys(firstPage)
                                 var nextPage = 2
                                 var lastPageNumber = 100
                                 val firstPageKeys = mutableSetOf<Set<String>>()
-                                when {
-                                    page0.length() == 0 && page1.length() == 0 -> continue
-                                    page0.length() == 0 -> {
-                                        consumePage(page1, categoryName)
-                                        firstPageKeys.add(keys1)
-                                    }
-                                    page1.length() == 0 -> {
-                                        consumePage(page0, categoryName)
-                                        firstPageKeys.add(keys0)
-                                        nextPage = 1
-                                    }
-                                    keys0.isNotEmpty() && keys0 == keys1 -> {
-                                        consumePage(page1, categoryName)
-                                        firstPageKeys.add(keys1)
-                                    }
-                                    else -> {
-                                        consumePage(page0, categoryName)
-                                        consumePage(page1, categoryName)
-                                        firstPageKeys.add(keys0)
-                                        firstPageKeys.add(keys1)
-                                    }
-                                }
+                                consumePage(firstPage, categoryName)
+                                if (firstPageKey.isNotEmpty()) firstPageKeys.add(firstPageKey)
                                 // Show the first available VOD/series items immediately;
                                 // continue collecting the remaining pages in the background.
                                 publishPartialSection()
@@ -2795,8 +2766,7 @@ class MainActivity : Activity() {
                                     ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize).coerceAtLeast(1)
                                 } else -1
                                 if (totalPages > 0) {
-                                    val oneBased = page0.length() == 0 || (keys0.isNotEmpty() && keys0 == keys1)
-                                    lastPageNumber = if (oneBased) totalPages else totalPages - 1
+                                    lastPageNumber = totalPages
                                     lastPageNumber = lastPageNumber.coerceIn(nextPage, 5000)
                                     sectionDiagnostics.add(
                                         "$type sayfalama hedefi kategori=$categoryId: toplam=$reportedTotalItems, " +
@@ -4884,8 +4854,8 @@ class MainActivity : Activity() {
                     val seriesCategoryId = android.net.Uri.parse(series.url).getQueryParameter("category")
                         ?.takeIf { it.isNotBlank() } ?: seriesPortalId
                     val baseParams = linkedMapOf(
-                        "type" to "vod", "action" to "get_ordered_list",
-                        "movie_id" to seriesPortalId, "category" to seriesCategoryId,
+                        "type" to "series", "action" to "get_ordered_list",
+                        "movie_id" to "0", "series_id" to seriesPortalId, "category" to seriesCategoryId,
                         "season_id" to "0", "episode_id" to "0", "p" to "1",
                         "fav" to "0", "sortby" to "added", "hd" to "0",
                         "ended" to "0", "search" to ""
