@@ -2440,6 +2440,7 @@ class MainActivity : Activity() {
             val failed = ArrayList<String>()
             val sectionDiagnostics = ArrayList<String>()
             var anySectionLoaded = false
+            var vodSeriesCount = 0
             try {
                 runOnUiThread { updateLoadingMessage( "${source.name}: Portal yanıtı bekleniyor…") }
                 val token = stalkerHandshake(source)
@@ -2482,7 +2483,11 @@ class MainActivity : Activity() {
                     return result
                 }
 
-                fun loadSection(type: String, label: String, categoryAction: String) {
+                fun loadSection(type: String, label: String, categoryAction: String, splitVodSeries: Boolean = false) {
+                    if (type == "series" && vodSeriesCount > 0) {
+                        sectionDiagnostics.add("series fallback atlandı: VOD içinden $vodSeriesCount dizi bulundu")
+                        return
+                    }
                     try {
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label kategorileri alınıyor…") }
                         val categories = if (type == "itv") {
@@ -2566,7 +2571,14 @@ class MainActivity : Activity() {
                                 val id = entry.optString("id").ifBlank { entry.optString("ch_id") }
                                     .ifBlank { entry.optString("movie_id") }.ifBlank { entry.optString("series_id") }
                                 if (id.isBlank()) continue
-                                val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$label $id" }
+                                val isSeriesEntry = splitVodSeries && (
+                                    entry.optString("is_series") == "1" ||
+                                        entry.optBoolean("is_series", false) ||
+                                        entry.optString("is_series").equals("true", ignoreCase = true) ||
+                                        entry.optJSONArray("series") != null
+                                    )
+                                val itemType = if (isSeriesEntry) "Diziler" else label
+                                val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$itemType $id" }
                                 val catId = entry.optString("tv_genre_id").ifBlank { entry.optString("category_id") }
                                     .ifBlank { entry.optString("genre_id") }
                                 val catName = categories.firstOrNull { it.first == catId }?.second
@@ -2580,14 +2592,17 @@ class MainActivity : Activity() {
                                     image.startsWith("/") -> source.address.trimEnd('/') + image
                                     else -> image
                                 }
-                                val itemUrl = when (type) {
-                                    "itv" -> "stalker://$id"
-                                    "vod" -> "stalker-vod://$id"
+                                val itemUrl = when {
+                                    type == "itv" -> "stalker://$id"
+                                    type == "vod" && isSeriesEntry -> "stalker-series://$id"
+                                    type == "vod" -> "stalker-vod://$id"
                                     else -> "stalker-series://$id"
                                 }
-                                collected["$type:$id"] = MediaItem(
-                                    "stalker-$type:$id", name, itemUrl, catName, label, artwork,
-                                    "mp4", if (type == "series") id else "", source.id,
+                                val seriesId = entry.optString("series_id").ifBlank { id }
+                                collected["$itemType:$id"] = MediaItem(
+                                    "stalker-$type:$id", name, itemUrl, catName, itemType, artwork,
+                                    entry.optString("cmd").substringAfterLast('.').takeIf { it.length in 2..5 } ?: "mp4",
+                                    if (itemType == "Diziler") seriesId else "", source.id,
                                     entry.optString("description").ifBlank { entry.optString("plot") },
                                     entry.optString("director"), entry.optString("rating"), entry.optString("year"),
                                     entry.optString("genre")
@@ -2671,6 +2686,31 @@ class MainActivity : Activity() {
                         }
 
                         val sectionItems = collected.values.toList()
+                        if (splitVodSeries) {
+                            val movieItems = sectionItems.filter { it.type == "Filmler" }
+                            val seriesItems = sectionItems.filter { it.type == "Diziler" }
+                            vodSeriesCount = seriesItems.size
+                            val diagnostic = "VOD: kategori=${categories.size}, film=${movieItems.size}, dizi=${seriesItems.size}, $responseShape"
+                            sectionDiagnostics.add(diagnostic)
+                            android.util.Log.i("KaiserTV", "Stalker $diagnostic")
+                            if (sectionItems.isEmpty()) {
+                                failed.add("Filmler")
+                                runOnUiThread { updateLoadingMessage("${source.name}: VOD listesi boş döndü; alternatif dizi kataloğu denenecek…") }
+                                return
+                            }
+                            if (movieItems.isEmpty()) failed.add("Filmler")
+                            runOnUiThread {
+                                items.removeAll { it.sourceId == source.id && (it.type == "Filmler" || it.type == "Diziler") }
+                                items.addAll(movieItems)
+                                items.addAll(seriesItems)
+                                saveCachedItems()
+                                anySectionLoaded = true
+                                if (selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Tümü") render()
+                                updateLoadingMessage("${source.name}: VOD hazır (${movieItems.size} film, ${seriesItems.size} dizi).")
+                            }
+                            return
+                        }
+
                         val diagnostic = "$label: kategori=${categories.size}, içerik=${sectionItems.size}, $responseShape"
                         sectionDiagnostics.add(diagnostic)
                         android.util.Log.i("KaiserTV", "Stalker $diagnostic")
@@ -2704,8 +2744,15 @@ class MainActivity : Activity() {
                 }
 
                 loadSection("itv", "Canlı TV", "get_genres")
-                loadSection("vod", "Filmler", "get_categories")
-                loadSection("series", "Diziler", "get_categories")
+                // First read the unified VOD catalogue. Ministra portals may place
+                // both movies and series here and mark series with is_series=1.
+                loadSection("vod", "Filmler", "get_categories", splitVodSeries = true)
+                // Keep the regular Series endpoint as a compatibility fallback.
+                if (vodSeriesCount == 0) {
+                    loadSection("series", "Diziler", "get_categories")
+                } else {
+                    sectionDiagnostics.add("Diziler VOD kataloğundan ayrıştırıldı; ayrı series isteği atlandı")
+                }
 
                 runOnUiThread {
                     isLoadingSource = false
