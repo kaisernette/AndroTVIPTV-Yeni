@@ -2287,7 +2287,11 @@ class MainActivity : Activity() {
             dialog.dismiss()
             val source = savedSources.firstOrNull { it.name == sourceName }
             if (source != null) {
-                if (source.mode == "xtream") loadXtream(source, false) else loadM3u(source, false)
+                when (source.mode) {
+                    "xtream" -> loadXtream(source, false)
+                    "mac" -> loadStalker(source, false)
+                    else -> loadM3u(source, false)
+                }
             }
         }, LinearLayout.LayoutParams(dp(154), dp(44)).apply { setMargins(dp(6), 0, 0, 0) })
         panel.addView(actions)
@@ -2342,8 +2346,8 @@ class MainActivity : Activity() {
     private fun stalkerRequest(source: SavedSource, token: String, params: Map<String, String>): JSONObject {
         val address = stalkerApiUrl(source, params)
         val conn = (URL(address).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 20000
-            readTimeout = 30000
+            connectTimeout = 12000
+            readTimeout = 15000
             requestMethod = "GET"
             instanceFollowRedirects = true
             setRequestProperty("User-Agent", "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 MAG250")
@@ -2430,8 +2434,10 @@ class MainActivity : Activity() {
             val failed = ArrayList<String>()
             var anySectionLoaded = false
             try {
+                runOnUiThread { status.text = "${source.name}: Portal yanıtı bekleniyor…" }
                 val token = stalkerHandshake(source)
-                stalkerRequest(source, token, mapOf("type" to "stb", "action" to "get_profile"))
+                android.util.Log.i("KaiserTV", "Stalker handshake completed for ${source.name}")
+                runOnUiThread { status.text = "${source.name}: Oturum açıldı, TV kategorileri alınıyor…" }
 
                 fun extractArray(response: JSONObject): JSONArray {
                     val direct = stalkerArray(response, "data", "categories", "genres", "channels", "items", "results")
