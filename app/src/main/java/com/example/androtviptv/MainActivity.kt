@@ -2663,14 +2663,27 @@ class MainActivity : Activity() {
                                 val isSeriesFlag = entry.optString("is_series").trim().lowercase()
                                 val isMovieFlag = entry.optString("is_movie").trim().lowercase()
                                 val seriesField = entry.opt("series")
+                                // An empty JSON array ("[]") is a common value for movie records.
+                                // It must not be treated as proof that the item is a series.
+                                val hasSeriesEntries = when (seriesField) {
+                                    is JSONArray -> seriesField.length() > 0
+                                    is JSONObject -> seriesField.length() > 0
+                                    null, JSONObject.NULL -> false
+                                    else -> seriesField.toString().trim().let {
+                                        it.isNotEmpty() && it != "0" && !it.equals("false", true) &&
+                                            it != "[]" && it != "{}" && !it.equals("null", true)
+                                    }
+                                }
+                                val explicitSeries = isSeriesFlag in setOf("1", "true", "yes") ||
+                                    entry.optBoolean("is_series", false) ||
+                                    entry.optString("type").equals("series", ignoreCase = true) ||
+                                    hasSeriesEntries
+                                val explicitMovie = isMovieFlag in setOf("1", "true", "yes") ||
+                                    entry.optBoolean("is_movie", false)
+                                val explicitNotMovie = isMovieFlag in setOf("0", "false", "no")
                                 val isSeriesEntry = splitVodSeries && (
-                                    isSeriesFlag in setOf("1", "true", "yes") ||
-                                        entry.optBoolean("is_series", false) ||
-                                        isMovieFlag in setOf("0", "false") ||
-                                        entry.optString("type").equals("series", ignoreCase = true) ||
-                                        (seriesField != null && seriesField != JSONObject.NULL &&
-                                            seriesField.toString().isNotBlank() && seriesField.toString() != "0")
-                                    )
+                                    explicitSeries || (!explicitMovie && explicitNotMovie)
+                                )
                                 val itemType = if (isSeriesEntry) "Diziler" else label
                                 val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$itemType $id" }
                                 val catId = entry.optString("tv_genre_id").ifBlank { entry.optString("category_id") }
