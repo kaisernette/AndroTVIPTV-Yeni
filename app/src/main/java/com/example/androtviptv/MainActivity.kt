@@ -2488,23 +2488,42 @@ class MainActivity : Activity() {
                         val collected = LinkedHashMap<String, MediaItem>()
 
                         fun requestList(categoryId: String?, page: Int): JSONArray {
-                            val params = LinkedHashMap<String, String>()
-                            params["type"] = type
-                            params["action"] = "get_ordered_list"
-                            params["p"] = page.toString()
-                            params["sortby"] = "number"
-                            params["fav"] = "0"
-                            if (type == "itv") params["genre"] = categoryId ?: "*"
-                            else params["category"] = categoryId ?: "*"
-                            val response = stalkerRequest(source, token, params)
-                            val arr = extractArray(response)
-                            if (arr.length() == 0) {
-                                // Some portals use the alternate filter parameter.
-                                params.remove(if (type == "itv") "genre" else "category")
-                                params[if (type == "itv") "category" else "genre"] = categoryId ?: "*"
-                                return extractArray(stalkerRequest(source, token, params))
+                            val filterKey = if (type == "itv") "genre" else "category"
+                            val alternateKey = if (type == "itv") "category" else "genre"
+                            val base = linkedMapOf(
+                                "type" to type,
+                                "action" to "get_ordered_list",
+                                "p" to page.toString(),
+                                "fav" to "0"
+                            )
+                            // Number sorting is intended for live channels. Some portals reject it
+                            // for VOD/series and return an empty catalogue without an HTTP error.
+                            if (type == "itv") base["sortby"] = "number"
+                            base[filterKey] = categoryId ?: "*"
+
+                            val attempts = listOf(
+                                LinkedHashMap(base),
+                                LinkedHashMap(base).apply {
+                                    remove(filterKey)
+                                    put(alternateKey, categoryId ?: "*")
+                                },
+                                LinkedHashMap(base).apply { remove("sortby") },
+                                linkedMapOf(
+                                    "type" to type,
+                                    "action" to "get_ordered_list",
+                                    "p" to page.toString(),
+                                    filterKey to (categoryId ?: "*")
+                                )
+                            )
+                            for ((index, params) in attempts.withIndex()) {
+                                val arr = extractArray(stalkerRequest(source, token, params))
+                                android.util.Log.d(
+                                    "KaiserTV",
+                                    "Stalker $type list attempt=${index + 1} category=${categoryId ?: "*"} page=$page count=${arr.length()} keys=${params.keys}"
+                                )
+                                if (arr.length() > 0) return arr
                             }
-                            return arr
+                            return JSONArray()
                         }
 
                         // Live TV supports a wildcard catalogue query on this portal.
