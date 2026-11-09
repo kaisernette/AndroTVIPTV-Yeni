@@ -2331,11 +2331,12 @@ class MainActivity : Activity() {
 
     private fun stalkerApiUrl(source: SavedSource, params: Map<String, String>): String {
         val base = source.address.trimEnd('/')
-        val query = params.entries.joinToString("&") {
+        val allParams = LinkedHashMap(params)
+        if (!allParams.containsKey("JsHttpRequest")) allParams["JsHttpRequest"] = "1-xml"
+        val query = allParams.entries.joinToString("&") {
             URLEncoder.encode(it.key, "UTF-8") + "=" + URLEncoder.encode(it.value, "UTF-8")
         }
-        val separator = if (query.isBlank()) "" else "&"
-        return "$base/server/load.php?${query}${separator}JsHttpRequest=1-xml"
+        return "$base/server/load.php?$query"
     }
 
     private fun stalkerRequest(source: SavedSource, token: String, params: Map<String, String>): JSONObject {
@@ -2344,19 +2345,28 @@ class MainActivity : Activity() {
             connectTimeout = 20000
             readTimeout = 30000
             requestMethod = "GET"
-            setRequestProperty("User-Agent", "Mozilla/5.0 (QtEmbedded; U; Linux; C) MAG250")
-            setRequestProperty("X-User-Agent", "Model: MAG250; Link: Ethernet")
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 MAG250")
+            setRequestProperty("X-User-Agent", "Model: MAG250; Link: WiFi")
             setRequestProperty("Accept", "application/json, text/javascript, */*")
+            setRequestProperty("Referer", source.address.trimEnd('/') + "/")
             setRequestProperty("Cookie", "mac=${source.username}; stb_lang=en; timezone=Europe%2FIstanbul")
             if (token.isNotBlank()) setRequestProperty("Authorization", "Bearer $token")
             useCaches = false
         }
         try {
             val code = conn.responseCode
-            if (code !in 200..299) throw Exception("Portal HTTP $code")
-            val raw = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val raw = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) throw Exception("Portal HTTP $code: ${raw.take(180)}")
             if (raw.isBlank()) throw Exception("Portal boş yanıt döndürdü.")
-            val root = JSONObject(raw)
+            val clean = raw.trim().removePrefix("/*").removeSuffix("*/").trim()
+            val root = try { JSONObject(clean) } catch (_: Exception) {
+                val first = clean.indexOf('{')
+                val last = clean.lastIndexOf('}')
+                if (first >= 0 && last > first) JSONObject(clean.substring(first, last + 1))
+                else throw Exception("Portal JSON yerine beklenmeyen yanıt döndürdü.")
+            }
             val js = root.opt("js")
             return when (js) {
                 is JSONObject -> js
@@ -2367,10 +2377,23 @@ class MainActivity : Activity() {
     }
 
     private fun stalkerHandshake(source: SavedSource): String {
-        val result = stalkerRequest(source, "", mapOf("type" to "stb", "action" to "handshake", "token" to ""))
+        val result = stalkerRequest(source, "", mapOf(
+            "type" to "stb", "action" to "handshake", "token" to ""
+        ))
         val token = result.optString("token").ifBlank { result.optString("access_token") }
-        if (token.isBlank()) throw Exception("Portal oturum anahtarı döndürmedi. MAC yetkisini kontrol edin.")
+        if (token.isBlank()) throw Exception("Portal oturum anahtarı döndürmedi. MAC adresinin portalda yetkili olduğunu kontrol edin.")
         return token
+    }
+
+    private fun stalkerArray(response: JSONObject, vararg keys: String): JSONArray {
+        for (key in keys) {
+            response.optJSONArray(key)?.let { return it }
+        }
+        val data = response.optJSONObject("data")
+        if (data != null) {
+            for (key in keys) data.optJSONArray(key)?.let { return it }
+        }
+        return JSONArray()
     }
 
     private fun loadStalker(source: SavedSource, append: Boolean) {
@@ -2385,7 +2408,7 @@ class MainActivity : Activity() {
                 stalkerRequest(source, token, mapOf("type" to "stb", "action" to "get_profile"))
                 runOnUiThread { status.text = "${source.name}: TV kategorileri alınıyor…" }
                 val genresResponse = stalkerRequest(source, token, mapOf("type" to "itv", "action" to "get_genres"))
-                val genreArray = genresResponse.optJSONArray("data") ?: genresResponse.optJSONArray("genres") ?: JSONArray()
+                val genreArray = stalkerArray(genresResponse, "data", "genres")
                 val genres = LinkedHashMap<String, String>()
                 for (i in 0 until genreArray.length()) {
                     val g = genreArray.optJSONObject(i) ?: continue
@@ -2394,22 +2417,32 @@ class MainActivity : Activity() {
                     if (id.isNotBlank() && title.isNotBlank()) genres[id] = title
                 }
                 runOnUiThread { status.text = "${source.name}: Kanallar alınıyor…" }
-                val channelsResponse = stalkerRequest(source, token, mapOf(
-                    "type" to "itv", "action" to "get_ordered_list", "p" to "1"
-                ))
-                val channelArray = channelsResponse.optJSONArray("data") ?: channelsResponse.optJSONArray("channels") ?: JSONArray()
-                val parsed = ArrayList<MediaItem>(channelArray.length())
-                for (i in 0 until channelArray.length()) {
-                    val channel = channelArray.optJSONObject(i) ?: continue
-                    val id = channel.optString("id").ifBlank { channel.optString("ch_id") }
-                    if (id.isBlank()) continue
-                    val name = channel.optString("name").ifBlank { channel.optString("title") }.ifBlank { "Kanal $id" }
-                    val genreId = channel.optString("tv_genre_id").ifBlank { channel.optString("genre_id") }
-                    val group = genres[genreId] ?: channel.optString("genre").ifBlank { "Diğer" }
-                    val logo = channel.optString("logo").ifBlank { channel.optString("screenshot_uri") }
-                    parsed.add(MediaItem("stalker:$id", name, "stalker://$id", group, "Canlı TV", logo, sourceId = source.id))
+                val parsed = ArrayList<MediaItem>()
+                var page = 1
+                var totalItems = Int.MAX_VALUE
+                while (parsed.size < totalItems && page <= 100) {
+                    val channelsResponse = stalkerRequest(source, token, mapOf(
+                        "type" to "itv", "action" to "get_ordered_list", "genre" to "*",
+                        "force_ch_link_check" to "", "fav" to "0", "sortby" to "number", "p" to page.toString()
+                    ))
+                    val channelArray = stalkerArray(channelsResponse, "data", "channels")
+                    totalItems = channelsResponse.optInt("total_items",
+                        channelsResponse.optJSONObject("data")?.optInt("total_items", totalItems) ?: totalItems)
+                    if (channelArray.length() == 0) break
+                    for (i in 0 until channelArray.length()) {
+                        val channel = channelArray.optJSONObject(i) ?: continue
+                        val id = channel.optString("id").ifBlank { channel.optString("ch_id") }
+                        if (id.isBlank()) continue
+                        val name = channel.optString("name").ifBlank { channel.optString("title") }.ifBlank { "Kanal $id" }
+                        val genreId = channel.optString("tv_genre_id").ifBlank { channel.optString("genre_id") }
+                        val group = genres[genreId] ?: channel.optString("genre").ifBlank { "Diğer" }
+                        val logo = channel.optString("logo").ifBlank { channel.optString("screenshot_uri") }
+                        parsed.add(MediaItem("stalker:$id", name, "stalker://$id", group, "Canlı TV", logo, sourceId = source.id))
+                    }
+                    page++
+                    if (channelArray.length() < 10 && totalItems == Int.MAX_VALUE) break
                 }
-                if (parsed.isEmpty()) throw Exception("Portal oturumu açıldı ancak kanal listesi boş döndü.")
+                if (parsed.isEmpty()) throw Exception("Portal oturumu açıldı ancak kanal listesi boş döndü. Portalın MAG erişimini ve MAC yetkisini kontrol edin.")
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
@@ -2438,13 +2471,14 @@ class MainActivity : Activity() {
     private fun resolveStalkerStream(source: SavedSource, channelId: String): String {
         val token = stalkerHandshake(source)
         val response = stalkerRequest(source, token, mapOf(
-            "type" to "itv", "action" to "create_link", "cmd" to "ch_id=$channelId",
-            "forced_storage" to "", "disable_ad" to "0"
+            "type" to "itv", "action" to "create_link", "cmd" to "ffmpeg http://localhost/ch/$channelId",
+            "series" to "", "forced_storage" to "", "disable_ad" to "0"
         ))
         val cmd = response.optString("cmd").ifBlank { response.optString("url") }
         if (cmd.isBlank()) throw Exception("Portal yayın adresi döndürmedi.")
         return cmd.removePrefix("ffmpeg ").trim()
     }
+
     private fun loadXtream(source: SavedSource, append: Boolean) {
         val base = source.address.trimEnd('/')
         val user = source.username
