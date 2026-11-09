@@ -2516,7 +2516,19 @@ class MainActivity : Activity() {
                             )
                             // Number sorting is intended for live channels. Some portals reject it
                             // for VOD/series and return an empty catalogue without an HTTP error.
-                            if (type == "itv") base["sortby"] = "number"
+                            if (type == "itv") {
+                                base["sortby"] = "number"
+                            } else {
+                                // Ministra-compatible VOD hierarchy parameters. Several portals
+                                // return an empty list unless the hierarchy selectors are explicit.
+                                base["movie_id"] = "0"
+                                base["season_id"] = "0"
+                                base["episode_id"] = "0"
+                                base["sortby"] = "added"
+                                base["hd"] = "0"
+                                base["ended"] = "0"
+                                base["search"] = ""
+                            }
                             base[filterKey] = categoryId ?: "*"
 
                             val attempts = listOf(
@@ -2598,9 +2610,9 @@ class MainActivity : Activity() {
                                 val encodedCommand = URLEncoder.encode(rawCommand, "UTF-8")
                                 val itemUrl = when {
                                     type == "itv" -> "stalker://$id"
-                                    type == "vod" && isSeriesEntry -> "stalker-series://$id?cmd=$encodedCommand"
-                                    type == "vod" -> "stalker-vod://$id?cmd=$encodedCommand"
-                                    else -> "stalker-series://$id?cmd=$encodedCommand"
+                                    type == "vod" && isSeriesEntry -> "stalker-series://$id?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
+                                    type == "vod" -> "stalker-vod://$id?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
+                                    else -> "stalker-series://$id?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
                                 }
                                 val seriesId = entry.optString("series_id").ifBlank { id }
                                 collected["$itemType:$id"] = MediaItem(
@@ -4722,9 +4734,13 @@ class MainActivity : Activity() {
             try {
                 if (source.mode == "mac") {
                     val token = stalkerHandshake(source)
+                    val seriesPortalId = android.net.Uri.parse(series.url).lastPathSegment
+                        ?.takeIf { it.isNotBlank() } ?: series.id.substringAfterLast(':')
+                    val seriesCategoryId = android.net.Uri.parse(series.url).getQueryParameter("category")
+                        ?.takeIf { it.isNotBlank() } ?: seriesPortalId
                     val baseParams = linkedMapOf(
                         "type" to "vod", "action" to "get_ordered_list",
-                        "movie_id" to series.id, "category" to series.id,
+                        "movie_id" to seriesPortalId, "category" to seriesCategoryId,
                         "season_id" to "0", "episode_id" to "0", "p" to "1",
                         "fav" to "0", "sortby" to "added", "hd" to "0",
                         "ended" to "0", "search" to ""
@@ -4745,13 +4761,16 @@ class MainActivity : Activity() {
                                 ?: (i + 1)
                             val seasonNumber = ep.optString("season_number").ifBlank { ep.optString("season") }
                                 .ifBlank { fallbackSeason ?: "1" }
-                            val command = ep.optString("cmd").ifBlank { series.url.substringAfter("cmd=", "").let { java.net.URLDecoder.decode(it, "UTF-8") }.takeIf { it.isNotBlank() } ?: "/media/file_$id.mpg" }
+                            val command = ep.optString("cmd").ifBlank {
+                                android.net.Uri.parse(series.url).getQueryParameter("cmd")
+                                    ?.takeIf { it.isNotBlank() } ?: "/media/file_$id.mpg"
+                            }
                             val episodeUrl = "stalker-episode://$id?cmd=${URLEncoder.encode(command, "UTF-8")}&series=$episodeNumber"
                             rows.add(MediaItem(
                                 id, ep.optString("name").ifBlank { ep.optString("title") }.ifBlank { "Bölüm $episodeNumber" },
                                 episodeUrl, "${series.name} • Sezon $seasonNumber", "Bölümler",
                                 ep.optString("screenshot_uri").ifBlank { series.icon }, "mpg",
-                                series.id, source.id, ep.optString("description").ifBlank { ep.optString("plot") }
+                                seriesPortalId, source.id, ep.optString("description").ifBlank { ep.optString("plot") }
                             ))
                         }
                         return rows
