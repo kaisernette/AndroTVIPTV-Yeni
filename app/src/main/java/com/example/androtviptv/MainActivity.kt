@@ -2457,9 +2457,19 @@ class MainActivity : Activity() {
                     return direct
                 }
 
+                fun responseSummary(response: JSONObject, array: JSONArray): String {
+                    val keys = response.keys().asSequence().joinToString(",")
+                    val first = array.optJSONObject(0)
+                    val firstKeys = first?.keys()?.asSequence()?.joinToString(",") ?: "yok"
+                    val dataType = response.opt("data")?.javaClass?.simpleName ?: "yok"
+                    val jsType = response.opt("js")?.javaClass?.simpleName ?: "yok"
+                    return "keys=[$keys], data=$dataType, js=$jsType, adet=${array.length()}, ilkKayitAlanlari=[$firstKeys]"
+                }
+
                 fun readCategories(type: String): List<Pair<String, String>> {
                     val response = stalkerRequest(source, token, mapOf("type" to type, "action" to "get_categories"))
                     val array = extractArray(response)
+                    sectionDiagnostics.add("$type get_categories: ${responseSummary(response, array)}")
                     val result = ArrayList<Pair<String, String>>()
                     for (i in 0 until array.length()) {
                         val item = array.optJSONObject(i) ?: continue
@@ -2478,6 +2488,7 @@ class MainActivity : Activity() {
                         val categories = if (type == "itv") {
                             val response = stalkerRequest(source, token, mapOf("type" to "itv", "action" to "get_genres"))
                             val arr = extractArray(response)
+                            sectionDiagnostics.add("itv get_genres: ${responseSummary(response, arr)}")
                             (0 until arr.length()).mapNotNull { i ->
                                 val o = arr.optJSONObject(i) ?: return@mapNotNull null
                                 val id = o.optString("id").ifBlank { o.optString("genre_id") }
@@ -2519,8 +2530,11 @@ class MainActivity : Activity() {
                             )
                             for ((index, params) in attempts.withIndex()) {
                                 val response = stalkerRequest(source, token, params)
-                                responseShape = "yanıt alanları=" + response.keys().asSequence().joinToString(",")
                                 val arr = extractArray(response)
+                                responseShape = responseSummary(response, arr)
+                                if (index == 0 || arr.length() > 0) {
+                                    sectionDiagnostics.add("$type get_ordered_list deneme=${index + 1} kategori=${categoryId ?: "*"} sayfa=$page: $responseShape")
+                                }
                                 android.util.Log.d(
                                     "KaiserTV",
                                     "Stalker $type list attempt=${index + 1} category=${categoryId ?: "*"} page=$page count=${arr.length()} keys=${params.keys}"
@@ -2637,7 +2651,20 @@ class MainActivity : Activity() {
                             android.util.Log.w("KaiserTV", "Stalker catalogue diagnostics: $diagnosticText")
                             // Do not open a dialog from a background completion callback:
                             // the Activity may already be finishing or destroyed.
-                            updateLoadingMessage("Stalker sonuçları: $diagnosticText")
+                            runOnUiThread {
+                                updateLoadingMessage("Stalker sonuçları: $diagnosticText")
+                                if (!isFinishing && !isDestroyed && window.decorView.isAttachedToWindow) {
+                                    try {
+                                        android.app.AlertDialog.Builder(this@MainActivity)
+                                            .setTitle("Stalker tanılama")
+                                            .setMessage(diagnosticText.take(3500))
+                                            .setPositiveButton("Tamam", null)
+                                            .show()
+                                    } catch (dialogError: Exception) {
+                                        android.util.Log.w("KaiserTV", "Tanılama penceresi açılamadı", dialogError)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
