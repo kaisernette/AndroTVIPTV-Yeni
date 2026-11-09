@@ -4734,8 +4734,10 @@ class MainActivity : Activity() {
             try {
                 if (source.mode == "mac") {
                     val token = stalkerHandshake(source)
-                    val seriesPortalId = android.net.Uri.parse(series.url).lastPathSegment
-                        ?.takeIf { it.isNotBlank() } ?: series.id.substringAfterLast(':')
+                    val seriesPortalUri = android.net.Uri.parse(series.url)
+                    val seriesPortalId = seriesPortalUri.host?.takeIf { it.isNotBlank() }
+                        ?: seriesPortalUri.lastPathSegment?.takeIf { it.isNotBlank() }
+                        ?: series.id.substringAfterLast(':')
                     val seriesCategoryId = android.net.Uri.parse(series.url).getQueryParameter("category")
                         ?.takeIf { it.isNotBlank() } ?: seriesPortalId
                     val baseParams = linkedMapOf(
@@ -6654,7 +6656,7 @@ class MainActivity : Activity() {
                 return
             }
             val parsedUrl = android.net.Uri.parse(item.url)
-            val channelId = parsedUrl.lastPathSegment.orEmpty()
+            val channelId = parsedUrl.host?.takeIf { it.isNotBlank() } ?: parsedUrl.lastPathSegment.orEmpty()
             val isLive = item.url.startsWith("stalker://")
             val isVod = item.url.startsWith("stalker-vod://")
             val rawCommand = parsedUrl.getQueryParameter("cmd").orEmpty()
