@@ -2229,15 +2229,38 @@ class MainActivity : Activity() {
         val labels = savedSources.map { "${it.name} • ${when (it.mode) { "xtream" -> "Xtream"; "mac" -> "MAC Portal"; else -> "M3U" }}" }.toTypedArray()
         AlertDialog.Builder(this).setTitle("Kayıtlı kaynaklar").setItems(labels) { _, which ->
             val s = savedSources[which]
-            AlertDialog.Builder(this).setTitle(s.name).setItems(arrayOf("Yenile", "Sil")) { _, action ->
-                if (action == 0) {
-                    when (s.mode) {
-                        "xtream" -> loadXtream(s, true)
-                        "mac" -> loadStalker(s, true)
-                        else -> loadM3u(s, true)
+            AlertDialog.Builder(this).setTitle(s.name).setItems(arrayOf("Aç (önbellekten)", "Yenile", "Sil")) { _, action ->
+                when (action) {
+                    0 -> {
+                        val cached = items.any { it.sourceId == s.id }
+                        if (cached) {
+                            prefs.edit().putString("last_source_id", s.id).remove("selected_source_ids").apply()
+                            selectedCategorySourceId = s.id
+                            selectedType = "Tümü"
+                            selectedGroup = "Tüm kategoriler"
+                            sidebarMode = "main"
+                            isLoadingSource = false
+                            status.visibility = View.VISIBLE
+                            status.text = "${s.name}: kayıtlı içerik açıldı."
+                            render()
+                        } else {
+                            when (s.mode) {
+                                "xtream" -> loadXtream(s, true)
+                                "mac" -> loadStalker(s, true)
+                                else -> loadM3u(s, true)
+                            }
+                        }
                     }
+                    1 -> {
+                        prefs.edit().putString("last_source_id", s.id).remove("selected_source_ids").apply()
+                        when (s.mode) {
+                            "xtream" -> loadXtream(s, true)
+                            "mac" -> loadStalker(s, true)
+                            else -> loadM3u(s, true)
+                        }
+                    }
+                    2 -> { savedSources.removeAll { it.id == s.id }; persistSources(); items.removeAll { it.sourceId == s.id }; render() }
                 }
-                else { savedSources.removeAll { it.id == s.id }; persistSources(); items.removeAll { it.sourceId == s.id }; render() }
             }.setNegativeButton(t("İptal"), null).show()
         }.setPositiveButton("Kaynak ekle") { _, _ -> showConnectionDialog() }.setNegativeButton("Kapat", null).show()
     }
@@ -2793,7 +2816,7 @@ class MainActivity : Activity() {
                                 // page count: it can trigger thousands of needless requests.
                                 // Fetch a small initial slice per category; later category
                                 // selection can be used to expand loading without blocking startup.
-                                val categoryPageLimit = 3
+                                val categoryPageLimit = 1
                                 val effectiveLastPage = minOf(lastPageNumber, categoryPageLimit)
                                 var page = nextPage
                                 while (page <= effectiveLastPage) {
