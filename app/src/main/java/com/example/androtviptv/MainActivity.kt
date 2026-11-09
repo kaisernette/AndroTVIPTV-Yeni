@@ -2438,6 +2438,7 @@ class MainActivity : Activity() {
         render()
         thread(name = "kaiser-stalker-sections") {
             val failed = ArrayList<String>()
+            val sectionDiagnostics = ArrayList<String>()
             var anySectionLoaded = false
             try {
                 runOnUiThread { updateLoadingMessage( "${source.name}: Portal yanıtı bekleniyor…") }
@@ -2486,6 +2487,7 @@ class MainActivity : Activity() {
 
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label yükleniyor…") }
                         val collected = LinkedHashMap<String, MediaItem>()
+                        var responseShape = "liste isteği henüz yapılmadı"
 
                         fun requestList(categoryId: String?, page: Int): JSONArray {
                             val filterKey = if (type == "itv") "genre" else "category"
@@ -2516,7 +2518,9 @@ class MainActivity : Activity() {
                                 )
                             )
                             for ((index, params) in attempts.withIndex()) {
-                                val arr = extractArray(stalkerRequest(source, token, params))
+                                val response = stalkerRequest(source, token, params)
+                                responseShape = "yanıt alanları=" + response.keys().asSequence().joinToString(",")
+                                val arr = extractArray(response)
                                 android.util.Log.d(
                                     "KaiserTV",
                                     "Stalker $type list attempt=${index + 1} category=${categoryId ?: "*"} page=$page count=${arr.length()} keys=${params.keys}"
@@ -2581,7 +2585,9 @@ class MainActivity : Activity() {
                         }
 
                         val sectionItems = collected.values.toList()
-                        android.util.Log.i("KaiserTV", "Stalker $label categories=${categories.size}, items=${sectionItems.size}")
+                        val diagnostic = "$label: kategori=${categories.size}, içerik=${sectionItems.size}, $responseShape"
+                        sectionDiagnostics.add(diagnostic)
+                        android.util.Log.i("KaiserTV", "Stalker $diagnostic")
                         if (sectionItems.isEmpty()) {
                             failed.add(label)
                             runOnUiThread { updateLoadingMessage( "${source.name}: $label boş döndü; sonraki bölüm yükleniyor…") }
@@ -2625,6 +2631,13 @@ class MainActivity : Activity() {
                         updateLoadingMessage("${source.name}: yükleme tamamlandı" +
                             if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else "")
                         render()
+                        if (failed.any { it == "Filmler" || it == "Diziler" }) {
+                            android.app.AlertDialog.Builder(this@MainActivity)
+                                .setTitle("Stalker katalog sonucu")
+                                .setMessage(sectionDiagnostics.joinToString("\n"))
+                                .setPositiveButton("Kapat", null)
+                                .show()
+                        }
                     }
                 }
             } catch (e: Exception) {
