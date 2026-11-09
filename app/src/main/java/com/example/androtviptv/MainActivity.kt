@@ -2700,18 +2700,6 @@ class MainActivity : Activity() {
                                 // VOD/Series portals differ: some are zero-based (p=0),
                                 // some are one-based (p=1), and some map both to the same first page.
                                 // Probe both first pages and compare their item IDs before continuing.
-                                val page0 = requestList(categoryId, 0)
-                                val page1 = requestList(categoryId, 1)
-                                val keys0 = pageKeys(page0)
-                                val keys1 = pageKeys(page1)
-                                if (sectionDiagnostics.count { it.startsWith("$type pagination probe") } < 8) {
-                                sectionDiagnostics.add(
-                                    "$type pagination probe kategori=${categoryId ?: "*"}: " +
-                                        "p0=${page0.length()} kayıt, p1=${page1.length()} kayıt, " +
-                                        "aynı=${keys0.isNotEmpty() && keys0 == keys1}"
-                                )
-                            }
-
                                 var reportedTotalItems = -1
                                 var reportedPageSize = -1
                                 val capturePageMeta: (Int, Int) -> Unit = { total, pageSize ->
