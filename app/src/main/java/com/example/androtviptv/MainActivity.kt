@@ -2592,8 +2592,8 @@ class MainActivity : Activity() {
                         render()
                         showConnectionError(source.name, "Kataloglar alınamadı: ${failed.joinToString()}")
                     } else {
-                        updateLoadingMessage( "${source.name}: yükleme tamamlandı") +
-                            if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else ""
+                        updateLoadingMessage("${source.name}: yükleme tamamlandı" +
+                            if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else "")
                         render()
                     }
                 }
