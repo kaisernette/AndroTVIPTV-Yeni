@@ -213,17 +213,50 @@ internal class StalkerPortalClient(
         val genres = loadGenres(session)
         return (0 until array.length()).mapNotNull { index ->
             val item = array.optJSONObject(index) ?: return@mapNotNull null
-            val id = item.optString("id").ifBlank { item.optString("ch_id") }
+            val id = firstValue(item, "id", "ch_id", "channel_id")
             if (id.isBlank()) return@mapNotNull null
-            val genreId = item.optString("tv_genre_id")
+            val genreId = firstValue(item, "tv_genre_id", "genre_id", "category_id", "tv_genre")
+            val directGenre = firstValue(item, "genre_title", "genre_name", "category_name", "group_title", "category", "genre")
             Channel(
                 id = id,
-                name = item.optString("name").ifBlank { "Kanal $id" },
-                group = genres[genreId]
-                    ?: item.optString("genre_title").ifBlank { "Diğer" },
-                logo = item.optString("logo").ifBlank { item.optString("logo_2") }
+                name = firstValue(item, "name", "title").ifBlank { "Kanal $id" },
+                group = genres[genreId] ?: directGenre.takeIf { it.isNotBlank() && !it.all(Char::isDigit) } ?: "Diğer",
+                logo = firstValue(item, "logo", "logo_2", "screenshot_uri")
             )
         }
+    }
+
+    private fun firstValue(item: JSONObject, vararg keys: String): String {
+        for (key in keys) {
+            val value = item.opt(key)
+            val text = when (value) {
+                is String -> value.trim()
+                is Number -> value.toString()
+                else -> ""
+            }
+            if (text.isNotBlank() && text != "null") return text
+        }
+        return ""
+    }
+
+    private fun findGenreArray(value: Any?): JSONArray? {
+        when (value) {
+            is JSONArray -> return value
+            is String -> {
+                val parsedArray = runCatching { JSONArray(value) }.getOrNull()
+                if (parsedArray != null) return parsedArray
+                val parsedObject = runCatching { JSONObject(value) }.getOrNull()
+                if (parsedObject != null) return findGenreArray(parsedObject)
+            }
+            is JSONObject -> {
+                for (key in listOf("data", "genres", "categories", "items", "tv_genres")) {
+                    val nested = value.opt(key)
+                    val found = findGenreArray(nested)
+                    if (found != null) return found
+                }
+            }
+        }
+        return null
     }
 
     private fun loadGenres(session: Session): Map<String, String> = try {
@@ -232,19 +265,21 @@ internal class StalkerPortalClient(
             "action" to "get_genres",
             "JsHttpRequest" to "1-xml"
         ))
-        val js = response.json.optJSONObject("js")
-        val data = js?.optJSONArray("data")
-            ?: (js?.opt("data") as? JSONObject)?.optJSONArray("data")
+        val js = response.json.optJSONObject("js") ?: response.json
+        val data = findGenreArray(js.opt("data"))
+            ?: findGenreArray(js.opt("genres"))
+            ?: findGenreArray(js.opt("categories"))
             ?: JSONArray()
         buildMap {
             for (i in 0 until data.length()) {
                 val item = data.optJSONObject(i) ?: continue
-                val id = item.optString("id")
-                val title = item.optString("title")
+                val id = firstValue(item, "id", "genre_id", "category_id", "tv_genre_id")
+                val title = firstValue(item, "title", "name", "genre", "category_name")
                 if (id.isNotBlank() && title.isNotBlank()) put(id, title)
             }
         }
-    } catch (_: Exception) {
+    } catch (error: Exception) {
+        android.util.Log.w("KaiserTV-Stalker", "Kategori listesi alınamadı; kanal içi kategori alanları kullanılacak.", error)
         emptyMap()
     }
 
