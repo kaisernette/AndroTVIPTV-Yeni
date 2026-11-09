@@ -2632,11 +2632,12 @@ class MainActivity : Activity() {
                             if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else "")
                         render()
                         if (failed.any { it == "Filmler" || it == "Diziler" }) {
-                            android.app.AlertDialog.Builder(this@MainActivity)
-                                .setTitle("Stalker katalog sonucu")
-                                .setMessage(sectionDiagnostics.joinToString("\n"))
-                                .setPositiveButton("Kapat", null)
-                                .show()
+                            val diagnosticText = sectionDiagnostics.joinToString(" | ")
+                            prefs.edit().putString("last_stalker_catalog_diagnostics", diagnosticText).apply()
+                            android.util.Log.w("KaiserTV", "Stalker catalogue diagnostics: $diagnosticText")
+                            // Do not open a dialog from a background completion callback:
+                            // the Activity may already be finishing or destroyed.
+                            updateLoadingMessage("Stalker sonuçları: $diagnosticText")
                         }
                     }
                 }
