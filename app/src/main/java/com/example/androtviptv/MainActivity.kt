@@ -2549,7 +2549,7 @@ class MainActivity : Activity() {
                         val collected = LinkedHashMap<String, MediaItem>()
                         var responseShape = "liste isteği henüz yapılmadı"
 
-                        fun requestList(categoryId: String?, page: Int): JSONArray {
+                        fun requestList(categoryId: String?, page: Int, onPageMeta: ((Int, Int) -> Unit)? = null): JSONArray {
                             val filterKey = if (type == "itv") "genre" else "category"
                             val alternateKey = if (type == "itv") "category" else "genre"
                             val base = linkedMapOf(
@@ -2592,6 +2592,9 @@ class MainActivity : Activity() {
                             for ((index, params) in attempts.withIndex()) {
                                 val response = stalkerRequest(source, token, params)
                                 val arr = extractArray(response)
+                                if (arr.length() > 0) {
+                                    onPageMeta?.invoke(response.optInt("total_items", -1), response.optInt("max_page_items", -1))
+                                }
                                 responseShape = responseSummary(response, arr)
                                 // Keep diagnostics compact: Live TV can span hundreds of pages
                                 // and must not push the VOD/series results out of the dialog.
@@ -2709,59 +2712,85 @@ class MainActivity : Activity() {
                                 )
                             }
 
+                                var reportedTotalItems = -1
+                                var reportedPageSize = -1
+                                val capturePageMeta: (Int, Int) -> Unit = { total, pageSize ->
+                                    if (total > 0) reportedTotalItems = total
+                                    if (pageSize > 0) reportedPageSize = pageSize
+                                }
+                                val page0 = requestList(categoryId, 0, capturePageMeta)
+                                val page1 = requestList(categoryId, 1, capturePageMeta)
+                                val keys0 = pageKeys(page0)
+                                val keys1 = pageKeys(page1)
+                                if (sectionDiagnostics.count { it.startsWith("$type pagination probe") } < 8) {
+                                    sectionDiagnostics.add(
+                                        "$type pagination probe kategori=${categoryId ?: "*"}: " +
+                                            "p0=${page0.length()} kayıt, p1=${page1.length()} kayıt, " +
+                                            "aynı=${keys0.isNotEmpty() && keys0 == keys1}"
+                                    )
+                                }
+
                                 var nextPage = 2
+                                var lastPageNumber = 100
+                                val firstPageKeys = mutableSetOf<Set<String>>()
                                 when {
-                                    page0.length() == 0 && page1.length() == 0 -> {
-                                        // No catalogue data for this category.
-                                        continue
-                                    }
+                                    page0.length() == 0 && page1.length() == 0 -> continue
                                     page0.length() == 0 -> {
-                                        // One-based portal: first page is p=1.
                                         consumePage(page1, categoryName)
+                                        firstPageKeys.add(keys1)
                                     }
                                     page1.length() == 0 -> {
-                                        // Zero-based portal with a single/short first page.
                                         consumePage(page0, categoryName)
-                                        continue
+                                        firstPageKeys.add(keys0)
+                                        nextPage = 1
                                     }
                                     keys0.isNotEmpty() && keys0 == keys1 -> {
-                                        // Portal aliases p=0 to its first page; consume it once.
                                         consumePage(page1, categoryName)
+                                        firstPageKeys.add(keys1)
                                     }
                                     else -> {
-                                        // Zero-based portal returned distinct p=0 and p=1 pages.
                                         consumePage(page0, categoryName)
                                         consumePage(page1, categoryName)
+                                        firstPageKeys.add(keys0)
+                                        firstPageKeys.add(keys1)
                                     }
                                 }
 
-                                var lastPage = if (page1.length() > 0) page1 else page0
-                                var previousPageKeys = pageKeys(lastPage)
-                                if (lastPage.length() >= 10) {
-                                    var page = nextPage
-                                    while (page <= 100) {
-                                        val arr = requestList(categoryId, page)
-                                        if (arr.length() == 0) break
-                                        val currentPageKeys = pageKeys(arr)
-                                        if (page <= 4 && sectionDiagnostics.count { it.startsWith("$type page fingerprint") } < 8) {
-                                            sectionDiagnostics.add(
-                                                "$type page fingerprint kategori=$categoryId sayfa=$page: " +
-                                                    "adet=${arr.length()}, oncekiyleAyni=${currentPageKeys.isNotEmpty() && currentPageKeys == previousPageKeys}, " +
-                                                    "ids=${currentPageKeys.take(5).joinToString(",")}"
-                                            )
-                                        }
-                                        if (currentPageKeys.isNotEmpty() && currentPageKeys == previousPageKeys) {
-                                            sectionDiagnostics.add("$type sayfalama durduruldu: kategori=$categoryId sayfa=$page önceki sayfayla aynı kayıtları döndürdü")
-                                            break
-                                        }
-                                        consumePage(arr, categoryName)
-                                        previousPageKeys = currentPageKeys
-                                        if (arr.length() < 10) break
-                                        page++
-                                        if (page % 5 == 0) {
-                                            runOnUiThread {
-                                                updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
-                                            }
+                                val totalPages = if (reportedTotalItems > 0 && reportedPageSize > 0) {
+                                    ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize).coerceAtLeast(1)
+                                } else -1
+                                if (totalPages > 0) {
+                                    val oneBased = page0.length() == 0 || (keys0.isNotEmpty() && keys0 == keys1)
+                                    lastPageNumber = if (oneBased) totalPages else totalPages - 1
+                                    lastPageNumber = lastPageNumber.coerceIn(nextPage, 5000)
+                                    sectionDiagnostics.add(
+                                        "$type sayfalama hedefi kategori=$categoryId: toplam=$reportedTotalItems, " +
+                                            "sayfaBoyutu=$reportedPageSize, sonSayfa=$lastPageNumber"
+                                    )
+                                }
+
+                                val seenPageKeys = firstPageKeys.toMutableSet()
+                                var page = nextPage
+                                while (page <= lastPageNumber) {
+                                    val arr = requestList(categoryId, page, capturePageMeta)
+                                    if (arr.length() == 0) break
+                                    val currentPageKeys = pageKeys(arr)
+                                    if (currentPageKeys.isNotEmpty() && !seenPageKeys.add(currentPageKeys)) {
+                                        sectionDiagnostics.add("$type sayfalama durduruldu: kategori=$categoryId sayfa=$page daha önce alınan sayfayı tekrarladı")
+                                        break
+                                    }
+                                    if (page <= 4 && sectionDiagnostics.count { it.startsWith("$type page fingerprint") } < 8) {
+                                        sectionDiagnostics.add(
+                                            "$type page fingerprint kategori=$categoryId sayfa=$page: " +
+                                                "adet=${arr.length()}, ids=${currentPageKeys.take(5).joinToString(",")}"
+                                        )
+                                    }
+                                    consumePage(arr, categoryName)
+                                    if (totalPages <= 0 && arr.length() < 10) break
+                                    page++
+                                    if (page % 5 == 0) {
+                                        runOnUiThread {
+                                            updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
                                         }
                                     }
                                 }
