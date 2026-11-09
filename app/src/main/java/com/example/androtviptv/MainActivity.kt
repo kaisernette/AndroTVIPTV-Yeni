@@ -3360,12 +3360,16 @@ class MainActivity : Activity() {
             val inlineXtream = RadioButton(this).apply {
                 id = View.generateViewId(); text = "Xtream Codes"
                 setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent)
-                isChecked = true
+            }
+            val inlineStalker = RadioButton(this).apply {
+                id = View.generateViewId(); text = "Stalker Portal"
+                setTextColor(Color.WHITE); buttonTintList = android.content.res.ColorStateList.valueOf(accent)
             }
             sourceMode.addView(inlineM3u)
             sourceMode.addView(inlineXtream)
+            sourceMode.addView(inlineStalker)
             sourceMode.check(inlineXtream.id)
-            playlistUrl = edit("URL adresini girin", false).apply {
+            playlistUrl = edit("M3U / M3U8 URL adresi", false).apply {
                 id = View.generateViewId()
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_NEXT
             }
@@ -3381,6 +3385,10 @@ class MainActivity : Activity() {
                 id = View.generateViewId()
                 imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
             }
+            val portalMac = edit("MAC adresi (00:1A:79:XX:XX:XX)", false).apply {
+                id = View.generateViewId()
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            }
             val playlistLabel = TextView(this).apply {
                 text = "M3U / M3U8 oynatma listesi URL'si"
                 textSize = 13f; setTextColor(muted)
@@ -3394,27 +3402,26 @@ class MainActivity : Activity() {
             inlineForm.addView(server, LinearLayout.LayoutParams(-1, dp(48)).apply {
                 setMargins(0, 0, 0, dp(6))
             })
-            val inlineCredentials = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-            }
-            inlineCredentials.addView(username, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
-                setMargins(0, 0, dp(4), 0)
-            })
-            inlineCredentials.addView(password, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
-                setMargins(dp(4), 0, 0, 0)
-            })
+            val inlineCredentials = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            inlineCredentials.addView(username, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(0, 0, dp(4), 0) })
+            inlineCredentials.addView(password, LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(dp(4), 0, 0, 0) })
             inlineForm.addView(inlineCredentials)
             fun updateInlineFields() {
-                val useM3u = sourceMode.checkedRadioButtonId == inlineM3u.id
+                val mode = sourceMode.checkedRadioButtonId
+                val useM3u = mode == inlineM3u.id
+                val useStalker = mode == inlineStalker.id
                 playlistLabel.visibility = if (useM3u) View.VISIBLE else View.GONE
                 playlistUrl.visibility = if (useM3u) View.VISIBLE else View.GONE
                 server.visibility = if (useM3u) View.GONE else View.VISIBLE
-                inlineCredentials.visibility = if (useM3u) View.GONE else View.VISIBLE
+                inlineCredentials.visibility = if (mode == inlineXtream.id) View.VISIBLE else View.GONE
+                portalMac.visibility = if (useStalker) View.VISIBLE else View.GONE
+                server.hint = if (useStalker) "Portal URL (http://adres/c/)" else "Sunucu adresi (https://...)"
             }
             sourceMode.setOnCheckedChangeListener { _, _ -> updateInlineFields() }
             updateInlineFields()
-
-            // Keep keyboard Enter and TV-remote Down navigation in the same visual order.
+            inlineForm.addView(portalMac, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                setMargins(0, 0, 0, dp(6))
+            })
             fun focusNextOnDown(view: View, next: () -> View) {
                 view.setOnKeyListener { _, keyCode, event ->
                     if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN &&
@@ -3428,22 +3435,62 @@ class MainActivity : Activity() {
                 if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT ||
                     (event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER &&
                      event.action == android.view.KeyEvent.ACTION_DOWN)) {
-                    (if (sourceMode.checkedRadioButtonId == inlineXtream.id) inlineXtream else inlineM3u).requestFocus()
+                    (when (sourceMode.checkedRadioButtonId) {
+                        inlineM3u.id -> inlineM3u
+                        inlineStalker.id -> inlineStalker
+                        else -> inlineXtream
+                    }).requestFocus()
                     true
                 } else false
             }
-            focusNextOnDown(sourceName) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) inlineXtream else inlineM3u }
-            focusNextOnDown(inlineM3u) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) server else playlistUrl }
-            focusNextOnDown(inlineXtream) { if (sourceMode.checkedRadioButtonId == inlineXtream.id) server else playlistUrl }
-            focusNextOnDown(playlistUrl) { playlistUrl.focusSearch(View.FOCUS_DOWN) ?: playlistUrl }
-            server.setOnEditorActionListener { _, actionId, _ ->
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) { username.requestFocus(); true } else false
-            }
-            username.setOnEditorActionListener { _, actionId, _ ->
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) { password.requestFocus(); true } else false
-            }
-            focusNextOnDown(server) { username }
+            focusNextOnDown(sourceName) { sourceMode.getChildAt(0) }
+            focusNextOnDown(inlineM3u) { if (sourceMode.checkedRadioButtonId == inlineM3u.id) playlistUrl else server }
+            focusNextOnDown(inlineXtream) { server }
+            focusNextOnDown(inlineStalker) { server }
+            focusNextOnDown(server) { if (sourceMode.checkedRadioButtonId == inlineStalker.id) portalMac else username }
             focusNextOnDown(username) { password }
+            focusNextOnDown(playlistUrl) { playlistUrl.focusSearch(View.FOCUS_DOWN) ?: playlistUrl }
+            inlineForm.addView(makeButton("＋ KAYNAK EKLE", true) {
+                val mode = sourceMode.checkedRadioButtonId
+                val label = sourceName.text.toString().trim()
+                when (mode) {
+                    inlineM3u.id -> {
+                        val address = playlistUrl.text.toString().trim()
+                        if (!address.startsWith("http://") && !address.startsWith("https://")) {
+                            Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
+                            return@makeButton
+                        }
+                        val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "M3U ${savedSources.size + 1}" }, "m3u", address)
+                        saveSource(src); hideKeyboard(); loadM3u(src, false)
+                    }
+                    inlineStalker.id -> {
+                        val portal = server.text.toString().trim().trimEnd('/')
+                        val macValue = portalMac.text.toString().trim().uppercase(java.util.Locale.ROOT)
+                        val validMac = Regex("^[0-9A-F]{2}(:[0-9A-F]{2}){5}$").matches(macValue)
+                        if (!(portal.startsWith("http://") || portal.startsWith("https://")) || !validMac) {
+                            Toast.makeText(this, "Portal URL ve geçerli MAC adresini girin.", Toast.LENGTH_LONG).show()
+                            return@makeButton
+                        }
+                        val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "Stalker Portal ${savedSources.size + 1}" }, "mac", if (portal.endsWith("/c")) "$portal/" else portal, macValue)
+                        saveSource(src); hideKeyboard()
+                        Toast.makeText(this, "Stalker kaynağı kaydedildi. Portal bağlantı motoru sonraki aşamada etkinleştirilecek.", Toast.LENGTH_LONG).show()
+                    }
+                    else -> {
+                        val address = server.text.toString().trim()
+                        if (!(address.startsWith("http://") || address.startsWith("https://")) ||
+                            username.text.isNullOrBlank() || password.text.isNullOrBlank()) {
+                            Toast.makeText(this, "Sunucu, kullanıcı adı ve şifreyi doldur.", Toast.LENGTH_LONG).show()
+                            return@makeButton
+                        }
+                        val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "Xtream ${savedSources.size + 1}" }, "xtream",
+                            address.trimEnd('/'), username.text.toString().trim(), password.text.toString())
+                        saveSource(src); hideKeyboard(); loadXtream(src, false)
+                    }
+                }
+            }, LinearLayout.LayoutParams(dp(280), dp(52)).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                setMargins(0, dp(18), 0, 0)
+            })
             inlineForm.addView(makeButton("＋ KAYNAK EKLE", true) {
                 val useXtream = sourceMode.checkedRadioButtonId == inlineXtream.id
                 if (useXtream) {
