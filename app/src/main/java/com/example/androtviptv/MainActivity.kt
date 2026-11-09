@@ -4916,94 +4916,131 @@ class MainActivity : Activity() {
             try {
                 if (source.mode == "mac") {
                     val token = stalkerHandshake(source)
-                    val seriesPortalUri = android.net.Uri.parse(series.url)
-                    val seriesPortalId = seriesPortalUri.host?.takeIf { it.isNotBlank() }
-                        ?: seriesPortalUri.lastPathSegment?.takeIf { it.isNotBlank() }
+                    val seriesUri = android.net.Uri.parse(series.url)
+                    val seriesPortalId = seriesUri.host?.takeIf { it.isNotBlank() }
+                        ?: seriesUri.lastPathSegment?.takeIf { it.isNotBlank() }
                         ?: series.id.substringAfterLast(':')
-                    val seriesCategoryId = android.net.Uri.parse(series.url).getQueryParameter("category")
-                        ?.takeIf { it.isNotBlank() } ?: seriesPortalId
-                    val baseParams = linkedMapOf(
-                        "type" to "series", "action" to "get_ordered_list",
-                        "movie_id" to "0", "series_id" to seriesPortalId, "category" to seriesCategoryId,
-                        "season_id" to "0", "episode_id" to "0", "p" to "1",
-                        "fav" to "0", "sortby" to "added", "hd" to "0",
-                        "ended" to "0", "search" to ""
-                    )
-                    fun readEpisodeRows(params: Map<String, String>, fallbackSeason: String?): List<MediaItem> {
-                        fun fetch(p: Map<String, String>): JSONArray {
-                            val response = stalkerRequest(source, token, p)
-                            return stalkerArray(response, "data", "items", "results")
+                    val categoryId = seriesUri.getQueryParameter("category")
+                        ?.takeIf { it.isNotBlank() }
+                    if (seriesPortalId.isBlank()) throw Exception("Dizi portal kimliği bulunamadı.")
+
+                    // Stalker/Ministra portals do not agree on whether the selected
+                    // series is passed as movie_id or series_id. Try the supported
+                    // hierarchy shapes explicitly; the previous code only retried
+                    // when movie_id was non-zero, although it was always set to zero.
+                    fun requestSeriesList(seasonId: String = "0"): JSONArray {
+                        val common = linkedMapOf(
+                            "type" to "series", "action" to "get_ordered_list",
+                            "season_id" to seasonId, "episode_id" to "0",
+                            "p" to "1", "fav" to "0", "sortby" to "added",
+                            "hd" to "0", "ended" to "0", "search" to ""
+                        )
+                        val attempts = mutableListOf<Map<String, String>>()
+                        attempts.add(LinkedHashMap(common).apply {
+                            put("movie_id", "0"); put("series_id", seriesPortalId)
+                            if (categoryId != null) put("category", categoryId)
+                        })
+                        attempts.add(LinkedHashMap(common).apply {
+                            put("movie_id", seriesPortalId); put("series_id", seriesPortalId)
+                            if (categoryId != null) put("category", categoryId)
+                        })
+                        attempts.add(LinkedHashMap(common).apply {
+                            put("movie_id", seriesPortalId)
+                            if (categoryId != null) put("category", categoryId)
+                        })
+                        attempts.add(LinkedHashMap(common).apply {
+                            put("series_id", seriesPortalId)
+                            if (categoryId != null) put("category", categoryId)
+                        })
+                        attempts.add(LinkedHashMap(common).apply {
+                            put("movie_id", "0"); put("series_id", seriesPortalId)
+                            if (categoryId != null) put("genre", categoryId)
+                        })
+                        for ((index, params) in attempts.withIndex()) {
+                            val response = stalkerRequest(source, token, params)
+                            val array = stalkerArray(response, "data", "items", "results")
+                            android.util.Log.d("KaiserTV", "Stalker series detail attempt=${index + 1}, season=$seasonId, count=${array.length()}, keys=${params.keys}")
+                            if (array.length() > 0) return array
                         }
-                        var array = fetch(params)
-                        if (array.length() == 0 && params["movie_id"] != "0") {
-                            // Stalker implementations vary: some expect the selected series
-                            // in movie_id, others use series_id with movie_id=0.
-                            val bySeriesId = LinkedHashMap(params).apply {
-                                put("movie_id", "0")
-                                put("series_id", seriesPortalId)
-                            }
-                            array = fetch(bySeriesId)
-                        }
-                        if (array.length() == 0 && params["series_id"] == null) {
-                            val byMovieId = LinkedHashMap(params).apply {
-                                put("movie_id", "0")
-                                put("series_id", seriesPortalId)
-                                put("category", seriesCategoryId)
-                            }
-                            array = fetch(byMovieId)
-                        }
+                        return JSONArray()
+                    }
+
+                    fun parseEpisodes(array: JSONArray, fallbackSeason: String?): List<MediaItem> {
                         val rows = ArrayList<MediaItem>()
                         for (i in 0 until array.length()) {
                             val ep = array.optJSONObject(i) ?: continue
                             if (ep.optBoolean("is_season", false)) continue
-                            val id = ep.optString("id").ifBlank { ep.optString("episode_id") }
+                            val id = ep.optString("episode_id").ifBlank { ep.optString("id") }
+                                .ifBlank { ep.optString("ch_id") }
                             if (id.isBlank()) continue
                             val episodeNumber = ep.optString("series_number").toIntOrNull()
                                 ?: ep.optString("episode_number").toIntOrNull()
                                 ?: ep.optString("episode").toIntOrNull()
-                                ?: Regex("(?i)(?:episode|bölüm|ep)\\s*([0-9]+)").find(ep.optString("name"))?.groupValues?.getOrNull(1)?.toIntOrNull()
+                                ?: Regex("(?i)(?:episode|bölüm|ep)\\s*([0-9]+)").find(
+                                    ep.optString("name").ifBlank { ep.optString("title") }
+                                )?.groupValues?.getOrNull(1)?.toIntOrNull()
                                 ?: (i + 1)
-                            val seasonNumber = ep.optString("season_number").ifBlank { ep.optString("season") }
+                            val seasonNumber = ep.optString("season_number")
+                                .ifBlank { ep.optString("season") }
                                 .ifBlank { fallbackSeason ?: "1" }
                             val command = ep.optString("cmd").ifBlank {
-                                android.net.Uri.parse(series.url).getQueryParameter("cmd")
-                                    ?.takeIf { it.isNotBlank() } ?: "/media/file_$id.mpg"
-                            }
+                                seriesUri.getQueryParameter("cmd").orEmpty()
+                            }.ifBlank { "/media/file_$id.mpg" }
                             val episodeUrl = "stalker-episode://$id?cmd=${URLEncoder.encode(command, "UTF-8")}&series=$episodeNumber"
                             rows.add(MediaItem(
-                                id, ep.optString("name").ifBlank { ep.optString("title") }.ifBlank { "Bölüm $episodeNumber" },
+                                id,
+                                ep.optString("name").ifBlank { ep.optString("title") }
+                                    .ifBlank { "Bölüm $episodeNumber" },
                                 episodeUrl, "${series.name} • Sezon $seasonNumber", "Bölümler",
-                                ep.optString("screenshot_uri").ifBlank { series.icon }, "mpg",
-                                seriesPortalId, source.id, ep.optString("description").ifBlank { ep.optString("plot") }
+                                ep.optString("screenshot_uri").ifBlank { ep.optString("pic") }
+                                    .ifBlank { series.icon },
+                                ep.optString("cmd").substringAfterLast('.').takeIf { it.length in 2..5 } ?: "mpg",
+                                seriesPortalId, source.id,
+                                ep.optString("description").ifBlank { ep.optString("plot") }
                             ))
                         }
                         return rows
                     }
-                    var episodeItems = readEpisodeRows(baseParams, null)
+
+                    var episodeItems = parseEpisodes(requestSeriesList("0"), null)
                     if (episodeItems.isEmpty()) {
-                        val seasonResponse = stalkerRequest(source, token, baseParams)
-                        val seasons = stalkerArray(seasonResponse, "data", "items", "results")
-                        val all = ArrayList<MediaItem>()
-                        for (i in 0 until seasons.length()) {
-                            val season = seasons.optJSONObject(i) ?: continue
-                            val seasonId = season.optString("season_id").ifBlank { season.optString("id") }
-                            if (seasonId.isBlank()) continue
-                            val seasonParams = LinkedHashMap(baseParams).apply { put("season_id", seasonId) }
-                            all.addAll(readEpisodeRows(seasonParams, season.optString("season_number").ifBlank { (i + 1).toString() }))
+                        // Some portals return season records first. Query each season
+                        // separately, using its own ID and a fallback season number.
+                        val seasonArrays = listOf(
+                            requestSeriesList("0"),
+                            requestSeriesList(seriesPortalId)
+                        )
+                        val seasons = LinkedHashMap<String, Pair<String, String>>()
+                        for (array in seasonArrays) {
+                            for (i in 0 until array.length()) {
+                                val season = array.optJSONObject(i) ?: continue
+                                val seasonId = season.optString("season_id").ifBlank { season.optString("id") }
+                                if (seasonId.isBlank()) continue
+                                val number = season.optString("season_number")
+                                    .ifBlank { season.optString("name").filter { it.isDigit() }.ifBlank { (i + 1).toString() } }
+                                seasons[seasonId] = seasonId to number
+                            }
                         }
-                        episodeItems = all
+                        val allEpisodes = ArrayList<MediaItem>()
+                        for ((seasonId, seasonNumber) in seasons.values) {
+                            allEpisodes.addAll(parseEpisodes(requestSeriesList(seasonId), seasonNumber))
+                        }
+                        episodeItems = allEpisodes.distinctBy { it.id }
                     }
+
                     val grouped = episodeItems.groupBy {
                         it.group.substringAfterLast("Sezon ").ifBlank { "1" }
                     }
                     val sortedRows = grouped.entries
                         .sortedBy { it.key.toIntOrNull() ?: Int.MAX_VALUE }
-                        .map { it.key to it.value.sortedBy { ep -> ep.name } }
+                        .map { it.key to it.value.sortedBy { ep ->
+                            Regex("\\d+").find(ep.name)?.value?.toIntOrNull() ?: Int.MAX_VALUE
+                        } }
                     runOnUiThread {
                         if (detailSeries?.favoriteKey != series.favoriteKey) return@runOnUiThread
                         seriesEpisodeRows = sortedRows
                         seriesEpisodesLoading = false
-                        if (sortedRows.isEmpty()) seriesEpisodesError = "Portal bu dizi için bölüm veya sezon listesi döndürmedi."
+                        if (sortedRows.isEmpty()) seriesEpisodesError = "Portal bu dizi için sezon veya bölüm listesi döndürmedi. Dizi kimliği: $seriesPortalId"
                         render()
                     }
                     return@thread
