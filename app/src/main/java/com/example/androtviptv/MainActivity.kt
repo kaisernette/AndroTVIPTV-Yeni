@@ -2628,6 +2628,22 @@ class MainActivity : Activity() {
                             }.toSet()
                         }
 
+                        fun publishPartialSection() {
+                            val snapshot = collected.values.toList()
+                            if (snapshot.isEmpty()) return
+                            val publishTypes = if (splitVodSeries) setOf("Filmler", "Diziler") else setOf(label)
+                            val publishItems = snapshot.filter { it.type in publishTypes }
+                            if (publishItems.isEmpty()) return
+                            runOnUiThread {
+                                items.removeAll { it.sourceId == source.id && it.type in publishTypes }
+                                items.addAll(publishItems)
+                                saveCachedItems()
+                                anySectionLoaded = true
+                                if (selectedType in publishTypes || selectedType == "Tümü") render()
+                                updateLoadingMessage("${source.name}: ${label} yükleniyor… (${publishItems.size} içerik hazır)")
+                            }
+                        }
+
                         fun consumePage(arr: JSONArray, categoryName: String) {
                             for (i in 0 until arr.length()) {
                                 val entry = arr.optJSONObject(i) ?: continue
@@ -2743,6 +2759,9 @@ class MainActivity : Activity() {
                                         firstPageKeys.add(keys1)
                                     }
                                 }
+                                // Show the first available VOD/series items immediately;
+                                // continue collecting the remaining pages in the background.
+                                publishPartialSection()
 
                                 val totalPages = if (reportedTotalItems > 0 && reportedPageSize > 0) {
                                     ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize).coerceAtLeast(1)
@@ -2777,9 +2796,7 @@ class MainActivity : Activity() {
                                     if (totalPages <= 0 && arr.length() < 10) break
                                     page++
                                     if (page % 5 == 0) {
-                                        runOnUiThread {
-                                            updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
-                                        }
+                                        publishPartialSection()
                                     }
                                 }
                             }
