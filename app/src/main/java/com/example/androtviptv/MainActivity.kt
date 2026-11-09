@@ -2427,90 +2427,124 @@ class MainActivity : Activity() {
         status.text = "${source.name}: Stalker bağlantısı kuruluyor…"
         render()
         thread(name = "kaiser-stalker-sections") {
-            var anySectionLoaded = false
             val failed = ArrayList<String>()
+            var anySectionLoaded = false
             try {
                 val token = stalkerHandshake(source)
                 stalkerRequest(source, token, mapOf("type" to "stb", "action" to "get_profile"))
 
-                fun readCategoryMap(type: String, action: String): Map<String, String> {
-                    val result = LinkedHashMap<String, String>()
-                    val response = stalkerRequest(source, token, mapOf("type" to type, "action" to action))
-                    val array = stalkerArray(response, "data", "categories", "genres")
+                fun extractArray(response: JSONObject): JSONArray {
+                    val direct = stalkerArray(response, "data", "categories", "genres", "channels", "items", "results")
+                    if (direct.length() > 0) return direct
+                    val js = response.optJSONObject("js")
+                    if (js != null) {
+                        val nested = stalkerArray(js, "data", "categories", "genres", "channels", "items", "results")
+                        if (nested.length() > 0) return nested
+                    }
+                    return direct
+                }
+
+                fun readCategories(type: String): List<Pair<String, String>> {
+                    val response = stalkerRequest(source, token, mapOf("type" to type, "action" to "get_categories"))
+                    val array = extractArray(response)
+                    val result = ArrayList<Pair<String, String>>()
                     for (i in 0 until array.length()) {
-                        val c = array.optJSONObject(i) ?: continue
-                        val id = c.optString("id").ifBlank { c.optString("category_id") }.ifBlank { c.optString("genre_id") }
-                        val name = c.optString("title").ifBlank { c.optString("category_name") }.ifBlank { c.optString("name") }
-                        if (id.isNotBlank() && name.isNotBlank()) result[id] = name
+                        val item = array.optJSONObject(i) ?: continue
+                        val id = item.optString("id").ifBlank { item.optString("category_id") }
+                            .ifBlank { item.optString("genre_id") }
+                        val name = item.optString("title").ifBlank { item.optString("category_name") }
+                            .ifBlank { item.optString("name") }
+                        if (id.isNotBlank()) result.add(id to name.ifBlank { "Diğer" })
                     }
                     return result
                 }
 
-                fun loadSection(type: String, label: String, categoryAction: String, listAction: String) {
+                fun loadSection(type: String, label: String, categoryAction: String) {
                     try {
                         runOnUiThread { status.text = "${source.name}: $label kategorileri alınıyor…" }
-                        val categories = readCategoryMap(type, categoryAction)
+                        val categories = if (type == "itv") {
+                            val response = stalkerRequest(source, token, mapOf("type" to "itv", "action" to "get_genres"))
+                            val arr = extractArray(response)
+                            (0 until arr.length()).mapNotNull { i ->
+                                val o = arr.optJSONObject(i) ?: return@mapNotNull null
+                                val id = o.optString("id").ifBlank { o.optString("genre_id") }
+                                if (id.isBlank()) null else id to o.optString("title").ifBlank { o.optString("name") }.ifBlank { "Diğer" }
+                            }
+                        } else readCategories(type)
+
                         runOnUiThread { status.text = "${source.name}: $label yükleniyor…" }
-                        val sectionItems = ArrayList<MediaItem>()
-                        var page = 1
-                        var totalItems = Int.MAX_VALUE
-                        while (page <= 100 && sectionItems.size < totalItems) {
-                            val response = stalkerRequest(source, token, mapOf(
-                                "type" to type, "action" to listAction, "genre" to "*",
-                                "category" to "*", "sortby" to "number", "fav" to "0", "p" to page.toString()
-                            ))
-                            val array = stalkerArray(response, "data", "channels", "items", "results")
-                            val dataObject = response.optJSONObject("data")
-                            totalItems = response.optInt("total_items", dataObject?.optInt("total_items", totalItems) ?: totalItems)
-                            if (array.length() == 0) {
-                                android.util.Log.w("KaiserTV", "Stalker $label empty page=$page responseKeys=${response.keys().asSequence().toList()}")
-                                break
+                        val collected = LinkedHashMap<String, MediaItem>()
+
+                        fun requestList(categoryId: String?, page: Int): JSONArray {
+                            val params = LinkedHashMap<String, String>()
+                            params["type"] = type
+                            params["action"] = "get_ordered_list"
+                            params["p"] = page.toString()
+                            params["sortby"] = "number"
+                            params["fav"] = "0"
+                            if (type == "itv") params["genre"] = categoryId ?: "*"
+                            else params["category"] = categoryId ?: "*"
+                            val response = stalkerRequest(source, token, params)
+                            val arr = extractArray(response)
+                            if (arr.length() == 0) {
+                                // Some portals use the alternate filter parameter.
+                                params.remove(if (type == "itv") "genre" else "category")
+                                params[if (type == "itv") "category" else "genre"] = categoryId ?: "*"
+                                return extractArray(stalkerRequest(source, token, params))
                             }
-                            for (i in 0 until array.length()) {
-                                val entry = array.optJSONObject(i) ?: continue
-                                val id = entry.optString("id").ifBlank { entry.optString("ch_id") }
-                                    .ifBlank { entry.optString("movie_id") }.ifBlank { entry.optString("series_id") }
-                                if (id.isBlank()) continue
-                                val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$label $id" }
-                                val categoryId = entry.optString("tv_genre_id").ifBlank { entry.optString("category_id") }.ifBlank { entry.optString("genre_id") }
-                                val categoryName = categories[categoryId]
-                                    ?: entry.optString("category_name").takeIf { it.isNotBlank() }
-                                    ?: entry.optString("genre").takeIf { it.isNotBlank() } ?: "Diğer"
-                                val image = entry.optString("screenshot_uri").ifBlank { entry.optString("logo") }
-                                    .ifBlank { entry.optString("cover") }.ifBlank { entry.optString("picture") }
-                                val artwork = when {
-                                    image.startsWith("//") -> "https:$image"
-                                    image.startsWith("/") -> source.address.trimEnd('/') + image
-                                    else -> image
-                                }
-                                val itemUrl = when (type) {
-                                    "itv" -> "stalker://$id"
-                                    "vod" -> "stalker-vod://$id"
-                                    else -> "stalker-series://$id"
-                                }
-                                sectionItems.add(MediaItem(
-                                    "stalker-$type:$id", name, itemUrl, categoryName, label, artwork,
-                                    "mp4", if (type == "series") id else "", source.id,
-                                    entry.optString("description").ifBlank { entry.optString("plot") },
-                                    entry.optString("director"), entry.optString("rating"), entry.optString("year"),
-                                    entry.optString("genre")
-                                ))
-                            }
-                            page++
-                            if (array.length() < 10 && totalItems == Int.MAX_VALUE) break
+                            return arr
                         }
 
+                        val targets = if (categories.isEmpty()) listOf("*" to "Diğer") else categories
+                        for ((categoryId, categoryName) in targets) {
+                            var page = 1
+                            while (page <= 100) {
+                                val arr = requestList(categoryId, page)
+                                if (arr.length() == 0) break
+                                for (i in 0 until arr.length()) {
+                                    val entry = arr.optJSONObject(i) ?: continue
+                                    val id = entry.optString("id").ifBlank { entry.optString("ch_id") }
+                                        .ifBlank { entry.optString("movie_id") }.ifBlank { entry.optString("series_id") }
+                                    if (id.isBlank()) continue
+                                    val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$label $id" }
+                                    val catId = entry.optString("tv_genre_id").ifBlank { entry.optString("category_id") }
+                                        .ifBlank { entry.optString("genre_id") }
+                                    val catName = categories.firstOrNull { it.first == catId }?.second
+                                        ?: entry.optString("category_name").takeIf { it.isNotBlank() }
+                                        ?: entry.optString("genre").takeIf { it.isNotBlank() }
+                                        ?: categoryName
+                                    val image = entry.optString("screenshot_uri").ifBlank { entry.optString("logo") }
+                                        .ifBlank { entry.optString("cover") }.ifBlank { entry.optString("picture") }
+                                    val artwork = when {
+                                        image.startsWith("//") -> "https:$image"
+                                        image.startsWith("/") -> source.address.trimEnd('/') + image
+                                        else -> image
+                                    }
+                                    val itemUrl = when (type) {
+                                        "itv" -> "stalker://$id"
+                                        "vod" -> "stalker-vod://$id"
+                                        else -> "stalker-series://$id"
+                                    }
+                                    collected["$type:$id"] = MediaItem(
+                                        "stalker-$type:$id", name, itemUrl, catName, label, artwork,
+                                        "mp4", if (type == "series") id else "", source.id,
+                                        entry.optString("description").ifBlank { entry.optString("plot") },
+                                        entry.optString("director"), entry.optString("rating"), entry.optString("year"),
+                                        entry.optString("genre")
+                                    )
+                                }
+                                if (arr.length() < 10) break
+                                page++
+                            }
+                        }
+
+                        val sectionItems = collected.values.toList()
+                        android.util.Log.i("KaiserTV", "Stalker $label categories=${categories.size}, items=${sectionItems.size}")
                         if (sectionItems.isEmpty()) {
                             failed.add(label)
-                            android.util.Log.w("KaiserTV", "Stalker $label returned 0 items; categories=${categories.size}")
-                            runOnUiThread {
-                                status.text = "${source.name}: $label bulunamadı; diğer bölümler yükleniyor…"
-                            }
+                            runOnUiThread { status.text = "${source.name}: $label boş döndü; sonraki bölüm yükleniyor…" }
                             return
                         }
-
-                        // Publish each section as soon as it is ready. TV becomes usable
-                        // while VOD and Series continue loading on the background thread.
                         runOnUiThread {
                             items.removeAll { it.sourceId == source.id && it.type == label }
                             items.addAll(sectionItems)
@@ -2525,32 +2559,29 @@ class MainActivity : Activity() {
                                 hasLoadedSource = true
                                 render()
                                 publishHomeChannel()
-                            } else if (selectedType == label || selectedType == "Tümü") {
-                                render()
-                            }
+                            } else if (selectedType == label || selectedType == "Tümü") render()
                             status.text = "${source.name}: $label hazır (${sectionItems.size} içerik)."
                         }
-                        android.util.Log.i("KaiserTV", "Stalker $label loaded: ${sectionItems.size}; categories: ${categories.size}")
                     } catch (e: Exception) {
                         failed.add(label)
-                        android.util.Log.e("KaiserTV", "Stalker $label catalogue failed", e)
-                        runOnUiThread { status.text = "${source.name}: $label alınamadı; sonraki bölüme geçiliyor…" }
+                        android.util.Log.e("KaiserTV", "Stalker $label failed", e)
+                        runOnUiThread { status.text = "${source.name}: $label alınamadı; sonraki bölüm deneniyor…" }
                     }
                 }
 
-                loadSection("itv", "Canlı TV", "get_genres", "get_ordered_list")
-                loadSection("vod", "Filmler", "get_categories", "get_ordered_list")
-                loadSection("series", "Diziler", "get_categories", "get_ordered_list")
+                loadSection("itv", "Canlı TV", "get_genres")
+                loadSection("vod", "Filmler", "get_categories")
+                loadSection("series", "Diziler", "get_categories")
 
                 runOnUiThread {
                     isLoadingSource = false
                     if (!anySectionLoaded) {
                         status.text = "${source.name}: katalog alınamadı."
                         render()
-                        showConnectionError(source.name, "TV, film ve dizi listeleri alınamadı: ${failed.distinct().joinToString()}")
+                        showConnectionError(source.name, "Kataloglar alınamadı: ${failed.joinToString()}")
                     } else {
                         status.text = "${source.name}: yükleme tamamlandı" +
-                            if (failed.isNotEmpty()) " • Eksik: ${failed.distinct().joinToString()}" else ""
+                            if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else ""
                         render()
                     }
                 }
