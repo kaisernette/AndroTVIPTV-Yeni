@@ -625,6 +625,12 @@ class MainActivity : Activity() {
     private var selectedEpisodeIndex = -1
     private var seriesEpisodesError = ""
     private lateinit var status: TextView
+    private var loadingMessageView: TextView? = null
+
+    private fun updateLoadingMessage(message: String) {
+        status.text = message
+        loadingMessageView?.text = message
+    }
     private lateinit var playlistUrl: EditText
     private lateinit var server: EditText
     private lateinit var username: EditText
@@ -2428,16 +2434,16 @@ class MainActivity : Activity() {
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
         loadProgress = 0
-        status.text = "${source.name}: Stalker bağlantısı kuruluyor…"
+        updateLoadingMessage( "${source.name}: Stalker bağlantısı kuruluyor…")
         render()
         thread(name = "kaiser-stalker-sections") {
             val failed = ArrayList<String>()
             var anySectionLoaded = false
             try {
-                runOnUiThread { status.text = "${source.name}: Portal yanıtı bekleniyor…" }
+                runOnUiThread { updateLoadingMessage( "${source.name}: Portal yanıtı bekleniyor…") }
                 val token = stalkerHandshake(source)
                 android.util.Log.i("KaiserTV", "Stalker handshake completed for ${source.name}")
-                runOnUiThread { status.text = "${source.name}: Oturum açıldı, TV kategorileri alınıyor…" }
+                runOnUiThread { updateLoadingMessage( "${source.name}: Oturum açıldı, TV kategorileri alınıyor…") }
 
                 fun extractArray(response: JSONObject): JSONArray {
                     val direct = stalkerArray(response, "data", "categories", "genres", "channels", "items", "results")
@@ -2467,7 +2473,7 @@ class MainActivity : Activity() {
 
                 fun loadSection(type: String, label: String, categoryAction: String) {
                     try {
-                        runOnUiThread { status.text = "${source.name}: $label kategorileri alınıyor…" }
+                        runOnUiThread { updateLoadingMessage( "${source.name}: $label kategorileri alınıyor…") }
                         val categories = if (type == "itv") {
                             val response = stalkerRequest(source, token, mapOf("type" to "itv", "action" to "get_genres"))
                             val arr = extractArray(response)
@@ -2478,7 +2484,7 @@ class MainActivity : Activity() {
                             }
                         } else readCategories(type)
 
-                        runOnUiThread { status.text = "${source.name}: $label yükleniyor…" }
+                        runOnUiThread { updateLoadingMessage( "${source.name}: $label yükleniyor…") }
                         val collected = LinkedHashMap<String, MediaItem>()
 
                         fun requestList(categoryId: String?, page: Int): JSONArray {
@@ -2548,7 +2554,7 @@ class MainActivity : Activity() {
                         android.util.Log.i("KaiserTV", "Stalker $label categories=${categories.size}, items=${sectionItems.size}")
                         if (sectionItems.isEmpty()) {
                             failed.add(label)
-                            runOnUiThread { status.text = "${source.name}: $label boş döndü; sonraki bölüm yükleniyor…" }
+                            runOnUiThread { updateLoadingMessage( "${source.name}: $label boş döndü; sonraki bölüm yükleniyor…") }
                             return
                         }
                         runOnUiThread {
@@ -2566,12 +2572,12 @@ class MainActivity : Activity() {
                                 render()
                                 publishHomeChannel()
                             } else if (selectedType == label || selectedType == "Tümü") render()
-                            status.text = "${source.name}: $label hazır (${sectionItems.size} içerik)."
+                            updateLoadingMessage( "${source.name}: $label hazır (${sectionItems.size} içerik).")
                         }
                     } catch (e: Exception) {
                         failed.add(label)
                         android.util.Log.e("KaiserTV", "Stalker $label failed", e)
-                        runOnUiThread { status.text = "${source.name}: $label alınamadı; sonraki bölüm deneniyor…" }
+                        runOnUiThread { updateLoadingMessage( "${source.name}: $label alınamadı; sonraki bölüm deneniyor…") }
                     }
                 }
 
@@ -2582,11 +2588,11 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     isLoadingSource = false
                     if (!anySectionLoaded) {
-                        status.text = "${source.name}: katalog alınamadı."
+                        updateLoadingMessage( "${source.name}: katalog alınamadı.")
                         render()
                         showConnectionError(source.name, "Kataloglar alınamadı: ${failed.joinToString()}")
                     } else {
-                        status.text = "${source.name}: yükleme tamamlandı" +
+                        updateLoadingMessage( "${source.name}: yükleme tamamlandı") +
                             if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else ""
                         render()
                     }
@@ -2595,7 +2601,7 @@ class MainActivity : Activity() {
                 android.util.Log.e("KaiserTV", "Stalker Portal load failed", e)
                 runOnUiThread {
                     isLoadingSource = false
-                    status.text = "${source.name}: ${friendlyLoadError(e)}"
+                    updateLoadingMessage( "${source.name}: ${friendlyLoadError(e)}")
                     render()
                     showConnectionError(source.name, friendlyLoadError(e))
                 }
@@ -3786,6 +3792,7 @@ class MainActivity : Activity() {
             sidebarMenuScroll.visibility = View.VISIBLE
         }
         if (isLoadingSource) {
+            loadingMessageView = null
             val loadingPanel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
@@ -3794,11 +3801,12 @@ class MainActivity : Activity() {
             loadingPanel.addView(makeKaiserLogoView(34f), LinearLayout.LayoutParams(dp(230), dp(64)).apply {
                 gravity = Gravity.CENTER
             })
-            loadingPanel.addView(TextView(this).apply {
+            loadingMessageView = TextView(this).apply {
                 text = status.text.toString().ifBlank { "Kaynak yükleniyor…" }
                 textSize = 18f; setTextColor(muted); gravity = Gravity.CENTER
                 setPadding(0, dp(18), 0, 0)
-            })
+            }
+            loadingPanel.addView(loadingMessageView)
             // Tek bir geniş, çerçevesiz görsel alanı; görseller sağdan sola otomatik akar.
             val visualViewport = FrameLayout(this).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(440), dp(145)).apply {
