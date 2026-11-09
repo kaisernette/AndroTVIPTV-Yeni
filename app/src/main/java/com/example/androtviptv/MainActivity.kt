@@ -1826,9 +1826,9 @@ class MainActivity : Activity() {
                 }
                 val label = sourceName.text.toString().trim().ifBlank { "MAC Portal ${savedSources.size + 1}" }
                 val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "mac", portal, macValue)
-                saveSource(src); hideKeyboard()
-                Toast.makeText(this, t("MAC Portal bilgileri kaydedildi. Yayın bağlantısı henüz etkin değil."), Toast.LENGTH_LONG).show()
-                render()
+                saveSource(src)
+                hideKeyboard()
+                loadStalker(src, editSource != null)
                 return@makeButton
             }
             val useXtream = sourceMode.checkedRadioButtonId == xtream.id
@@ -3621,7 +3621,7 @@ class MainActivity : Activity() {
                             Toast.makeText(this, "Portal URL ve geçerli MAC adresini girin.", Toast.LENGTH_LONG).show()
                             return@makeButton
                         }
-                        val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "Stalker Portal ${savedSources.size + 1}" }, "mac", if (portal.endsWith("/c")) "$portal/" else portal, macValue)
+                        val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "Stalker Portal ${savedSources.size + 1}" }, "mac", portal, macValue)
                         saveSource(src); hideKeyboard()
                         loadStalker(src, false)
                     }
@@ -4048,8 +4048,7 @@ class MainActivity : Activity() {
                 })
                 textSize = 14f; setTextColor(muted); setPadding(0, 7, 0, 14)
             })
-            if (items.isEmpty()) empty.addView(makeButton(t("KAYNAK EKLE  →"), true) { showConnectionDialog() },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
+            // Kaynak ekleme işlemi ilk açılış formundan yapılır; ikinci CTA kaldırıldı.
             content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
             if (selectedType in listOf("Favoriler", "Son İzlenenler")) {
                 rebuildNavigation()
