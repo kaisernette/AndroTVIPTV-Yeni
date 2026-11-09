@@ -2613,7 +2613,12 @@ class MainActivity : Activity() {
                         val targets = if (type == "itv" || categories.isEmpty()) {
                             listOf("*" to "Diğer")
                         } else {
-                            categories
+                            // The portal's "*" category reports the GLOBAL catalogue total
+                            // (37k+) even when category pagination is requested. Scanning it
+                            // first causes thousands of redundant requests. Load real
+                            // categories instead; the dedicated all-category view is not
+                            // needed to populate the category catalogue.
+                            categories.filterNot { it.first == "*" }
                         }
                         fun pageKeys(array: JSONArray): Set<String> {
                             return (0 until array.length()).mapNotNull { index ->
@@ -2799,8 +2804,15 @@ class MainActivity : Activity() {
                                 }
 
                                 val seenPageKeys = firstPageKeys.toMutableSet()
+                                // Stalker often returns the GLOBAL total_items value
+                                // for every category. Never use that value as a per-category
+                                // page count: it can trigger thousands of needless requests.
+                                // Fetch a small initial slice per category; later category
+                                // selection can be used to expand loading without blocking startup.
+                                val categoryPageLimit = 3
+                                val effectiveLastPage = minOf(lastPageNumber, categoryPageLimit)
                                 var page = nextPage
-                                while (page <= lastPageNumber) {
+                                while (page <= effectiveLastPage) {
                                     val arr = requestList(categoryId, page, capturePageMeta)
                                     if (arr.length() == 0) break
                                     val currentPageKeys = pageKeys(arr)
