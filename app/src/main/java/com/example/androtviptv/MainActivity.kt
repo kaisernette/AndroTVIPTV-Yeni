@@ -2232,22 +2232,39 @@ class MainActivity : Activity() {
             AlertDialog.Builder(this).setTitle(s.name).setItems(arrayOf("Aç (önbellekten)", "Yenile", "Sil")) { _, action ->
                 when (action) {
                     0 -> {
-                        val cached = items.any { it.sourceId == s.id }
-                        if (cached) {
-                            prefs.edit().putString("last_source_id", s.id).remove("selected_source_ids").apply()
-                            selectedCategorySourceId = s.id
-                            selectedType = "Tümü"
-                            selectedGroup = "Tüm kategoriler"
-                            sidebarMode = "main"
-                            isLoadingSource = false
-                            status.visibility = View.VISIBLE
-                            status.text = "${s.name}: kayıtlı içerik açıldı."
-                            render()
+                        fun openCachedSource(cachedItems: List<MediaItem>) {
+                            if (cachedItems.isNotEmpty()) {
+                                items.removeAll { it.sourceId == s.id }
+                                items.addAll(cachedItems)
+                                prefs.edit().putString("last_source_id", s.id).remove("selected_source_ids").apply()
+                                selectedCategorySourceId = s.id
+                                selectedType = "Tümü"
+                                selectedGroup = "Tüm kategoriler"
+                                sidebarMode = "main"
+                                isLoadingSource = false
+                                status.visibility = View.VISIBLE
+                                status.text = "${s.name}: kayıtlı içerik açıldı."
+                                render()
+                            } else {
+                                when (s.mode) {
+                                    "xtream" -> loadXtream(s, true)
+                                    "mac" -> loadStalker(s, true)
+                                    else -> loadM3u(s, true)
+                                }
+                            }
+                        }
+                        val inMemory = items.filter { it.sourceId == s.id }
+                        if (inMemory.isNotEmpty()) {
+                            openCachedSource(inMemory)
                         } else {
-                            when (s.mode) {
-                                "xtream" -> loadXtream(s, true)
-                                "mac" -> loadStalker(s, true)
-                                else -> loadM3u(s, true)
+                            status.visibility = View.VISIBLE
+                            status.text = "${s.name}: kayıtlı içerik aranıyor…"
+                            thread(name = "kaiser-source-cache-restore") {
+                                val diskCache = try { readCachedItems(s.id) } catch (e: Exception) {
+                                    android.util.Log.w("KaiserTV", "Source cache restore failed for ${s.name}", e)
+                                    emptyList()
+                                }
+                                runOnUiThread { openCachedSource(diskCache) }
                             }
                         }
                     }
@@ -2907,10 +2924,9 @@ class MainActivity : Activity() {
                                 selectedGroup = "Tüm kategoriler"
                                 expandedCategory = null
                                 sidebarMode = "main"
-                                isLoadingSource = false
-                                hasLoadedSource = true
-                                render()
-                                publishHomeChannel()
+                                // Keep the loading screen active until TV, VOD and
+                                // Series workers have all completed. Do not expose the home
+                                // screen while the other catalogues are still being fetched.
                             } else if (selectedType == label || selectedType == "Tümü") render()
                             updateLoadingMessage( "${source.name}: $label hazır (${sectionItems.size} içerik).")
                         }
@@ -2943,9 +2959,11 @@ class MainActivity : Activity() {
                         render()
                         showConnectionError(source.name, "Kataloglar alınamadı: ${failed.joinToString()}")
                     } else {
+                        hasLoadedSource = true
                         updateLoadingMessage("${source.name}: yükleme tamamlandı" +
                             if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else "")
                         render()
+                        publishHomeChannel()
                         run {
                             // Save compact Stalker diagnostics after every successful catalogue load
                             // so the first VOD records can be inspected even when other sections work.
@@ -3521,76 +3539,81 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun loadCachedItems() {
-        try {
-            val file = cachedItemsFile()
-            if (!file.exists() || file.length() <= 0L) return
-            if (file.length() > 64L * 1024L * 1024L) {
-                android.util.Log.w("KaiserTV", "Media cache exceeds hard safety limit; skipping restore.")
-                return
-            }
-            // Stream the cache instead of readText()+JSONArray, which duplicated
-            // the complete IPTV catalogue in memory and could crash at startup.
-            val restored = ArrayList<MediaItem>(minOf(12000, (file.length() / 180).toInt().coerceAtLeast(64)))
-            java.io.BufferedReader(java.io.InputStreamReader(file.inputStream(), Charsets.UTF_8)).use { input ->
-                android.util.JsonReader(input).use { reader ->
-                    reader.beginArray()
-                    while (reader.hasNext() && restored.size < 12000) {
-                        var id = ""
-                        var name = ""
-                        var url = ""
-                        var group = "Diğer"
-                        var type = "Canlı TV"
-                        var icon = ""
-                        var extension = ""
-                        var seriesId = ""
-                        var sourceId = ""
-                        var plot = ""
-                        var actors = ""
-                        var rating = ""
-                        var releaseDate = ""
-                        var genre = ""
-                        var requestHeaders = ""
-                        reader.beginObject()
-                        while (reader.hasNext()) {
-                            val key = reader.nextName()
-                            val value = if (reader.peek() == android.util.JsonToken.NULL) {
-                                reader.nextNull()
-                                ""
-                            } else if (reader.peek() == android.util.JsonToken.STRING ||
-                                reader.peek() == android.util.JsonToken.NUMBER ||
-                                reader.peek() == android.util.JsonToken.BOOLEAN) {
-                                reader.nextString()
-                            } else {
-                                reader.skipValue()
-                                ""
-                            }
-                            when (key) {
-                                "id" -> id = value
-                                "name" -> name = value
-                                "url" -> url = value
-                                "group" -> group = value
-                                "type" -> type = value
-                                "icon" -> icon = value
-                                "extension" -> extension = value
-                                "seriesId" -> seriesId = value
-                                "sourceId" -> sourceId = value
-                                "plot" -> plot = value
-                                "actors" -> actors = value
-                                "rating" -> rating = value
-                                "releaseDate" -> releaseDate = value
-                                "genre" -> genre = value
-                                "requestHeaders" -> requestHeaders = value
-                            }
+    private fun readCachedItems(sourceIdFilter: String? = null): List<MediaItem> {
+        val file = cachedItemsFile()
+        if (!file.exists() || file.length() <= 0L) return emptyList()
+        if (file.length() > 64L * 1024L * 1024L) {
+            android.util.Log.w("KaiserTV", "Media cache exceeds hard safety limit; skipping restore.")
+            return emptyList()
+        }
+        // Read only the requested source when switching sources. This keeps the
+        // memory ceiling bounded without forcing a network reload for older sources.
+        val restored = ArrayList<MediaItem>(minOf(12000, (file.length() / 180).toInt().coerceAtLeast(64)))
+        java.io.BufferedReader(java.io.InputStreamReader(file.inputStream(), Charsets.UTF_8)).use { input ->
+            android.util.JsonReader(input).use { reader ->
+                reader.beginArray()
+                while (reader.hasNext() && restored.size < 12000) {
+                    var id = ""
+                    var name = ""
+                    var url = ""
+                    var group = "Diğer"
+                    var type = "Canlı TV"
+                    var icon = ""
+                    var extension = ""
+                    var seriesId = ""
+                    var sourceId = ""
+                    var plot = ""
+                    var actors = ""
+                    var rating = ""
+                    var releaseDate = ""
+                    var genre = ""
+                    var requestHeaders = ""
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        val key = reader.nextName()
+                        val value = if (reader.peek() == android.util.JsonToken.NULL) {
+                            reader.nextNull()
+                            ""
+                        } else if (reader.peek() == android.util.JsonToken.STRING ||
+                            reader.peek() == android.util.JsonToken.NUMBER ||
+                            reader.peek() == android.util.JsonToken.BOOLEAN) {
+                            reader.nextString()
+                        } else {
+                            reader.skipValue()
+                            ""
                         }
-                        reader.endObject()
-                        if (url.isNotBlank()) {
-                            restored.add(MediaItem(id, name, url, group, type, icon, extension, seriesId,
-                                sourceId, plot, actors, rating, releaseDate, genre, requestHeaders))
+                        when (key) {
+                            "id" -> id = value
+                            "name" -> name = value
+                            "url" -> url = value
+                            "group" -> group = value
+                            "type" -> type = value
+                            "icon" -> icon = value
+                            "extension" -> extension = value
+                            "seriesId" -> seriesId = value
+                            "sourceId" -> sourceId = value
+                            "plot" -> plot = value
+                            "actors" -> actors = value
+                            "rating" -> rating = value
+                            "releaseDate" -> releaseDate = value
+                            "genre" -> genre = value
+                            "requestHeaders" -> requestHeaders = value
                         }
+                    }
+                    reader.endObject()
+                    if (url.isNotBlank() && (sourceIdFilter.isNullOrBlank() || sourceId == sourceIdFilter)) {
+                        restored.add(MediaItem(id, name, url, group, type, icon, extension, seriesId,
+                            sourceId, plot, actors, rating, releaseDate, genre, requestHeaders))
                     }
                 }
             }
+        }
+        return restored
+    }
+
+    private fun loadCachedItems() {
+        try {
+            val restored = readCachedItems()
             items.clear()
             items.addAll(restored)
             android.util.Log.i("KaiserTV", "Restored " + restored.size + " cached media items.")
