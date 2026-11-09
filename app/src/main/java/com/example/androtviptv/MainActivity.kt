@@ -2469,8 +2469,8 @@ class MainActivity : Activity() {
         updateLoadingMessage( "${source.name}: Stalker bağlantısı kuruluyor…")
         render()
         thread(name = "kaiser-stalker-sections") {
-            val failed = ArrayList<String>()
-            val sectionDiagnostics = ArrayList<String>()
+            val failed = java.util.Collections.synchronizedList(ArrayList<String>())
+            val sectionDiagnostics = java.util.Collections.synchronizedList(ArrayList<String>())
             var anySectionLoaded = false
             var vodSeriesCount = 0
             try {
@@ -2780,7 +2780,7 @@ class MainActivity : Activity() {
                                 // page count: it can trigger thousands of needless requests.
                                 // Fetch a small initial slice per category; later category
                                 // selection can be used to expand loading without blocking startup.
-                                val categoryPageLimit = 1
+                                val categoryPageLimit = 3
                                 val effectiveLastPage = minOf(lastPageNumber, categoryPageLimit)
                                 var page = nextPage
                                 while (page <= effectiveLastPage) {
@@ -2879,16 +2879,20 @@ class MainActivity : Activity() {
                     }
                 }
 
-                loadSection("itv", "Canlı TV", "get_genres")
-                // First read the unified VOD catalogue. Ministra portals may place
-                // both movies and series here and mark series with is_series=1.
-                loadSection("vod", "Filmler", "get_categories", splitVodSeries = true)
-                // Keep the regular Series endpoint as a compatibility fallback.
-                if (vodSeriesCount == 0) {
-                    loadSection("series", "Diziler", "get_categories")
-                } else {
-                    sectionDiagnostics.add("Diziler VOD kataloğundan ayrıştırıldı; ayrı series isteği atlandı")
+                // Start all three catalogues together. Each loader has its own
+                // collection; UI publication remains on the main thread.
+                val tvTask = thread(name = "kaiser-stalker-tv") {
+                    loadSection("itv", "Canlı TV", "get_genres")
                 }
+                val vodTask = thread(name = "kaiser-stalker-vod") {
+                    loadSection("vod", "Filmler", "get_categories", splitVodSeries = true)
+                }
+                val seriesTask = thread(name = "kaiser-stalker-series") {
+                    loadSection("series", "Diziler", "get_categories")
+                }
+                tvTask.join()
+                vodTask.join()
+                seriesTask.join()
 
                 runOnUiThread {
                     isLoadingSource = false
