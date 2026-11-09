@@ -6108,6 +6108,32 @@ class MainActivity : Activity() {
 
     private fun play(item: MediaItem, startOver: Boolean = false) {
         if (openingPlayer) return
+        if (item.url.startsWith("stalker://")) {
+            val source = savedSources.firstOrNull { it.id == item.sourceId && it.mode == "mac" }
+            if (source == null) {
+                Toast.makeText(this, "Stalker kaynağı bulunamadı. Kaynağı yeniden ekleyin.", Toast.LENGTH_LONG).show()
+                return
+            }
+            val channelId = item.url.removePrefix("stalker://")
+            openingPlayer = true
+            status.text = "${item.name}: yayın bağlantısı alınıyor…"
+            thread(name = "kaiser-stalker-play") {
+                try {
+                    val streamUrl = resolveStalkerStream(source, channelId)
+                    runOnUiThread {
+                        openingPlayer = false
+                        play(item.copy(url = streamUrl), startOver)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("KaiserTV", "Stalker stream resolve failed", e)
+                    runOnUiThread {
+                        openingPlayer = false
+                        Toast.makeText(this, friendlyLoadError(e), Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            return
+        }
         if (item.type == "Diziler" && item.url.isBlank()) { loadSeriesEpisodes(item); return }
         if (item.url.isBlank()) {
             android.widget.Toast.makeText(this, "Bu içerik için yayın adresi bulunamadı.", android.widget.Toast.LENGTH_LONG).show()
