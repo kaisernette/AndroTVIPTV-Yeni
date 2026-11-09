@@ -2528,10 +2528,6 @@ class MainActivity : Activity() {
                 }
 
                 fun loadSection(type: String, label: String, categoryAction: String, splitVodSeries: Boolean = false) {
-                    if (type == "series" && vodSeriesCount > 0) {
-                        sectionDiagnostics.add("series fallback atlandı: VOD içinden $vodSeriesCount dizi bulundu")
-                        return
-                    }
                     try {
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label kategorileri alınıyor…") }
                         val categories = if (type == "itv") {
@@ -2867,8 +2863,18 @@ class MainActivity : Activity() {
                             return
                         }
                         runOnUiThread {
-                            items.removeAll { it.sourceId == source.id && it.type == label }
-                            items.addAll(sectionItems)
+                            if (type == "series") {
+                                // Merge the dedicated Series catalogue with any series
+                                // already discovered in VOD; prefer the dedicated endpoint
+                                // when the same source item appears in both responses.
+                                val merged = (items.filter { it.sourceId == source.id && it.type == label } + sectionItems)
+                                    .distinctBy { it.id.ifBlank { it.url } }
+                                items.removeAll { it.sourceId == source.id && it.type == label }
+                                items.addAll(merged)
+                            } else {
+                                items.removeAll { it.sourceId == source.id && it.type == label }
+                                items.addAll(sectionItems)
+                            }
                             saveCachedItems()
                             anySectionLoaded = true
                             if (type == "itv") {
