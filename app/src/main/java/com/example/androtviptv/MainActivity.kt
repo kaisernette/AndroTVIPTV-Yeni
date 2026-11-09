@@ -2551,48 +2551,120 @@ class MainActivity : Activity() {
                         } else {
                             categories
                         }
-                        for ((categoryId, categoryName) in targets) {
-                            var page = 1
-                            while (page <= 100) {
-                                val arr = requestList(categoryId, page)
-                                if (arr.length() == 0) break
-                                for (i in 0 until arr.length()) {
-                                    val entry = arr.optJSONObject(i) ?: continue
-                                    val id = entry.optString("id").ifBlank { entry.optString("ch_id") }
-                                        .ifBlank { entry.optString("movie_id") }.ifBlank { entry.optString("series_id") }
-                                    if (id.isBlank()) continue
-                                    val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$label $id" }
-                                    val catId = entry.optString("tv_genre_id").ifBlank { entry.optString("category_id") }
-                                        .ifBlank { entry.optString("genre_id") }
-                                    val catName = categories.firstOrNull { it.first == catId }?.second
-                                        ?: entry.optString("category_name").takeIf { it.isNotBlank() }
-                                        ?: entry.optString("genre").takeIf { it.isNotBlank() }
-                                        ?: categoryName
-                                    val image = entry.optString("screenshot_uri").ifBlank { entry.optString("logo") }
-                                        .ifBlank { entry.optString("cover") }.ifBlank { entry.optString("picture") }
-                                    val artwork = when {
-                                        image.startsWith("//") -> "https:$image"
-                                        image.startsWith("/") -> source.address.trimEnd('/') + image
-                                        else -> image
-                                    }
-                                    val itemUrl = when (type) {
-                                        "itv" -> "stalker://$id"
-                                        "vod" -> "stalker-vod://$id"
-                                        else -> "stalker-series://$id"
-                                    }
-                                    collected["$type:$id"] = MediaItem(
-                                        "stalker-$type:$id", name, itemUrl, catName, label, artwork,
-                                        "mp4", if (type == "series") id else "", source.id,
-                                        entry.optString("description").ifBlank { entry.optString("plot") },
-                                        entry.optString("director"), entry.optString("rating"), entry.optString("year"),
-                                        entry.optString("genre")
-                                    )
+                        fun pageKeys(array: JSONArray): Set<String> {
+                            return (0 until array.length()).mapNotNull { index ->
+                                val entry = array.optJSONObject(index) ?: return@mapNotNull null
+                                val id = entry.optString("id").ifBlank { entry.optString("ch_id") }
+                                    .ifBlank { entry.optString("movie_id") }.ifBlank { entry.optString("series_id") }
+                                if (id.isNotBlank()) id else entry.toString()
+                            }.toSet()
+                        }
+
+                        fun consumePage(arr: JSONArray, categoryName: String) {
+                            for (i in 0 until arr.length()) {
+                                val entry = arr.optJSONObject(i) ?: continue
+                                val id = entry.optString("id").ifBlank { entry.optString("ch_id") }
+                                    .ifBlank { entry.optString("movie_id") }.ifBlank { entry.optString("series_id") }
+                                if (id.isBlank()) continue
+                                val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$label $id" }
+                                val catId = entry.optString("tv_genre_id").ifBlank { entry.optString("category_id") }
+                                    .ifBlank { entry.optString("genre_id") }
+                                val catName = categories.firstOrNull { it.first == catId }?.second
+                                    ?: entry.optString("category_name").takeIf { it.isNotBlank() }
+                                    ?: entry.optString("genre").takeIf { it.isNotBlank() }
+                                    ?: categoryName
+                                val image = entry.optString("screenshot_uri").ifBlank { entry.optString("logo") }
+                                    .ifBlank { entry.optString("cover") }.ifBlank { entry.optString("picture") }
+                                val artwork = when {
+                                    image.startsWith("//") -> "https:$image"
+                                    image.startsWith("/") -> source.address.trimEnd('/') + image
+                                    else -> image
                                 }
-                                if (arr.length() < 10) break
-                                page++
-                                if (page % 5 == 0) {
-                                    runOnUiThread {
-                                        updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
+                                val itemUrl = when (type) {
+                                    "itv" -> "stalker://$id"
+                                    "vod" -> "stalker-vod://$id"
+                                    else -> "stalker-series://$id"
+                                }
+                                collected["$type:$id"] = MediaItem(
+                                    "stalker-$type:$id", name, itemUrl, catName, label, artwork,
+                                    "mp4", if (type == "series") id else "", source.id,
+                                    entry.optString("description").ifBlank { entry.optString("plot") },
+                                    entry.optString("director"), entry.optString("rating"), entry.optString("year"),
+                                    entry.optString("genre")
+                                )
+                            }
+                        }
+
+                        for ((categoryId, categoryName) in targets) {
+                            if (type == "itv") {
+                                // Keep the existing Live TV pagination unchanged.
+                                var page = 1
+                                while (page <= 100) {
+                                    val arr = requestList(categoryId, page)
+                                    if (arr.length() == 0) break
+                                    consumePage(arr, categoryName)
+                                    if (arr.length() < 10) break
+                                    page++
+                                    if (page % 5 == 0) {
+                                        runOnUiThread {
+                                            updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
+                                        }
+                                    }
+                                }
+                            } else {
+                                // VOD/Series portals differ: some are zero-based (p=0),
+                                // some are one-based (p=1), and some map both to the same first page.
+                                // Probe both first pages and compare their item IDs before continuing.
+                                val page0 = requestList(categoryId, 0)
+                                val page1 = requestList(categoryId, 1)
+                                val keys0 = pageKeys(page0)
+                                val keys1 = pageKeys(page1)
+                                sectionDiagnostics.add(
+                                    "$type pagination probe kategori=${categoryId ?: "*"}: " +
+                                        "p0=${page0.length()} kayıt, p1=${page1.length()} kayıt, " +
+                                        "aynı=${keys0.isNotEmpty() && keys0 == keys1}"
+                                )
+
+                                var nextPage = 2
+                                when {
+                                    page0.length() == 0 && page1.length() == 0 -> {
+                                        // No catalogue data for this category.
+                                        continue
+                                    }
+                                    page0.length() == 0 -> {
+                                        // One-based portal: first page is p=1.
+                                        consumePage(page1, categoryName)
+                                    }
+                                    page1.length() == 0 -> {
+                                        // Zero-based portal with a single/short first page.
+                                        consumePage(page0, categoryName)
+                                        continue
+                                    }
+                                    keys0.isNotEmpty() && keys0 == keys1 -> {
+                                        // Portal aliases p=0 to its first page; consume it once.
+                                        consumePage(page1, categoryName)
+                                    }
+                                    else -> {
+                                        // Zero-based portal returned distinct p=0 and p=1 pages.
+                                        consumePage(page0, categoryName)
+                                        consumePage(page1, categoryName)
+                                    }
+                                }
+
+                                var lastPage = if (page1.length() > 0) page1 else page0
+                                if (lastPage.length() >= 10) {
+                                    var page = nextPage
+                                    while (page <= 100) {
+                                        val arr = requestList(categoryId, page)
+                                        if (arr.length() == 0) break
+                                        consumePage(arr, categoryName)
+                                        if (arr.length() < 10) break
+                                        page++
+                                        if (page % 5 == 0) {
+                                            runOnUiThread {
+                                                updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
+                                            }
+                                        }
                                     }
                                 }
                             }
