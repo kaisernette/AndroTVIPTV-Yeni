@@ -2645,6 +2645,16 @@ class MainActivity : Activity() {
                         }
 
                         fun consumePage(arr: JSONArray, categoryName: String) {
+                            if (type == "vod" && sectionDiagnostics.none { it.startsWith("vod sample fields:") }) {
+                                val samples = (0 until minOf(arr.length(), 3)).mapNotNull { index ->
+                                    val entry = arr.optJSONObject(index) ?: return@mapNotNull null
+                                    "id=${entry.optString("id")},name=${entry.optString("name").take(90)}," +
+                                        "is_series=${entry.opt("is_series")},is_movie=${entry.opt("is_movie")}," +
+                                        "series=${entry.opt("series")},category_id=${entry.opt("category_id")}," +
+                                        "genre_id=${entry.opt("genre_id")}"
+                                }.joinToString(" || ")
+                                sectionDiagnostics.add("vod sample fields: $samples")
+                            }
                             for (i in 0 until arr.length()) {
                                 val entry = arr.optJSONObject(i) ?: continue
                                 val id = entry.optString("id").ifBlank { entry.optString("ch_id") }
@@ -2885,9 +2895,9 @@ class MainActivity : Activity() {
                         updateLoadingMessage("${source.name}: yükleme tamamlandı" +
                             if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else "")
                         render()
-                        if (failed.any { it == "Filmler" || it == "Diziler" }) {
-                            // Show the useful VOD/series findings first; retain only a compact
-                            // Live TV summary so the dialog cannot be filled by channel pages.
+                        run {
+                            // Save compact Stalker diagnostics after every successful catalogue load
+                            // so the first VOD records can be inspected even when other sections work.
                             val diagnosticText = sectionDiagnostics
                                 .sortedBy { if (it.startsWith("itv ")) 1 else 0 }
                                 .joinToString(" | ")
