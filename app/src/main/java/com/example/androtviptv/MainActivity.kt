@@ -3623,7 +3623,7 @@ class MainActivity : Activity() {
                         }
                         val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "Stalker Portal ${savedSources.size + 1}" }, "mac", if (portal.endsWith("/c")) "$portal/" else portal, macValue)
                         saveSource(src); hideKeyboard()
-                        Toast.makeText(this, "Stalker kaynağı kaydedildi. Portal bağlantı motoru sonraki aşamada etkinleştirilecek.", Toast.LENGTH_LONG).show()
+                        loadStalker(src, false)
                     }
                     else -> {
                         val address = server.text.toString().trim()
@@ -3636,37 +3636,6 @@ class MainActivity : Activity() {
                             address.trimEnd('/'), username.text.toString().trim(), password.text.toString())
                         saveSource(src); hideKeyboard(); loadXtream(src, false)
                     }
-                }
-            }, LinearLayout.LayoutParams(dp(280), dp(52)).apply {
-                gravity = Gravity.CENTER_HORIZONTAL
-                setMargins(0, dp(18), 0, 0)
-            })
-            inlineForm.addView(makeButton("＋ KAYNAK EKLE", true) {
-                val useXtream = sourceMode.checkedRadioButtonId == inlineXtream.id
-                if (useXtream) {
-                    val serverAddress = server.text.toString().trim()
-                    if (!(serverAddress.startsWith("http://") || serverAddress.startsWith("https://")) ||
-                        username.text.isNullOrBlank() || password.text.isNullOrBlank()) {
-                        Toast.makeText(this, "Sunucu, kullanıcı adı ve şifreyi doldur.", Toast.LENGTH_LONG).show()
-                        return@makeButton
-                    }
-                    val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
-                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "xtream",
-                        serverAddress.trimEnd('/'), username.text.toString().trim(), password.text.toString())
-                    saveSource(src)
-                    hideKeyboard()
-                    loadXtream(src, false)
-                } else {
-                    val address = playlistUrl.text.toString().trim()
-                    if (!address.startsWith("http://") && !address.startsWith("https://")) {
-                        Toast.makeText(this, "Geçerli bir M3U/M3U8 URL'si gir.", Toast.LENGTH_LONG).show()
-                        return@makeButton
-                    }
-                    val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
-                    val src = SavedSource(java.util.UUID.randomUUID().toString(), label, "m3u", address)
-                    saveSource(src)
-                    hideKeyboard()
-                    loadM3u(src, false)
                 }
             }, LinearLayout.LayoutParams(dp(280), dp(52)).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
