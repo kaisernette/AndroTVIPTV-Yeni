@@ -2594,8 +2594,9 @@ class MainActivity : Activity() {
                                 responseShape = responseSummary(response, arr)
                                 // Keep diagnostics compact: Live TV can span hundreds of pages
                                 // and must not push the VOD/series results out of the dialog.
-                                if (type != "itv" && (page <= 1 || arr.length() > 0) ||
-                                    type == "itv" && page == 1 && (index == 0 || arr.length() > 0)
+                                if (sectionDiagnostics.size < 80 &&
+                                    ((type != "itv" && page <= 1 && categoryId == targets.firstOrNull()?.first) ||
+                                     (type == "itv" && page == 1 && index == 0))
                                 ) {
                                     sectionDiagnostics.add("$type get_ordered_list deneme=${index + 1} kategori=${categoryId ?: "*"} sayfa=$page: $responseShape")
                                 }
@@ -2809,7 +2810,7 @@ class MainActivity : Activity() {
                                 // page count: it can trigger thousands of needless requests.
                                 // Fetch a small initial slice per category; later category
                                 // selection can be used to expand loading without blocking startup.
-                                val categoryPageLimit = 3
+                                val categoryPageLimit = 1
                                 val effectiveLastPage = minOf(lastPageNumber, categoryPageLimit)
                                 var page = nextPage
                                 while (page <= effectiveLastPage) {
@@ -2934,7 +2935,9 @@ class MainActivity : Activity() {
                             // so the first VOD records can be inspected even when other sections work.
                             val diagnosticText = sectionDiagnostics
                                 .sortedBy { if (it.startsWith("itv ")) 1 else 0 }
+                                .take(80)
                                 .joinToString(" | ")
+                                .take(12000)
                             prefs.edit().putString("last_stalker_catalog_diagnostics", diagnosticText).apply()
                             android.util.Log.w("KaiserTV", "Stalker catalogue diagnostics: $diagnosticText")
                             runOnUiThread {
@@ -4888,8 +4891,28 @@ class MainActivity : Activity() {
                         "ended" to "0", "search" to ""
                     )
                     fun readEpisodeRows(params: Map<String, String>, fallbackSeason: String?): List<MediaItem> {
-                        val response = stalkerRequest(source, token, params)
-                        val array = stalkerArray(response, "data", "items", "results")
+                        fun fetch(p: Map<String, String>): JSONArray {
+                            val response = stalkerRequest(source, token, p)
+                            return stalkerArray(response, "data", "items", "results")
+                        }
+                        var array = fetch(params)
+                        if (array.length() == 0 && params["movie_id"] != "0") {
+                            // Stalker implementations vary: some expect the selected series
+                            // in movie_id, others use series_id with movie_id=0.
+                            val bySeriesId = LinkedHashMap(params).apply {
+                                put("movie_id", "0")
+                                put("series_id", seriesPortalId)
+                            }
+                            array = fetch(bySeriesId)
+                        }
+                        if (array.length() == 0 && params["series_id"] == null) {
+                            val byMovieId = LinkedHashMap(params).apply {
+                                put("movie_id", "0")
+                                put("series_id", seriesPortalId)
+                                put("category", seriesCategoryId)
+                            }
+                            array = fetch(byMovieId)
+                        }
                         val rows = ArrayList<MediaItem>()
                         for (i in 0 until array.length()) {
                             val ep = array.optJSONObject(i) ?: continue
