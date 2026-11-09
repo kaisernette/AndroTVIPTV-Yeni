@@ -2549,7 +2549,11 @@ class MainActivity : Activity() {
                                 val response = stalkerRequest(source, token, params)
                                 val arr = extractArray(response)
                                 responseShape = responseSummary(response, arr)
-                                if (index == 0 || arr.length() > 0) {
+                                // Keep diagnostics compact: Live TV can span hundreds of pages
+                                // and must not push the VOD/series results out of the dialog.
+                                if (type != "itv" && (page <= 1 || arr.length() > 0) ||
+                                    type == "itv" && page == 1 && (index == 0 || arr.length() > 0)
+                                ) {
                                     sectionDiagnostics.add("$type get_ordered_list deneme=${index + 1} kategori=${categoryId ?: "*"} sayfa=$page: $responseShape")
                                 }
                                 android.util.Log.d(
@@ -2650,11 +2654,13 @@ class MainActivity : Activity() {
                                 val page1 = requestList(categoryId, 1)
                                 val keys0 = pageKeys(page0)
                                 val keys1 = pageKeys(page1)
+                                if (sectionDiagnostics.count { it.startsWith("$type pagination probe") } < 8) {
                                 sectionDiagnostics.add(
                                     "$type pagination probe kategori=${categoryId ?: "*"}: " +
                                         "p0=${page0.length()} kayıt, p1=${page1.length()} kayıt, " +
                                         "aynı=${keys0.isNotEmpty() && keys0 == keys1}"
                                 )
+                            }
 
                                 var nextPage = 2
                                 when {
@@ -2781,7 +2787,11 @@ class MainActivity : Activity() {
                             if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else "")
                         render()
                         if (failed.any { it == "Filmler" || it == "Diziler" }) {
-                            val diagnosticText = sectionDiagnostics.joinToString(" | ")
+                            // Show the useful VOD/series findings first; retain only a compact
+                            // Live TV summary so the dialog cannot be filled by channel pages.
+                            val diagnosticText = sectionDiagnostics
+                                .sortedBy { if (it.startsWith("itv ")) 1 else 0 }
+                                .joinToString(" | ")
                             prefs.edit().putString("last_stalker_catalog_diagnostics", diagnosticText).apply()
                             android.util.Log.w("KaiserTV", "Stalker catalogue diagnostics: $diagnosticText")
                             // Do not open a dialog from a background completion callback:
