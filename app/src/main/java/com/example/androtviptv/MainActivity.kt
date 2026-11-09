@@ -2595,7 +2595,7 @@ class MainActivity : Activity() {
                                 // Keep diagnostics compact: Live TV can span hundreds of pages
                                 // and must not push the VOD/series results out of the dialog.
                                 if (sectionDiagnostics.size < 80 &&
-                                    ((type != "itv" && page <= 1 && categoryId == targets.firstOrNull()?.first) ||
+                                    ((type != "itv" && page <= 1 && categoryId == categories.firstOrNull()?.first) ||
                                      (type == "itv" && page == 1 && index == 0))
                                 ) {
                                     sectionDiagnostics.add("$type get_ordered_list deneme=${index + 1} kategori=${categoryId ?: "*"} sayfa=$page: $responseShape")
