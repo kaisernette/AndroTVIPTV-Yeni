@@ -2507,7 +2507,10 @@ class MainActivity : Activity() {
                             return arr
                         }
 
-                        val targets = if (categories.isEmpty()) listOf("*" to "Diğer") else categories
+                        // Fetch the complete section with one wildcard catalogue query.
+                        // Category names are mapped locally from the category metadata.
+                        // This avoids one network request per category on slower portals.
+                        val targets = listOf("*" to "Diğer")
                         for ((categoryId, categoryName) in targets) {
                             var page = 1
                             while (page <= 100) {
@@ -2547,6 +2550,11 @@ class MainActivity : Activity() {
                                 }
                                 if (arr.length() < 10) break
                                 page++
+                                if (page % 5 == 0) {
+                                    runOnUiThread {
+                                        updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
+                                    }
+                                }
                             }
                         }
 
