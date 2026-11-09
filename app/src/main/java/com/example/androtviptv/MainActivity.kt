@@ -2575,6 +2575,8 @@ class MainActivity : Activity() {
                                     entry.optString("is_series") == "1" ||
                                         entry.optBoolean("is_series", false) ||
                                         entry.optString("is_series").equals("true", ignoreCase = true) ||
+                                        entry.optString("series") == "1" ||
+                                        entry.optString("type").equals("series", ignoreCase = true) ||
                                         entry.optJSONArray("series") != null
                                     )
                                 val itemType = if (isSeriesEntry) "Diziler" else label
@@ -2592,11 +2594,13 @@ class MainActivity : Activity() {
                                     image.startsWith("/") -> source.address.trimEnd('/') + image
                                     else -> image
                                 }
+                                val rawCommand = entry.optString("cmd")
+                                val encodedCommand = URLEncoder.encode(rawCommand, "UTF-8")
                                 val itemUrl = when {
                                     type == "itv" -> "stalker://$id"
-                                    type == "vod" && isSeriesEntry -> "stalker-series://$id"
-                                    type == "vod" -> "stalker-vod://$id"
-                                    else -> "stalker-series://$id"
+                                    type == "vod" && isSeriesEntry -> "stalker-series://$id?cmd=$encodedCommand"
+                                    type == "vod" -> "stalker-vod://$id?cmd=$encodedCommand"
+                                    else -> "stalker-series://$id?cmd=$encodedCommand"
                                 }
                                 val seriesId = entry.optString("series_id").ifBlank { id }
                                 collected["$itemType:$id"] = MediaItem(
@@ -4706,16 +4710,81 @@ class MainActivity : Activity() {
         seriesEpisodesError = ""
         render()
 
-        val source = savedSources.firstOrNull { it.id == series.sourceId && it.mode == "xtream" }
+        val source = savedSources.firstOrNull { it.id == series.sourceId && (it.mode == "xtream" || it.mode == "mac") }
         if (source == null) {
             seriesEpisodesLoading = false
-            seriesEpisodesError = "Bölümleri göstermek için bu dizinin Xtream kaynağına bağlan."
+            seriesEpisodesError = "Dizi kaynağı bulunamadı. Kaynağı yeniden yükle."
             render()
             return
         }
 
         thread {
             try {
+                if (source.mode == "mac") {
+                    val token = stalkerHandshake(source)
+                    val baseParams = linkedMapOf(
+                        "type" to "vod", "action" to "get_ordered_list",
+                        "movie_id" to series.id, "category" to series.id,
+                        "season_id" to "0", "episode_id" to "0", "p" to "1",
+                        "fav" to "0", "sortby" to "added", "hd" to "0",
+                        "ended" to "0", "search" to ""
+                    )
+                    fun readEpisodeRows(params: Map<String, String>, fallbackSeason: String?): List<MediaItem> {
+                        val response = stalkerRequest(source, token, params)
+                        val array = stalkerArray(response, "data", "items", "results")
+                        val rows = ArrayList<MediaItem>()
+                        for (i in 0 until array.length()) {
+                            val ep = array.optJSONObject(i) ?: continue
+                            if (ep.optBoolean("is_season", false)) continue
+                            val id = ep.optString("id").ifBlank { ep.optString("episode_id") }
+                            if (id.isBlank()) continue
+                            val episodeNumber = ep.optString("series_number").toIntOrNull()
+                                ?: ep.optString("episode_number").toIntOrNull()
+                                ?: ep.optString("episode").toIntOrNull()
+                                ?: Regex("(?i)(?:episode|bölüm|ep)\\s*([0-9]+)").find(ep.optString("name"))?.groupValues?.getOrNull(1)?.toIntOrNull()
+                                ?: (i + 1)
+                            val seasonNumber = ep.optString("season_number").ifBlank { ep.optString("season") }
+                                .ifBlank { fallbackSeason ?: "1" }
+                            val command = ep.optString("cmd").ifBlank { series.url.substringAfter("cmd=", "").let { java.net.URLDecoder.decode(it, "UTF-8") }.takeIf { it.isNotBlank() } ?: "/media/file_$id.mpg" }
+                            val episodeUrl = "stalker-episode://$id?cmd=${URLEncoder.encode(command, "UTF-8")}&series=$episodeNumber"
+                            rows.add(MediaItem(
+                                id, ep.optString("name").ifBlank { ep.optString("title") }.ifBlank { "Bölüm $episodeNumber" },
+                                episodeUrl, "${series.name} • Sezon $seasonNumber", "Bölümler",
+                                ep.optString("screenshot_uri").ifBlank { series.icon }, "mpg",
+                                series.id, source.id, ep.optString("description").ifBlank { ep.optString("plot") }
+                            ))
+                        }
+                        return rows
+                    }
+                    var episodeItems = readEpisodeRows(baseParams, null)
+                    if (episodeItems.isEmpty()) {
+                        val seasonResponse = stalkerRequest(source, token, baseParams)
+                        val seasons = stalkerArray(seasonResponse, "data", "items", "results")
+                        val all = ArrayList<MediaItem>()
+                        for (i in 0 until seasons.length()) {
+                            val season = seasons.optJSONObject(i) ?: continue
+                            val seasonId = season.optString("season_id").ifBlank { season.optString("id") }
+                            if (seasonId.isBlank()) continue
+                            val seasonParams = LinkedHashMap(baseParams).apply { put("season_id", seasonId) }
+                            all.addAll(readEpisodeRows(seasonParams, season.optString("season_number").ifBlank { (i + 1).toString() }))
+                        }
+                        episodeItems = all
+                    }
+                    val grouped = episodeItems.groupBy {
+                        it.group.substringAfterLast("Sezon ").ifBlank { "1" }
+                    }
+                    val sortedRows = grouped.entries
+                        .sortedBy { it.key.toIntOrNull() ?: Int.MAX_VALUE }
+                        .map { it.key to it.value.sortedBy { ep -> ep.name } }
+                    runOnUiThread {
+                        if (detailSeries?.favoriteKey != series.favoriteKey) return@runOnUiThread
+                        seriesEpisodeRows = sortedRows
+                        seriesEpisodesLoading = false
+                        if (sortedRows.isEmpty()) seriesEpisodesError = "Portal bu dizi için bölüm veya sezon listesi döndürmedi."
+                        render()
+                    }
+                    return@thread
+                }
                 val u = URLEncoder.encode(source.username, "UTF-8")
                 val p = URLEncoder.encode(source.password, "UTF-8")
                 val api = "${source.address.trimEnd('/')}/player_api.php?username=$u&password=$p&action=get_series_info&series_id=${URLEncoder.encode(series.seriesId.ifBlank { series.id }, "UTF-8")}"
@@ -6559,18 +6628,36 @@ class MainActivity : Activity() {
 
     private fun play(item: MediaItem, startOver: Boolean = false) {
         if (openingPlayer) return
-        if (item.url.startsWith("stalker://")) {
+        if (item.url.startsWith("stalker://") || item.url.startsWith("stalker-vod://") || item.url.startsWith("stalker-episode://")) {
             val source = savedSources.firstOrNull { it.id == item.sourceId && it.mode == "mac" }
             if (source == null) {
                 Toast.makeText(this, "Stalker kaynağı bulunamadı. Kaynağı yeniden ekleyin.", Toast.LENGTH_LONG).show()
                 return
             }
-            val channelId = item.url.removePrefix("stalker://")
+            val parsedUrl = android.net.Uri.parse(item.url)
+            val channelId = parsedUrl.lastPathSegment.orEmpty()
+            val isLive = item.url.startsWith("stalker://")
+            val isVod = item.url.startsWith("stalker-vod://")
+            val rawCommand = parsedUrl.getQueryParameter("cmd").orEmpty()
+            val seriesNumber = parsedUrl.getQueryParameter("series") ?: "0"
             openingPlayer = true
             status.text = "${item.name}: yayın bağlantısı alınıyor…"
             thread(name = "kaiser-stalker-play") {
                 try {
-                    val streamUrl = resolveStalkerStream(source, channelId)
+                    val streamUrl = if (isLive) {
+                        resolveStalkerStream(source, channelId)
+                    } else {
+                        val token = stalkerHandshake(source)
+                        val command = rawCommand.ifBlank { "/media/file_$channelId.mpg" }
+                        val response = stalkerRequest(source, token, mapOf(
+                            "type" to "vod", "action" to "create_link", "cmd" to command,
+                            "series" to seriesNumber, "download" to "0",
+                            "disable_ad" to "0", "force_ch_link_check" to "0"
+                        ))
+                        response.optString("cmd").ifBlank { response.optString("url") }
+                            .removePrefix("ffmpeg ").removePrefix("ffrt ").trim()
+                            .takeIf { it.isNotBlank() } ?: throw Exception("Portal film/bölüm oynatma bağlantısı döndürmedi.")
+                    }
                     runOnUiThread {
                         openingPlayer = false
                         play(item.copy(url = streamUrl), startOver)
