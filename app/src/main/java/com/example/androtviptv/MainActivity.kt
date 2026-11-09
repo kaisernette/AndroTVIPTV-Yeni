@@ -2496,7 +2496,14 @@ class MainActivity : Activity() {
                     val firstKeys = first?.keys()?.asSequence()?.joinToString(",") ?: "yok"
                     val dataType = response.opt("data")?.javaClass?.simpleName ?: "yok"
                     val jsType = response.opt("js")?.javaClass?.simpleName ?: "yok"
-                    return "keys=[$keys], data=$dataType, js=$jsType, adet=${array.length()}, ilkKayitAlanlari=[$firstKeys]"
+                    val pageMeta = listOf("total_items", "max_page_items", "selected_item", "cur_page")
+                        .joinToString(",") { key -> "$key=${response.optString(key, "-")}" }
+                    val sampleIds = (0 until minOf(array.length(), 3)).mapNotNull { index ->
+                        val item = array.optJSONObject(index) ?: return@mapNotNull null
+                        item.optString("id").ifBlank { item.optString("ch_id") }
+                            .ifBlank { item.optString("movie_id") }.ifBlank { item.optString("series_id") }
+                    }.joinToString(",")
+                    return "keys=[$keys], data=$dataType, js=$jsType, adet=${array.length()}, meta=[$pageMeta], sampleIds=[$sampleIds], ilkKayitAlanlari=[$firstKeys]"
                 }
 
                 fun readCategories(type: String): List<Pair<String, String>> {
@@ -2729,12 +2736,26 @@ class MainActivity : Activity() {
                                 }
 
                                 var lastPage = if (page1.length() > 0) page1 else page0
+                                var previousPageKeys = pageKeys(lastPage)
                                 if (lastPage.length() >= 10) {
                                     var page = nextPage
                                     while (page <= 100) {
                                         val arr = requestList(categoryId, page)
                                         if (arr.length() == 0) break
+                                        val currentPageKeys = pageKeys(arr)
+                                        if (page <= 4 && sectionDiagnostics.count { it.startsWith("$type page fingerprint") } < 8) {
+                                            sectionDiagnostics.add(
+                                                "$type page fingerprint kategori=$categoryId sayfa=$page: " +
+                                                    "adet=${arr.length()}, oncekiyleAyni=${currentPageKeys.isNotEmpty() && currentPageKeys == previousPageKeys}, " +
+                                                    "ids=${currentPageKeys.take(5).joinToString(",")}"
+                                            )
+                                        }
+                                        if (currentPageKeys.isNotEmpty() && currentPageKeys == previousPageKeys) {
+                                            sectionDiagnostics.add("$type sayfalama durduruldu: kategori=$categoryId sayfa=$page önceki sayfayla aynı kayıtları döndürdü")
+                                            break
+                                        }
                                         consumePage(arr, categoryName)
+                                        previousPageKeys = currentPageKeys
                                         if (arr.length() < 10) break
                                         page++
                                         if (page % 5 == 0) {
