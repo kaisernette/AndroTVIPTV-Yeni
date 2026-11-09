@@ -2430,6 +2430,38 @@ class MainActivity : Activity() {
         return JSONArray()
     }
 
+    private fun showStalkerDiagnostics() {
+        val report = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
+        if (report.isBlank()) {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Stalker tanılama")
+                .setMessage("Henüz tanılama kaydı yok. MAC kaynağını yeniden yükleyin.")
+                .setPositiveButton("Tamam", null).show()
+            return
+        }
+        val body = TextView(this).apply {
+            text = report
+            textSize = 14f
+            setTextIsSelectable(true)
+            setPadding(dp(18), dp(12), dp(18), dp(12))
+        }
+        val scroll = ScrollView(this).apply { isFillViewport = true; addView(body) }
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setTitle("Stalker tanılama")
+            .setView(scroll)
+            .setNeutralButton("Kopyala", null)
+            .setPositiveButton("Kapat", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stalker tanılama", report))
+                android.widget.Toast.makeText(this, "Tanılama kopyalandı.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+        dialog.show()
+    }
+
     private fun loadStalker(source: SavedSource, append: Boolean) {
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
@@ -2470,8 +2502,8 @@ class MainActivity : Activity() {
                 fun readCategories(type: String): List<Pair<String, String>> {
                     val response = stalkerRequest(source, token, mapOf("type" to type, "action" to "get_categories"))
                     val array = extractArray(response)
-                    sectionDiagnostics.add("$type get_categories: ${responseSummary(response, array)}")
                     val result = ArrayList<Pair<String, String>>()
+                    sectionDiagnostics.add("$type get_categories: ${responseSummary(response, array)}")
                     for (i in 0 until array.length()) {
                         val item = array.optJSONObject(i) ?: continue
                         val id = item.optString("id").ifBlank { item.optString("category_id") }
@@ -2480,6 +2512,11 @@ class MainActivity : Activity() {
                             .ifBlank { item.optString("name") }
                         if (id.isNotBlank()) result.add(id to name.ifBlank { "Diğer" })
                     }
+                    val categorySamples = (0 until minOf(array.length(), 3)).mapNotNull { i ->
+                        val item = array.optJSONObject(i) ?: return@mapNotNull null
+                        "id=${item.optString("id")},category_id=${item.optString("category_id")},genre_id=${item.optString("genre_id")},title=${item.optString("title")},name=${item.optString("name")}"
+                    }.joinToString(" || ")
+                    sectionDiagnostics.add("$type categories parsed=${result.size}/${array.length()} sample=[$categorySamples]")
                     return result
                 }
 
@@ -2587,13 +2624,16 @@ class MainActivity : Activity() {
                                 val id = entry.optString("id").ifBlank { entry.optString("ch_id") }
                                     .ifBlank { entry.optString("movie_id") }.ifBlank { entry.optString("series_id") }
                                 if (id.isBlank()) continue
+                                val isSeriesFlag = entry.optString("is_series").trim().lowercase()
+                                val isMovieFlag = entry.optString("is_movie").trim().lowercase()
+                                val seriesField = entry.opt("series")
                                 val isSeriesEntry = splitVodSeries && (
-                                    entry.optString("is_series") == "1" ||
+                                    isSeriesFlag in setOf("1", "true", "yes") ||
                                         entry.optBoolean("is_series", false) ||
-                                        entry.optString("is_series").equals("true", ignoreCase = true) ||
-                                        entry.optString("series") == "1" ||
+                                        isMovieFlag in setOf("0", "false") ||
                                         entry.optString("type").equals("series", ignoreCase = true) ||
-                                        entry.optJSONArray("series") != null
+                                        (seriesField != null && seriesField != JSONObject.NULL &&
+                                            seriesField.toString().isNotBlank() && seriesField.toString() != "0")
                                     )
                                 val itemType = if (isSeriesEntry) "Diziler" else label
                                 val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$itemType $id" }
@@ -2709,6 +2749,10 @@ class MainActivity : Activity() {
 
                         val sectionItems = collected.values.toList()
                         if (splitVodSeries) {
+                            val sampleFlags = sectionItems.take(8).joinToString(" || ") { item ->
+                                "${item.name}:type=${item.type},url=${item.url.substringBefore('?')}"
+                            }
+                            sectionDiagnostics.add("VOD sınıflandırma örnekleri: $sampleFlags")
                             val movieItems = sectionItems.filter { it.type == "Filmler" }
                             val seriesItems = sectionItems.filter { it.type == "Diziler" }
                             vodSeriesCount = seriesItems.size
@@ -2794,21 +2838,8 @@ class MainActivity : Activity() {
                                 .joinToString(" | ")
                             prefs.edit().putString("last_stalker_catalog_diagnostics", diagnosticText).apply()
                             android.util.Log.w("KaiserTV", "Stalker catalogue diagnostics: $diagnosticText")
-                            // Do not open a dialog from a background completion callback:
-                            // the Activity may already be finishing or destroyed.
                             runOnUiThread {
-                                updateLoadingMessage("Stalker sonuçları: $diagnosticText")
-                                if (!isFinishing && !isDestroyed && window.decorView.isAttachedToWindow) {
-                                    try {
-                                        android.app.AlertDialog.Builder(this@MainActivity)
-                                            .setTitle("Stalker tanılama")
-                                            .setMessage(diagnosticText.take(3500))
-                                            .setPositiveButton("Tamam", null)
-                                            .show()
-                                    } catch (dialogError: Exception) {
-                                        android.util.Log.w("KaiserTV", "Tanılama penceresi açılamadı", dialogError)
-                                    }
-                                }
+                                updateLoadingMessage("Stalker tanılama kaydedildi. Ayrıntılar Ayarlar bölümünde.")
                             }
                         }
                     }
@@ -5611,6 +5642,9 @@ class MainActivity : Activity() {
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Hakkında", "Uygulama sürümü ve teknik bilgiler") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
+                    option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
+                }
                 option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "language" -> {
