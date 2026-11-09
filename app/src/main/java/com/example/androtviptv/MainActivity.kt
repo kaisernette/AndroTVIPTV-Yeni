@@ -578,8 +578,10 @@ class MainActivity : Activity() {
     }
     // Android TV cihazlarında aynı anda daha az görsel işi yürüt; RAM'e göre güvenli bitmap bütçesi kullan.
     // Bound background poster work: an unbounded queue can exhaust small TV boxes.
+    // Mi TV Stick Full HD has very limited memory: serialize poster decoding
+    // and keep only a small bounded queue so tab changes cannot flood the process.
     private val posterExecutor = ThreadPoolExecutor(
-        2, 2, 30L, TimeUnit.SECONDS, ArrayBlockingQueue<Runnable>(32),
+        1, 1, 30L, TimeUnit.SECONDS, ArrayBlockingQueue<Runnable>(12),
         ThreadPoolExecutor.AbortPolicy()
     )
     // A single coalescing writer prevents concurrent cache writes and duplicate snapshots.
@@ -588,7 +590,7 @@ class MainActivity : Activity() {
     private var pendingCacheSnapshot: List<MediaItem>? = null
     private var cacheWriterRunning = false
     private val posterCache = object : LruCache<String, Bitmap>(
-        (Runtime.getRuntime().maxMemory() / 16L).coerceAtMost(12L * 1024L * 1024L).coerceAtLeast(4L * 1024L * 1024L).toInt()
+        (Runtime.getRuntime().maxMemory() / 32L).coerceAtMost(3L * 1024L * 1024L).coerceAtLeast(1024L * 1024L).toInt()
     ) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
@@ -604,9 +606,9 @@ class MainActivity : Activity() {
     private var selectedCategorySection = "Canlı TV"
     private var categoryFocusRestoreKey: String? = null
     // Render live channels in small batches to avoid first-open freezes on Android TV.
-    private var liveChannelsLimit = 72
+    private var liveChannelsLimit = 24
     // Limit poster-card creation per render; large M3U categories can contain thousands of entries.
-    private var mediaItemsLimit = 40
+    private var mediaItemsLimit = 12
     private var expandedCategory: Pair<String, List<MediaItem>>? = null
     private lateinit var categoryPanel: LinearLayout
     private lateinit var categoryListScroll: ScrollView
@@ -654,6 +656,13 @@ class MainActivity : Activity() {
         applyKaiserImmersiveMode()
         pendingTvHomeItemKey = intent?.getStringExtra(EXTRA_TV_HOME_ITEM_KEY)
         installCrashLogger()
+        val diagnostics = getSharedPreferences("androtv_diagnostics", MODE_PRIVATE)
+        if (diagnostics.getBoolean("session_active", false)) {
+            diagnostics.edit()
+                .putString("last_unexpected_state", diagnostics.getString("last_ui_state", "Son arayüz durumu yok"))
+                .apply()
+        }
+        diagnostics.edit().putBoolean("session_active", true).apply()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         if (!prefs.getBoolean("global_oval_style_applied", false)) {
             prefs.edit().putBoolean("oval_buttons", true).putBoolean("global_oval_style_applied", true).apply()
@@ -710,14 +719,37 @@ class MainActivity : Activity() {
         }
     }
 
+    private var lastDiagnosticWriteAt = 0L
+    private var lastDiagnosticKey = ""
+
+    private fun recordUiDiagnostics() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val key = "$"+"selectedType|$"+"selectedGroup|$"+"sidebarMode"
+        if (key == lastDiagnosticKey && now - lastDiagnosticWriteAt < 2500L) return
+        lastDiagnosticKey = key
+        lastDiagnosticWriteAt = now
+        val runtime = Runtime.getRuntime()
+        val usedMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024L * 1024L)
+        val maxMb = runtime.maxMemory() / (1024L * 1024L)
+        val queueSize = posterExecutor.queue.size
+        val state = "Sekme=$"+"selectedType; kategori=$"+"selectedGroup; menü=$"+"sidebarMode; öğe=$"+"{items.size}; heap=$"+"{usedMb}/$"+"{maxMb}MB; afişKuyruğu=$"+"queueSize"
+        android.util.Log.i("KaiserTV", "UI_STATE $state")
+        getSharedPreferences("androtv_diagnostics", MODE_PRIVATE).edit()
+            .putString("last_ui_state", state)
+            .putLong("last_ui_state_time", System.currentTimeMillis())
+            .apply()
+    }
+
     private fun installCrashLogger() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             try {
                 val writer = java.io.StringWriter()
                 error.printStackTrace(java.io.PrintWriter(writer))
-                getSharedPreferences("androtv_diagnostics", MODE_PRIVATE).edit()
-                    .putString("last_crash", writer.toString().take(12000))
+                val diagnostics = getSharedPreferences("androtv_diagnostics", MODE_PRIVATE)
+                val lastState = diagnostics.getString("last_ui_state", "UI durumu kaydedilemedi")
+                diagnostics.edit()
+                    .putString("last_crash", writer.toString().take(10000) + "\n\nSon arayüz durumu: " + lastState)
                     .putLong("last_crash_time", System.currentTimeMillis())
                     .commit()
             } catch (_: Exception) { }
@@ -727,15 +759,18 @@ class MainActivity : Activity() {
 
     private fun showPreviousCrashIfAny() {
         val diagnostics = getSharedPreferences("androtv_diagnostics", MODE_PRIVATE)
-        val trace = diagnostics.getString("last_crash", null) ?: return
-        diagnostics.edit().remove("last_crash").apply()
+        val trace = diagnostics.getString("last_crash", null)
+        val unexpectedState = diagnostics.getString("last_unexpected_state", null)
+        if (trace == null && unexpectedState == null) return
+        diagnostics.edit().remove("last_crash").remove("last_unexpected_state").apply()
+        val message = trace ?: "Uygulama önceki oturumda beklenmedik şekilde kapanmış olabilir.\n\nSon durum: $"+"unexpectedState"
         android.app.AlertDialog.Builder(this)
-            .setTitle("Önceki kanal açılış hatası")
-            .setMessage(trace.take(3500))
+            .setTitle(if (trace != null) "Önceki uygulama hatası" else "Önceki oturum bilgisi")
+            .setMessage(message.take(3500))
             .setPositiveButton("Kopyala") { _, _ ->
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("KaiserTv hata kaydı", trace))
-                android.widget.Toast.makeText(this, "Hata kaydı kopyalandı; buraya yapıştır.", android.widget.Toast.LENGTH_LONG).show()
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("KaiserTV tanılama kaydı", message))
+                android.widget.Toast.makeText(this, "Kayıt kopyalandı; buraya yapıştır.", android.widget.Toast.LENGTH_LONG).show()
             }
             .setNegativeButton("Kapat", null)
             .show()
@@ -1600,7 +1635,7 @@ class MainActivity : Activity() {
                         setOnClickListener {
                             selectedGroup = name
                             expandedCategory = name to entries
-                            mediaItemsLimit = 40
+                            mediaItemsLimit = 12
                             focusFirstContentOnRender = true
                             render()
                         }
@@ -3205,6 +3240,7 @@ class MainActivity : Activity() {
 
     private fun render() {
         if (!::content.isInitialized || !::categoryBar.isInitialized) return
+        recordUiDiagnostics()
         content.removeAllViews()
         if (::mainContentScroll.isInitialized && selectedType in listOf("Filmler", "Diziler")) {
             mainContentScroll.post { mainContentScroll.scrollTo(0, 0) }
@@ -3664,7 +3700,7 @@ class MainActivity : Activity() {
         groupsAvailable.take(40).forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
-                mediaItemsLimit = 40
+                mediaItemsLimit = 12
                 render()
             }.apply {
                 textSize = 11f; minWidth = 0; minimumWidth = 0
@@ -3956,8 +3992,8 @@ class MainActivity : Activity() {
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(if (isMobileLayout) 156 else 140) // Kart genişliği afişle aynı
             val displayedEntries = when {
-                posterGridMode -> entries.take(if (selectedType == "Canlı TV" && !showingExpandedCategory) 16 else mediaItemsLimit)
-                weeklyMovieFeature -> entries.take(24)
+                posterGridMode -> entries.take(if (selectedType == "Canlı TV" && !showingExpandedCategory) 8 else mediaItemsLimit)
+                weeklyMovieFeature -> entries.take(8)
                 else -> entries.take(5)
             }
             var expandedPosterRow: LinearLayout? = null
@@ -4111,7 +4147,7 @@ class MainActivity : Activity() {
                     content.addView(makeButton(
                         "Daha fazla içerik göster  (${displayedEntries.size}/${entries.size})", false
                     ) {
-                        mediaItemsLimit = (mediaItemsLimit + 40).coerceAtMost(entries.size)
+                        mediaItemsLimit = (mediaItemsLimit + 12).coerceAtMost(entries.size)
                         render()
                     }, LinearLayout.LayoutParams(-1, dp(48)).apply {
                         setMargins(dp(8), dp(4), dp(8), dp(16))
@@ -5895,7 +5931,18 @@ class MainActivity : Activity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            posterCache.evictAll()
+            android.util.Log.i("KaiserTV", "Poster memory cache cleared; trim level=$"+"level")
+        }
+    }
+
     override fun onDestroy() {
+        getSharedPreferences("androtv_diagnostics", MODE_PRIVATE).edit()
+            .putBoolean("session_active", false)
+            .apply()
         previewPlayer?.release()
         previewPlayer = null
         posterExecutor.shutdownNow()
