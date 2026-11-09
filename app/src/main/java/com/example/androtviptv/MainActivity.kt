@@ -2507,10 +2507,13 @@ class MainActivity : Activity() {
                             return arr
                         }
 
-                        // Fetch the complete section with one wildcard catalogue query.
-                        // Category names are mapped locally from the category metadata.
-                        // This avoids one network request per category on slower portals.
-                        val targets = listOf("*" to "Diğer")
+                        // Live TV supports a wildcard catalogue query on this portal.
+                        // VOD and Series require category-scoped requests to return their items.
+                        val targets = if (type == "itv" || categories.isEmpty()) {
+                            listOf("*" to "Diğer")
+                        } else {
+                            categories
+                        }
                         for ((categoryId, categoryName) in targets) {
                             var page = 1
                             while (page <= 100) {
