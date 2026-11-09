@@ -2302,7 +2302,7 @@ class MainActivity : Activity() {
         thread {
             try {
                 // Stream large M3U playlists line-by-line to avoid allocating one huge response String.
-                val parsed = requestM3u(source.address).map { it.copy(sourceId = source.id) }
+                val parsed = requestM3uWithAutoPlus(source.address).map { it.copy(sourceId = source.id) }
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
@@ -2637,6 +2637,32 @@ class MainActivity : Activity() {
             }
         }
         throw Exception("Sunucuya ulaşılamadı: ${lastError?.message ?: "bağlantı hatası"}")
+    }
+
+    /**
+     * Try the richer m3u_plus variant for URLs explicitly using type=m3u.
+     * If the provider rejects m3u_plus, fall back to the original URL.
+     */
+    private fun requestM3uWithAutoPlus(address: String): List<MediaItem> {
+        val typePattern = Regex("([?&]type=)m3u(?=(&|#|$))", RegexOption.IGNORE_CASE)
+        val match = typePattern.find(address) ?: return requestM3u(address)
+        val plusAddress = address.replaceRange(
+            match.range,
+            match.value.replace(Regex("m3u$", RegexOption.IGNORE_CASE), "m3u_plus")
+        )
+        return try {
+            requestM3u(plusAddress)
+        } catch (plusError: Exception) {
+            android.util.Log.w("KaiserTV", "M3U+ endpoint unavailable; falling back to original M3U URL")
+            try {
+                requestM3u(address)
+            } catch (fallbackError: Exception) {
+                throw Exception(
+                    "M3U+ denemesi başarısız (" + plusError.message + "); normal M3U denemesi de başarısız (" + fallbackError.message + ").",
+                    fallbackError
+                )
+            }
+        }
     }
 
     private fun requestM3u(address: String): List<MediaItem> {
