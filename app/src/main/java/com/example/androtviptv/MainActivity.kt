@@ -2679,8 +2679,11 @@ class MainActivity : Activity() {
                                     ?: entry.optString("category_name").takeIf { it.isNotBlank() }
                                     ?: entry.optString("genre").takeIf { it.isNotBlank() }
                                     ?: categoryName
-                                val image = entry.optString("screenshot_uri").ifBlank { entry.optString("logo") }
-                                    .ifBlank { entry.optString("cover") }.ifBlank { entry.optString("picture") }
+                                // Stalker VOD catalogues commonly expose movie artwork in "pic".
+                                // Keep existing fallbacks for portals using alternate field names.
+                                val image = entry.optString("pic").ifBlank { entry.optString("screenshot_uri") }
+                                    .ifBlank { entry.optString("logo") }.ifBlank { entry.optString("cover") }
+                                    .ifBlank { entry.optString("picture") }
                                 val artwork = when {
                                     image.startsWith("//") -> "https:$image"
                                     image.startsWith("/") -> source.address.trimEnd('/') + image
