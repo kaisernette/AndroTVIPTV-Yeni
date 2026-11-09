@@ -2637,8 +2637,21 @@ class MainActivity : Activity() {
                             val publishItems = snapshot.filter { it.type in publishTypes }
                             if (publishItems.isEmpty()) return
                             runOnUiThread {
-                                items.removeAll { it.sourceId == source.id && it.type in publishTypes }
-                                items.addAll(publishItems)
+                                if (splitVodSeries) {
+                                    // VOD and dedicated Series now load concurrently. A VOD
+                                    // partial update must never erase Series already published
+                                    // by the dedicated endpoint.
+                                    val currentSeries = items.filter { it.sourceId == source.id && it.type == "Diziler" }
+                                    val mergedSeries = (currentSeries + publishItems.filter { it.type == "Diziler" })
+                                        .distinctBy { it.id.ifBlank { it.url } }
+                                    items.removeAll { it.sourceId == source.id && it.type == "Filmler" }
+                                    items.addAll(publishItems.filter { it.type == "Filmler" })
+                                    items.removeAll { it.sourceId == source.id && it.type == "Diziler" }
+                                    items.addAll(mergedSeries)
+                                } else {
+                                    items.removeAll { it.sourceId == source.id && it.type in publishTypes }
+                                    items.addAll(publishItems)
+                                }
                                 saveCachedItems()
                                 anySectionLoaded = true
                                 if (selectedType in publishTypes || selectedType == "Tümü") render()
@@ -2826,13 +2839,19 @@ class MainActivity : Activity() {
                             }
                             if (movieItems.isEmpty()) failed.add("Filmler")
                             runOnUiThread {
-                                items.removeAll { it.sourceId == source.id && (it.type == "Filmler" || it.type == "Diziler") }
+                                // Preserve series from the dedicated "series" loader;
+                                // this VOD result may contain movies only or partial series.
+                                val currentSeries = items.filter { it.sourceId == source.id && it.type == "Diziler" }
+                                val mergedSeries = (currentSeries + seriesItems)
+                                    .distinctBy { it.id.ifBlank { it.url } }
+                                items.removeAll { it.sourceId == source.id && it.type == "Filmler" }
                                 items.addAll(movieItems)
-                                items.addAll(seriesItems)
+                                items.removeAll { it.sourceId == source.id && it.type == "Diziler" }
+                                items.addAll(mergedSeries)
                                 saveCachedItems()
                                 anySectionLoaded = true
                                 if (selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Tümü") render()
-                                updateLoadingMessage("${source.name}: VOD hazır (${movieItems.size} film, ${seriesItems.size} dizi).")
+                                updateLoadingMessage("${source.name}: VOD hazır (${movieItems.size} film, ${mergedSeries.size} dizi).")
                             }
                             return
                         }
