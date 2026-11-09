@@ -724,7 +724,7 @@ class MainActivity : Activity() {
 
     private fun recordUiDiagnostics() {
         val now = android.os.SystemClock.elapsedRealtime()
-        val key = "$"+"selectedType|$"+"selectedGroup|$"+"sidebarMode"
+        val key = selectedType + "|" + selectedGroup + "|" + sidebarMode
         if (key == lastDiagnosticKey && now - lastDiagnosticWriteAt < 2500L) return
         lastDiagnosticKey = key
         lastDiagnosticWriteAt = now
@@ -732,7 +732,7 @@ class MainActivity : Activity() {
         val usedMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024L * 1024L)
         val maxMb = runtime.maxMemory() / (1024L * 1024L)
         val queueSize = posterExecutor.queue.size
-        val state = "Sekme=$"+"selectedType; kategori=$"+"selectedGroup; menü=$"+"sidebarMode; öğe=$"+"{items.size}; heap=$"+"{usedMb}/$"+"{maxMb}MB; afişKuyruğu=$"+"queueSize"
+        val state = "Sekme=" + selectedType + "; kategori=" + selectedGroup + "; menü=" + sidebarMode + "; öğe=" + items.size + "; heap=" + usedMb + "/" + maxMb + "MB; afişKuyruğu=" + queueSize
         android.util.Log.i("KaiserTV", "UI_STATE $state")
         getSharedPreferences("androtv_diagnostics", MODE_PRIVATE).edit()
             .putString("last_ui_state", state)
@@ -763,7 +763,7 @@ class MainActivity : Activity() {
         val unexpectedState = diagnostics.getString("last_unexpected_state", null)
         if (trace == null && unexpectedState == null) return
         diagnostics.edit().remove("last_crash").remove("last_unexpected_state").apply()
-        val message = trace ?: "Uygulama önceki oturumda beklenmedik şekilde kapanmış olabilir.\n\nSon durum: $"+"unexpectedState"
+        val message = trace ?: ("Uygulama önceki oturumda beklenmedik şekilde kapanmış olabilir.\n\nSon durum: " + unexpectedState)
         android.app.AlertDialog.Builder(this)
             .setTitle(if (trace != null) "Önceki uygulama hatası" else "Önceki oturum bilgisi")
             .setMessage(message.take(3500))
@@ -5935,7 +5935,7 @@ class MainActivity : Activity() {
         super.onTrimMemory(level)
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
             posterCache.evictAll()
-            android.util.Log.i("KaiserTV", "Poster memory cache cleared; trim level=$"+"level")
+            android.util.Log.i("KaiserTV", "Poster memory cache cleared; trim level=" + level)
         }
     }
 
