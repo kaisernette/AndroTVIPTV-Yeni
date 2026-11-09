@@ -2080,7 +2080,10 @@ class MainActivity : Activity() {
 
     private fun edit(hintText: String, secret: Boolean): EditText = EditText(this).apply {
         hint = hintText; textSize = 14f; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(muted)
-        setPadding(12, 0, 12, 0)
+        gravity = Gravity.CENTER_VERTICAL
+        includeFontPadding = false
+        minHeight = dp(48)
+        setPadding(dp(14), 0, dp(14), 0)
         background = roundedDrawable(panel, 24, Color.rgb(48, 57, 73))
         if (android.os.Build.VERSION.SDK_INT >= 24) imeHintLocales = android.os.LocaleList.getDefault()
         if (android.os.Build.VERSION.SDK_INT >= 29) textCursorDrawable?.setTint(accent)
@@ -3348,7 +3351,7 @@ class MainActivity : Activity() {
                 id = View.generateViewId()
                 orientation = RadioGroup.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                visibility = View.GONE
+                visibility = View.VISIBLE
             }
             val inlineM3u = RadioButton(this).apply {
                 id = View.generateViewId(); text = "M3U / M3U8"
@@ -3383,6 +3386,7 @@ class MainActivity : Activity() {
                 textSize = 13f; setTextColor(muted)
                 setPadding(0, dp(4), 0, dp(3))
             }
+            inlineForm.addView(sourceMode, LinearLayout.LayoutParams(-1, dp(44)).apply { setMargins(0, 0, 0, dp(6)) })
             inlineForm.addView(playlistLabel)
             inlineForm.addView(playlistUrl, LinearLayout.LayoutParams(-1, dp(48)).apply {
                 setMargins(0, 0, 0, dp(6))
@@ -3401,11 +3405,13 @@ class MainActivity : Activity() {
             })
             inlineForm.addView(inlineCredentials)
             fun updateInlineFields() {
-                playlistLabel.visibility = View.GONE
-                playlistUrl.visibility = View.GONE
-                server.visibility = View.VISIBLE
-                inlineCredentials.visibility = View.VISIBLE
+                val useM3u = sourceMode.checkedRadioButtonId == inlineM3u.id
+                playlistLabel.visibility = if (useM3u) View.VISIBLE else View.GONE
+                playlistUrl.visibility = if (useM3u) View.VISIBLE else View.GONE
+                server.visibility = if (useM3u) View.GONE else View.VISIBLE
+                inlineCredentials.visibility = if (useM3u) View.GONE else View.VISIBLE
             }
+            sourceMode.setOnCheckedChangeListener { _, _ -> updateInlineFields() }
             updateInlineFields()
 
             // Keep keyboard Enter and TV-remote Down navigation in the same visual order.
