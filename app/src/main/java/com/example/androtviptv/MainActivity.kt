@@ -2370,7 +2370,15 @@ class MainActivity : Activity() {
             val js = root.opt("js")
             return when (js) {
                 is JSONObject -> js
-                is String -> try { JSONObject(js) } catch (_: Exception) { root }
+                is JSONArray -> JSONObject().put("data", js)
+                is String -> try {
+                    val parsed = js.trim()
+                    when {
+                        parsed.startsWith("[") -> JSONObject().put("data", JSONArray(parsed))
+                        parsed.startsWith("{") -> JSONObject(parsed)
+                        else -> root
+                    }
+                } catch (_: Exception) { root }
                 else -> root
             }
         } finally { conn.disconnect() }
@@ -2389,9 +2397,25 @@ class MainActivity : Activity() {
         for (key in keys) {
             response.optJSONArray(key)?.let { return it }
         }
+        val dataValue = response.opt("data")
+        if (dataValue is JSONArray) return dataValue
+        if (dataValue is String) {
+            val text = dataValue.trim()
+            if (text.startsWith("[")) {
+                try { return JSONArray(text) } catch (_: Exception) { }
+            }
+            if (text.startsWith("{")) {
+                try {
+                    val nested = JSONObject(text)
+                    for (key in keys) nested.optJSONArray(key)?.let { return it }
+                    nested.optJSONArray("data")?.let { return it }
+                } catch (_: Exception) { }
+            }
+        }
         val data = response.optJSONObject("data")
         if (data != null) {
             for (key in keys) data.optJSONArray(key)?.let { return it }
+            data.optJSONArray("data")?.let { return it }
         }
         return JSONArray()
     }
@@ -2440,11 +2464,14 @@ class MainActivity : Activity() {
                                 "genre" to "*", "category" to "*", "sortby" to "number",
                                 "fav" to "0", "p" to page.toString()
                             ))
-                            val array = stalkerArray(response, "data", "channels", "items")
+                            val array = stalkerArray(response, "data", "channels", "items", "results")
                             val dataObject = response.optJSONObject("data")
                             totalItems = response.optInt("total_items",
                                 dataObject?.optInt("total_items", totalItems) ?: totalItems)
-                            if (array.length() == 0) break
+                            if (array.length() == 0) {
+                                android.util.Log.w("KaiserTV", "Stalker $label empty page=$page responseKeys=${response.keys().asSequence().toList()}")
+                                break
+                            }
                             for (i in 0 until array.length()) {
                                 val entry = array.optJSONObject(i) ?: continue
                                 val id = entry.optString("id")
