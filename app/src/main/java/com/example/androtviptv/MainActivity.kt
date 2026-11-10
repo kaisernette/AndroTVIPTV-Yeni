@@ -3121,13 +3121,18 @@ class MainActivity : Activity() {
         }
         val selectedSourceIds = prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()
         val activeSourceId = prefs.getString("last_source_id", "") ?: ""
-        val activeSourceItemsBase = if (selectedSourceIds.size > 1) items.filter { selectedSourceIds.contains(it.sourceId) }
-            else if (selectedSourceIds.size == 1) items.filter { it.sourceId == selectedSourceIds.first() }
-            else if (activeSourceId.isBlank()) items.toList()
-            else items.filter { it.sourceId == activeSourceId }
-        if (selectedCategorySourceId.isBlank() || activeSourceItemsBase.none { it.sourceId == selectedCategorySourceId }) {
-            selectedCategorySourceId = activeSourceId.takeIf { id -> activeSourceItemsBase.any { it.sourceId == id } }
-                ?: activeSourceItemsBase.firstOrNull()?.sourceId.orEmpty()
+        // Never merge cached content from inactive sources into the visible library.
+        // When no source is selected, show no source-owned categories or content.
+        val activeSourceIds = when {
+            selectedSourceIds.isNotEmpty() -> selectedSourceIds
+            activeSourceId.isNotBlank() -> setOf(activeSourceId)
+            else -> emptySet()
+        }
+        val activeSourceItemsBase = if (activeSourceIds.isEmpty()) emptyList()
+            else items.filter { activeSourceIds.contains(it.sourceId) }
+        if (selectedCategorySourceId.isBlank() || selectedCategorySourceId !in activeSourceIds) {
+            selectedCategorySourceId = activeSourceId.takeIf { it in activeSourceIds }
+                ?: activeSourceIds.firstOrNull().orEmpty()
         }
         val activeSourceItems = if (selectedCategorySourceId.isNotBlank())
             activeSourceItemsBase.filter { it.sourceId == selectedCategorySourceId }
