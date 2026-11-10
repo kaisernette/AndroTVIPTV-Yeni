@@ -2406,6 +2406,69 @@ class MainActivity : Activity() {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
+    private fun normalizePosterMatchName(value: String): String {
+        val normalized = java.text.Normalizer.normalize(value.lowercase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "")
+            .replace(Regex("\\[[^]]*]|\\([^)]*\\b(?:19|20)\\d{2}\\b[^)]*\\)"), " ")
+            .replace(Regex("\\b(19|20)\\d{2}\\b"), " ")
+            .replace(Regex("[^a-z0-9]+"), " ")
+            .trim()
+            .replace(Regex("\\s+"), " ")
+        return normalized
+    }
+
+    // Optional poster enrichment for M3U sources that use the same Xtream
+    // account. Credentials are read from the user's saved M3U URL at runtime;
+    // they are never embedded in source code or sent to a third party.
+    private fun enrichM3uMoviePosters(source: SavedSource) {
+        thread(name = "kaiser-m3u-poster-match") {
+            try {
+                val uri = android.net.Uri.parse(source.address)
+                val user = uri.getQueryParameter("username").orEmpty()
+                val pass = uri.getQueryParameter("password").orEmpty()
+                val scheme = uri.scheme?.takeIf { it == "http" || it == "https" } ?: return@thread
+                val authority = uri.encodedAuthority?.takeIf { it.isNotBlank() } ?: return@thread
+                if (user.isBlank() || pass.isBlank()) return@thread
+                val base = "$scheme://$authority"
+                val u = URLEncoder.encode(user, "UTF-8")
+                val p = URLEncoder.encode(pass, "UTF-8")
+                val api = "$base/player_api.php?username=$u&password=$p&action=get_vod_streams"
+                val posters = HashMap<String, String>(2048)
+                forEachXtreamJsonObject(api) { item ->
+                    val title = item.optString("name").ifBlank { item.optString("title") }
+                    val poster = item.optString("movie_image").ifBlank {
+                        item.optString("cover_big").ifBlank { item.optString("cover") }
+                    }.ifBlank { item.optString("stream_icon") }
+                    val key = normalizePosterMatchName(title)
+                    if (key.length >= 3 && poster.startsWith("http", true)) posters.putIfAbsent(key, poster)
+                }
+                if (posters.isEmpty()) return@thread
+                var changed = false
+                synchronized(items) {
+                    for (index in items.indices) {
+                        val item = items[index]
+                        if (item.sourceId != source.id || item.type != "Filmler") continue
+                        val key = normalizePosterMatchName(item.name)
+                        val poster = posters[key] ?: continue
+                        if (item.icon != poster) {
+                            items[index] = item.copy(icon = poster)
+                            changed = true
+                        }
+                    }
+                }
+                if (changed) {
+                    saveCachedItems()
+                    runOnUiThread {
+                        if (prefs.getString("last_source_id", "") == source.id) render()
+                    }
+                    android.util.Log.i("KaiserTV", "M3U poster enrichment updated matching movie artwork.")
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("KaiserTV", "Optional M3U poster enrichment unavailable; playlist remains usable.", e)
+            }
+        }
+    }
+
     private fun loadM3u(source: SavedSource, append: Boolean) {
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
@@ -2428,6 +2491,9 @@ class MainActivity : Activity() {
                     render()
                     publishHomeChannel()
                     tryOpenPendingTvHomeItem()
+                    // Artwork lookup runs after the playlist is already usable so
+                    // it cannot delay TV/Movies/Series startup.
+                    enrichM3uMoviePosters(source)
                 }
             } catch (e: Exception) { runOnUiThread {
                 loadProgress = 0
