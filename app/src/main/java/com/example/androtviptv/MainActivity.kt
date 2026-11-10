@@ -2923,7 +2923,7 @@ class MainActivity : Activity() {
                             if (type == "vod" && synchronized(sectionDiagnostics) { sectionDiagnostics.none { it.startsWith("vod sample fields:") } }) {
                                 val samples = (0 until minOf(arr.length(), 3)).mapNotNull { index ->
                                     val entry = arr.optJSONObject(index) ?: return@mapNotNull null
-                                    "id=${entry.optString("id")},name=${entry.optString("name").take(90)}," +
+                                    "id=${entry.optString("id")},video_id=${entry.optString("video_id")},movie_id=${entry.optString("movie_id")},series_id=${entry.optString("series_id")},name=${entry.optString("name").take(90)}," +
                                         "is_series=${entry.opt("is_series")},is_movie=${entry.opt("is_movie")}," +
                                         "series=${entry.opt("series")},category_id=${entry.opt("category_id")}," +
                                         "genre_id=${entry.opt("genre_id")}"
@@ -2982,15 +2982,21 @@ class MainActivity : Activity() {
                                 }
                                 val rawCommand = entry.optString("cmd")
                                 val encodedCommand = URLEncoder.encode(rawCommand, "UTF-8")
+                                // On some Stalker series catalogues, "id" is the catalogue row
+                                // while "video_id" is the parent movie/series ID expected by
+                                // the season lookup (movie_id). Prefer the explicit parent ID.
+                                val portalSeriesId = if (isSeriesEntry) {
+                                    entry.optString("video_id").ifBlank { entry.optString("movie_id") }.ifBlank { id }
+                                } else id
                                 val itemUrl = when {
                                     // Keep the portal-provided playback command. Stalker live TV
                                     // create_link must receive the original cmd, not a fabricated /ch/{id} URL.
                                     type == "itv" -> "stalker://$id?cmd=$encodedCommand"
-                                    type == "vod" && isSeriesEntry -> "stalker-series://$id?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
+                                    type == "vod" && isSeriesEntry -> "stalker-series://$portalSeriesId?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}&row_id=$id"
                                     type == "vod" -> "stalker-vod://$id?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
-                                    else -> "stalker-series://$id?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
+                                    else -> "stalker-series://$portalSeriesId?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
                                 }
-                                val seriesId = entry.optString("series_id").ifBlank { id }
+                                val seriesId = entry.optString("series_id").ifBlank { portalSeriesId }
                                 collected["$itemType:$id"] = MediaItem(
                                     "stalker-$type:$id", name, itemUrl, catName, itemType, artwork,
                                     entry.optString("cmd").substringAfterLast('.').takeIf { it.length in 2..5 } ?: "mp4",
