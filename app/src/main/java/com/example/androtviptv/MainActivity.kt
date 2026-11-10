@@ -5233,6 +5233,20 @@ class MainActivity : Activity() {
                     // series is passed as movie_id or series_id. Try the supported
                     // hierarchy shapes explicitly; the previous code only retried
                     // when movie_id was non-zero, although it was always set to zero.
+                    fun belongsToSelectedSeries(ep: JSONObject): Boolean {
+                        val parentKeys = listOf("series_id", "parent_series_id", "parent_id", "owner_id", "tv_show_id", "movie_id")
+                        val parentValues = parentKeys.map { ep.optString(it).trim() }
+                            .filter { it.isNotBlank() && it != "0" && !it.equals("null", true) }
+                        if (parentValues.isNotEmpty()) return parentValues.any { it == seriesPortalId }
+                        val nested = ep.optJSONObject("series")
+                        val nestedId = nested?.optString("id").orEmpty()
+                        if (nestedId.isNotBlank()) return nestedId == seriesPortalId
+                        // If the portal omits parent IDs, only accept records explicitly
+                        // labelled with the selected show; never display another series' episodes.
+                        val title = ep.optString("series_name").ifBlank { ep.optString("parent_name") }
+                        return title.isNotBlank() && title.contains(series.name, ignoreCase = true)
+                    }
+
                     fun requestSeriesList(seasonId: String = "0"): JSONArray {
                         val common = linkedMapOf(
                             "type" to "series", "action" to "get_ordered_list",
@@ -5261,12 +5275,21 @@ class MainActivity : Activity() {
                             put("movie_id", "0"); put("series_id", seriesPortalId)
                             if (categoryId != null) put("genre", categoryId)
                         })
+                        var best = JSONArray()
                         for ((index, params) in attempts.withIndex()) {
                             val response = stalkerRequest(source, token, params)
                             val array = stalkerArray(response, "data", "items", "results")
-                            android.util.Log.d("KaiserTV", "Stalker series detail attempt=${index + 1}, season=$seasonId, count=${array.length()}, keys=${params.keys}")
-                            if (array.length() > 0) return array
+                            val matched = JSONArray()
+                            for (i in 0 until array.length()) {
+                                val ep = array.optJSONObject(i) ?: continue
+                                if (belongsToSelectedSeries(ep)) matched.put(ep)
+                            }
+                            android.util.Log.d("KaiserTV", "Stalker series detail attempt=${index + 1}, season=$seasonId, raw=${array.length()}, matched=${matched.length()}, keys=${params.keys}")
+                            if (matched.length() > 0) return matched
+                            if (array.length() > best.length()) best = array
                         }
+                        // Do not return an unfiltered global series list: that produced
+                        // MacGyver/Buffy/Family Guy episodes under unrelated show pages.
                         return JSONArray()
                     }
 
@@ -5274,6 +5297,7 @@ class MainActivity : Activity() {
                         val rows = ArrayList<MediaItem>()
                         for (i in 0 until array.length()) {
                             val ep = array.optJSONObject(i) ?: continue
+                            if (!belongsToSelectedSeries(ep)) continue
                             if (ep.optBoolean("is_season", false)) continue
                             val id = ep.optString("episode_id").ifBlank { ep.optString("id") }
                                 .ifBlank { ep.optString("ch_id") }
