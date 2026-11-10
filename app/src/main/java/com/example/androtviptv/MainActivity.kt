@@ -2803,7 +2803,7 @@ class MainActivity : Activity() {
 
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label yükleniyor…") }
                         val collected = ConcurrentHashMap<String, MediaItem>()
-                        var responseShape = "liste isteği henüz yapılmadı"
+                        val responseShape = java.util.concurrent.atomic.AtomicReference("liste isteği henüz yapılmadı")
 
                         fun requestList(categoryId: String?, page: Int, onPageMeta: ((Int, Int) -> Unit)? = null): JSONArray {
                             val filterKey = if (type == "itv") "genre" else "category"
@@ -2851,14 +2851,14 @@ class MainActivity : Activity() {
                                 if (arr.length() > 0) {
                                     onPageMeta?.invoke(response.optInt("total_items", -1), response.optInt("max_page_items", -1))
                                 }
-                                responseShape = responseSummary(response, arr)
+                                responseShape.set(responseSummary(response, arr))
                                 // Keep diagnostics compact: Live TV can span hundreds of pages
                                 // and must not push the VOD/series results out of the dialog.
                                 if (sectionDiagnostics.size < 80 &&
                                     ((type != "itv" && page <= 1 && categoryId == categories.firstOrNull()?.first) ||
                                      (type == "itv" && page == 1 && index == 0))
                                 ) {
-                                    sectionDiagnostics.add("$type get_ordered_list deneme=${index + 1} kategori=${categoryId ?: "*"} sayfa=$page: $responseShape")
+                                    sectionDiagnostics.add("$type get_ordered_list deneme=${index + 1} kategori=${categoryId ?: "*"} sayfa=$page: $responseShape.get()")
                                 }
                                 android.util.Log.d(
                                     "KaiserTV",
@@ -2920,7 +2920,7 @@ class MainActivity : Activity() {
                         }
 
                         fun consumePage(arr: JSONArray, categoryName: String) {
-                            if (type == "vod" && sectionDiagnostics.none { it.startsWith("vod sample fields:") }) {
+                            if (type == "vod" && synchronized(sectionDiagnostics) { sectionDiagnostics.none { it.startsWith("vod sample fields:") } }) {
                                 val samples = (0 until minOf(arr.length(), 3)).mapNotNull { index ->
                                     val entry = arr.optJSONObject(index) ?: return@mapNotNull null
                                     "id=${entry.optString("id")},name=${entry.optString("name").take(90)}," +
