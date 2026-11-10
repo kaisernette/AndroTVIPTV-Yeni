@@ -1834,6 +1834,10 @@ class MainActivity : Activity() {
                 val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "mac", portal, macValue)
                 saveSource(src)
                 hideKeyboard()
+                if (editSource == null) {
+                    settingsPage = "main"; sidebarMode = "main"; selectedType = "Tümü"
+                    selectedGroup = "Tüm kategoriler"; render()
+                }
                 loadStalker(src, editSource != null)
                 return@makeButton
             }
@@ -1848,7 +1852,12 @@ class MainActivity : Activity() {
                 val label = sourceName.text.toString().trim().ifBlank { "Xtream ${savedSources.size + 1}" }
                 val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "xtream",
                     address.trimEnd('/'), username.text.toString().trim(), password.text.toString())
-                saveSource(src); hideKeyboard(); render(); loadXtream(src, editSource != null)
+                saveSource(src); hideKeyboard()
+                if (editSource == null) {
+                    settingsPage = "main"; sidebarMode = "main"; selectedType = "Tümü"
+                    selectedGroup = "Tüm kategoriler"
+                }
+                render(); loadXtream(src, editSource != null)
             } else {
                 val address = playlistUrl.text.toString().trim()
                 if (!address.startsWith("http://") && !address.startsWith("https://")) {
@@ -1857,7 +1866,12 @@ class MainActivity : Activity() {
                 }
                 val label = sourceName.text.toString().trim().ifBlank { "M3U ${savedSources.size + 1}" }
                 val src = SavedSource(editSource?.id ?: java.util.UUID.randomUUID().toString(), label, "m3u", address)
-                saveSource(src); hideKeyboard(); render(); loadM3u(src, editSource != null)
+                saveSource(src); hideKeyboard()
+                if (editSource == null) {
+                    settingsPage = "main"; sidebarMode = "main"; selectedType = "Tümü"
+                    selectedGroup = "Tüm kategoriler"
+                }
+                render(); loadM3u(src, editSource != null)
             }
         }.apply { minWidth = 0; textSize = 13f }
 
@@ -2221,6 +2235,52 @@ class MainActivity : Activity() {
             }
         }
     }
+    private fun activateSourceFromCache(source: SavedSource) {
+        prefs.edit().putString("last_source_id", source.id)
+            .putStringSet("selected_source_ids", setOf(source.id)).apply()
+        selectedCategorySourceId = source.id
+        selectedType = "Tümü"
+        selectedGroup = "Tüm kategoriler"
+        expandedCategory = null
+        focusedCategoryName = null
+        sidebarMode = "main"
+
+        fun showCached(cached: List<MediaItem>) {
+            if (cached.isEmpty()) {
+                when (source.mode) {
+                    "xtream" -> loadXtream(source, true)
+                    "mac" -> loadStalker(source, true)
+                    else -> loadM3u(source, true)
+                }
+                return
+            }
+            // Keep other sources in memory. The visible catalogue is filtered by
+            // last_source_id, so switching back never needs to download it again.
+            val knownIds = items.asSequence().filter { it.sourceId == source.id }
+                .map { it.id }.toHashSet()
+            items.addAll(cached.filter { it.id !in knownIds })
+            isLoadingSource = false
+            status.visibility = View.VISIBLE
+            status.text = "${source.name}: kayıtlı içerik açıldı."
+            render()
+        }
+
+        val memory = items.filter { it.sourceId == source.id }
+        if (memory.isNotEmpty()) {
+            showCached(memory)
+        } else {
+            status.visibility = View.VISIBLE
+            status.text = "${source.name}: kayıtlı içerik açılıyor…"
+            thread(name = "kaiser-source-cache-restore") {
+                val disk = try { readCachedItems(source.id) } catch (e: Exception) {
+                    android.util.Log.w("KaiserTV", "Source cache restore failed for ${source.name}", e)
+                    emptyList()
+                }
+                runOnUiThread { showCached(disk) }
+            }
+        }
+    }
+
     private fun showSourcesDialog() {
         if (savedSources.isEmpty()) {
             AlertDialog.Builder(this).setTitle("Kaynaklar").setMessage("Henüz kayıtlı kaynak yok.")
@@ -3127,9 +3187,9 @@ class MainActivity : Activity() {
                                 val plot = o.optString("plot", o.optString("description", ""))
                                 val actors = o.optString("cast", o.optString("actors", ""))
                                 val artworkKeys = when (type) {
-                                    "Canlı TV" -> listOf("stream_icon", "cover", "cover_big", "movie_image", "logo")
-                                    "Filmler" -> listOf("stream_icon", "movie_image", "cover_big", "cover", "poster")
-                                    else -> listOf("cover", "cover_big", "stream_icon", "movie_image", "poster")
+                                    "Canlı TV" -> listOf("stream_icon", "logo", "cover", "cover_big", "movie_image")
+                                    "Filmler" -> listOf("movie_image", "cover_big", "cover", "poster", "stream_icon")
+                                    else -> listOf("cover_big", "cover", "movie_image", "poster", "stream_icon")
                                 }
                                 val rawArtwork = artworkKeys.asSequence()
                                     .map { key -> o.optString(key, "").trim() }
@@ -4140,7 +4200,7 @@ class MainActivity : Activity() {
                             return@makeButton
                         }
                         val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "M3U ${savedSources.size + 1}" }, "m3u", address)
-                        saveSource(src); hideKeyboard(); loadM3u(src, false)
+                        saveSource(src); hideKeyboard(); settingsPage = "main"; sidebarMode = "main"; selectedType = "Tümü"; render(); loadM3u(src, false)
                     }
                     inlineStalker.id -> {
                         val portal = server.text.toString().trim().trimEnd('/')
@@ -4152,6 +4212,7 @@ class MainActivity : Activity() {
                         }
                         val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "Stalker Portal ${savedSources.size + 1}" }, "mac", portal, macValue)
                         saveSource(src); hideKeyboard()
+                        settingsPage = "main"; sidebarMode = "main"; selectedType = "Tümü"; render()
                         loadStalker(src, false)
                     }
                     else -> {
@@ -4163,7 +4224,7 @@ class MainActivity : Activity() {
                         }
                         val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "Xtream ${savedSources.size + 1}" }, "xtream",
                             address.trimEnd('/'), username.text.toString().trim(), password.text.toString())
-                        saveSource(src); hideKeyboard(); loadXtream(src, false)
+                        saveSource(src); hideKeyboard(); settingsPage = "main"; sidebarMode = "main"; selectedType = "Tümü"; render(); loadXtream(src, false)
                     }
                 }
             }, LinearLayout.LayoutParams(dp(280), dp(52)).apply {
@@ -5997,11 +6058,7 @@ class MainActivity : Activity() {
                                     .putString("last_source_id", if (checked) source.id else "")
                                     .apply()
                                 if (checked) {
-                                    selectedCategorySourceId = source.id
-                                    selectedGroup = "Tüm kategoriler"
-                                    expandedCategory = null
-                                    focusedCategoryName = null
-                                    when (source.mode) { "xtream" -> loadXtream(source, false); "mac" -> loadStalker(source, false); else -> loadM3u(source, false) }
+                                    activateSourceFromCache(source)
                                 } else {
                                     selectedCategorySourceId = ""
                                     selectedGroup = "Tüm kategoriler"
@@ -6010,13 +6067,14 @@ class MainActivity : Activity() {
                                     selectedType = "Tümü"
                                     focusFirstCategoryOnRender = false
                                     focusFirstContentOnRender = false
-                                    items.clear()
+                                    // Do not clear the in-memory catalogue or overwrite
+                                    // the disk cache when disabling a source. The next source
+                                    // selection can reuse its already-loaded items.
                                     prefs.edit()
                                         .putString("last_group", selectedGroup)
                                         .putString("last_section", selectedType)
                                         .putString("last_source_id", "")
                                         .apply()
-                                    saveCachedItems()
                                     render()
                                 }
                             }
