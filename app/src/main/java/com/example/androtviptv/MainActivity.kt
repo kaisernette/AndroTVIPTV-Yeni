@@ -5426,7 +5426,9 @@ class MainActivity : Activity() {
                         val allEpisodes = ArrayList<MediaItem>()
                         for ((seasonId, seasonNumber) in seasons.values) {
                             val seasonRows = requestSeriesList(seasonId)
-                            val parsed = parseEpisodes(seasonRows, seasonNumber)
+                            // The request is already scoped to this exact season ID.
+                            // Do not require parent-series fields that this portal omits.
+                            val parsed = parseEpisodes(seasonRows, seasonNumber, alreadyScopedToSeries = true)
                             allEpisodes.addAll(parsed)
                             val seasonDiagnostic = "SEASON_EPISODE_QUERY series=${series.name.take(70)} seasonId=$seasonId seasonNo=$seasonNumber raw=${seasonRows.length()} parsed=${parsed.size}"
                             android.util.Log.i("KaiserTV", "Stalker $seasonDiagnostic")
