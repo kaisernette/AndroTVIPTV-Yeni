@@ -5397,6 +5397,41 @@ class MainActivity : Activity() {
                         return array
                     }
 
+                    // Diagnostic only: test the standard series endpoint suggested for some
+                    // Stalker implementations. Do not feed its result into the UI until the
+                    // response shape and selected-series ownership have been verified.
+                    fun requestStandardSeriesEpisodes(): JSONArray {
+                        val params = linkedMapOf(
+                            "type" to "series",
+                            "action" to "get_episodes_list",
+                            "series_id" to seriesPortalId,
+                            "p" to "1"
+                        )
+                        val response = stalkerRequest(source, token, params)
+                        var array = stalkerArray(response, "episodes", "items", "results", "data")
+                        if (array.length() == 0) {
+                            response.optJSONObject("js")?.let { nested ->
+                                array = stalkerArray(nested, "episodes", "items", "results", "data")
+                            }
+                        }
+                        val sample = (0 until minOf(array.length(), 3)).mapNotNull { index ->
+                            array.optJSONObject(index)?.let { row ->
+                                "id=${row.optString("id")},episode_id=${row.optString("episode_id")},season_id=${row.optString("season_id")},name=${row.optString("name").take(60)},keys=${row.keys().asSequence().joinToString(",")}"
+                            }
+                        }.joinToString(" || ")
+                        val summary = "STANDARD_GET_EPISODES_LIST request={type=series,action=get_episodes_list,series_id=$seriesPortalId,p=1} count=${array.length()} responseKeys=${response.keys().asSequence().joinToString(",")} jsKeys=${response.optJSONObject("js")?.keys()?.asSequence()?.joinToString(",") ?: "-"} sample=$sample"
+                        android.util.Log.i("KaiserTV", "Stalker $summary")
+                        synchronized(this@MainActivity) {
+                            val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
+                            prefs.edit().putString("last_stalker_catalog_diagnostics", (previous + " | " + summary).takeLast(14000)).apply()
+                        }
+                        return array
+                    }
+
+                    try { requestStandardSeriesEpisodes() } catch (e: Exception) {
+                        android.util.Log.w("KaiserTV", "Stalker get_episodes_list diagnostic failed", e)
+                    }
+
                     val dedicatedEpisodes = try { requestDedicatedSeriesEpisodes() } catch (e: Exception) {
                         android.util.Log.w("KaiserTV", "Stalker get_series_episodes unsupported; use standard VOD hierarchy", e)
                         JSONArray()
