@@ -2554,13 +2554,24 @@ class MainActivity : Activity() {
     }
 
     private fun stalkerApiUrl(source: SavedSource, params: Map<String, String>): String {
-        val base = source.address.trimEnd('/')
+        // Accept either a portal root (/stalker_portal or /c) or a full
+        // server/load.php URL. Do not accidentally request /server/load.php/server/load.php.
+        val entered = source.address.trim().trimEnd('/')
+        val base = when {
+            entered.endsWith("/server/load.php", ignoreCase = true) ->
+                entered.substringBeforeLast("/server/load.php")
+            entered.endsWith("/c", ignoreCase = true) ->
+                entered.dropLast(2).trimEnd('/')
+            else -> entered
+        }
+        val endpoint = if (entered.endsWith("/server/load.php", ignoreCase = true)) entered
+            else "$base/server/load.php"
         val allParams = LinkedHashMap(params)
         if (!allParams.containsKey("JsHttpRequest")) allParams["JsHttpRequest"] = "1-xml"
         val query = allParams.entries.joinToString("&") {
             URLEncoder.encode(it.key, "UTF-8") + "=" + URLEncoder.encode(it.value, "UTF-8")
         }
-        return "$base/server/load.php?$query"
+        return "$endpoint?$query"
     }
 
     private fun stalkerRequest(source: SavedSource, token: String, params: Map<String, String>): JSONObject {
@@ -2677,7 +2688,17 @@ class MainActivity : Activity() {
     }
 
     private fun loadStalker(source: SavedSource, append: Boolean) {
-        prefs.edit().putString("last_source_id", source.id).apply()
+        // Pin every screen/filter to the newly activated source before loading starts.
+        // Keep other sources cached in memory, but never let their categories leak into this view.
+        prefs.edit()
+            .putString("last_source_id", source.id)
+            .putStringSet("selected_source_ids", setOf(source.id))
+            .apply()
+        selectedCategorySourceId = source.id
+        selectedType = "Tümü"
+        selectedGroup = "Tüm kategoriler"
+        expandedCategory = null
+        focusedCategoryName = null
         isLoadingSource = true
         loadProgress = 0
         updateLoadingMessage( "${source.name}: Stalker bağlantısı kuruluyor…")
@@ -2996,7 +3017,6 @@ class MainActivity : Activity() {
                                     ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize).coerceAtLeast(1)
                                 } else -1
                                 if (totalPages > 0) {
-                                    lastPageNumber = totalPages
                                     lastPageNumber = totalPages.coerceAtLeast(1)
                                     sectionDiagnostics.add(
                                         "$type sayfalama hedefi kategori=$categoryId: toplam=$reportedTotalItems, " +
@@ -3010,7 +3030,7 @@ class MainActivity : Activity() {
                                 // page count: it can trigger thousands of needless requests.
                                 // Fetch a small initial slice per category; later category
                                 // selection can be used to expand loading without blocking startup.
-                                val categoryPageLimit = 6
+                                val categoryPageLimit = 2
                                 val effectiveLastPage = minOf(lastPageNumber, categoryPageLimit)
                                 var page = nextPage
                                 while (page <= effectiveLastPage) {
