@@ -5284,7 +5284,20 @@ class MainActivity : Activity() {
                                 val ep = array.optJSONObject(i) ?: continue
                                 if (belongsToSelectedSeries(ep)) matched.put(ep)
                             }
-                            android.util.Log.d("KaiserTV", "Stalker series detail attempt=${index + 1}, season=$seasonId, raw=${array.length()}, matched=${matched.length()}, keys=${params.keys}")
+                            val sampleRows = (0 until minOf(array.length(), 3)).mapNotNull { rowIndex ->
+                                val row = array.optJSONObject(rowIndex) ?: return@mapNotNull null
+                                val rowKeys = row.keys().asSequence().joinToString(",")
+                                val parentSummary = listOf("series_id", "parent_series_id", "parent_id", "owner_id", "tv_show_id", "movie_id")
+                                    .joinToString(",") { key -> "$key=${row.optString(key, "-")}" }
+                                "keys=[$rowKeys], id=${row.optString("id")}, episode_id=${row.optString("episode_id")}, name=${row.optString("name").take(70)}, title=${row.optString("title").take(70)}, $parentSummary, series_name=${row.optString("series_name")}, parent_name=${row.optString("parent_name")}, season_id=${row.optString("season_id")}"
+                            }.joinToString(" || ")
+                            val detailDiagnostic = "DETAIL series=${series.name.take(70)} portalId=$seriesPortalId category=${categoryId ?: "-"} season=$seasonId attempt=${index + 1} raw=${array.length()} matched=${matched.length()} params=${params.keys} samples=$sampleRows"
+                            android.util.Log.i("KaiserTV", "Stalker $detailDiagnostic")
+                            synchronized(this@MainActivity) {
+                                val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
+                                prefs.edit().putString("last_stalker_catalog_diagnostics",
+                                    (previous + " | " + detailDiagnostic).takeLast(14000)).apply()
+                            }
                             if (matched.length() > 0) return matched
                             if (array.length() > best.length()) best = array
                         }
