@@ -5313,7 +5313,8 @@ class MainActivity : Activity() {
                                     .joinToString(",") { key -> "$key=${row.optString(key, "-")}" }
                                 "keys=[$rowKeys], id=${row.optString("id")}, episode_id=${row.optString("episode_id")}, name=${row.optString("name").take(70)}, title=${row.optString("title").take(70)}, $parentSummary, season_id=${row.optString("season_id")}, is_episode=${row.optString("is_episode")}, is_season=${row.optString("is_season")}"
                             }.joinToString(" || ")
-                            val detailDiagnostic = "DETAIL_VOD_SERIES series=${series.name.take(70)} portalId=$seriesPortalId season=$seasonId page=$page raw=${array.length()} matched=${matched.length()} seasonRows=${(0 until array.length()).count { array.optJSONObject(it)?.let(::isSeasonRow) == true }} params=${params.keys} samples=$sampleRows"
+                            val dataValue = response.opt("data")
+                            val detailDiagnostic = "DETAIL_VOD_SERIES request={type=vod,action=get_ordered_list,movie_id=$seriesPortalId,season_id=$seasonId,episode_id=0,p=$page} http=200 responseKeys=${response.keys().asSequence().joinToString(",")} dataType=${dataValue?.javaClass?.simpleName ?: "null"} raw=${array.length()} matched=${matched.length()} seasonRows=${(0 until array.length()).count { array.optJSONObject(it)?.let(::isSeasonRow) == true }} samples=$sampleRows"
                             android.util.Log.i("KaiserTV", "Stalker $detailDiagnostic")
                             synchronized(this@MainActivity) {
                                 val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
@@ -5430,7 +5431,7 @@ class MainActivity : Activity() {
                             // Do not require parent-series fields that this portal omits.
                             val parsed = parseEpisodes(seasonRows, seasonNumber, alreadyScopedToSeries = true)
                             allEpisodes.addAll(parsed)
-                            val seasonDiagnostic = "SEASON_EPISODE_QUERY series=${series.name.take(70)} seasonId=$seasonId seasonNo=$seasonNumber raw=${seasonRows.length()} parsed=${parsed.size}"
+                            val seasonDiagnostic = "SEASON_EPISODE_QUERY request={type=vod,action=get_ordered_list,movie_id=$seriesPortalId,season_id=$seasonId,episode_id=0} seasonId=$seasonId seasonNo=$seasonNumber raw=${seasonRows.length()} parsed=${parsed.size} sample=${(0 until minOf(seasonRows.length(), 5)).mapNotNull { idx -> seasonRows.optJSONObject(idx)?.let { row -> "id=${row.optString("id")},episode_id=${row.optString("episode_id")},name=${row.optString("name").take(55)},series_number=${row.optString("series_number")},episode_number=${row.optString("episode_number")},season_id=${row.optString("season_id")},is_series=${row.optString("is_series")},is_movie=${row.optString("is_movie")}" } }.joinToString(" || ")}"
                             android.util.Log.i("KaiserTV", "Stalker $seasonDiagnostic")
                             synchronized(this@MainActivity) {
                                 val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
