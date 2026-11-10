@@ -5261,7 +5261,7 @@ class MainActivity : Activity() {
                             val rowId = ep.optString("episode_id").ifBlank { ep.optString("id") }.trim()
                             if (rowId.startsWith("$expectedSeasonId:")) return true
                         }
-                        val parentKeys = listOf("series_id", "parent_series_id", "parent_id", "owner_id", "tv_show_id", "movie_id")
+                        val parentKeys = listOf("series_id", "parent_series_id", "parent_id", "owner_id", "tv_show_id", "movie_id", "video_id")
                         val parentValues = parentKeys.map { ep.optString(it).trim() }
                             .filter { it.isNotBlank() && it != "0" && !it.equals("null", true) }
                         if (parentValues.isNotEmpty()) return parentValues.any { it == seriesPortalId }
@@ -5275,70 +5275,55 @@ class MainActivity : Activity() {
                     }
 
                     fun requestSeriesList(seasonId: String = "0", includeSeasonRows: Boolean = false): JSONArray {
-                        val common = linkedMapOf(
-                            "type" to "series", "action" to "get_ordered_list",
-                            "season_id" to seasonId, "episode_id" to "0",
-                            "p" to "1", "fav" to "0", "sortby" to "added",
-                            "hd" to "0", "ended" to "0", "search" to ""
-                        )
-                        val attempts = mutableListOf<Map<String, String>>()
-                        attempts.add(LinkedHashMap(common).apply {
-                            put("movie_id", "0"); put("series_id", seriesPortalId)
-                            if (categoryId != null) put("category", categoryId)
-                        })
-                        attempts.add(LinkedHashMap(common).apply {
-                            put("movie_id", seriesPortalId); put("series_id", seriesPortalId)
-                            if (categoryId != null) put("category", categoryId)
-                        })
-                        attempts.add(LinkedHashMap(common).apply {
-                            put("movie_id", seriesPortalId)
-                            if (categoryId != null) put("category", categoryId)
-                        })
-                        attempts.add(LinkedHashMap(common).apply {
-                            put("series_id", seriesPortalId)
-                            if (categoryId != null) put("category", categoryId)
-                        })
-                        attempts.add(LinkedHashMap(common).apply {
-                            put("movie_id", "0"); put("series_id", seriesPortalId)
-                            if (categoryId != null) put("genre", categoryId)
-                        })
-                        var best = JSONArray()
-                        for ((index, params) in attempts.withIndex()) {
+                        // Ministra stores series, seasons and episodes in the VOD catalogue.
+                        // The supported hierarchy endpoint is type=vod + movie_id=series ID;
+                        // season_id=0 returns season rows, a concrete season ID returns episodes.
+                        val combined = JSONArray()
+                        for (page in 1..100) {
+                            val params = linkedMapOf(
+                                "type" to "vod",
+                                "action" to "get_ordered_list",
+                                "movie_id" to seriesPortalId,
+                                "season_id" to seasonId,
+                                "episode_id" to "0",
+                                "p" to page.toString(),
+                                "fav" to "0",
+                                "sortby" to "added",
+                                "hd" to "0",
+                                "ended" to "0",
+                                "search" to ""
+                            )
                             val response = stalkerRequest(source, token, params)
                             val array = stalkerArray(response, "data", "items", "results")
                             val matched = JSONArray()
                             for (i in 0 until array.length()) {
-                                val ep = array.optJSONObject(i) ?: continue
-                                if (belongsToSelectedSeries(ep, seasonId.takeIf { it != "0" })) matched.put(ep)
-                            }
-                            // For the initial hierarchy lookup, preserve only season entries.
-                            // Never return the unfiltered global list of unrelated shows.
-                            if (matched.length() == 0 && includeSeasonRows) {
-                                for (i in 0 until array.length()) {
-                                    val row = array.optJSONObject(i) ?: continue
-                                    if (isSeasonRow(row)) matched.put(row)
+                                val row = array.optJSONObject(i) ?: continue
+                                if (seasonId != "0" && belongsToSelectedSeries(row, seasonId)) {
+                                    matched.put(row)
+                                } else if (seasonId == "0" && includeSeasonRows && isSeasonRow(row)) {
+                                    matched.put(row)
+                                } else if (seasonId == "0" && !includeSeasonRows && belongsToSelectedSeries(row)) {
+                                    matched.put(row)
                                 }
                             }
                             val sampleRows = (0 until minOf(array.length(), 3)).mapNotNull { rowIndex ->
                                 val row = array.optJSONObject(rowIndex) ?: return@mapNotNull null
                                 val rowKeys = row.keys().asSequence().joinToString(",")
-                                val parentSummary = listOf("series_id", "parent_series_id", "parent_id", "owner_id", "tv_show_id", "movie_id")
+                                val parentSummary = listOf("series_id", "parent_series_id", "parent_id", "owner_id", "tv_show_id", "movie_id", "video_id")
                                     .joinToString(",") { key -> "$key=${row.optString(key, "-")}" }
-                                "keys=[$rowKeys], id=${row.optString("id")}, episode_id=${row.optString("episode_id")}, name=${row.optString("name").take(70)}, title=${row.optString("title").take(70)}, $parentSummary, series_name=${row.optString("series_name")}, parent_name=${row.optString("parent_name")}, season_id=${row.optString("season_id")}"
+                                "keys=[$rowKeys], id=${row.optString("id")}, episode_id=${row.optString("episode_id")}, name=${row.optString("name").take(70)}, title=${row.optString("title").take(70)}, $parentSummary, season_id=${row.optString("season_id")}, is_episode=${row.optString("is_episode")}, is_season=${row.optString("is_season")}"
                             }.joinToString(" || ")
-                            val detailDiagnostic = "DETAIL series=${series.name.take(70)} portalId=$seriesPortalId category=${categoryId ?: "-"} season=$seasonId attempt=${index + 1} raw=${array.length()} matched=${matched.length()} seasonRows=${(0 until array.length()).count { array.optJSONObject(it)?.let(::isSeasonRow) == true }} params=${params.keys} samples=$sampleRows"
+                            val detailDiagnostic = "DETAIL_VOD_SERIES series=${series.name.take(70)} portalId=$seriesPortalId season=$seasonId page=$page raw=${array.length()} matched=${matched.length()} seasonRows=${(0 until array.length()).count { array.optJSONObject(it)?.let(::isSeasonRow) == true }} params=${params.keys} samples=$sampleRows"
                             android.util.Log.i("KaiserTV", "Stalker $detailDiagnostic")
                             synchronized(this@MainActivity) {
                                 val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
                                 prefs.edit().putString("last_stalker_catalog_diagnostics",
                                     (previous + " | " + detailDiagnostic).takeLast(14000)).apply()
                             }
-                            if (matched.length() > 0) return matched
-                            if (array.length() > best.length()) best = array
+                            for (i in 0 until matched.length()) combined.put(matched.optJSONObject(i))
+                            if (array.length() < 14) break
                         }
-                        // Do not return an unfiltered global series list: that produced
-                        // MacGyver/Buffy/Family Guy episodes under unrelated show pages.
-                        return JSONArray()
+                        return combined
                     }
 
                     fun parseEpisodes(array: JSONArray, fallbackSeason: String?, alreadyScopedToSeries: Boolean = false): List<MediaItem> {
@@ -5406,14 +5391,13 @@ class MainActivity : Activity() {
                     }
 
                     val dedicatedEpisodes = try { requestDedicatedSeriesEpisodes() } catch (e: Exception) {
-                        android.util.Log.w("KaiserTV", "Stalker get_series_episodes unsupported; fallback to ordered list", e)
+                        android.util.Log.w("KaiserTV", "Stalker get_series_episodes unsupported; use standard VOD hierarchy", e)
                         JSONArray()
                     }
-                    var episodeItems = if (dedicatedEpisodes.length() > 0) {
-                        parseEpisodes(dedicatedEpisodes, null, alreadyScopedToSeries = true)
-                    } else {
-                        parseEpisodes(requestSeriesList("0"), null)
-                    }
+                    // Do not trust the non-standard dedicated action: some portals return a
+                    // global catalogue page here. The standard VOD hierarchy below is scoped
+                    // by movie_id and season_id and prevents unrelated shows becoming episodes.
+                    var episodeItems = parseEpisodes(requestSeriesList("0"), null)
                     if (episodeItems.isEmpty()) {
                         // Several Ministra portals return a season node (for example id=417:1)
                         // from the dedicated action. Capture it before filtering, then query that
