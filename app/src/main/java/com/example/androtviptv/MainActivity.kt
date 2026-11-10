@@ -5306,11 +5306,11 @@ class MainActivity : Activity() {
                         return JSONArray()
                     }
 
-                    fun parseEpisodes(array: JSONArray, fallbackSeason: String?): List<MediaItem> {
+                    fun parseEpisodes(array: JSONArray, fallbackSeason: String?, alreadyScopedToSeries: Boolean = false): List<MediaItem> {
                         val rows = ArrayList<MediaItem>()
                         for (i in 0 until array.length()) {
                             val ep = array.optJSONObject(i) ?: continue
-                            if (!belongsToSelectedSeries(ep)) continue
+                            if (!alreadyScopedToSeries && !belongsToSelectedSeries(ep)) continue
                             if (ep.optBoolean("is_season", false)) continue
                             val id = ep.optString("episode_id").ifBlank { ep.optString("id") }
                                 .ifBlank { ep.optString("ch_id") }
@@ -5344,7 +5344,35 @@ class MainActivity : Activity() {
                         return rows
                     }
 
-                    var episodeItems = parseEpisodes(requestSeriesList("0"), null)
+                    // Prefer the portal's dedicated series-episode action. Unlike a
+                    // generic ordered-list query, this request is scoped to the selected show ID.
+                    fun requestDedicatedSeriesEpisodes(): JSONArray {
+                        val response = stalkerRequest(source, token, mapOf(
+                            "type" to "series",
+                            "action" to "get_series_episodes",
+                            "movie_id" to seriesPortalId,
+                            "series_id" to seriesPortalId,
+                            "p" to "1"
+                        ))
+                        val array = stalkerArray(response, "data", "episodes", "items", "results")
+                        val summary = "DEDICATED_EPISODES series=${series.name.take(70)} id=$seriesPortalId count=${array.length()} keys=${response.keys().asSequence().joinToString(",")}"
+                        android.util.Log.i("KaiserTV", "Stalker $summary")
+                        synchronized(this@MainActivity) {
+                            val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
+                            prefs.edit().putString("last_stalker_catalog_diagnostics", (previous + " | " + summary).takeLast(14000)).apply()
+                        }
+                        return array
+                    }
+
+                    val dedicatedEpisodes = try { requestDedicatedSeriesEpisodes() } catch (e: Exception) {
+                        android.util.Log.w("KaiserTV", "Stalker get_series_episodes unsupported; fallback to ordered list", e)
+                        JSONArray()
+                    }
+                    var episodeItems = if (dedicatedEpisodes.length() > 0) {
+                        parseEpisodes(dedicatedEpisodes, null, alreadyScopedToSeries = true)
+                    } else {
+                        parseEpisodes(requestSeriesList("0"), null)
+                    }
                     if (episodeItems.isEmpty()) {
                         // Some portals return season records first. Query each season
                         // separately, using its own ID and a fallback season number.
