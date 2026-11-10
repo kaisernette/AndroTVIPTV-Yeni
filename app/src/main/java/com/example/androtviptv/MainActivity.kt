@@ -5233,7 +5233,25 @@ class MainActivity : Activity() {
                     // series is passed as movie_id or series_id. Try the supported
                     // hierarchy shapes explicitly; the previous code only retried
                     // when movie_id was non-zero, although it was always set to zero.
-                    fun belongsToSelectedSeries(ep: JSONObject): Boolean {
+                    fun isSeasonRow(row: JSONObject): Boolean {
+                        if (row.optBoolean("is_season", false)) return true
+                        val name = row.optString("name").ifBlank { row.optString("title") }.trim()
+                        if (Regex("(?i)^(season|sezon)\\s*[-#:]?\\s*\\d+\\s*$").matches(name)) return true
+                        val hasEpisodeIdentity = listOf("episode_id", "episode_number", "series_number", "episode")
+                            .any { row.optString(it).isNotBlank() }
+                        return !hasEpisodeIdentity &&
+                            Regex("(?i)^(season|sezon)\\s*[-#:]?\\s*\\d+.*$").matches(name)
+                    }
+
+                    fun belongsToSelectedSeries(ep: JSONObject, expectedSeasonId: String? = null): Boolean {
+                        // Some Stalker portals encode hierarchy in IDs rather than parent fields:
+                        // season row 417:1, episode rows 417:1:1, 417:1:2, etc.
+                        if (!expectedSeasonId.isNullOrBlank()) {
+                            val rowSeasonId = ep.optString("season_id").trim()
+                            if (rowSeasonId == expectedSeasonId) return true
+                            val rowId = ep.optString("episode_id").ifBlank { ep.optString("id") }.trim()
+                            if (rowId.startsWith("$expectedSeasonId:")) return true
+                        }
                         val parentKeys = listOf("series_id", "parent_series_id", "parent_id", "owner_id", "tv_show_id", "movie_id")
                         val parentValues = parentKeys.map { ep.optString(it).trim() }
                             .filter { it.isNotBlank() && it != "0" && !it.equals("null", true) }
@@ -5247,7 +5265,7 @@ class MainActivity : Activity() {
                         return title.isNotBlank() && title.contains(series.name, ignoreCase = true)
                     }
 
-                    fun requestSeriesList(seasonId: String = "0"): JSONArray {
+                    fun requestSeriesList(seasonId: String = "0", includeSeasonRows: Boolean = false): JSONArray {
                         val common = linkedMapOf(
                             "type" to "series", "action" to "get_ordered_list",
                             "season_id" to seasonId, "episode_id" to "0",
@@ -5282,7 +5300,15 @@ class MainActivity : Activity() {
                             val matched = JSONArray()
                             for (i in 0 until array.length()) {
                                 val ep = array.optJSONObject(i) ?: continue
-                                if (belongsToSelectedSeries(ep)) matched.put(ep)
+                                if (belongsToSelectedSeries(ep, seasonId.takeIf { it != "0" })) matched.put(ep)
+                            }
+                            // For the initial hierarchy lookup, preserve only season entries.
+                            // Never return the unfiltered global list of unrelated shows.
+                            if (matched.length() == 0 && includeSeasonRows) {
+                                for (i in 0 until array.length()) {
+                                    val row = array.optJSONObject(i) ?: continue
+                                    if (isSeasonRow(row)) matched.put(row)
+                                }
                             }
                             val sampleRows = (0 until minOf(array.length(), 3)).mapNotNull { rowIndex ->
                                 val row = array.optJSONObject(rowIndex) ?: return@mapNotNull null
@@ -5291,7 +5317,7 @@ class MainActivity : Activity() {
                                     .joinToString(",") { key -> "$key=${row.optString(key, "-")}" }
                                 "keys=[$rowKeys], id=${row.optString("id")}, episode_id=${row.optString("episode_id")}, name=${row.optString("name").take(70)}, title=${row.optString("title").take(70)}, $parentSummary, series_name=${row.optString("series_name")}, parent_name=${row.optString("parent_name")}, season_id=${row.optString("season_id")}"
                             }.joinToString(" || ")
-                            val detailDiagnostic = "DETAIL series=${series.name.take(70)} portalId=$seriesPortalId category=${categoryId ?: "-"} season=$seasonId attempt=${index + 1} raw=${array.length()} matched=${matched.length()} params=${params.keys} samples=$sampleRows"
+                            val detailDiagnostic = "DETAIL series=${series.name.take(70)} portalId=$seriesPortalId category=${categoryId ?: "-"} season=$seasonId attempt=${index + 1} raw=${array.length()} matched=${matched.length()} seasonRows=${(0 until array.length()).count { array.optJSONObject(it)?.let(::isSeasonRow) == true }} params=${params.keys} samples=$sampleRows"
                             android.util.Log.i("KaiserTV", "Stalker $detailDiagnostic")
                             synchronized(this@MainActivity) {
                                 val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
@@ -5310,18 +5336,8 @@ class MainActivity : Activity() {
                         val rows = ArrayList<MediaItem>()
                         for (i in 0 until array.length()) {
                             val ep = array.optJSONObject(i) ?: continue
-                            // Season rows can be returned by Stalker episode actions as ordinary
-                            // objects (often only id + name=Season N). Never treat them as playable episodes.
-                            val rowName = ep.optString("name").ifBlank { ep.optString("title") }.trim()
-                            val isSeasonRow = ep.optBoolean("is_season", false) ||
-                                Regex("(?i)^(season|sezon)\\s*[-#:]?\\s*\\d+\\s*$").matches(rowName) ||
-                                (ep.optString("season_id").isBlank() &&
-                                    ep.optString("episode_id").isBlank() &&
-                                    ep.optString("episode_number").isBlank() &&
-                                    ep.optString("series_number").isBlank() &&
-                                    ep.optString("episode").isBlank() &&
-                                    rowName.matches(Regex("(?i)^(season|sezon)\\s*[-#:]?\\s*\\d+.*$")))
-                            if (isSeasonRow) continue
+                            // Season entries are hierarchy nodes, never playable episodes.
+                            if (isSeasonRow(ep)) continue
                             if (!alreadyScopedToSeries && !belongsToSelectedSeries(ep)) continue
                             val id = ep.optString("episode_id").ifBlank { ep.optString("id") }
                                 .ifBlank { ep.optString("ch_id") }
@@ -5365,8 +5381,13 @@ class MainActivity : Activity() {
                             "series_id" to seriesPortalId,
                             "p" to "1"
                         ))
-                        val array = stalkerArray(response, "data", "episodes", "items", "results")
-                        val summary = "DEDICATED_EPISODES series=${series.name.take(70)} id=$seriesPortalId count=${array.length()} keys=${response.keys().asSequence().joinToString(",")}"
+                        var array = stalkerArray(response, "episodes", "items", "results", "data")
+                        if (array.length() == 0) {
+                            response.optJSONObject("js")?.let { nested ->
+                                array = stalkerArray(nested, "episodes", "items", "results", "data")
+                            }
+                        }
+                        val summary = "DEDICATED_EPISODES series=${series.name.take(70)} id=$seriesPortalId count=${array.length()} keys=${response.keys().asSequence().joinToString(",")} jsKeys=${response.optJSONObject("js")?.keys()?.asSequence()?.joinToString(",") ?: "-"}"
                         android.util.Log.i("KaiserTV", "Stalker $summary")
                         synchronized(this@MainActivity) {
                             val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
@@ -5385,28 +5406,53 @@ class MainActivity : Activity() {
                         parseEpisodes(requestSeriesList("0"), null)
                     }
                     if (episodeItems.isEmpty()) {
-                        // Some portals return season records first. Query each season
-                        // separately, using its own ID and a fallback season number.
+                        // Several Ministra portals return a season node (for example id=417:1)
+                        // from the dedicated action. Capture it before filtering, then query that
+                        // exact season ID. A generic list may contain unrelated show titles.
                         val seasonArrays = listOf(
-                            requestSeriesList("0"),
-                            requestSeriesList(seriesPortalId)
+                            dedicatedEpisodes,
+                            requestSeriesList("0", includeSeasonRows = true),
+                            requestSeriesList(seriesPortalId, includeSeasonRows = true)
                         )
                         val seasons = LinkedHashMap<String, Pair<String, String>>()
                         for (array in seasonArrays) {
                             for (i in 0 until array.length()) {
                                 val season = array.optJSONObject(i) ?: continue
-                                val seasonId = season.optString("season_id").ifBlank { season.optString("id") }
-                                if (seasonId.isBlank()) continue
-                                val number = season.optString("season_number")
-                                    .ifBlank { season.optString("name").filter { it.isDigit() }.ifBlank { (i + 1).toString() } }
+                                if (!isSeasonRow(season)) continue
+                                val seasonId = season.optString("season_id").ifBlank { season.optString("id") }.trim()
+                                if (seasonId.isBlank() || seasonId == "0") continue
+                                val seasonLabel = season.optString("name").ifBlank { season.optString("title") }
+                                val number = season.optString("season_number").ifBlank {
+                                    Regex("(?i)(?:season|sezon)\\s*[-#:]?\\s*(\\d+)")
+                                        .find(seasonLabel)?.groupValues?.getOrNull(1)
+                                        ?: (seasons.size + 1).toString()
+                                }
                                 seasons[seasonId] = seasonId to number
                             }
                         }
                         val allEpisodes = ArrayList<MediaItem>()
                         for ((seasonId, seasonNumber) in seasons.values) {
-                            allEpisodes.addAll(parseEpisodes(requestSeriesList(seasonId), seasonNumber))
+                            val seasonRows = requestSeriesList(seasonId)
+                            val parsed = parseEpisodes(seasonRows, seasonNumber)
+                            allEpisodes.addAll(parsed)
+                            val seasonDiagnostic = "SEASON_EPISODE_QUERY series=${series.name.take(70)} seasonId=$seasonId seasonNo=$seasonNumber raw=${seasonRows.length()} parsed=${parsed.size}"
+                            android.util.Log.i("KaiserTV", "Stalker $seasonDiagnostic")
+                            synchronized(this@MainActivity) {
+                                val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
+                                prefs.edit().putString("last_stalker_catalog_diagnostics",
+                                    (previous + " | " + seasonDiagnostic).takeLast(14000)).apply()
+                            }
                         }
                         episodeItems = allEpisodes.distinctBy { it.id }
+                        if (episodeItems.isEmpty()) {
+                            val noEpisodes = "NO_EPISODES series=${series.name.take(70)} portalId=$seriesPortalId seasons=${seasons.keys.joinToString(",")}"
+                            android.util.Log.w("KaiserTV", "Stalker $noEpisodes")
+                            synchronized(this@MainActivity) {
+                                val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
+                                prefs.edit().putString("last_stalker_catalog_diagnostics",
+                                    (previous + " | " + noEpisodes).takeLast(14000)).apply()
+                            }
+                        }
                     }
 
                     val grouped = episodeItems.groupBy {
