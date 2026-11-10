@@ -3535,7 +3535,43 @@ class MainActivity : Activity() {
                 }
             }
         }
-        return out
+        // M3U playlists often expose each episode as a flat stream entry.
+        // Build series parents from SxxExx / 1x02 names, retaining child URLs.
+        val episodePattern = Regex("(?i)^(.+?)\\s*(?:[-_. ]?S(\\d{1,2})\\s*E(\\d{1,3})|\\b(\\d{1,2})x(\\d{1,3})\\b)(?:\\s*[-_. ].*)?$")
+        val seriesParents = LinkedHashMap<String, MediaItem>()
+        val seriesEpisodes = ArrayList<MediaItem>()
+        val ordinaryItems = ArrayList<MediaItem>()
+        for (entry in out) {
+            val match = episodePattern.matchEntire(entry.name.trim())
+            if (entry.type != "Diziler" || match == null) {
+                ordinaryItems.add(entry)
+                continue
+            }
+            val seriesName = match.groupValues[1].trim().trimEnd('-', '_', '.', ' ')
+            val seasonNumber = match.groupValues[2].ifBlank { match.groupValues[4] }.toIntOrNull() ?: 1
+            val episodeNumber = match.groupValues[3].ifBlank { match.groupValues[5] }.toIntOrNull() ?: 1
+            if (seriesName.isBlank()) {
+                ordinaryItems.add(entry)
+                continue
+            }
+            val stableKey = (entry.group + "|" + seriesName).lowercase(java.util.Locale.ROOT)
+                .replace(Regex("\\s+"), " ").trim()
+            val parentId = "m3u-series:" + stableKey.hashCode().toUInt().toString(16)
+            val previous = seriesParents[parentId]
+            if (previous == null || (previous.icon.isBlank() && entry.icon.isNotBlank())) {
+                seriesParents[parentId] = MediaItem(
+                    parentId, seriesName, "m3u-series://$parentId", entry.group,
+                    "Diziler", entry.icon, "", parentId, entry.sourceId
+                )
+            }
+            seriesEpisodes.add(entry.copy(
+                name = "S${seasonNumber.toString().padStart(2, '0')} E${episodeNumber.toString().padStart(2, '0')}",
+                group = "$seriesName • Sezon $seasonNumber",
+                type = "Bölümler",
+                seriesId = parentId
+            ))
+        }
+        return ordinaryItems + seriesParents.values + seriesEpisodes
     }
     private fun classify(name: String, group: String): String {
         val s = "$name $group".lowercase()
@@ -4965,8 +5001,26 @@ class MainActivity : Activity() {
         seriesEpisodesError = ""
         render()
 
-        val source = savedSources.firstOrNull { it.id == series.sourceId && (it.mode == "xtream" || it.mode == "mac") }
-        if (source == null) {
+        val source = savedSources.firstOrNull { it.id == series.sourceId }
+        if (source?.mode == "m3u") {
+            val episodes = items.filter {
+                it.sourceId == series.sourceId && it.type == "Bölümler" && it.seriesId == series.id
+            }
+            val rows = episodes.groupBy {
+                it.group.substringAfterLast("Sezon ").ifBlank { "1" }
+            }.entries.sortedBy { it.key.toIntOrNull() ?: Int.MAX_VALUE }.map { entry ->
+                entry.key to entry.value.sortedBy { ep ->
+                    Regex("E(\\d+)", RegexOption.IGNORE_CASE).find(ep.name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                        ?: Int.MAX_VALUE
+                }
+            }
+            seriesEpisodeRows = rows
+            seriesEpisodesLoading = false
+            if (rows.isEmpty()) seriesEpisodesError = "Bu M3U listesinde diziye ait sezon/bölüm numarası bulunamadı."
+            render()
+            return
+        }
+        if (source == null || (source.mode != "xtream" && source.mode != "mac")) {
             seriesEpisodesLoading = false
             seriesEpisodesError = "Dizi kaynağı bulunamadı. Kaynağı yeniden yükle."
             render()
