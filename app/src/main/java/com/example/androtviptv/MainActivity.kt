@@ -2420,8 +2420,10 @@ class MainActivity : Activity() {
     // Optional poster enrichment for M3U sources that use the same Xtream
     // account. Credentials are read from the user's saved M3U URL at runtime;
     // they are never embedded in source code or sent to a third party.
-    private fun enrichM3uMoviePosters(source: SavedSource) {
-        thread(name = "kaiser-m3u-poster-match") {
+    private fun enrichM3uMetadata(source: SavedSource) {
+        // The M3U playlist remains the playback source. Xtream API is used only
+        // as optional metadata for the same account (posters and VOD categories).
+        thread(name = "kaiser-m3u-metadata") {
             try {
                 val uri = android.net.Uri.parse(source.address)
                 val user = uri.getQueryParameter("username").orEmpty()
@@ -2432,26 +2434,72 @@ class MainActivity : Activity() {
                 val base = "$scheme://$authority"
                 val u = URLEncoder.encode(user, "UTF-8")
                 val p = URLEncoder.encode(pass, "UTF-8")
-                val api = "$base/player_api.php?username=$u&password=$p&action=get_vod_streams"
-                val posters = HashMap<String, String>(2048)
-                forEachXtreamJsonObject(api) { item ->
+                val api = "$base/player_api.php?username=$u&password=$p"
+
+                fun categoryMap(action: String): Map<String, String> {
+                    val result = LinkedHashMap<String, String>()
+                    forEachXtreamJsonObject("$api&action=$action") { item ->
+                        val id = item.optString("category_id").trim()
+                        val title = item.optString("category_name").trim()
+                        if (id.isNotBlank() && title.isNotBlank()) result[id] = title
+                    }
+                    return result
+                }
+
+                val moviePosters = HashMap<String, Pair<String, String>>(2048)
+                forEachXtreamJsonObject("$api&action=get_vod_streams") { item ->
                     val title = item.optString("name").ifBlank { item.optString("title") }
                     val poster = item.optString("movie_image").ifBlank {
                         item.optString("cover_big").ifBlank { item.optString("cover") }
                     }.ifBlank { item.optString("stream_icon") }
                     val key = normalizePosterMatchName(title)
-                    if (key.length >= 3 && poster.startsWith("http", true)) posters.putIfAbsent(key, poster)
+                    if (key.length >= 3 && poster.startsWith("http", true)) {
+                        val category = item.optString("category_name").ifBlank { item.optString("category_id") }
+                        moviePosters.putIfAbsent(key, poster to category)
+                    }
                 }
-                if (posters.isEmpty()) return@thread
+
+                val seriesCategories = try { categoryMap("get_series_categories") } catch (e: Exception) {
+                    android.util.Log.w("KaiserTV", "Optional M3U series categories unavailable.", e)
+                    emptyMap()
+                }
+                val seriesMetadata = HashMap<String, Pair<String, String>>(1024)
+                try {
+                    forEachXtreamJsonObject("$api&action=get_series") { item ->
+                        val title = item.optString("name").ifBlank { item.optString("title") }
+                        val poster = item.optString("cover").ifBlank {
+                            item.optString("cover_big").ifBlank { item.optString("movie_image") }
+                        }
+                        val key = normalizePosterMatchName(title)
+                        if (key.length >= 3) {
+                            val category = item.optString("category_name").ifBlank {
+                                seriesCategories[item.optString("category_id")].orEmpty()
+                            }
+                            val validPoster = if (poster.startsWith("//")) "https:$poster" else poster
+                            seriesMetadata.putIfAbsent(key, validPoster to category)
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("KaiserTV", "Optional M3U series metadata unavailable.", e)
+                }
+
                 var changed = false
                 synchronized(items) {
                     for (index in items.indices) {
                         val item = items[index]
-                        if (item.sourceId != source.id || item.type != "Filmler") continue
+                        if (item.sourceId != source.id) continue
                         val key = normalizePosterMatchName(item.name)
-                        val poster = posters[key] ?: continue
-                        if (item.icon != poster) {
-                            items[index] = item.copy(icon = poster)
+                        val metadata = when (item.type) {
+                            "Filmler" -> moviePosters[key]
+                            "Diziler" -> if (item.id.startsWith("m3u-series:")) seriesMetadata[key] else null
+                            else -> null
+                        } ?: continue
+                        val poster = metadata.first
+                        val category = metadata.second
+                        val updatedIcon = if (poster.startsWith("http", true)) poster else item.icon
+                        val updatedGroup = category.takeIf { it.isNotBlank() && !it.all(Char::isDigit) } ?: item.group
+                        if (updatedIcon != item.icon || updatedGroup != item.group) {
+                            items[index] = item.copy(icon = updatedIcon, group = updatedGroup)
                             changed = true
                         }
                     }
@@ -2461,10 +2509,10 @@ class MainActivity : Activity() {
                     runOnUiThread {
                         if (prefs.getString("last_source_id", "") == source.id) render()
                     }
-                    android.util.Log.i("KaiserTV", "M3U poster enrichment updated matching movie artwork.")
+                    android.util.Log.i("KaiserTV", "Optional M3U metadata enrichment updated matching VOD artwork/categories.")
                 }
             } catch (e: Exception) {
-                android.util.Log.w("KaiserTV", "Optional M3U poster enrichment unavailable; playlist remains usable.", e)
+                android.util.Log.w("KaiserTV", "Optional M3U metadata enrichment unavailable; playlist remains usable.", e)
             }
         }
     }
@@ -2493,7 +2541,7 @@ class MainActivity : Activity() {
                     tryOpenPendingTvHomeItem()
                     // Artwork lookup runs after the playlist is already usable so
                     // it cannot delay TV/Movies/Series startup.
-                    enrichM3uMoviePosters(source)
+                    enrichM3uMetadata(source)
                 }
             } catch (e: Exception) { runOnUiThread {
                 loadProgress = 0
