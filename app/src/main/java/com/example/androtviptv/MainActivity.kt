@@ -3591,7 +3591,7 @@ class MainActivity : Activity() {
                             }
                         }
                     }
-                    val type = classify(name, group)
+                    val type = classify(name, group, streamUrl)
                     val headerJson = if (headers.isEmpty()) "" else JSONObject(headers as Map<*, *>).toString()
                     out.add(MediaItem(streamUrl, name, streamUrl, group, type, icon, requestHeaders = headerJson))
                     name = "İçerik"
@@ -3639,11 +3639,22 @@ class MainActivity : Activity() {
         }
         return ordinaryItems + seriesParents.values + seriesEpisodes
     }
-    private fun classify(name: String, group: String): String {
-        val s = "$name $group".lowercase()
+    private fun classify(name: String, group: String, streamUrl: String = ""): String {
+        val urlPath = try { android.net.Uri.parse(streamUrl).path.orEmpty().lowercase(java.util.Locale.ROOT) } catch (_: Exception) { "" }
+        // Provider URL paths are more reliable than group labels: many playlists
+        // name live channel groups "FILM", "CINEMA" or "DIZI" even though they
+        // are linear TV channels, which must never become VOD cards.
+        when {
+            Regex("/live/").containsMatchIn(urlPath) -> return "Canlı TV"
+            Regex("/movie/").containsMatchIn(urlPath) -> return "Filmler"
+            Regex("/series/").containsMatchIn(urlPath) -> return "Diziler"
+        }
+        val s = "$name $group".lowercase(java.util.Locale.ROOT)
+        val seriesHints = listOf("series", "dizi", "tv show", "season", "sezon", "episode", "bölüm", "son bölüm", "tüm bölümler")
+        val movieHints = listOf("movie", "film", "cinema", "vod", "sinema", "4k turk filmleri", "yabancı filmler", "çocuk filmleri")
         return when {
-            listOf("series", "dizi", "tv show", "season", "sezon", "episode", "bölüm").any { it in s } -> "Diziler"
-            listOf("movie", "film", "cinema", "vod", "4k film").any { it in s } -> "Filmler"
+            seriesHints.any { it in s } -> "Diziler"
+            movieHints.any { it in s } -> "Filmler"
             else -> "Canlı TV"
         }
     }
