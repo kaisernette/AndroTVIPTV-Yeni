@@ -2983,7 +2983,9 @@ class MainActivity : Activity() {
                                 val rawCommand = entry.optString("cmd")
                                 val encodedCommand = URLEncoder.encode(rawCommand, "UTF-8")
                                 val itemUrl = when {
-                                    type == "itv" -> "stalker://$id"
+                                    // Keep the portal-provided playback command. Stalker live TV
+                                    // create_link must receive the original cmd, not a fabricated /ch/{id} URL.
+                                    type == "itv" -> "stalker://$id?cmd=$encodedCommand"
                                     type == "vod" && isSeriesEntry -> "stalker-series://$id?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
                                     type == "vod" -> "stalker-vod://$id?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
                                     else -> "stalker-series://$id?cmd=$encodedCommand&category=${URLEncoder.encode(catId, "UTF-8")}"
@@ -3224,15 +3226,22 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun resolveStalkerStream(source: SavedSource, channelId: String): String {
+    private fun resolveStalkerStream(source: SavedSource, channelId: String, portalCommand: String): String {
         val token = stalkerHandshake(source)
+        // The cmd field returned with the ITV catalogue entry is the portal's actual
+        // channel locator (often a prefixed ffmpeg/ffrt command). Do not synthesize
+        // http://localhost/ch/{id}; many Ministra portals reject that placeholder.
+        val command = portalCommand.trim().ifBlank { "ffmpeg http://localhost/ch/$channelId" }
         val response = stalkerRequest(source, token, mapOf(
-            "type" to "itv", "action" to "create_link", "cmd" to "ffmpeg http://localhost/ch/$channelId",
+            "type" to "itv", "action" to "create_link", "cmd" to command,
             "series" to "", "forced_storage" to "", "disable_ad" to "0"
         ))
         val cmd = response.optString("cmd").ifBlank { response.optString("url") }
-        if (cmd.isBlank()) throw Exception("Portal yayın adresi döndürmedi.")
-        return cmd.removePrefix("ffmpeg ").trim()
+        if (cmd.isBlank()) {
+            val error = response.optString("error").ifBlank { response.optString("message") }
+            throw Exception(error.ifBlank { "Portal yayın adresi döndürmedi." })
+        }
+        return cmd.removePrefix("ffmpeg ").removePrefix("ffrt ").trim()
     }
 
     private fun loadXtream(source: SavedSource, append: Boolean) {
@@ -7332,7 +7341,7 @@ class MainActivity : Activity() {
             thread(name = "kaiser-stalker-play") {
                 try {
                     val streamUrl = if (isLive) {
-                        resolveStalkerStream(source, channelId)
+                        resolveStalkerStream(source, channelId, rawCommand)
                     } else {
                         val token = stalkerHandshake(source)
                         val command = rawCommand.ifBlank { "/media/file_$channelId.mpg" }
