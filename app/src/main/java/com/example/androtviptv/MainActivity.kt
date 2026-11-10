@@ -5310,8 +5310,19 @@ class MainActivity : Activity() {
                         val rows = ArrayList<MediaItem>()
                         for (i in 0 until array.length()) {
                             val ep = array.optJSONObject(i) ?: continue
+                            // Season rows can be returned by Stalker episode actions as ordinary
+                            // objects (often only id + name=Season N). Never treat them as playable episodes.
+                            val rowName = ep.optString("name").ifBlank { ep.optString("title") }.trim()
+                            val isSeasonRow = ep.optBoolean("is_season", false) ||
+                                Regex("(?i)^(season|sezon)\\s*[-#:]?\\s*\\d+\\s*$").matches(rowName) ||
+                                (ep.optString("season_id").isBlank() &&
+                                    ep.optString("episode_id").isBlank() &&
+                                    ep.optString("episode_number").isBlank() &&
+                                    ep.optString("series_number").isBlank() &&
+                                    ep.optString("episode").isBlank() &&
+                                    rowName.matches(Regex("(?i)^(season|sezon)\\s*[-#:]?\\s*\\d+.*$")))
+                            if (isSeasonRow) continue
                             if (!alreadyScopedToSeries && !belongsToSelectedSeries(ep)) continue
-                            if (ep.optBoolean("is_season", false)) continue
                             val id = ep.optString("episode_id").ifBlank { ep.optString("id") }
                                 .ifBlank { ep.optString("ch_id") }
                             if (id.isBlank()) continue
