@@ -2915,6 +2915,9 @@ class MainActivity : Activity() {
                                 )
                                 val itemType = if (isSeriesEntry) "Diziler" else label
                                 val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$itemType $id" }
+                                // Language-prefixed entries (TR:, FR:, EN:, etc.) are linear channel labels,
+                                // not VOD titles. Keep them out of Stalker movie/series catalogues.
+                                if (type == "vod" && isLanguagePrefixedChannel(name)) continue
                                 val catId = entry.optString("tv_genre_id").ifBlank { entry.optString("category_id") }
                                     .ifBlank { entry.optString("genre_id") }
                                 val catName = categories.firstOrNull { it.first == catId }?.second
@@ -3292,6 +3295,8 @@ class MainActivity : Activity() {
                             ).trim()
                             if (id.isNotBlank()) {
                                 val name = o.optString("name", "İsimsiz içerik").ifBlank { "İsimsiz içerik" }
+                                // Provider language tags identify channel variants, never movie/series cards.
+                                if (type != "Canlı TV" && isLanguagePrefixedChannel(name)) return@forEachXtreamJsonObject
                                 val categoryId = o.optString("category_id")
                                 val group = o.optString("category_name").takeIf { it.isNotBlank() }
                                     ?: categories[categoryId] ?: "Diğer"
@@ -3687,7 +3692,12 @@ class MainActivity : Activity() {
         }
         return ordinaryItems + seriesParents.values + seriesEpisodes
     }
+    private fun isLanguagePrefixedChannel(name: String): Boolean =
+        Regex("""^\\s*[A-Za-z]{2,3}\\s*:""").containsMatchIn(name)
+
     private fun classify(name: String, group: String, streamUrl: String = ""): String {
+        // TR:, FR:, EN:, DE: and similar provider prefixes denote live channel variants.
+        if (isLanguagePrefixedChannel(name)) return "Canlı TV"
         val urlPath = try { android.net.Uri.parse(streamUrl).path.orEmpty().lowercase(java.util.Locale.ROOT) } catch (_: Exception) { "" }
         // Provider URL paths are more reliable than group labels: many playlists
         // name live channel groups "FILM", "CINEMA" or "DIZI" even though they
