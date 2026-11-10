@@ -2576,21 +2576,46 @@ class MainActivity : Activity() {
 
     private fun stalkerRequest(source: SavedSource, token: String, params: Map<String, String>): JSONObject {
         val address = stalkerApiUrl(source, params)
+        // Keep portal session cookies isolated per saved source. Some Stalker servers
+        // issue a fresh PHP/session cookie during handshake and require it on every page.
+        val cookieKey = "stalker_session_cookies_${source.id}"
+        val cookieValues = LinkedHashMap<String, String>()
+        cookieValues["mac"] = source.username.trim()
+        cookieValues["stb_lang"] = "en"
+        cookieValues["timezone"] = "Europe%2FIstanbul"
+        prefs.getString(cookieKey, "").orEmpty().split(";").forEach { part ->
+            val split = part.trim().split("=", limit = 2)
+            if (split.size == 2 && split[0].isNotBlank()) cookieValues[split[0]] = split[1]
+        }
+        cookieValues["mac"] = source.username.trim()
+        val cookieHeader = cookieValues.entries.joinToString("; ") { "${it.key}=${it.value}" }
         val conn = (URL(address).openConnection() as HttpURLConnection).apply {
             connectTimeout = 12000
-            readTimeout = 15000
+            readTimeout = 20000
             requestMethod = "GET"
             instanceFollowRedirects = true
             setRequestProperty("User-Agent", "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 MAG250")
-            setRequestProperty("X-User-Agent", "Model: MAG250; Link: WiFi")
+            setRequestProperty("X-User-Agent", "Model: MAG250; Link: WiFi; MAC: ${source.username.trim()}")
             setRequestProperty("Accept", "application/json, text/javascript, */*")
             setRequestProperty("Referer", source.address.trimEnd('/') + "/")
-            setRequestProperty("Cookie", "mac=${source.username}; stb_lang=en; timezone=Europe%2FIstanbul")
+            setRequestProperty("Cookie", cookieHeader)
             if (token.isNotBlank()) setRequestProperty("Authorization", "Bearer $token")
             useCaches = false
         }
         try {
             val code = conn.responseCode
+            // Merge Set-Cookie name/value pairs for the next request; ignore cookie attributes.
+            val updatedCookies = LinkedHashMap(cookieValues)
+            conn.headerFields?.filterKeys { it != null && it.equals("Set-Cookie", ignoreCase = true) }
+                ?.values?.flatten()?.forEach { header ->
+                    val pair = header.substringBefore(";").trim().split("=", limit = 2)
+                    if (pair.size == 2 && pair[0].isNotBlank()) updatedCookies[pair[0]] = pair[1]
+                }
+            if (updatedCookies.size > 3) {
+                prefs.edit().putString(cookieKey, updatedCookies.entries
+                    .filterNot { it.key.equals("mac", true) || it.key.equals("stb_lang", true) || it.key.equals("timezone", true) }
+                    .joinToString("; ") { "${it.key}=${it.value}" }).apply()
+            }
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val raw = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (code !in 200..299) throw Exception("Portal HTTP $code: ${raw.take(180)}")
