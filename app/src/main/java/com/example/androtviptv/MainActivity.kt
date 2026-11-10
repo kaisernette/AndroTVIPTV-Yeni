@@ -2858,7 +2858,7 @@ class MainActivity : Activity() {
                                     ((type != "itv" && page <= 1 && categoryId == categories.firstOrNull()?.first) ||
                                      (type == "itv" && page == 1 && index == 0))
                                 ) {
-                                    sectionDiagnostics.add("$type get_ordered_list deneme=${index + 1} kategori=${categoryId ?: "*"} sayfa=$page: $responseShape.get()")
+                                    sectionDiagnostics.add("$type get_ordered_list deneme=${index + 1} kategori=${categoryId ?: "*"} sayfa=$page: ${responseShape.get()}")
                                 }
                                 android.util.Log.d(
                                     "KaiserTV",
@@ -3101,7 +3101,7 @@ class MainActivity : Activity() {
                             val movieItems = sectionItems.filter { it.type == "Filmler" }
                             val seriesItems = sectionItems.filter { it.type == "Diziler" }
                             vodSeriesCount = seriesItems.size
-                            val diagnostic = "VOD: kategori=${categories.size}, film=${movieItems.size}, dizi=${seriesItems.size}, $responseShape"
+                            val diagnostic = "VOD: kategori=${categories.size}, film=${movieItems.size}, dizi=${seriesItems.size}, ${responseShape.get()}"
                             sectionDiagnostics.add(diagnostic)
                             android.util.Log.i("KaiserTV", "Stalker $diagnostic")
                             if (sectionItems.isEmpty()) {
