@@ -2802,7 +2802,7 @@ class MainActivity : Activity() {
                         } else readCategories(type)
 
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label yükleniyor…") }
-                        val collected = LinkedHashMap<String, MediaItem>()
+                        val collected = ConcurrentHashMap<String, MediaItem>()
                         var responseShape = "liste isteği henüz yapılmadı"
 
                         fun requestList(categoryId: String?, page: Int, onPageMeta: ((Int, Int) -> Unit)? = null): JSONArray {
@@ -3000,7 +3000,12 @@ class MainActivity : Activity() {
                             }
                         }
 
-                        for ((categoryId, categoryName) in targets) {
+                        // Two category workers per VOD/series section; with three sections this caps concurrent portal requests at about six.
+                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 2)
+                        try {
+                            val categoryTasks = ArrayList<java.util.concurrent.Future<*>>()
+                            for ((categoryId, categoryName) in targets) {
+                                categoryTasks.add(categoryExecutor.submit {
                             if (type == "itv") {
                                 // Keep the existing Live TV pagination unchanged.
                                 var page = 1
@@ -3027,7 +3032,7 @@ class MainActivity : Activity() {
                                     if (pageSize > 0) reportedPageSize = pageSize
                                 }
                                 val firstPage = requestList(categoryId, 1, capturePageMeta)
-                                if (firstPage.length() == 0) continue
+                                if (firstPage.length() == 0) return@submit
                                 val firstPageKey = pageKeys(firstPage)
                                 var nextPage = 2
                                 var lastPageNumber = 100
@@ -3080,6 +3085,11 @@ class MainActivity : Activity() {
                                     }
                                 }
                             }
+                                })
+                            }
+                            categoryTasks.forEach { it.get() }
+                        } finally {
+                            categoryExecutor.shutdownNow()
                         }
 
                         val sectionItems = collected.values.toList()
