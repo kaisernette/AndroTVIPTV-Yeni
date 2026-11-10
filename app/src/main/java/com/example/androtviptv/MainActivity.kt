@@ -3693,7 +3693,7 @@ class MainActivity : Activity() {
         return ordinaryItems + seriesParents.values + seriesEpisodes
     }
     private fun isLanguagePrefixedChannel(name: String): Boolean =
-        Regex("""^\\s*[A-Za-z]{2,3}\\s*:""").containsMatchIn(name)
+        Regex("""^\s*[A-Za-z]{2,3}\s*:""").containsMatchIn(name)
 
     private fun classify(name: String, group: String, streamUrl: String = ""): String {
         // TR:, FR:, EN:, DE: and similar provider prefixes denote live channel variants.
