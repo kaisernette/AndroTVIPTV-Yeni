@@ -2997,7 +2997,7 @@ class MainActivity : Activity() {
                                 } else -1
                                 if (totalPages > 0) {
                                     lastPageNumber = totalPages
-                                    lastPageNumber = lastPageNumber.coerceIn(nextPage, 5000)
+                                    lastPageNumber = totalPages.coerceAtLeast(1)
                                     sectionDiagnostics.add(
                                         "$type sayfalama hedefi kategori=$categoryId: toplam=$reportedTotalItems, " +
                                             "sayfaBoyutu=$reportedPageSize, sonSayfa=$lastPageNumber"
@@ -3010,7 +3010,7 @@ class MainActivity : Activity() {
                                 // page count: it can trigger thousands of needless requests.
                                 // Fetch a small initial slice per category; later category
                                 // selection can be used to expand loading without blocking startup.
-                                val categoryPageLimit = 1
+                                val categoryPageLimit = 6
                                 val effectiveLastPage = minOf(lastPageNumber, categoryPageLimit)
                                 var page = nextPage
                                 while (page <= effectiveLastPage) {
