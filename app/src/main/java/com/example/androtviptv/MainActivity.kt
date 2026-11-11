@@ -944,22 +944,39 @@ class MainActivity : Activity() {
                         // Only the currently selected TV/Movies/Series tab opens its category list.
                         // Right from Home or another main-menu item goes straight to the content area.
                         if (activeTabLabel.isNotBlank() && focused.contentDescription?.toString() == activeTabLabel) {
-                            showContextNavigationStage(1)
-                            firstCategoryFocusView?.post { firstCategoryFocusView?.requestFocus() }
-                            return firstCategoryFocusView ?: focused
+                            val target = firstCategoryFocusView
+                            // Do not hide/detach the currently focused navigation branch while
+                            // ViewRootImpl is still calculating the D-pad focus rectangle.
+                            post {
+                                if (sidebarMode == "context" && contextNavigationStage == 0) {
+                                    showContextNavigationStage(1)
+                                    target?.takeIf { it.isAttachedToWindow && it.isShown && isDescendantView(rootLayout, it) }?.requestFocus()
+                                }
+                            }
+                            return focused
                         }
                     }
                     if (direction == View.FOCUS_LEFT && contextNavigationStage == 2 &&
                         ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)) {
-                        showContextNavigationStage(1)
-                        firstCategoryFocusView?.post { firstCategoryFocusView?.requestFocus() }
-                        return firstCategoryFocusView ?: focused
+                        val target = firstCategoryFocusView
+                        post {
+                            if (sidebarMode == "context" && contextNavigationStage == 2) {
+                                showContextNavigationStage(1)
+                                target?.takeIf { it.isAttachedToWindow && it.isShown && isDescendantView(rootLayout, it) }?.requestFocus()
+                            }
+                        }
+                        return focused
                     }
                     if (direction == View.FOCUS_RIGHT && contextNavigationStage == 1 &&
                         ::categoryListScroll.isInitialized && isDescendantView(categoryListScroll, focused)) {
-                        showContextNavigationStage(2)
-                        firstRightContentFocusView?.post { firstRightContentFocusView?.requestFocus() }
-                        return firstRightContentFocusView ?: focused
+                        val target = firstRightContentFocusView
+                        post {
+                            if (sidebarMode == "context" && contextNavigationStage == 1) {
+                                showContextNavigationStage(2)
+                                target?.takeIf { it.isAttachedToWindow && it.isShown && isDescendantView(rootLayout, it) }?.requestFocus()
+                            }
+                        }
+                        return focused
                     }
                 }
                 val focusIsInSidebar = ::sidebar.isInitialized && isDescendantView(sidebar, focused)
