@@ -664,11 +664,42 @@ class MainActivity : Activity() {
         installCrashLogger()
         val diagnostics = getSharedPreferences("androtv_diagnostics", MODE_PRIVATE)
         if (diagnostics.getBoolean("session_active", false)) {
+            val previousState = diagnostics.getString("last_ui_state", "Son arayüz durumu yok")
+            val previousStart = diagnostics.getLong("session_started_at", 0L)
+            val exitInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                try {
+                    val manager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                    manager.getHistoricalProcessExitReasons(packageName, 0, 8)
+                        .firstOrNull { it.timestamp >= previousStart }
+                } catch (_: Exception) { null }
+            } else null
+            val exitSummary = if (exitInfo != null) {
+                val reason = when (exitInfo.reason) {
+                    android.app.ApplicationExitInfo.REASON_ANR -> "ANR: uygulama yanıt vermedi"
+                    android.app.ApplicationExitInfo.REASON_CRASH -> "Uygulama çökmesi"
+                    android.app.ApplicationExitInfo.REASON_CRASH_NATIVE -> "Yerel (native) çökme"
+                    android.app.ApplicationExitInfo.REASON_LOW_MEMORY -> "Sistem düşük bellek nedeniyle kapattı"
+                    android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "Aşırı kaynak kullanımı"
+                    android.app.ApplicationExitInfo.REASON_USER_REQUESTED -> "Kullanıcı veya sistem isteğiyle kapatıldı"
+                    android.app.ApplicationExitInfo.REASON_USER_STOPPED -> "Kullanıcı uygulamayı durdurdu"
+                    android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "Bağımlı süreç kapandığı için sonlandırıldı"
+                    android.app.ApplicationExitInfo.REASON_SIGNALED -> "Sinyal ile sonlandırıldı"
+                    else -> "Diğer / bilinmeyen sonlandırma (kod=${exitInfo.reason})"
+                }
+                val description = exitInfo.description?.takeIf { it.isNotBlank() }?.let { "\\nAçıklama: " + it } ?: ""
+                val status = if (exitInfo.status != 0) "\\nSistem kodu: " + exitInfo.status else ""
+                "Sistem kapanış nedeni: " + reason + description + status
+            } else {
+                "Android kapanış nedeni sağlayamadı (API 23–29 veya kayıt mevcut değil)."
+            }
             diagnostics.edit()
-                .putString("last_unexpected_state", diagnostics.getString("last_ui_state", "Son arayüz durumu yok"))
+                .putString("last_unexpected_state", previousState + "\\n" + exitSummary)
                 .apply()
         }
-        diagnostics.edit().putBoolean("session_active", true).apply()
+        diagnostics.edit()
+            .putBoolean("session_active", true)
+            .putLong("session_started_at", System.currentTimeMillis())
+            .apply()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         if (!prefs.getBoolean("global_oval_style_applied", false)) {
             prefs.edit().putBoolean("oval_buttons", true).putBoolean("global_oval_style_applied", true).apply()
