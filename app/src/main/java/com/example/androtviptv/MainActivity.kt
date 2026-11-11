@@ -2719,9 +2719,9 @@ class MainActivity : Activity() {
         val catalogReport = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
         val endpointReport = prefs.getString("last_stalker_series_endpoint_diagnostics", "").orEmpty()
         val report = buildString {
-            if (catalogReport.isNotBlank()) append("STALKER KATALOG TANILAMASI\\n").append(catalogReport)
+            if (catalogReport.isNotBlank()) append("STALKER KATALOG TANILAMASI\n").append(catalogReport)
             if (endpointReport.isNotBlank()) {
-                if (isNotEmpty()) append("\\n\\n")
+                if (isNotEmpty()) append("\n\n")
                 append("STALKER DİZİ/BÖLÜM API TANILAMASI\\n").append(endpointReport)
             }
         }
