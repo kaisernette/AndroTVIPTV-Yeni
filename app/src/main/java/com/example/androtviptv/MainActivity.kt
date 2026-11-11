@@ -2847,6 +2847,10 @@ class MainActivity : Activity() {
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label yükleniyor…") }
                         val collected = ConcurrentHashMap<String, MediaItem>()
                         val responseShape = java.util.concurrent.atomic.AtomicReference("liste isteği henüz yapılmadı")
+                        // Avoid rewriting the entire growing catalogue after every few pages.
+                        // Persist the first partial batch, then checkpoint only after 1,000 new items.
+                        val lastCheckpointCount = java.util.concurrent.atomic.AtomicInteger(0)
+                        val lastProgressUpdateAt = java.util.concurrent.atomic.AtomicLong(0L)
 
                         fun requestList(categoryId: String?, page: Int, onPageMeta: ((Int, Int) -> Unit)? = null): JSONArray {
                             val filterKey = if (type == "itv") "genre" else "category"
@@ -2933,7 +2937,11 @@ class MainActivity : Activity() {
                             }.toSet()
                         }
 
-                        fun publishPartialSection() {
+                        fun publishPartialSection(force: Boolean = false) {
+                            val currentCount = collected.size
+                            val previousCheckpoint = lastCheckpointCount.get()
+                            if (!force && currentCount - previousCheckpoint < 1000) return
+                            if (!lastCheckpointCount.compareAndSet(previousCheckpoint, currentCount)) return
                             val snapshot = collected.values.toList()
                             if (snapshot.isEmpty()) return
                             val publishTypes = if (splitVodSeries) setOf("Filmler", "Diziler") else setOf(label)
@@ -3052,7 +3060,7 @@ class MainActivity : Activity() {
                         }
 
                         // Two category workers per VOD/series section; with three sections this caps concurrent portal requests at about six.
-                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 3)
+                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 4)
                         try {
                             val categoryTasks = ArrayList<java.util.concurrent.Future<*>>()
                             for ((categoryId, categoryName) in targets) {
@@ -3092,7 +3100,7 @@ class MainActivity : Activity() {
                                 if (firstPageKey.isNotEmpty()) firstPageKeys.add(firstPageKey)
                                 // Show the first available VOD/series items immediately;
                                 // continue collecting the remaining pages in the background.
-                                publishPartialSection()
+                                publishPartialSection(force = true)
 
                                 val totalPages = if (reportedTotalItems > 0 && reportedPageSize > 0) {
                                     ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize).coerceAtLeast(1)
@@ -3128,6 +3136,13 @@ class MainActivity : Activity() {
                                         )
                                     }
                                     consumePage(arr, categoryName)
+                                    val now = android.os.SystemClock.elapsedRealtime()
+                                    val lastUi = lastProgressUpdateAt.get()
+                                    if (now - lastUi >= 1500L && lastProgressUpdateAt.compareAndSet(lastUi, now)) {
+                                        runOnUiThread {
+                                            updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik hazır)")
+                                        }
+                                    }
                                     if (totalPages <= 0 && arr.length() < 10) break
                                     page++
                                     if (page % 5 == 0) {
