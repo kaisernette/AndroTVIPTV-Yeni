@@ -2685,7 +2685,7 @@ class MainActivity : Activity() {
             val previous = prefs.getString("last_stalker_series_endpoint_diagnostics", "").orEmpty()
             prefs.edit().putString(
                 "last_stalker_series_endpoint_diagnostics",
-                (previous + "\\n" + entry).trim().takeLast(8000)
+                (previous + "\n" + entry).trim().takeLast(8000)
             ).apply()
         }
     }
