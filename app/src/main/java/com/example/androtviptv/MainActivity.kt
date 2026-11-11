@@ -5563,7 +5563,6 @@ class MainActivity : Activity() {
                         // from the dedicated action. Capture it before filtering, then query that
                         // exact season ID. A generic list may contain unrelated show titles.
                         val seasonArrays = listOf(
-                            dedicatedEpisodes,
                             requestSeriesList("0", includeSeasonRows = true),
                             requestSeriesList(seriesPortalId, includeSeasonRows = true)
                         )
