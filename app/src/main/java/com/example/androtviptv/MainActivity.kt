@@ -2716,7 +2716,15 @@ class MainActivity : Activity() {
     }
 
     private fun showStalkerDiagnostics() {
-        val report = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
+        val catalogReport = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
+        val endpointReport = prefs.getString("last_stalker_series_endpoint_diagnostics", "").orEmpty()
+        val report = buildString {
+            if (catalogReport.isNotBlank()) append("STALKER KATALOG TANILAMASI\\n").append(catalogReport)
+            if (endpointReport.isNotBlank()) {
+                if (isNotEmpty()) append("\\n\\n")
+                append("STALKER DİZİ/BÖLÜM API TANILAMASI\\n").append(endpointReport)
+            }
+        }
         if (report.isBlank()) {
             android.app.AlertDialog.Builder(this)
                 .setTitle("Stalker tanılama")
@@ -5427,6 +5435,12 @@ class MainActivity : Activity() {
                             if (row.optString("id").isBlank() && row.optString("episode_id").isBlank()) {
                                 row.put("id", "$seriesPortalId:episode:${row.optString("episode_number")}")
                             }
+                            // Rows inside the selected show's own "series" array are already
+                            // scoped to that show. Add the missing parent ID so the common parser
+                            // does not discard these valid legacy episode-number entries.
+                            val hasParent = listOf("series_id", "parent_series_id", "parent_id", "owner_id", "tv_show_id", "movie_id", "video_id")
+                                .any { key -> row.optString(key).isNotBlank() && row.optString(key) != "0" }
+                            if (!hasParent) row.put("series_id", seriesPortalId)
                             if (row.optString("cmd").isBlank() && parentCommand.isNotBlank()) row.put("cmd", parentCommand)
                             if (row.optString("season_number").isBlank()) row.put("season_number", "1")
                             if (row.optString("name").isBlank()) row.put("name", "Bölüm ${row.optString("episode_number")}")
