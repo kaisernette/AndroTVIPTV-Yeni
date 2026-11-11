@@ -3173,11 +3173,13 @@ class MainActivity : Activity() {
                                 // Stalker often returns the GLOBAL total_items value
                                 // for every category. Never use that value as a per-category
                                 // page count: it can trigger thousands of needless requests.
-                                // Load the complete category catalogue. Portal totals can be global,
-                                // so repeated-page detection and a hard cap prevent runaway scans.
-                                val effectiveLastPage = minOf(lastPageNumber, 100)
+                                // Stalker portals often report a GLOBAL total_items value for
+                                // each category. Do not let that metadata truncate large categories.
+                                // Continue until the portal returns an empty/repeated page. Keep a
+                                // generous emergency ceiling for malformed portals that never end.
+                                val emergencyPageCeiling = 1000
                                 var page = nextPage
-                                while (page <= effectiveLastPage) {
+                                while (page <= emergencyPageCeiling) {
                                     val arr = requestList(categoryId, page, capturePageMeta)
                                     if (arr.length() == 0) break
                                     val currentPageKeys = pageKeys(arr)
@@ -3199,11 +3201,16 @@ class MainActivity : Activity() {
                                             updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik hazır)")
                                         }
                                     }
-                                    if (totalPages <= 0 && arr.length() < 10) break
+                                    // A short page is not necessarily the final page: some
+                                    // Stalker servers return variable page sizes. Empty/repeated
+                                    // pages above are the reliable end markers.
                                     page++
                                     if (page % 5 == 0) {
                                         publishPartialSection()
                                     }
+                                }
+                                if (page > emergencyPageCeiling) {
+                                    sectionDiagnostics.add("$type sayfalama güvenlik sınırına ulaştı: kategori=$categoryId, sınır=$emergencyPageCeiling")
                                 }
                             }
                                 })
