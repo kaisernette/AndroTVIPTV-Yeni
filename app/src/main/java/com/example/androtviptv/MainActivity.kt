@@ -3052,7 +3052,7 @@ class MainActivity : Activity() {
                         }
 
                         // Two category workers per VOD/series section; with three sections this caps concurrent portal requests at about six.
-                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 2)
+                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 3)
                         try {
                             val categoryTasks = ArrayList<java.util.concurrent.Future<*>>()
                             for ((categoryId, categoryName) in targets) {
@@ -3109,10 +3109,9 @@ class MainActivity : Activity() {
                                 // Stalker often returns the GLOBAL total_items value
                                 // for every category. Never use that value as a per-category
                                 // page count: it can trigger thousands of needless requests.
-                                // Fetch a small initial slice per category; later category
-                                // selection can be used to expand loading without blocking startup.
-                                val categoryPageLimit = 2
-                                val effectiveLastPage = minOf(lastPageNumber, categoryPageLimit)
+                                // Load the complete category catalogue. Portal totals can be global,
+                                // so repeated-page detection and a hard cap prevent runaway scans.
+                                val effectiveLastPage = minOf(lastPageNumber, 100)
                                 var page = nextPage
                                 while (page <= effectiveLastPage) {
                                     val arr = requestList(categoryId, page, capturePageMeta)
