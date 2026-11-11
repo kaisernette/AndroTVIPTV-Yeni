@@ -5499,6 +5499,25 @@ class MainActivity : Activity() {
                             val rows = extractEpisodeArray(response)
                             appendSeriesNumberArray(rows, response.opt("series"), response)
                             response.optJSONObject("js")?.let { appendSeriesNumberArray(rows, it.opt("series"), it) }
+                            // Some portals nest the episode-number array inside each season row.
+                            val seasonRows = (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }
+                                .filter { isSeasonRow(it) }
+                            for (seasonRow in seasonRows) {
+                                val seasonLabel = seasonRow.optString("name").ifBlank { seasonRow.optString("title") }
+                                val seasonNumber = seasonRow.optString("season_number").ifBlank {
+                                    Regex("(?i)(?:season|sezon)\\s*[-#:]?\\s*(\\d+)")
+                                        .find(seasonLabel)?.groupValues?.getOrNull(1) ?: "1"
+                                }
+                                val episodeRows = JSONArray()
+                                appendSeriesNumberArray(episodeRows, seasonRow.opt("series"), seasonRow)
+                                for (episodeIndex in 0 until episodeRows.length()) {
+                                    val episodeRow = episodeRows.optJSONObject(episodeIndex) ?: continue
+                                    episodeRow.put("season_number", seasonNumber)
+                                    episodeRow.put("season_id", seasonRow.optString("id"))
+                                    episodeRow.put("series_id", seriesPortalId)
+                                    rows.put(episodeRow)
+                                }
+                            }
                             for (n in 0 until rows.length()) combined.put(rows.opt(n))
                             val summary = "STANDARD_SERIES_ORDERED_LIST request={type=series,action=get_ordered_list,movie_id=$seriesPortalId,season_id=$seasonId,p=$page} count=${rows.length()} keys=${response.keys().asSequence().joinToString(",")} raw=${response.toString().take(900)}"
                             appendStalkerSeriesEndpointDiagnostic(summary)
