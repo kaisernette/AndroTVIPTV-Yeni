@@ -2680,6 +2680,41 @@ class MainActivity : Activity() {
         return JSONArray()
     }
 
+    private fun appendStalkerSeriesEndpointDiagnostic(entry: String) {
+        synchronized(this) {
+            val previous = prefs.getString("last_stalker_series_endpoint_diagnostics", "").orEmpty()
+            prefs.edit().putString(
+                "last_stalker_series_endpoint_diagnostics",
+                (previous + "\\n" + entry).trim().takeLast(8000)
+            ).apply()
+        }
+    }
+
+    private fun showStalkerSeriesEndpointDiagnostics() {
+        val report = prefs.getString("last_stalker_series_endpoint_diagnostics", "").orEmpty()
+        val body = TextView(this).apply {
+            text = report.ifBlank { "Henüz bölüm API tanılaması yok. Stalker kaynağında bir dizi açıp tekrar deneyin." }
+            textSize = 14f
+            setTextIsSelectable(true)
+            setPadding(dp(18), dp(12), dp(18), dp(12))
+        }
+        val scroll = ScrollView(this).apply { isFillViewport = true; addView(body) }
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setTitle("Stalker bölüm API tanılaması")
+            .setView(scroll)
+            .setNeutralButton("Kopyala", null)
+            .setPositiveButton("Kapat", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stalker bölüm API tanılaması", report))
+                android.widget.Toast.makeText(this, "Bölüm API tanılaması kopyalandı.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+        dialog.show()
+    }
+
     private fun showStalkerDiagnostics() {
         val report = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
         if (report.isBlank()) {
@@ -5390,10 +5425,7 @@ class MainActivity : Activity() {
                         }
                         val summary = "DEDICATED_EPISODES series=${series.name.take(70)} id=$seriesPortalId count=${array.length()} keys=${response.keys().asSequence().joinToString(",")} jsKeys=${response.optJSONObject("js")?.keys()?.asSequence()?.joinToString(",") ?: "-"}"
                         android.util.Log.i("KaiserTV", "Stalker $summary")
-                        synchronized(this@MainActivity) {
-                            val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
-                            prefs.edit().putString("last_stalker_catalog_diagnostics", (previous + " | " + summary).takeLast(14000)).apply()
-                        }
+                        appendStalkerSeriesEndpointDiagnostic(summary)
                         return array
                     }
 
@@ -6307,6 +6339,7 @@ class MainActivity : Activity() {
                 if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
                     option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
                 }
+                option("Stalker Bölüm API Tanılaması", "Dizi bölüm isteklerinin ayrı kaydını görüntüle ve kopyala") { showStalkerSeriesEndpointDiagnostics() }
                 option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "language" -> {
