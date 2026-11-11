@@ -1974,7 +1974,7 @@ class MainActivity : Activity() {
             try {
                 val channels = StalkerPortalClient(portal, mac).loadChannels()
                 val loaded = channels.map { channel ->
-                    MediaItem(id = channel.id, name = channel.name, url = "stalker://${channel.id}",
+                    MediaItem(id = channel.id, name = channel.name, url = "stalker://${channel.id}|${android.net.Uri.encode(channel.cmd)}",
                         group = channel.group.ifBlank { "Diğer" }, type = "Canlı TV",
                         icon = channel.logo, extension = "", sourceId = source.id)
                 }
@@ -5616,7 +5616,7 @@ class MainActivity : Activity() {
             thread(name = "kaiser-stalker-link") {
                 try {
                     val result = StalkerPortalClient(owningSource.address, owningSource.username)
-                        .createLink(item.url.removePrefix("stalker://"))
+                        .createLink(item.url.removePrefix("stalker://").substringBefore("|"), item.url.substringAfter("|", "").takeIf { it.isNotBlank() }?.let { android.net.Uri.decode(it) })
                     runOnUiThread {
                         openingPlayer = false
                         play(item.copy(url = result.first), startOver, result.second)
