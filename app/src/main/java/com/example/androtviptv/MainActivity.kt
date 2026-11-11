@@ -7484,14 +7484,44 @@ class MainActivity : Activity() {
                     } else {
                         val token = stalkerHandshake(source)
                         val command = rawCommand.ifBlank { "/media/file_$channelId.mpg" }
-                        val response = stalkerRequest(source, token, mapOf(
+                        fun extractPlayableLink(response: JSONObject): String {
+                            fun fromObject(obj: JSONObject?): String {
+                                if (obj == null) return ""
+                                for (key in listOf("cmd", "url", "stream_url", "link", "playback_url")) {
+                                    val value = obj.optString(key).trim()
+                                    if (value.startsWith("http://", true) || value.startsWith("https://", true) ||
+                                        value.startsWith("rtsp://", true) || value.startsWith("rtmp://", true) ||
+                                        value.startsWith("udp://", true) || value.startsWith("ffmpeg ") ||
+                                        value.startsWith("ffrt ")) return value
+                                }
+                                val data = obj.opt("data")
+                                if (data is JSONObject) return fromObject(data)
+                                if (data is String && (data.startsWith("http://") || data.startsWith("https://"))) return data
+                                return ""
+                            }
+                            return fromObject(response).removePrefix("ffmpeg ").removePrefix("ffrt ").trim()
+                        }
+
+                        val requestParams = mapOf(
                             "type" to "vod", "action" to "create_link", "cmd" to command,
                             "series" to seriesNumber, "download" to "0",
                             "disable_ad" to "0", "force_ch_link_check" to "0"
-                        ))
-                        response.optString("cmd").ifBlank { response.optString("url") }
-                            .removePrefix("ffmpeg ").removePrefix("ffrt ").trim()
-                            .takeIf { it.isNotBlank() } ?: throw Exception("Portal film/bölüm oynatma bağlantısı döndürmedi.")
+                        )
+                        val response = stalkerRequest(source, token, requestParams)
+                        var resolved = extractPlayableLink(response)
+                        appendStalkerSeriesEndpointDiagnostic(
+                            "EPISODE_CREATE_LINK type=vod id=$channelId series=$seriesNumber cmd=${command.take(220)} responseKeys=${response.keys().asSequence().joinToString(",")} response=${response.toString().take(900)} link=${resolved.take(300)}"
+                        )
+                        // A few Stalker implementations expose the same series resolver under type=series.
+                        if (resolved.isBlank()) {
+                            val alternate = stalkerRequest(source, token, requestParams + ("type" to "series"))
+                            resolved = extractPlayableLink(alternate)
+                            appendStalkerSeriesEndpointDiagnostic(
+                                "EPISODE_CREATE_LINK type=series id=$channelId series=$seriesNumber responseKeys=${alternate.keys().asSequence().joinToString(",")} response=${alternate.toString().take(900)} link=${resolved.take(300)}"
+                            )
+                        }
+                        resolved.takeIf { it.isNotBlank() }
+                            ?: throw Exception("Portal bölüm için oynatma adresi döndürmedi. Stalker tanılamasını kontrol edin.")
                     }
                     runOnUiThread {
                         openingPlayer = false
