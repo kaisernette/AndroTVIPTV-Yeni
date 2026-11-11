@@ -383,7 +383,7 @@ internal class StalkerPortalClient(
         val response = call(session, listOf(
             "type" to "itv",
             "action" to "create_link",
-            "cmd" to originalCommand?.takeIf { it.isNotBlank() } ?: "ffmpeg http://localhost/ch/$channelId",
+            "cmd" to (originalCommand?.takeIf { it.isNotBlank() } ?: "ffmpeg http://localhost/ch/$channelId"),
             "JsHttpRequest" to "1-xml"
         ))
         val js = response.json.optJSONObject("js")
