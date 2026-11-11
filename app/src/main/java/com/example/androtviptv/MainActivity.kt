@@ -5072,8 +5072,11 @@ class MainActivity : Activity() {
                 ranked.addAll(remaining)
                 return ranked
             }
-            (listOf(t("Son İzlenenler") to homeRecent) + listOf(
+            // Weekly movie posters stay pinned as the first row on Home.
+            // Recently watched follows them; weekly series remain below.
+            (listOf(
                 t("Haftanın Filmleri") to rankedByTrend(activeSourceItems.filter { it.type == "Filmler" }, trendingMovies).take(24),
+                t("Son İzlenenler") to homeRecent,
                 t("Haftanın Dizileri") to rankedByTrend(activeSourceItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
             )).filter { it.second.isNotEmpty() }
         } else if (selectedType == "Filmler" || selectedType == "Diziler") {
