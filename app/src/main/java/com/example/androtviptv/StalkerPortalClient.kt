@@ -17,7 +17,7 @@ internal class StalkerPortalClient(
     private val portal: String,
     private val mac: String
 ) {
-    data class Channel(val id: String, val name: String, val group: String, val logo: String)
+    data class Channel(val id: String, val name: String, val group: String, val logo: String, val cmd: String = "")
 
     data class Session(val token: String, val cookie: String) {
         fun headers(): Map<String, String> = mapOf(
@@ -185,45 +185,140 @@ internal class StalkerPortalClient(
         return session
     }
 
+    private fun findChannelArray(value: Any?): JSONArray? {
+        when (value) {
+            is JSONArray -> return value
+            is String -> {
+                runCatching { JSONArray(value) }.getOrNull()?.let { return it }
+                runCatching { JSONObject(value) }.getOrNull()?.let { return findChannelArray(it) }
+            }
+            is JSONObject -> {
+                for (key in listOf("data", "channels", "items", "results", "itv", "rows")) {
+                    val found = findChannelArray(value.opt(key))
+                    if (found != null) return found
+                }
+            }
+        }
+        return null
+    }
+
+    private fun responseChannelArray(response: JSONObject): JSONArray? {
+        findChannelArray(response.opt("js"))?.let { return it }
+        return findChannelArray(response)
+    }
+
+    private fun requestLiveList(session: Session, params: List<Pair<String, String>>): JSONArray? {
+        return runCatching {
+            responseChannelArray(call(session, params).json)
+        }.onFailure {
+            android.util.Log.w("KaiserTV-Stalker", "Live-TV catalogue request failed: ${params.joinToString()}", it)
+        }.getOrNull()?.takeIf { it.length() > 0 }
+    }
+
     fun loadChannels(): List<Channel> {
         val session = openSession()
-        val response = call(session, listOf(
-            "type" to "itv",
-            "action" to "get_all_channels",
-            "force_ch_link_check" to "",
-            "JsHttpRequest" to "1-xml"
-        ))
-        val js = response.json.optJSONObject("js")
-            ?: throw IllegalStateException("Portal kanal yanıtı geçersiz.")
-        val data = js.opt("data")
-        val array = when (data) {
-            is JSONArray -> data
-            is JSONObject -> data.optJSONArray("data")
-                ?: data.optJSONArray("channels")
-                ?: data.optJSONArray("items")
-            is String -> runCatching { JSONArray(data) }.getOrNull()
-                ?: runCatching { JSONObject(data).let { obj ->
-                    obj.optJSONArray("data") ?: obj.optJSONArray("channels") ?: obj.optJSONArray("items")
-                } }.getOrNull()
-            else -> null
-        } ?: throw IllegalStateException(
-            "Portal kanal listesi döndürmedi (yanıt: ${js.toString().take(220)})."
-        )
+        val collected = linkedMapOf<String, Channel>()
+
+        fun consume(array: JSONArray, genres: Map<String, String>) {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val id = firstValue(item, "id", "ch_id", "channel_id")
+                if (id.isBlank()) continue
+                val genreId = firstValue(item, "tv_genre_id", "genre_id", "category_id", "tv_genre")
+                val directGenre = firstValue(item, "genre_title", "genre_name", "category_name", "group_title", "category", "genre")
+                collected[id] = Channel(
+                    id = id,
+                    name = firstValue(item, "name", "title").ifBlank { "Kanal $id" },
+                    group = genres[genreId] ?: directGenre.takeIf { it.isNotBlank() && !it.all(Char::isDigit) } ?: "Diğer",
+                    logo = firstValue(item, "logo", "logo_2", "screenshot_uri", "pic"),
+                    cmd = firstValue(item, "cmd", "url", "stream_url")
+                )
+            }
+        }
+
+        // First use the portal's compact all-channel endpoint. Different Stalker
+        // middleware versions return the array at different nesting levels.
+        val allChannels = runCatching {
+            responseChannelArray(call(session, listOf(
+                "type" to "itv",
+                "action" to "get_all_channels",
+                "force_ch_link_check" to "",
+                "JsHttpRequest" to "1-xml"
+            )).json)
+        }.onFailure {
+            android.util.Log.w("KaiserTV-Stalker", "get_all_channels failed; trying ordered catalogue fallbacks", it)
+        }.getOrNull()
 
         val genres = loadGenres(session)
-        return (0 until array.length()).mapNotNull { index ->
-            val item = array.optJSONObject(index) ?: return@mapNotNull null
-            val id = firstValue(item, "id", "ch_id", "channel_id")
-            if (id.isBlank()) return@mapNotNull null
-            val genreId = firstValue(item, "tv_genre_id", "genre_id", "category_id", "tv_genre")
-            val directGenre = firstValue(item, "genre_title", "genre_name", "category_name", "group_title", "category", "genre")
-            Channel(
-                id = id,
-                name = firstValue(item, "name", "title").ifBlank { "Kanal $id" },
-                group = genres[genreId] ?: directGenre.takeIf { it.isNotBlank() && !it.all(Char::isDigit) } ?: "Diğer",
-                logo = firstValue(item, "logo", "logo_2", "screenshot_uri")
+        if (allChannels != null && allChannels.length() > 0) consume(allChannels, genres)
+
+        // Compatibility path for portals where get_all_channels returns an empty
+        // payload but get_ordered_list exposes the live catalogue.
+        if (collected.isEmpty()) {
+            val categoryArray = runCatching {
+                responseChannelArray(call(session, listOf(
+                    "type" to "itv",
+                    "action" to "get_genres",
+                    "JsHttpRequest" to "1-xml"
+                )).json)
+            }.onFailure {
+                android.util.Log.w("KaiserTV-Stalker", "get_genres failed; wildcard catalogue will be tried", it)
+            }.getOrNull()
+
+            val categories = (0 until (categoryArray?.length() ?: 0)).mapNotNull { index ->
+                val item = categoryArray?.optJSONObject(index) ?: return@mapNotNull null
+                val id = firstValue(item, "id", "genre_id", "category_id", "tv_genre_id")
+                if (id.isBlank()) null else id to firstValue(item, "title", "name").ifBlank { "Diğer" }
+            }
+
+            val base = listOf(
+                "type" to "itv",
+                "action" to "get_ordered_list",
+                "fav" to "0",
+                "sortby" to "number"
             )
+            val targets = if (categories.isEmpty()) listOf("*" to "Diğer") else categories
+            for ((categoryId, _) in targets) {
+                var page = 1
+                var emptyPages = 0
+                while (page <= 100 && emptyPages < 2) {
+                    val filterAttempts = listOf(
+                        base + listOf("p" to page.toString(), "genre" to categoryId),
+                        base + listOf("p" to page.toString(), "category" to categoryId),
+                        base.filterNot { it.first == "sortby" } + listOf("p" to page.toString(), "genre" to categoryId),
+                        base.filterNot { it.first == "sortby" } + listOf("p" to page.toString(), "category" to categoryId),
+                        base.filterNot { it.first == "sortby" } + listOf("p" to page.toString())
+                    ).toMutableList()
+
+                    if (page == 1) {
+                        filterAttempts += base.filterNot { it.first == "sortby" } + listOf("p" to "0")
+                        filterAttempts += base + listOf("p" to "0", "genre" to "0")
+                        filterAttempts += base + listOf("p" to "0", "category" to "0")
+                    }
+
+                    var pageArray: JSONArray? = null
+                    for (params in filterAttempts) {
+                        pageArray = requestLiveList(session, params)
+                        if (pageArray != null && pageArray.length() > 0) break
+                    }
+                    if (pageArray == null || pageArray.length() == 0) {
+                        emptyPages++
+                        page++
+                        continue
+                    }
+                    val before = collected.size
+                    consume(pageArray, genres)
+                    if (collected.size == before) emptyPages++ else emptyPages = 0
+                    if (pageArray.length() < 10) break
+                    page++
+                }
+            }
         }
+
+        if (collected.isEmpty()) {
+            throw IllegalStateException("Portal TV kataloğu boş döndü. get_all_channels ve get_ordered_list alternatifleri sonuç vermedi.")
+        }
+        return collected.values.toList()
     }
 
     private fun firstValue(item: JSONObject, vararg keys: String): String {
@@ -283,12 +378,12 @@ internal class StalkerPortalClient(
         emptyMap()
     }
 
-    fun createLink(channelId: String): Pair<String, Map<String, String>> {
+    fun createLink(channelId: String, originalCommand: String? = null): Pair<String, Map<String, String>> {
         val session = openSession()
         val response = call(session, listOf(
             "type" to "itv",
             "action" to "create_link",
-            "cmd" to "ffmpeg http://localhost/ch/$channelId",
+            "cmd" to originalCommand?.takeIf { it.isNotBlank() } ?: "ffmpeg http://localhost/ch/$channelId",
             "JsHttpRequest" to "1-xml"
         ))
         val js = response.json.optJSONObject("js")
