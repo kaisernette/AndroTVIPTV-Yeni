@@ -5458,18 +5458,23 @@ class MainActivity : Activity() {
                         return array
                     }
 
-                    try { requestStandardSeriesEpisodes() } catch (e: Exception) {
-                        android.util.Log.w("KaiserTV", "Stalker get_episodes_list diagnostic failed", e)
-                    }
-
+                    // Primary path: ask the portal's dedicated series endpoint first.
                     val dedicatedEpisodes = try { requestDedicatedSeriesEpisodes() } catch (e: Exception) {
-                        android.util.Log.w("KaiserTV", "Stalker get_series_episodes unsupported; use standard VOD hierarchy", e)
+                        android.util.Log.w("KaiserTV", "Stalker get_series_episodes failed; switching to standard VOD fallback", e)
                         JSONArray()
                     }
-                    // Do not trust the non-standard dedicated action: some portals return a
-                    // global catalogue page here. The standard VOD hierarchy below is scoped
-                    // by movie_id and season_id and prevents unrelated shows becoming episodes.
-                    var episodeItems = parseEpisodes(requestSeriesList("0"), null)
+                    // Keep the selected-series ownership check enabled: some portals return
+                    // a global catalogue even for the dedicated action.
+                    var episodeItems = parseEpisodes(dedicatedEpisodes, null)
+                    if (episodeItems.isEmpty()) {
+                        // Fallback path: Ministra-style VOD hierarchy, scoped to movie_id.
+                        // Never relax ownership checks to avoid showing unrelated catalogue rows.
+                        val standardRows = requestSeriesList("0")
+                        episodeItems = parseEpisodes(standardRows, null)
+                        val fallbackSummary = "STANDARD_VOD_FALLBACK request={type=vod,action=get_ordered_list,movie_id=$seriesPortalId,season_id=0,episode_id=0} raw=${standardRows.length()} parsed=${episodeItems.size}"
+                        android.util.Log.i("KaiserTV", "Stalker $fallbackSummary")
+                        appendStalkerSeriesEndpointDiagnostic(fallbackSummary)
+                    }
                     if (episodeItems.isEmpty()) {
                         // Several Ministra portals return a season node (for example id=417:1)
                         // from the dedicated action. Capture it before filtering, then query that
