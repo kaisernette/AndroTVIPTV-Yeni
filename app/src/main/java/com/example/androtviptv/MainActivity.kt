@@ -5041,6 +5041,13 @@ class MainActivity : Activity() {
             if (query.isBlank()) emptyList()
             else visible.take(240).groupBy { it.type }.map { (type, entries) -> "$type • Arama sonuçları" to entries }
         } else if (selectedType == "Tümü") {
+            // Put the user's own recently watched movies and series first on Home.
+            // Keep the row source-aware and use only real playback history entries.
+            val homeRecent = recent.filter { item ->
+                (item.type == "Filmler" || item.type == "Diziler") &&
+                    (if (selectedSourceIds.isNotEmpty()) selectedSourceIds.contains(item.sourceId)
+                    else activeSourceId.isBlank() || item.sourceId == activeSourceId)
+            }.take(8)
             // Weekly Turkey streaming chart, 19–26 Oct 2026. Existing playlist items are
             // prioritized by title; titles missing from the user's source are not fabricated.
             val trendingMovies = listOf(
@@ -5065,10 +5072,10 @@ class MainActivity : Activity() {
                 ranked.addAll(remaining)
                 return ranked
             }
-            listOf(
+            (listOf(t("Son İzlenenler") to homeRecent) + listOf(
                 t("Haftanın Filmleri") to rankedByTrend(activeSourceItems.filter { it.type == "Filmler" }, trendingMovies).take(24),
                 t("Haftanın Dizileri") to rankedByTrend(activeSourceItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
-            ).filter { it.second.isNotEmpty() }
+            )).filter { it.second.isNotEmpty() }
         } else if (selectedType == "Filmler" || selectedType == "Diziler") {
             // Trend rows are shown on the home screen only; category screens list categories directly.
             val source = visible.filter { it.type == selectedType }
