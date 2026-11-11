@@ -5407,8 +5407,44 @@ class MainActivity : Activity() {
                         return rows
                     }
 
-                    // Prefer the portal's dedicated series-episode action. Unlike a
-                    // generic ordered-list query, this request is scoped to the selected show ID.
+                    // Parse the alternate Stalker shape where episode numbers are returned
+                    // directly in a "series" array instead of episodes/data.
+                    fun appendSeriesNumberArray(target: JSONArray, value: Any?, response: JSONObject) {
+                        val values = value as? JSONArray ?: return
+                        val parentCommand = response.optString("cmd")
+                            .ifBlank { response.optJSONObject("js")?.optString("cmd").orEmpty() }
+                            .ifBlank { seriesUri.getQueryParameter("cmd").orEmpty() }
+                        for (index in 0 until values.length()) {
+                            val raw = values.opt(index)
+                            val row = when (raw) {
+                                is JSONObject -> JSONObject(raw.toString())
+                                is Number, is String -> JSONObject().put("episode_number", raw.toString())
+                                else -> continue
+                            }
+                            if (row.optString("episode_number").isBlank()) {
+                                row.put("episode_number", row.optString("series_number").ifBlank { (index + 1).toString() })
+                            }
+                            if (row.optString("id").isBlank() && row.optString("episode_id").isBlank()) {
+                                row.put("id", "$seriesPortalId:episode:${row.optString("episode_number")}")
+                            }
+                            if (row.optString("cmd").isBlank() && parentCommand.isNotBlank()) row.put("cmd", parentCommand)
+                            if (row.optString("season_number").isBlank()) row.put("season_number", "1")
+                            if (row.optString("name").isBlank()) row.put("name", "Bölüm ${row.optString("episode_number")}")
+                            target.put(row)
+                        }
+                    }
+
+                    fun extractEpisodeArray(response: JSONObject): JSONArray {
+                        val result = stalkerArray(response, "episodes", "items", "results", "data")
+                        if (result.length() > 0) return result
+                        val nested = response.optJSONObject("js")
+                        if (nested != null) {
+                            val nestedRows = stalkerArray(nested, "episodes", "items", "results", "data")
+                            if (nestedRows.length() > 0) return nestedRows
+                        }
+                        return JSONArray()
+                    }
+
                     fun requestDedicatedSeriesEpisodes(): JSONArray {
                         val response = stalkerRequest(source, token, mapOf(
                             "type" to "series",
@@ -5417,63 +5453,69 @@ class MainActivity : Activity() {
                             "series_id" to seriesPortalId,
                             "p" to "1"
                         ))
-                        var array = stalkerArray(response, "episodes", "items", "results", "data")
-                        if (array.length() == 0) {
-                            response.optJSONObject("js")?.let { nested ->
-                                array = stalkerArray(nested, "episodes", "items", "results", "data")
-                            }
+                        val array = extractEpisodeArray(response)
+                        appendSeriesNumberArray(array, response.opt("series"), response)
+                        response.optJSONObject("js")?.let { nested ->
+                            appendSeriesNumberArray(array, nested.opt("series"), nested)
                         }
-                        val summary = "DEDICATED_EPISODES series=${series.name.take(70)} id=$seriesPortalId count=${array.length()} keys=${response.keys().asSequence().joinToString(",")} jsKeys=${response.optJSONObject("js")?.keys()?.asSequence()?.joinToString(",") ?: "-"}"
-                        android.util.Log.i("KaiserTV", "Stalker $summary")
-                        appendStalkerSeriesEndpointDiagnostic(summary)
-                        return array
-                    }
-
-                    // Diagnostic only: test the standard series endpoint suggested for some
-                    // Stalker implementations. Do not feed its result into the UI until the
-                    // response shape and selected-series ownership have been verified.
-                    fun requestStandardSeriesEpisodes(): JSONArray {
-                        val params = linkedMapOf(
-                            "type" to "series",
-                            "action" to "get_episodes_list",
-                            "series_id" to seriesPortalId,
-                            "p" to "1"
-                        )
-                        val response = stalkerRequest(source, token, params)
-                        var array = stalkerArray(response, "episodes", "items", "results", "data")
-                        if (array.length() == 0) {
-                            response.optJSONObject("js")?.let { nested ->
-                                array = stalkerArray(nested, "episodes", "items", "results", "data")
-                            }
-                        }
-                        val sample = (0 until minOf(array.length(), 3)).mapNotNull { index ->
-                            array.optJSONObject(index)?.let { row ->
-                                "id=${row.optString("id")},episode_id=${row.optString("episode_id")},season_id=${row.optString("season_id")},name=${row.optString("name").take(60)},keys=${row.keys().asSequence().joinToString(",")}"
+                        val sample = (0 until minOf(array.length(), 4)).mapNotNull { n ->
+                            array.optJSONObject(n)?.let { row ->
+                                "id=${row.optString("id")},episode=${row.optString("episode_number")},name=${row.optString("name").take(45)}"
                             }
                         }.joinToString(" || ")
-                        val rawResponse = response.toString().take(2400)
-                        val summary = "STANDARD_GET_EPISODES_LIST request={type=series,action=get_episodes_list,series_id=$seriesPortalId,p=1} count=${array.length()} responseKeys=${response.keys().asSequence().joinToString(",")} jsKeys=${response.optJSONObject("js")?.keys()?.asSequence()?.joinToString(",") ?: "-"} sample=$sample raw=$rawResponse"
+                        val summary = "DEDICATED_EPISODES request={type=series,action=get_series_episodes,movie_id=$seriesPortalId,series_id=$seriesPortalId} count=${array.length()} rootSeries=${response.optJSONArray("series")?.length() ?: 0} jsSeries=${response.optJSONObject("js")?.optJSONArray("series")?.length() ?: 0} responseKeys=${response.keys().asSequence().joinToString(",")} sample=$sample raw=${response.toString().take(1800)}"
                         android.util.Log.i("KaiserTV", "Stalker $summary")
                         appendStalkerSeriesEndpointDiagnostic(summary)
                         return array
                     }
 
-                    // Primary path: ask the portal's dedicated series endpoint first.
+                    // Some portals use get_ordered_list under type=series, not type=vod.
+                    fun requestSeriesTypeOrderedList(seasonId: String = "0"): JSONArray {
+                        val combined = JSONArray()
+                        for (page in 1..30) {
+                            val response = stalkerRequest(source, token, mapOf(
+                                "type" to "series",
+                                "action" to "get_ordered_list",
+                                "movie_id" to seriesPortalId,
+                                "series_id" to seriesPortalId,
+                                "season_id" to seasonId,
+                                "episode_id" to "0",
+                                "p" to page.toString()
+                            ))
+                            val rows = extractEpisodeArray(response)
+                            appendSeriesNumberArray(rows, response.opt("series"), response)
+                            response.optJSONObject("js")?.let { appendSeriesNumberArray(rows, it.opt("series"), it) }
+                            for (n in 0 until rows.length()) combined.put(rows.opt(n))
+                            val summary = "STANDARD_SERIES_ORDERED_LIST request={type=series,action=get_ordered_list,movie_id=$seriesPortalId,season_id=$seasonId,p=$page} count=${rows.length()} keys=${response.keys().asSequence().joinToString(",")} raw=${response.toString().take(900)}"
+                            appendStalkerSeriesEndpointDiagnostic(summary)
+                            if (rows.length() < 14) break
+                        }
+                        return combined
+                    }
+
+                    // Primary: dedicated series endpoint. Fallback 1: ordered list under type=series.
+                    // Fallback 2: legacy Ministra VOD hierarchy. Each result still passes ownership checks.
                     val dedicatedEpisodes = try { requestDedicatedSeriesEpisodes() } catch (e: Exception) {
-                        android.util.Log.w("KaiserTV", "Stalker get_series_episodes failed; switching to standard VOD fallback", e)
+                        android.util.Log.w("KaiserTV", "Stalker dedicated series endpoint failed", e)
+                        appendStalkerSeriesEndpointDiagnostic("DEDICATED_EPISODES_ERROR ${e.javaClass.simpleName}: ${e.message}")
                         JSONArray()
                     }
-                    // Keep the selected-series ownership check enabled: some portals return
-                    // a global catalogue even for the dedicated action.
                     var episodeItems = parseEpisodes(dedicatedEpisodes, null)
                     if (episodeItems.isEmpty()) {
-                        // Fallback path: Ministra-style VOD hierarchy, scoped to movie_id.
-                        // Never relax ownership checks to avoid showing unrelated catalogue rows.
-                        val standardRows = requestSeriesList("0")
+                        val seriesRows = try { requestSeriesTypeOrderedList("0") } catch (e: Exception) {
+                            android.util.Log.w("KaiserTV", "Stalker type=series get_ordered_list failed", e)
+                            JSONArray()
+                        }
+                        episodeItems = parseEpisodes(seriesRows, null)
+                        appendStalkerSeriesEndpointDiagnostic("SERIES_ORDERED_LIST_RESULT raw=${seriesRows.length()} parsed=${episodeItems.size}")
+                    }
+                    if (episodeItems.isEmpty()) {
+                        val standardRows = try { requestSeriesList("0") } catch (e: Exception) {
+                            android.util.Log.w("KaiserTV", "Stalker type=vod fallback failed", e)
+                            JSONArray()
+                        }
                         episodeItems = parseEpisodes(standardRows, null)
-                        val fallbackSummary = "STANDARD_VOD_FALLBACK request={type=vod,action=get_ordered_list,movie_id=$seriesPortalId,season_id=0,episode_id=0} raw=${standardRows.length()} parsed=${episodeItems.size}"
-                        android.util.Log.i("KaiserTV", "Stalker $fallbackSummary")
-                        appendStalkerSeriesEndpointDiagnostic(fallbackSummary)
+                        appendStalkerSeriesEndpointDiagnostic("STANDARD_VOD_FALLBACK raw=${standardRows.length()} parsed=${episodeItems.size}")
                     }
                     if (episodeItems.isEmpty()) {
                         // Several Ministra portals return a season node (for example id=417:1)
