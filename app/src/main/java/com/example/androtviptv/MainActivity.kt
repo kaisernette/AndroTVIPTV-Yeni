@@ -5451,12 +5451,10 @@ class MainActivity : Activity() {
                                 "id=${row.optString("id")},episode_id=${row.optString("episode_id")},season_id=${row.optString("season_id")},name=${row.optString("name").take(60)},keys=${row.keys().asSequence().joinToString(",")}"
                             }
                         }.joinToString(" || ")
-                        val summary = "STANDARD_GET_EPISODES_LIST request={type=series,action=get_episodes_list,series_id=$seriesPortalId,p=1} count=${array.length()} responseKeys=${response.keys().asSequence().joinToString(",")} jsKeys=${response.optJSONObject("js")?.keys()?.asSequence()?.joinToString(",") ?: "-"} sample=$sample"
+                        val rawResponse = response.toString().take(2400)
+                        val summary = "STANDARD_GET_EPISODES_LIST request={type=series,action=get_episodes_list,series_id=$seriesPortalId,p=1} count=${array.length()} responseKeys=${response.keys().asSequence().joinToString(",")} jsKeys=${response.optJSONObject("js")?.keys()?.asSequence()?.joinToString(",") ?: "-"} sample=$sample raw=$rawResponse"
                         android.util.Log.i("KaiserTV", "Stalker $summary")
-                        synchronized(this@MainActivity) {
-                            val previous = prefs.getString("last_stalker_catalog_diagnostics", "").orEmpty()
-                            prefs.edit().putString("last_stalker_catalog_diagnostics", (previous + " | " + summary).takeLast(14000)).apply()
-                        }
+                        appendStalkerSeriesEndpointDiagnostic(summary)
                         return array
                     }
 
