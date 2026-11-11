@@ -2881,7 +2881,7 @@ class MainActivity : Activity() {
                             }
                             base[filterKey] = categoryId ?: "*"
 
-                            val attempts = mutableListOf<LinkedHashMap<String, String>>(
+                            val attempts = listOf(
                                 LinkedHashMap(base),
                                 LinkedHashMap(base).apply {
                                     remove(filterKey)
@@ -2895,36 +2895,6 @@ class MainActivity : Activity() {
                                     filterKey to (categoryId ?: "*")
                                 )
                             )
-                            if (type == "itv") {
-                                // Live-TV portals differ in how they represent the all-genres
-                                // selector. If genre=* returns an empty array, retry without a
-                                // genre filter and with the common zero/all selectors.
-                                attempts.add(LinkedHashMap(base).apply {
-                                    remove("genre")
-                                    remove("category")
-                                })
-                                attempts.add(LinkedHashMap(base).apply {
-                                    remove("sortby")
-                                    put("genre", "0")
-                                })
-                                attempts.add(LinkedHashMap(base).apply {
-                                    remove("sortby")
-                                    put("category", "0")
-                                })
-                                // Some Stalker portals expose the first live page as p=0.
-                                if (page == 1) {
-                                    attempts.add(LinkedHashMap(base).apply {
-                                        put("p", "0")
-                                        remove("genre")
-                                        remove("category")
-                                    })
-                                    attempts.add(LinkedHashMap(base).apply {
-                                        put("p", "0")
-                                        remove("sortby")
-                                        put("genre", "0")
-                                    })
-                                }
-                            }
                             for ((index, params) in attempts.withIndex()) {
                                 val response = stalkerRequest(source, token, params)
                                 val arr = extractArray(response)
