@@ -1,5 +1,5 @@
 # Android TV memory-stability test branch
-# Build includes bounded rendering and poster work
+# Build includes bounded rendering, poster work, and safe focus transitions
 name: Build Kaisertv APK
 
 on:
