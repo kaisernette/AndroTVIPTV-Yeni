@@ -7602,9 +7602,21 @@ class MainActivity : Activity() {
             if (item.type == "Bölümler") {
                 // Keep episode navigation metadata in process memory, not Intent extras.
                 val episodeList = pendingSeriesEpisodes
-                PlayerActivity.pendingEpisodeNames = episodeList.map { it.name }
-                PlayerActivity.pendingEpisodeUrls = episodeList.map { it.url }
-                PlayerActivity.pendingEpisodeIndex = episodeList.indexOfFirst { it.url == item.url }.coerceAtLeast(0)
+                // Stalker episode rows contain resolver-only stalker-episode:// URIs.
+                // They must never be handed to ExoPlayer as direct media URLs. The selected
+                // episode has already been resolved to a real HTTP URL before this player opens.
+                val hasUnresolvedStalkerEpisodes = episodeList.any {
+                    it.url.startsWith("stalker-episode://", ignoreCase = true)
+                }
+                if (hasUnresolvedStalkerEpisodes) {
+                    PlayerActivity.pendingEpisodeNames = emptyList()
+                    PlayerActivity.pendingEpisodeUrls = emptyList()
+                    PlayerActivity.pendingEpisodeIndex = 0
+                } else {
+                    PlayerActivity.pendingEpisodeNames = episodeList.map { it.name }
+                    PlayerActivity.pendingEpisodeUrls = episodeList.map { it.url }
+                    PlayerActivity.pendingEpisodeIndex = episodeList.indexOfFirst { it.url == item.url }.coerceAtLeast(0)
+                }
                 PlayerActivity.pendingSeriesTitle = historyItem.name
                 PlayerActivity.pendingSeriesKey = item.seriesId.ifBlank { historyItem.seriesId.ifBlank { historyItem.id } }
             } else {
