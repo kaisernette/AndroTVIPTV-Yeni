@@ -2776,6 +2776,9 @@ class MainActivity : Activity() {
             val sectionDiagnostics = java.util.Collections.synchronizedList(ArrayList<String>())
             var anySectionLoaded = false
             var vodSeriesCount = 0
+            // Release the full-screen loader as soon as the first usable category page arrives.
+            // Remaining Stalker pages continue downloading in the background.
+            val catalogueUiReleased = java.util.concurrent.atomic.AtomicBoolean(false)
             try {
                 runOnUiThread { updateLoadingMessage( "${source.name}: Portal yanıtı bekleniyor…") }
                 val token = stalkerHandshake(source)
@@ -2948,6 +2951,11 @@ class MainActivity : Activity() {
                             val publishItems = snapshot.filter { it.type in publishTypes }
                             if (publishItems.isEmpty()) return
                             runOnUiThread {
+                                if (catalogueUiReleased.compareAndSet(false, true)) {
+                                    isLoadingSource = false
+                                    status.visibility = View.VISIBLE
+                                    status.text = "${source.name}: içerikler açıldı, kalan katalog arka planda yükleniyor…"
+                                }
                                 if (splitVodSeries) {
                                     // VOD and dedicated Series now load concurrently. A VOD
                                     // partial update must never erase Series already published
