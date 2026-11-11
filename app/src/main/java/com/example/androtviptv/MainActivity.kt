@@ -3122,18 +3122,49 @@ class MainActivity : Activity() {
                             for ((categoryId, categoryName) in targets) {
                                 categoryTasks.add(categoryExecutor.submit {
                             if (type == "itv") {
-                                // Keep the existing Live TV pagination unchanged.
-                                var page = 1
-                                while (page <= 100) {
-                                    val arr = requestList(categoryId, page)
-                                    if (arr.length() == 0) break
-                                    consumePage(arr, categoryName)
-                                    if (arr.length() < 10) break
-                                    page++
-                                    if (page % 5 == 0) {
-                                        runOnUiThread {
-                                            updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
+                                // Live TV can contain thousands of pages. The old 100-page
+                                // cap truncated this portal at 1,400 items (14 per page).
+                                var reportedTotalItems = -1
+                                var reportedPageSize = -1
+                                val captureTvPageMeta: (Int, Int) -> Unit = { total, pageSize ->
+                                    if (total > 0) reportedTotalItems = total
+                                    if (pageSize > 0) reportedPageSize = pageSize
+                                }
+                                val firstPage = requestList(categoryId, 1, captureTvPageMeta)
+                                if (firstPage.length() > 0) {
+                                    val seenTvPages = mutableSetOf<Set<String>>()
+                                    val firstKeys = pageKeys(firstPage)
+                                    if (firstKeys.isNotEmpty()) seenTvPages.add(firstKeys)
+                                    consumePage(firstPage, categoryName)
+                                    val calculatedPages = if (reportedTotalItems > 0 && reportedPageSize > 0) {
+                                        ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize).coerceAtLeast(1)
+                                    } else -1
+                                    val tvPageCeiling = if (calculatedPages > 0) {
+                                        minOf(calculatedPages, 1000)
+                                    } else 1000
+                                    sectionDiagnostics.add(
+                                        "itv sayfalama hedefi: toplam=$reportedTotalItems, sayfaBoyutu=$reportedPageSize, " +
+                                            "hedefSayfa=$calculatedPages, güvenlikSınırı=$tvPageCeiling"
+                                    )
+                                    var page = 2
+                                    while (page <= tvPageCeiling) {
+                                        val arr = requestList(categoryId, page, captureTvPageMeta)
+                                        if (arr.length() == 0) break
+                                        val keys = pageKeys(arr)
+                                        if (keys.isNotEmpty() && !seenTvPages.add(keys)) {
+                                            sectionDiagnostics.add("itv sayfalama durduruldu: sayfa=$page önceki sayfayı tekrarladı")
+                                            break
                                         }
+                                        consumePage(arr, categoryName)
+                                        if (page % 5 == 0) {
+                                            runOnUiThread {
+                                                updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
+                                            }
+                                        }
+                                        page++
+                                    }
+                                    if (page > tvPageCeiling) {
+                                        sectionDiagnostics.add("itv sayfalama güvenlik sınırına ulaştı: $tvPageCeiling")
                                     }
                                 }
                             } else {
