@@ -5418,9 +5418,24 @@ class MainActivity : Activity() {
                     // directly in a "series" array instead of episodes/data.
                     fun appendSeriesNumberArray(target: JSONArray, value: Any?, response: JSONObject) {
                         val values = value as? JSONArray ?: return
-                        val parentCommand = response.optString("cmd")
-                            .ifBlank { response.optJSONObject("js")?.optString("cmd").orEmpty() }
-                            .ifBlank { seriesUri.getQueryParameter("cmd").orEmpty() }
+                        val seasonRowId = response.optString("id").trim()
+                        val seasonNumberFromId = seasonRowId.substringAfterLast(':', "").toIntOrNull()
+                        val parentCommand = if (seasonNumberFromId != null) {
+                            val seriesNumericId = seriesPortalId.toLongOrNull()
+                                ?: seriesPortalId.substringBefore(':').toLongOrNull()
+                            if (seriesNumericId != null) {
+                                val payload = JSONObject()
+                                    .put("series_id", seriesNumericId)
+                                    .put("season_num", seasonNumberFromId)
+                                    .put("type", "series")
+                                    .toString()
+                                android.util.Base64.encodeToString(payload.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+                            } else ""
+                        } else {
+                            response.optString("cmd")
+                                .ifBlank { response.optJSONObject("js")?.optString("cmd").orEmpty() }
+                                .ifBlank { seriesUri.getQueryParameter("cmd").orEmpty() }
+                        }
                         for (index in 0 until values.length()) {
                             val raw = values.opt(index)
                             val row = when (raw) {
@@ -5525,22 +5540,16 @@ class MainActivity : Activity() {
                         return combined
                     }
 
-                    // Primary: dedicated series endpoint. Fallback 1: ordered list under type=series.
-                    // Fallback 2: legacy Ministra VOD hierarchy. Each result still passes ownership checks.
-                    val dedicatedEpisodes = try { requestDedicatedSeriesEpisodes() } catch (e: Exception) {
-                        android.util.Log.w("KaiserTV", "Stalker dedicated series endpoint failed", e)
-                        appendStalkerSeriesEndpointDiagnostic("DEDICATED_EPISODES_ERROR ${e.javaClass.simpleName}: ${e.message}")
+                    // This portal does not implement get_series_episodes. Use its confirmed
+                    // STANDARD_SERIES_ORDERED_LIST route first to avoid a guaranteed empty request.
+                    // Season rows are expanded from their own "series" number arrays below.
+                    val seriesRows = try { requestSeriesTypeOrderedList("0") } catch (e: Exception) {
+                        android.util.Log.w("KaiserTV", "Stalker type=series get_ordered_list failed", e)
+                        appendStalkerSeriesEndpointDiagnostic("STANDARD_SERIES_ORDERED_LIST_ERROR ${e.javaClass.simpleName}: ${e.message}")
                         JSONArray()
                     }
-                    var episodeItems = parseEpisodes(dedicatedEpisodes, null)
-                    if (episodeItems.isEmpty()) {
-                        val seriesRows = try { requestSeriesTypeOrderedList("0") } catch (e: Exception) {
-                            android.util.Log.w("KaiserTV", "Stalker type=series get_ordered_list failed", e)
-                            JSONArray()
-                        }
-                        episodeItems = parseEpisodes(seriesRows, null)
-                        appendStalkerSeriesEndpointDiagnostic("SERIES_ORDERED_LIST_RESULT raw=${seriesRows.length()} parsed=${episodeItems.size}")
-                    }
+                    var episodeItems = parseEpisodes(seriesRows, null)
+                    appendStalkerSeriesEndpointDiagnostic("STANDARD_SERIES_ORDERED_LIST_RESULT raw=${seriesRows.length()} parsed=${episodeItems.size}")
                     if (episodeItems.isEmpty()) {
                         val standardRows = try { requestSeriesList("0") } catch (e: Exception) {
                             android.util.Log.w("KaiserTV", "Stalker type=vod fallback failed", e)
