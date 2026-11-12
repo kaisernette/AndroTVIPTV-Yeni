@@ -7517,14 +7517,12 @@ class MainActivity : Activity() {
     private fun publishHomeChannel() {
         if (!packageManager.hasSystemFeature("android.software.leanback") || android.os.Build.VERSION.SDK_INT < 26) return
         val eligible = items.filter { it.type == "Filmler" || it.type == "Diziler" }
-        if (eligible.isEmpty() && recent.isEmpty()) return
+        if (eligible.isEmpty()) return
 
         val weekly = eligible.sortedByDescending {
             it.rating.toFloatOrNull() ?: 0f
         }.take(8)
         val newest = eligible.asReversed().take(12)
-        val watched = recent.filter { it.type == "Filmler" || it.type == "Diziler" }.take(12)
-
         val entries = mutableListOf<TvHomeEntry>()
         fun addGroup(label: String, list: List<MediaItem>) {
             list.forEach { item ->
@@ -7543,7 +7541,6 @@ class MainActivity : Activity() {
         }
         addGroup("Haftanın Seçkisi", weekly)
         addGroup("Yeni Eklenenler", newest)
-        addGroup("Son İzlenenler", watched)
 
         Thread {
             TvHomeChannelPublisher.publish(applicationContext, entries.distinctBy { it.key })
