@@ -3117,7 +3117,7 @@ class MainActivity : Activity() {
                         // Two category workers per VOD/series section; with three sections this caps concurrent portal requests at about six.
                         // Keep Stalker session traffic conservative; four concurrent
                         // category workers can overload portals and cause missing categories.
-                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 2)
+                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 3)
                         try {
                             val categoryTasks = ArrayList<java.util.concurrent.Future<*>>()
                             for ((categoryId, categoryName) in targets) {
@@ -3132,23 +3132,43 @@ class MainActivity : Activity() {
                                     if (total > 0) reportedTotalItems = total
                                     if (pageSize > 0) reportedPageSize = pageSize
                                 }
-                                var page = 1
-                                var lastPage = 10000
-                                while (page <= lastPage) {
-                                    val arr = requestList(categoryId, page, captureTvMeta)
-                                    if (arr.length() == 0) break
-                                    consumePage(arr, categoryName)
-                                    if (page == 1 && reportedTotalItems > 0 && reportedPageSize > 0) {
-                                        lastPage = ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize)
-                                            .coerceIn(1, 10000)
-                                        sectionDiagnostics.add("itv sayfalama: toplam=$reportedTotalItems, sayfaBoyutu=$reportedPageSize, sonSayfa=$lastPage")
-                                    }
-                                    page++
-                                    if (page % 10 == 0) {
-                                        runOnUiThread {
-                                            updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} kanal, sayfa $page/$lastPage)")
+                                // Fetch page 1 first to learn the portal's real catalogue size.
+                                // Then download the remaining pages in small parallel batches.
+                                val firstPage = requestList(categoryId, 1, captureTvMeta)
+                                if (firstPage.length() > 0) {
+                                    consumePage(firstPage, categoryName)
+                                    val lastPage = if (reportedTotalItems > 0 && reportedPageSize > 0) {
+                                        ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize).coerceIn(1, 10000)
+                                    } else 10000
+                                    sectionDiagnostics.add("itv sayfalama: toplam=$reportedTotalItems, sayfaBoyutu=$reportedPageSize, sonSayfa=$lastPage, paralel=3")
+                                    publishPartialSection(force = true)
+
+                                    if (lastPage > 1) {
+                                        val pageExecutor = Executors.newFixedThreadPool(3)
+                                        try {
+                                            val nextPage = java.util.concurrent.atomic.AtomicInteger(2)
+                                            val completedPages = java.util.concurrent.atomic.AtomicInteger(1)
+                                            val workers = (0 until 3).map {
+                                                pageExecutor.submit {
+                                                    while (true) {
+                                                        val page = nextPage.getAndIncrement()
+                                                        if (page > lastPage) break
+                                                        val arr = requestList(categoryId, page)
+                                                        if (arr.length() > 0) consumePage(arr, categoryName)
+                                                        val completed = completedPages.incrementAndGet()
+                                                        if (completed % 10 == 0 || completed == lastPage) {
+                                                            runOnUiThread {
+                                                                updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} kanal, $completed/$lastPage sayfa)")
+                                                            }
+                                                            publishPartialSection()
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            workers.forEach { it.get() }
+                                        } finally {
+                                            pageExecutor.shutdownNow()
                                         }
-                                        publishPartialSection()
                                     }
                                 }
                             } else {
