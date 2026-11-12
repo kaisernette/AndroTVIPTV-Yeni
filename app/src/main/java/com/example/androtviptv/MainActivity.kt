@@ -3204,43 +3204,95 @@ class MainActivity : Activity() {
                                     )
                                 }
 
-                                val seenPageKeys = firstPageKeys.toMutableSet()
-                                // Stalker often returns a GLOBAL total_items value for every
-                                // category. It is not a reliable per-category page count and can
-                                // truncate smaller categories when used as a stopping boundary.
-                                // Scan each category until an empty/repeated page. Keep a high safety ceiling so large provider categories are not silently truncated.
+                                // Fetch VOD/series pages concurrently, but keep a small fixed
+                                // worker pool so the portal is not flooded. Empty or repeated
+                                // pages are retried before being treated as the end of a category.
+                                // Short pages are valid and never terminate pagination.
                                 val effectiveLastPage = 2000
-                                var page = nextPage
-                                while (page <= effectiveLastPage) {
-                                    val arr = requestList(categoryId, page, capturePageMeta)
-                                    if (arr.length() == 0) break
-                                    val currentPageKeys = pageKeys(arr)
-                                    if (currentPageKeys.isNotEmpty() && !seenPageKeys.add(currentPageKeys)) {
-                                        sectionDiagnostics.add("$type sayfalama durduruldu: kategori=$categoryId sayfa=$page daha önce alınan sayfayı tekrarladı")
-                                        break
-                                    }
-                                    if (page <= 4 && sectionDiagnostics.count { it.startsWith("$type page fingerprint") } < 8) {
-                                        sectionDiagnostics.add(
-                                            "$type page fingerprint kategori=$categoryId sayfa=$page: " +
-                                                "adet=${arr.length()}, ids=${currentPageKeys.take(5).joinToString(",")}"
-                                        )
-                                    }
-                                    consumePage(arr, categoryName)
-                                    val now = android.os.SystemClock.elapsedRealtime()
-                                    val lastUi = lastProgressUpdateAt.get()
-                                    if (now - lastUi >= 1500L && lastProgressUpdateAt.compareAndSet(lastUi, now)) {
-                                        runOnUiThread {
-                                            updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik hazır)")
+                                val nextPageToFetch = java.util.concurrent.atomic.AtomicInteger(nextPage)
+                                val stopAtPage = java.util.concurrent.atomic.AtomicInteger(effectiveLastPage + 1)
+                                val seenPageKeys = java.util.concurrent.ConcurrentHashMap.newKeySet<Set<String>>()
+                                seenPageKeys.addAll(firstPageKeys)
+                                val successfulPages = java.util.concurrent.atomic.AtomicInteger(1)
+                                val failedPages = java.util.concurrent.ConcurrentLinkedQueue<Int>()
+                                val pageExecutor = Executors.newFixedThreadPool(3)
+                                try {
+                                    val pageWorkers = (0 until 3).map {
+                                        pageExecutor.submit {
+                                            while (true) {
+                                                val page = nextPageToFetch.getAndIncrement()
+                                                if (page > effectiveLastPage || page >= stopAtPage.get()) break
+
+                                                var arr = JSONArray()
+                                                var attempt = 0
+                                                while (attempt < 3 && arr.length() == 0) {
+                                                    try {
+                                                        arr = requestList(categoryId, page)
+                                                    } catch (e: Exception) {
+                                                        android.util.Log.w(
+                                                            "KaiserTV",
+                                                            "Stalker $type page retry category=$categoryId page=$page attempt=${attempt + 1}",
+                                                            e
+                                                        )
+                                                    }
+                                                    if (arr.length() == 0 && attempt < 2) {
+                                                        try { Thread.sleep(250L * (attempt + 1)) } catch (_: InterruptedException) {
+                                                            Thread.currentThread().interrupt()
+                                                            break
+                                                        }
+                                                    }
+                                                    attempt++
+                                                }
+
+                                                if (arr.length() == 0) {
+                                                    failedPages.add(page)
+                                                    stopAtPage.getAndUpdate { current -> minOf(current, page) }
+                                                    continue
+                                                }
+
+                                                val currentPageKeys = pageKeys(arr)
+                                                if (currentPageKeys.isNotEmpty() && !seenPageKeys.add(currentPageKeys)) {
+                                                    sectionDiagnostics.add(
+                                                        "$type sayfalama durduruldu: kategori=$categoryId sayfa=$page tekrarlanan sayfa"
+                                                    )
+                                                    stopAtPage.getAndUpdate { current -> minOf(current, page) }
+                                                    continue
+                                                }
+
+                                                // A worker may have finished after another worker
+                                                // discovered an earlier empty/repeated page.
+                                                if (page >= stopAtPage.get()) continue
+                                                consumePage(arr, categoryName)
+                                                val completed = successfulPages.incrementAndGet()
+                                                if (page <= 4 && sectionDiagnostics.count { it.startsWith("$type page fingerprint") } < 8) {
+                                                    sectionDiagnostics.add(
+                                                        "$type page fingerprint kategori=$categoryId sayfa=$page: " +
+                                                            "adet=${arr.length()}, ids=${currentPageKeys.take(5).joinToString(",")}"
+                                                    )
+                                                }
+                                                val now = android.os.SystemClock.elapsedRealtime()
+                                                val lastUi = lastProgressUpdateAt.get()
+                                                if (now - lastUi >= 1500L && lastProgressUpdateAt.compareAndSet(lastUi, now)) {
+                                                    runOnUiThread {
+                                                        updateLoadingMessage(
+                                                            "${source.name}: $label yükleniyor… (${collected.size} içerik, $completed sayfa)"
+                                                        )
+                                                    }
+                                                }
+                                                if (completed % 5 == 0) publishPartialSection()
+                                            }
                                         }
                                     }
-                                    // Do not stop on a short page: some portals return fewer
-                                    // than ten records while more pages still remain. Empty or
-                                    // repeated-page detection above safely ends the category scan.
-                                    page++
-                                    if (page % 5 == 0) {
-                                        publishPartialSection()
-                                    }
+                                    pageWorkers.forEach { it.get() }
+                                } finally {
+                                    pageExecutor.shutdownNow()
                                 }
+                                val lastConfirmedPage = (stopAtPage.get() - 1).coerceAtLeast(1)
+                                sectionDiagnostics.add(
+                                    "$type sayfalama sonucu kategori=$categoryId: başarılıSayfa=${successfulPages.get()}, " +
+                                        "sonSayfa=$lastConfirmedPage, başarısızSayfalar=${failedPages.sorted().joinToString(",").ifBlank { "yok" }}"
+                                )
+                                publishPartialSection()
                             }
                                 })
                             }
