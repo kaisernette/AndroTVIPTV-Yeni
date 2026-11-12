@@ -2962,11 +2962,15 @@ class MainActivity : Activity() {
                             return JSONArray()
                         }
 
-                        // Query every provider genre for Live TV as well as every VOD/series
-                        // category. A wildcard ITV request can return only the default language
-                        // subset (often TR), hiding DE/EU and other country groups.
-                        // Keep the portal's category order; use wildcard only when no genres exist.
-                        val targets = if (categories.isEmpty()) {
+                        // Keep the previously working all-channel Stalker query as the
+                        // primary TV source, then supplement it with each explicit genre.
+                        // Some portals return an empty list for genre/category-filtered ITV
+                        // requests even though the wildcard request works. Other portals expose
+                        // additional country groups only through explicit genre requests.
+                        // ConcurrentHashMap de-duplicates channel IDs across these passes.
+                        val targets = if (type == "itv") {
+                            listOf("*" to "Diğer") + categories.filterNot { it.first == "*" }
+                        } else if (categories.isEmpty()) {
                             listOf("*" to "Diğer")
                         } else {
                             categories.filterNot { it.first == "*" }
