@@ -27,7 +27,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.HttpURLConnection
+import okhttp3.Authenticator
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.net.URLEncoder
 import java.net.URL
 import java.io.InputStreamReader
@@ -2578,10 +2580,43 @@ class MainActivity : Activity() {
         return "$endpoint?$query"
     }
 
+    // Shared OkHttp client reuses sockets across Stalker catalogue and page requests.
+    private val stalkerSources = ConcurrentHashMap<String, SavedSource>()
+    private val stalkerTokens = ConcurrentHashMap<String, String>()
+    private val stalkerRefreshLocks = ConcurrentHashMap<String, Any>()
+    private val stalkerHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .authenticator(Authenticator { _, response ->
+                if (response.request.url.queryParameter("action") == "handshake") return@Authenticator null
+                val sourceId = response.request.header("X-Kaiser-Source") ?: return@Authenticator null
+                val source = stalkerSources[sourceId] ?: return@Authenticator null
+                var prior = response
+                var attempts = 1
+                while (prior.priorResponse != null) { attempts++; prior = prior.priorResponse!! }
+                if (attempts >= 2) return@Authenticator null
+                synchronized(stalkerRefreshLocks.getOrPut(sourceId) { Any() }) {
+                    val failedToken = response.request.header("Authorization").orEmpty()
+                    val currentToken = stalkerTokens[sourceId].orEmpty()
+                    if (currentToken.isNotBlank() && currentToken != failedToken) {
+                        return@Authenticator response.request.newBuilder().header("Authorization", "Bearer $currentToken").build()
+                    }
+                    val freshToken = runCatching { stalkerHandshake(source) }.getOrNull()
+                        ?.takeIf { it.isNotBlank() } ?: return@Authenticator null
+                    stalkerTokens[sourceId] = freshToken
+                    response.request.newBuilder().header("Authorization", "Bearer $freshToken").build()
+                }
+            })
+            .build()
+    }
+
     private fun stalkerRequest(source: SavedSource, token: String, params: Map<String, String>): JSONObject {
+        stalkerSources[source.id] = source
+        if (token.isNotBlank()) stalkerTokens[source.id] = token
         val address = stalkerApiUrl(source, params)
-        // Keep portal session cookies isolated per saved source. Some Stalker servers
-        // issue a fresh PHP/session cookie during handshake and require it on every page.
         val cookieKey = "stalker_session_cookies_${source.id}"
         val cookieValues = LinkedHashMap<String, String>()
         cookieValues["mac"] = source.username.trim()
@@ -2592,42 +2627,29 @@ class MainActivity : Activity() {
             if (split.size == 2 && split[0].isNotBlank()) cookieValues[split[0]] = split[1]
         }
         cookieValues["mac"] = source.username.trim()
-        val cookieHeader = cookieValues.entries.joinToString("; ") { "${it.key}=${it.value}" }
-        val conn = (URL(address).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 12000
-            readTimeout = 20000
-            requestMethod = "GET"
-            instanceFollowRedirects = true
-            setRequestProperty("User-Agent", "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 MAG250")
-            setRequestProperty("X-User-Agent", "Model: MAG250; Link: WiFi; MAC: ${source.username.trim()}")
-            setRequestProperty("Accept", "application/json, text/javascript, */*")
-            setRequestProperty("Referer", source.address.trimEnd('/') + "/")
-            setRequestProperty("Cookie", cookieHeader)
-            if (token.isNotBlank()) setRequestProperty("Authorization", "Bearer $token")
-            useCaches = false
-        }
-        try {
-            val code = conn.responseCode
-            // Merge Set-Cookie name/value pairs for the next request; ignore cookie attributes.
+        val builder = Request.Builder().url(address).get()
+            .header("User-Agent", "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 MAG250")
+            .header("X-User-Agent", "Model: MAG250; Link: WiFi; MAC: ${source.username.trim()}")
+            .header("Accept", "application/json, text/javascript, */*")
+            .header("Referer", source.address.trimEnd('/') + "/")
+            .header("Cookie", cookieValues.entries.joinToString("; ") { "${it.key}=${it.value}" })
+            .header("X-Kaiser-Source", source.id)
+        if (token.isNotBlank()) builder.header("Authorization", "Bearer $token")
+        stalkerHttpClient.newCall(builder.build()).execute().use { response ->
             val updatedCookies = LinkedHashMap(cookieValues)
-            conn.headerFields?.filterKeys { it != null && it.equals("Set-Cookie", ignoreCase = true) }
-                ?.values?.flatten()?.forEach { header ->
-                    val pair = header.substringBefore(";").trim().split("=", limit = 2)
-                    if (pair.size == 2 && pair[0].isNotBlank()) updatedCookies[pair[0]] = pair[1]
-                }
-            if (updatedCookies.size > 3) {
-                prefs.edit().putString(cookieKey, updatedCookies.entries
-                    .filterNot { it.key.equals("mac", true) || it.key.equals("stb_lang", true) || it.key.equals("timezone", true) }
-                    .joinToString("; ") { "${it.key}=${it.value}" }).apply()
+            response.headers("Set-Cookie").forEach { header ->
+                val pair = header.substringBefore(";").trim().split("=", limit = 2)
+                if (pair.size == 2 && pair[0].isNotBlank()) updatedCookies[pair[0]] = pair[1]
             }
-            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-            val raw = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-            if (code !in 200..299) throw Exception("Portal HTTP $code: ${raw.take(180)}")
+            if (updatedCookies.size > 3) prefs.edit().putString(cookieKey, updatedCookies.entries
+                .filterNot { it.key.equals("mac", true) || it.key.equals("stb_lang", true) || it.key.equals("timezone", true) }
+                .joinToString("; ") { "${it.key}=${it.value}" }).apply()
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) throw Exception("Portal HTTP ${response.code}: ${raw.take(180)}")
             if (raw.isBlank()) throw Exception("Portal boş yanıt döndürdü.")
             val clean = raw.trim().removePrefix("/*").removeSuffix("*/").trim()
             val root = try { JSONObject(clean) } catch (_: Exception) {
-                val first = clean.indexOf('{')
-                val last = clean.lastIndexOf('}')
+                val first = clean.indexOf('{'); val last = clean.lastIndexOf('}')
                 if (first >= 0 && last > first) JSONObject(clean.substring(first, last + 1))
                 else throw Exception("Portal JSON yerine beklenmeyen yanıt döndürdü.")
             }
@@ -2645,7 +2667,7 @@ class MainActivity : Activity() {
                 } catch (_: Exception) { root }
                 else -> root
             }
-        } finally { conn.disconnect() }
+        }
     }
 
     private fun stalkerHandshake(source: SavedSource): String {
@@ -2654,6 +2676,7 @@ class MainActivity : Activity() {
         ))
         val token = result.optString("token").ifBlank { result.optString("access_token") }
         if (token.isBlank()) throw Exception("Portal oturum anahtarı döndürmedi. MAC adresinin portalda yetkili olduğunu kontrol edin.")
+        stalkerTokens[source.id] = token
         return token
     }
 
