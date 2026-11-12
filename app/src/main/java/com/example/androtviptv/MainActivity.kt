@@ -2897,8 +2897,7 @@ class MainActivity : Activity() {
                             )
                             if (type == "itv") {
                                 // Live-TV portals differ in how they represent the all-genres
-                                // selector. If genre=* returns an empty array, retry without a
-                                // genre filter and with the common zero/all selectors.
+                                // selector. Keep the proven TV fallback sequence unchanged.
                                 attempts.add(LinkedHashMap(base).apply {
                                     remove("genre")
                                     remove("category")
@@ -2911,7 +2910,6 @@ class MainActivity : Activity() {
                                     remove("sortby")
                                     put("category", "0")
                                 })
-                                // Some Stalker portals expose the first live page as p=0.
                                 if (page == 1) {
                                     attempts.add(LinkedHashMap(base).apply {
                                         put("p", "0")
@@ -2924,6 +2922,16 @@ class MainActivity : Activity() {
                                         put("genre", "0")
                                     })
                                 }
+                            } else if (page == 1) {
+                                // Some VOD/series portals are zero-based and return an empty
+                                // response for p=1. Retry p=0 only after the normal request
+                                // variants have failed; this does not alter working TV loading.
+                                attempts.add(LinkedHashMap(base).apply { put("p", "0") })
+                                attempts.add(LinkedHashMap(base).apply {
+                                    put("p", "0")
+                                    remove(filterKey)
+                                    put(alternateKey, categoryId ?: "*")
+                                })
                             }
                             for ((index, params) in attempts.withIndex()) {
                                 val response = stalkerRequest(source, token, params)
@@ -3152,12 +3160,11 @@ class MainActivity : Activity() {
                                 }
 
                                 val seenPageKeys = firstPageKeys.toMutableSet()
-                                // Stalker often returns the GLOBAL total_items value
-                                // for every category. Never use that value as a per-category
-                                // page count: it can trigger thousands of needless requests.
-                                // Load the complete category catalogue. Portal totals can be global,
-                                // so repeated-page detection and a hard cap prevent runaway scans.
-                                val effectiveLastPage = minOf(lastPageNumber, 100)
+                                // Stalker often returns a GLOBAL total_items value for every
+                                // category. It is not a reliable per-category page count and can
+                                // truncate smaller categories when used as a stopping boundary.
+                                // Scan each category until an empty/repeated page, with a hard cap.
+                                val effectiveLastPage = 100
                                 var page = nextPage
                                 while (page <= effectiveLastPage) {
                                     val arr = requestList(categoryId, page, capturePageMeta)
@@ -3181,7 +3188,9 @@ class MainActivity : Activity() {
                                             updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik hazır)")
                                         }
                                     }
-                                    if (totalPages <= 0 && arr.length() < 10) break
+                                    // Do not stop on a short page: some portals return fewer
+                                    // than ten records while more pages still remain. Empty or
+                                    // repeated-page detection above safely ends the category scan.
                                     page++
                                     if (page % 5 == 0) {
                                         publishPartialSection()
