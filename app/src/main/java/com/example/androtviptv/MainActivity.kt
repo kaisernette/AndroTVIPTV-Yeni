@@ -5008,7 +5008,11 @@ class MainActivity : Activity() {
         val providerGroups = synchronized(providerCategoryNames) {
             providerCategoryNames[selectedType].orEmpty()
         }
-        val groupsAvailable = (providerGroups + baseVisible.map { it.group.ifBlank { "Diğer" } }).distinct()
+        // Provider category names are already complete for IPTV sources. Avoid scanning
+        // tens of thousands of media records on every D-pad/menu render just to rebuild
+        // the category rail. Derive names from items only for sources without provider data.
+        val groupsAvailable = if (providerGroups.isNotEmpty()) providerGroups.distinct()
+            else baseVisible.asSequence().map { it.group.ifBlank { "Diğer" } }.distinct().toList()
         categoryBar.removeAllViews()
         categoryScroll.visibility = View.GONE
         categoryBar.addView(makeButton("Tümü", selectedGroup == "Tüm kategoriler") { selectedGroup = "Tüm kategoriler"; render() },
@@ -5242,10 +5246,12 @@ class MainActivity : Activity() {
                 t("Haftanın Dizileri") to rankedByTrend(activeSourceItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
             ).filter { it.second.isNotEmpty() }
         } else if (selectedType == "Filmler" || selectedType == "Diziler") {
-            // Trend rows are shown on the home screen only; category screens list categories directly.
-            val source = visible.filter { it.type == selectedType }
-            source.groupBy { it.group.ifBlank { "Diğer" } }.map { it.key to it.value }
-                .filter { it.second.isNotEmpty() }
+            // A category screen displays one selected category at a time. Do not group the
+            // entire 40k+ catalogue on every navigation render; filter only the chosen group.
+            val selectedEntries = if (selectedGroup == "Tüm kategoriler") visible
+                else visible.filter { it.group.ifBlank { "Diğer" } == selectedGroup }
+            if (selectedEntries.isEmpty()) emptyList()
+            else listOf((if (selectedGroup == "Tüm kategoriler") selectedType else selectedGroup) to selectedEntries)
         } else if (selectedType == "Son İzlenenler") {
             listOf("Diziler" to visible.filter { it.type == "Diziler" },
                 "Filmler" to visible.filter { it.type == "Filmler" },
