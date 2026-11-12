@@ -643,7 +643,7 @@ class MainActivity : Activity() {
     private lateinit var password: EditText
     private lateinit var sourceMode: RadioGroup
     private var selectedType = "Tümü"
-    private var selectedHistoryType = "Canlı TV"
+    private var selectedHistoryType = "Filmler"
     private var xtreamUser = ""
     private var xtreamPass = ""
     private var xtreamBase = ""
@@ -5065,7 +5065,7 @@ class MainActivity : Activity() {
                 })
             } else {
                 var channelRow: LinearLayout? = null
-                val tvGridColumns = 4 // 4 x 2 = eight equally sized channel cards on screen
+                val tvGridColumns = 6 // Six channel cards per row for a denser TV grid
                 displayedTvChannels.forEachIndexed { index, channel ->
                     if (index % tvGridColumns == 0) {
                         channelRow = LinearLayout(this).apply {
@@ -5073,7 +5073,7 @@ class MainActivity : Activity() {
                             gravity = Gravity.TOP
                             clipChildren = true
                             clipToPadding = true
-                            setPadding(0, dp(8), 0, dp(6))
+                            setPadding(0, dp(3), 0, dp(2))
                         }
                         content.addView(channelRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
@@ -5086,7 +5086,7 @@ class MainActivity : Activity() {
                         setPadding(dp(8), dp(8), dp(8), dp(8))
                         // TV channel tiles stay transparent; only the focused tile gets a theme outline.
                         background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                        minimumHeight = dp(126)
+                        minimumHeight = dp(104)
                         setOnFocusChangeListener { v, hasFocus ->
                             v.animate().cancel()
                             v.background = if (hasFocus) roundedDrawable(Color.TRANSPARENT, 12, accent)
@@ -5109,7 +5109,7 @@ class MainActivity : Activity() {
                         })
                         setPadding(dp(6), dp(6), dp(6), dp(6))
                     }
-                    tile.addView(logo, LinearLayout.LayoutParams(-1, dp(68)))
+                    tile.addView(logo, LinearLayout.LayoutParams(-1, dp(56)))
                     if (channel.icon.startsWith("http://") || channel.icon.startsWith("https://")) {
                         loadPoster(channel.icon, logo)
                     } else {
@@ -5126,9 +5126,9 @@ class MainActivity : Activity() {
                         maxLines = 2
                         ellipsize = android.text.TextUtils.TruncateAt.END
                         setPadding(0, dp(5), 0, 0)
-                    }, LinearLayout.LayoutParams(-1, dp(36)))
-                    channelRow?.addView(tile, LinearLayout.LayoutParams(0, dp(132), 1f).apply {
-                        setMargins(dp(5), dp(5), dp(5), dp(10))
+                    }, LinearLayout.LayoutParams(-1, dp(32)))
+                    channelRow?.addView(tile, LinearLayout.LayoutParams(0, dp(108), 1f).apply {
+                        setMargins(dp(3), dp(2), dp(3), dp(4))
                     })
                 }
                 if (displayedTvChannels.size < tvChannels.size) {
@@ -7303,8 +7303,9 @@ class MainActivity : Activity() {
                 actions.addView(clearAll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(dp(4), 0, dp(4), 0) })
                 content.addView(actions, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
+                // İzlediklerim yalnızca film ve dizi geçmişini gösterir; canlı TV
+                // kanal geçmişi bu ekrandan çıkarıldı.
                 val historySections = listOf(
-                    Triple("Canlı TV", "▣", "TV"),
                     Triple("Filmler", "▰", "Filmler"),
                     Triple("Diziler", "▤", "Diziler")
                 )
