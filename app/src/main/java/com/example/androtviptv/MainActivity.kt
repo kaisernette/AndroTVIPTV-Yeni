@@ -4870,7 +4870,8 @@ class MainActivity : Activity() {
             it.group.contains(query, ignoreCase = true) ||
             it.type.contains(query, ignoreCase = true)
         }
-        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+        // distinct() keeps the first-seen order from the source catalogue.
+        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct()
         categoryBar.removeAllViews()
         categoryScroll.visibility = View.GONE
         categoryBar.addView(makeButton("Tümü", selectedGroup == "Tüm kategoriler") { selectedGroup = "Tüm kategoriler"; render() },
@@ -5108,7 +5109,6 @@ class MainActivity : Activity() {
             // Trend rows are shown on the home screen only; category screens list categories directly.
             val source = visible.filter { it.type == selectedType }
             source.groupBy { it.group.ifBlank { "Diğer" } }.toList()
-                .sortedBy { it.first.lowercase(java.util.Locale.ROOT) }
                 .filter { it.second.isNotEmpty() }
         } else if (selectedType == "Son İzlenenler") {
             listOf("Diziler" to visible.filter { it.type == "Diziler" },
@@ -6905,7 +6905,7 @@ class MainActivity : Activity() {
                         setPadding(dp(2), dp(8), dp(2), dp(12))
                     })
                     val groups = items.filter { it.type == sectionType }
-                        .map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+                        .map { it.group.ifBlank { "Diğer" } }.distinct()
                     if (groups.isEmpty()) {
                         column.addView(TextView(this).apply {
                             text = "Kategori yok"
