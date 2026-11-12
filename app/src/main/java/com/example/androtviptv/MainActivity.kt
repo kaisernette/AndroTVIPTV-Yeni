@@ -2962,15 +2962,11 @@ class MainActivity : Activity() {
                             return JSONArray()
                         }
 
-                        // Keep the previously working all-channel Stalker query as the
-                        // primary TV source, then supplement it with each explicit genre.
-                        // Some portals return an empty list for genre/category-filtered ITV
-                        // requests even though the wildcard request works. Other portals expose
-                        // additional country groups only through explicit genre requests.
-                        // ConcurrentHashMap de-duplicates channel IDs across these passes.
-                        val targets = if (type == "itv") {
-                            listOf("*" to "Diğer") + categories.filterNot { it.first == "*" }
-                        } else if (categories.isEmpty()) {
+                        // This Stalker portal's confirmed working Live TV path is the
+                        // single wildcard catalogue request. Do not fan out ITV requests by
+                        // genre: this portal can return empty/incomplete data for those filters.
+                        // VOD and Series continue loading every explicit provider category.
+                        val targets = if (type == "itv" || categories.isEmpty()) {
                             listOf("*" to "Diğer")
                         } else {
                             categories.filterNot { it.first == "*" }
@@ -3112,7 +3108,9 @@ class MainActivity : Activity() {
                         }
 
                         // Two category workers per VOD/series section; with three sections this caps concurrent portal requests at about six.
-                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 4)
+                        // Keep Stalker session traffic conservative; four concurrent
+                        // category workers can overload portals and cause missing categories.
+                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 2)
                         try {
                             val categoryTasks = ArrayList<java.util.concurrent.Future<*>>()
                             for ((categoryId, categoryName) in targets) {
