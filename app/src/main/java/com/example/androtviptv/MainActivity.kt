@@ -4068,17 +4068,17 @@ class MainActivity : Activity() {
     private fun readCachedItems(sourceIdFilter: String? = null): List<MediaItem> {
         val file = cachedItemsFile()
         if (!file.exists() || file.length() <= 0L) return emptyList()
-        if (file.length() > 64L * 1024L * 1024L) {
+        if (file.length() > 256L * 1024L * 1024L) {
             android.util.Log.w("KaiserTV", "Media cache exceeds hard safety limit; skipping restore.")
             return emptyList()
         }
         // Read only the requested source when switching sources. This keeps the
         // memory ceiling bounded without forcing a network reload for older sources.
-        val restored = ArrayList<MediaItem>(minOf(12000, (file.length() / 180).toInt().coerceAtLeast(64)))
+        val restored = ArrayList<MediaItem>(minOf(100000, (file.length() / 180).toInt().coerceAtLeast(64)))
         java.io.BufferedReader(java.io.InputStreamReader(file.inputStream(), Charsets.UTF_8)).use { input ->
             android.util.JsonReader(input).use { reader ->
                 reader.beginArray()
-                while (reader.hasNext() && restored.size < 12000) {
+                while (reader.hasNext() && restored.size < 100000) {
                     var id = ""
                     var name = ""
                     var url = ""
