@@ -2902,7 +2902,11 @@ class MainActivity : Activity() {
                         } else readCategories(type)
 
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label yükleniyor…") }
-                        val collected = ConcurrentHashMap<String, MediaItem>()
+                        // A synchronized insertion-ordered map preserves provider category and
+                        // page order when snapshots are published to the UI/cache.
+                        val collected = java.util.Collections.synchronizedMap(
+                            LinkedHashMap<String, MediaItem>()
+                        )
                         val responseShape = java.util.concurrent.atomic.AtomicReference("liste isteği henüz yapılmadı")
                         // Avoid rewriting the entire growing catalogue after every few pages.
                         // Persist the first partial batch, then checkpoint only after 1,000 new items.
@@ -2999,7 +3003,7 @@ class MainActivity : Activity() {
                             val previousCheckpoint = lastCheckpointCount.get()
                             if (!force && currentCount - previousCheckpoint < 1000) return
                             if (!lastCheckpointCount.compareAndSet(previousCheckpoint, currentCount)) return
-                            val snapshot = collected.values.toList()
+                            val snapshot = synchronized(collected) { collected.values.toList() }
                             if (snapshot.isEmpty()) return
                             val publishTypes = if (splitVodSeries) setOf("Filmler", "Diziler") else setOf(label)
                             val publishItems = snapshot.filter { it.type in publishTypes }
@@ -3074,9 +3078,8 @@ class MainActivity : Activity() {
                                 )
                                 val itemType = if (isSeriesEntry) "Diziler" else label
                                 val name = entry.optString("name").ifBlank { entry.optString("title") }.ifBlank { "$itemType $id" }
-                                // Language-prefixed entries (TR:, FR:, EN:, etc.) are linear channel labels,
-                                // not VOD titles. Keep them out of Stalker movie/series catalogues.
-                                if (type == "vod" && isLanguagePrefixedChannel(name)) continue
+                                // Keep all provider VOD records, including language-prefixed titles
+                                // such as DE: and XX:. Category membership comes from portal metadata.
                                 val catId = entry.optString("tv_genre_id").ifBlank { entry.optString("category_id") }
                                     .ifBlank { entry.optString("genre_id") }
                                 val catName = categories.firstOrNull { it.first == catId }?.second
@@ -3121,8 +3124,9 @@ class MainActivity : Activity() {
                             }
                         }
 
-                        // Two category workers per VOD/series section; with three sections this caps concurrent portal requests at about six.
-                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 4)
+                        // Process categories in the exact order returned by the portal.
+                        // Parallel category workers reorder weekday/provider groups nondeterministically.
+                        val categoryExecutor = Executors.newSingleThreadExecutor()
                         try {
                             val categoryTasks = ArrayList<java.util.concurrent.Future<*>>()
                             for ((categoryId, categoryName) in targets) {
@@ -3519,8 +3523,8 @@ class MainActivity : Activity() {
                             ).trim()
                             if (id.isNotBlank()) {
                                 val name = o.optString("name", "İsimsiz içerik").ifBlank { "İsimsiz içerik" }
-                                // Provider language tags identify channel variants, never movie/series cards.
-                                if (type != "Canlı TV" && isLanguagePrefixedChannel(name)) return@forEachXtreamJsonObject
+                                // Do not discard DE:/XX:/other language-prefixed VOD titles;
+                                // provider action and category metadata determine the content type.
                                 val categoryId = o.optString("category_id")
                                 val group = o.optString("category_name").takeIf { it.isNotBlank() }
                                     ?: categories[categoryId] ?: "Diğer"
