@@ -662,6 +662,7 @@ class MainActivity : Activity() {
     private var gradientBackground = true
     private var customBackgroundUri: String? = null
     private var selectedCategorySourceId = ""
+    @Volatile private var sourceSwitchGeneration = 0
     private fun sourceAccent(mode: String): Int = when (mode) {
         "xtream" -> Color.rgb(0, 166, 255)
         "m3u" -> Color.rgb(32, 201, 151)
@@ -2284,7 +2285,20 @@ class MainActivity : Activity() {
         }
     }
     private fun activateSourceFromCache(source: SavedSource) {
+        val switchGeneration = ++sourceSwitchGeneration
         applySourceTheme(source)
+        // A source switch starts with a clean category/navigation state. Keep other
+        // sources' media cache on disk; only the active source is shown.
+        synchronized(providerCategoryNames) { providerCategoryNames.clear() }
+        providerCategoryNames.clear()
+        mediaItemsLimit = 12
+        searchQuery = ""
+        expandedCategory = null
+        selectedSearchHistory.clear()
+        detailMovie = null
+        detailSeries = null
+        fullscreenPoster = null
+        isLoadingSource = true
         prefs.edit().putString("last_source_id", source.id)
             .putStringSet("selected_source_ids", setOf(source.id)).apply()
         selectedCategorySourceId = source.id
@@ -2295,6 +2309,8 @@ class MainActivity : Activity() {
         sidebarMode = "main"
 
         fun showCached(cached: List<MediaItem>) {
+            if (switchGeneration != sourceSwitchGeneration ||
+                prefs.getString("last_source_id", "") != source.id) return
             if (cached.isEmpty()) {
                 when (source.mode) {
                     "xtream" -> loadXtream(source, true)
@@ -2314,6 +2330,9 @@ class MainActivity : Activity() {
             render()
         }
 
+        status.visibility = View.VISIBLE
+        status.text = "${source.name}: yalnızca bu kaynağın içeriği yükleniyor…"
+        render()
         val memory = items.filter { it.sourceId == source.id }
         if (memory.isNotEmpty()) {
             showCached(memory)
@@ -2341,44 +2360,10 @@ class MainActivity : Activity() {
             AlertDialog.Builder(this).setTitle(s.name).setItems(arrayOf("Aç (önbellekten)", "Yenile", "Sil")) { _, action ->
                 when (action) {
                     0 -> {
-                        fun openCachedSource(cachedItems: List<MediaItem>) {
-                            if (cachedItems.isNotEmpty()) {
-                                items.removeAll { it.sourceId == s.id }
-                                items.addAll(cachedItems)
-                                prefs.edit().putString("last_source_id", s.id).remove("selected_source_ids").apply()
-                                selectedCategorySourceId = s.id
-                                selectedType = "Tümü"
-                                selectedGroup = "Tüm kategoriler"
-                                sidebarMode = "main"
-                                isLoadingSource = false
-                                status.visibility = View.VISIBLE
-                                status.text = "${s.name}: kayıtlı içerik açıldı."
-                                render()
-                            } else {
-                                when (s.mode) {
-                                    "xtream" -> loadXtream(s, true)
-                                    "mac" -> loadStalker(s, true)
-                                    else -> loadM3u(s, true)
-                                }
-                            }
-                        }
-                        val inMemory = items.filter { it.sourceId == s.id }
-                        if (inMemory.isNotEmpty()) {
-                            openCachedSource(inMemory)
-                        } else {
-                            status.visibility = View.VISIBLE
-                            status.text = "${s.name}: kayıtlı içerik aranıyor…"
-                            thread(name = "kaiser-source-cache-restore") {
-                                val diskCache = try { readCachedItems(s.id) } catch (e: Exception) {
-                                    android.util.Log.w("KaiserTV", "Source cache restore failed for ${s.name}", e)
-                                    emptyList()
-                                }
-                                runOnUiThread { openCachedSource(diskCache) }
-                            }
-                        }
+                        activateSourceFromCache(s)
                     }
                     1 -> {
-                        prefs.edit().putString("last_source_id", s.id).remove("selected_source_ids").apply()
+                        activateSourceFromCache(s)
                         when (s.mode) {
                             "xtream" -> loadXtream(s, true)
                             "mac" -> loadStalker(s, true)
