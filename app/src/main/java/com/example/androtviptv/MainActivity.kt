@@ -30,6 +30,7 @@ import org.json.JSONObject
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
 import java.io.InputStreamReader
