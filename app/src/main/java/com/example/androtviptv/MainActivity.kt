@@ -1264,7 +1264,7 @@ class MainActivity : Activity() {
             categoryListScroll.visibility = if (!detailMode && sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler") && contextNavigationStage == 1) View.VISIBLE else View.GONE
             categoryPanel.removeAllViews()
             categoryPanel.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-            categoryListScroll.scrollTo(0, 0)
+            // Preserve the category list scroll position across content renders.
         }
         selectedSidebarFocusView = null
 
@@ -1642,6 +1642,7 @@ class MainActivity : Activity() {
                             } else false
                         }
                         setOnClickListener {
+                            focusedCategoryName = name
                             selectedGroup = name
                             expandedCategory = name to entries
                             mediaItemsLimit = 12
