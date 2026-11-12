@@ -595,6 +595,9 @@ class MainActivity : Activity() {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
+    // Provider category names are kept independently from loaded media so every
+    // category can be shown immediately, before its first content page arrives.
+    private val providerCategoryNames = mutableMapOf<String, List<String>>()
     private var pendingTvHomeItemKey: String? = null
     private val posterRequests = ConcurrentHashMap<String, CopyOnWriteArrayList<WeakReference<ImageView>>>()
     private val savedSources = mutableListOf<SavedSource>()
@@ -2852,6 +2855,15 @@ class MainActivity : Activity() {
                                 if (id.isBlank()) null else id to o.optString("title").ifBlank { o.optString("name") }.ifBlank { "Diğer" }
                             }
                         } else readCategories(type)
+                        val uiCategoryType = when (type) {
+                            "itv" -> "Canlı TV"
+                            "vod" -> "Filmler"
+                            else -> "Diziler"
+                        }
+                        synchronized(providerCategoryNames) {
+                            providerCategoryNames[uiCategoryType] = categories.map { it.second }.distinct()
+                        }
+                        runOnUiThread { render() }
 
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label yükleniyor…") }
                         val collected = ConcurrentHashMap<String, MediaItem>()
@@ -3111,18 +3123,32 @@ class MainActivity : Activity() {
                             for ((categoryId, categoryName) in targets) {
                                 categoryTasks.add(categoryExecutor.submit {
                             if (type == "itv") {
-                                // Keep the existing Live TV pagination unchanged.
+                                // The portal reports 12,997 live channels at 14 per page.
+                                // The old 100-page ceiling silently truncated the catalogue
+                                // at exactly 1,400 channels (usually only the first country).
+                                var reportedTotalItems = -1
+                                var reportedPageSize = -1
+                                val captureTvMeta: (Int, Int) -> Unit = { total, pageSize ->
+                                    if (total > 0) reportedTotalItems = total
+                                    if (pageSize > 0) reportedPageSize = pageSize
+                                }
                                 var page = 1
-                                while (page <= 100) {
-                                    val arr = requestList(categoryId, page)
+                                var lastPage = 2000
+                                while (page <= lastPage) {
+                                    val arr = requestList(categoryId, page, captureTvMeta)
                                     if (arr.length() == 0) break
                                     consumePage(arr, categoryName)
-                                    if (arr.length() < 10) break
+                                    if (page == 1 && reportedTotalItems > 0 && reportedPageSize > 0) {
+                                        lastPage = ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize)
+                                            .coerceIn(1, 2000)
+                                        sectionDiagnostics.add("itv sayfalama: toplam=$reportedTotalItems, sayfaBoyutu=$reportedPageSize, sonSayfa=$lastPage")
+                                    }
                                     page++
-                                    if (page % 5 == 0) {
+                                    if (page % 10 == 0) {
                                         runOnUiThread {
-                                            updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
+                                            updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} kanal, sayfa $page/$lastPage)")
                                         }
+                                        publishPartialSection()
                                     }
                                 }
                             } else {
@@ -4850,8 +4876,12 @@ class MainActivity : Activity() {
             it.group.contains(query, ignoreCase = true) ||
             it.type.contains(query, ignoreCase = true)
         }
-        // Preserve the provider/category order established during catalogue loading.
-        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct()
+        // Show the complete provider category list immediately, even while
+        // the category's media pages are still being downloaded in the background.
+        val providerGroups = synchronized(providerCategoryNames) {
+            providerCategoryNames[selectedType].orEmpty()
+        }
+        val groupsAvailable = (providerGroups + baseVisible.map { it.group.ifBlank { "Diğer" } }).distinct()
         categoryBar.removeAllViews()
         categoryScroll.visibility = View.GONE
         categoryBar.addView(makeButton("Tümü", selectedGroup == "Tüm kategoriler") { selectedGroup = "Tüm kategoriler"; render() },
