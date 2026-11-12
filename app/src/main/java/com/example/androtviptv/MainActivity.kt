@@ -3133,14 +3133,14 @@ class MainActivity : Activity() {
                                     if (pageSize > 0) reportedPageSize = pageSize
                                 }
                                 var page = 1
-                                var lastPage = 2000
+                                var lastPage = 10000
                                 while (page <= lastPage) {
                                     val arr = requestList(categoryId, page, captureTvMeta)
                                     if (arr.length() == 0) break
                                     consumePage(arr, categoryName)
                                     if (page == 1 && reportedTotalItems > 0 && reportedPageSize > 0) {
                                         lastPage = ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize)
-                                            .coerceIn(1, 2000)
+                                            .coerceIn(1, 10000)
                                         sectionDiagnostics.add("itv sayfalama: toplam=$reportedTotalItems, sayfaBoyutu=$reportedPageSize, sonSayfa=$lastPage")
                                     }
                                     page++
@@ -3188,8 +3188,8 @@ class MainActivity : Activity() {
                                 // Stalker often returns a GLOBAL total_items value for every
                                 // category. It is not a reliable per-category page count and can
                                 // truncate smaller categories when used as a stopping boundary.
-                                // Scan each category until an empty/repeated page, with a hard cap.
-                                val effectiveLastPage = 100
+                                // Scan each category until an empty/repeated page. Keep a high safety ceiling so large provider categories are not silently truncated.
+                                val effectiveLastPage = 2000
                                 var page = nextPage
                                 while (page <= effectiveLastPage) {
                                     val arr = requestList(categoryId, page, capturePageMeta)
