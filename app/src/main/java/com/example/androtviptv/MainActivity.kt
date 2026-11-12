@@ -2888,7 +2888,7 @@ class MainActivity : Activity() {
 
                             val attempts = if (type == "itv") {
                                 // Restore the exact request variants from the known-working TV build.
-                                listOf(
+                                mutableListOf(
                                     LinkedHashMap(base),
                                     LinkedHashMap(base).apply {
                                         remove(filterKey)
