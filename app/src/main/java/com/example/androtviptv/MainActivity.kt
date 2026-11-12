@@ -4875,7 +4875,7 @@ class MainActivity : Activity() {
         categoryScroll.visibility = View.GONE
         categoryBar.addView(makeButton("Tümü", selectedGroup == "Tüm kategoriler") { selectedGroup = "Tüm kategoriler"; render() },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
-        groupsAvailable.take(40).forEach { group ->
+        groupsAvailable.forEach { group ->
             categoryBar.addView(makeButton(if (group == selectedGroup) "● $group" else group, group == selectedGroup) {
                 selectedGroup = group
                 mediaItemsLimit = 12
@@ -5125,8 +5125,10 @@ class MainActivity : Activity() {
         // category at once can exhaust memory on older Android TV boxes. Keep the first
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
+        // Render every category section; each section still creates a bounded
+        // first batch of poster cards and expands on demand to protect TV memory.
         val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
-            ?: groups.take(8)
+            ?: groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
