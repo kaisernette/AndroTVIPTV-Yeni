@@ -121,6 +121,14 @@ class PlayerActivity : Activity() {
     private var episodesPanelView: LinearLayout? = null
     private var episodeOptionsView: LinearLayout? = null
     private var lastPlaybackFocusView: View? = null
+    private var episodeTransitionOverlay: View? = null
+    private val episodeTransitionHandler = Handler(Looper.getMainLooper())
+    private val hideEpisodeTransition = Runnable {
+        episodeTransitionOverlay?.animate()?.alpha(0f)?.setDuration(180)?.withEndAction {
+            (episodeTransitionOverlay?.parent as? ViewGroup)?.removeView(episodeTransitionOverlay)
+            episodeTransitionOverlay = null
+        }?.start()
+    }
 
     private fun playerThemeAccent(): Int {
         val theme = getSharedPreferences("androtv", Context.MODE_PRIVATE).getString("theme_name", "Antrasit • Mavi")
@@ -132,6 +140,46 @@ class PlayerActivity : Activity() {
             "Gece • Lavanta", "Koyu • Mor" -> 0xFFA78BFA.toInt()
             else -> 0xFF00A6FF.toInt()
         }
+    }
+
+    private fun showEpisodeTransition(index: Int, automatic: Boolean) {
+        if (isFinishing || index !in episodeNames.indices) return
+        val root = controlsRoot as? FrameLayout ?: return
+        episodeTransitionHandler.removeCallbacks(hideEpisodeTransition)
+        episodeTransitionOverlay?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        val accent = playerThemeAccent()
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(12), dp(18), dp(12))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(18).toFloat()
+                setColor(0xF20A1018.toInt())
+                setStroke(dp(2), accent)
+            }
+            elevation = dp(12).toFloat()
+            alpha = 0f
+        }
+        panel.addView(TextView(this).apply {
+            text = if (automatic) "Sonraki bölüm başladı" else "Bölüm değiştirildi"
+            textSize = 17f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(Color.WHITE)
+        })
+        panel.addView(TextView(this).apply {
+            text = episodeNames[index]
+            textSize = 15f
+            setTextColor(0xFFD4DEE8.toInt())
+            setPadding(0, dp(5), 0, 0)
+            maxLines = 2
+        })
+        panel.addView(View(this).apply { setBackgroundColor(accent) },
+            LinearLayout.LayoutParams(-1, dp(3)).apply { topMargin = dp(10) })
+        val params = FrameLayout.LayoutParams(dp(520), ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(28) }
+        root.addView(panel, params)
+        episodeTransitionOverlay = panel
+        panel.animate().alpha(1f).setDuration(180).start()
+        episodeTransitionHandler.postDelayed(hideEpisodeTransition, 4500L)
     }
 
     private fun updateContentInfo() {
@@ -705,7 +753,9 @@ class PlayerActivity : Activity() {
                             if (!isLiveStream && episodeUrls.isNotEmpty()) {
                                 val index = exo.currentMediaItemIndex
                                 if (index in episodeUrls.indices) {
+                                    val changedEpisode = index != selectedEpisodeIndex
                                     selectedEpisodeIndex = index
+                                    if (changedEpisode) showEpisodeTransition(index, reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO)
                                     updateContentInfo()
                                     currentStreamUrl = episodeUrls[index]
                                     originalStreamUrl = currentStreamUrl
@@ -1283,5 +1333,5 @@ class PlayerActivity : Activity() {
 
     override fun onPause() { savePlaybackPosition(); super.onPause() }
     override fun onStop() { savePlaybackPosition(); playerView?.keepScreenOn = false; window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); player?.pause(); super.onStop() }
-    override fun onDestroy() { uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
+    override fun onDestroy() { episodeTransitionHandler.removeCallbacksAndMessages(null); episodeTransitionOverlay?.let { (it.parent as? ViewGroup)?.removeView(it) }; episodeTransitionOverlay = null; uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
 }
