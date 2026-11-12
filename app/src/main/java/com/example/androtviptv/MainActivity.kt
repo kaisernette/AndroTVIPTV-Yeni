@@ -1843,7 +1843,8 @@ class MainActivity : Activity() {
 
         sourceMode = RadioGroup(this).apply {
             orientation = RadioGroup.HORIZONTAL
-            visibility = View.GONE
+            visibility = View.VISIBLE
+            gravity = Gravity.CENTER_VERTICAL
         }
         val m3u = RadioButton(this).apply { id = View.generateViewId(); text = "M3U / M3U8" }
         val xtream = RadioButton(this).apply { id = View.generateViewId(); text = "Xtream Codes" }
@@ -2014,11 +2015,15 @@ class MainActivity : Activity() {
         sourceFormPanel.addView(connectButton, LinearLayout.LayoutParams(-1, dp(54)).apply {
             topMargin = dp(12)
         })
-        form.addView(modeCards, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+        // Use the compact inline radio selector from the first-launch layout.
+        // The large three-card selector is intentionally omitted on the Sources page.
+        modeCards.visibility = View.GONE
+        form.addView(sourceMode, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(dp(3), dp(8), dp(3), dp(8))
+        })
         form.addView(sourceFormPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             setMargins(dp(3), dp(2), dp(3), dp(8))
         })
-        form.addView(sourceMode)
         selectSourceMode(when (editSource?.mode) {
             "m3u" -> m3u.id
             "mac" -> mac.id
