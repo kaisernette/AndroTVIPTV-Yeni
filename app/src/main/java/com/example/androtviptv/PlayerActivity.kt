@@ -142,44 +142,101 @@ class PlayerActivity : Activity() {
         }
     }
 
-    private fun showEpisodeTransition(index: Int, automatic: Boolean) {
-        if (isFinishing || index !in episodeNames.indices) return
+    private var episodeCountdownTitle: TextView? = null
+    private var episodeCountdownTimer: TextView? = null
+    private var episodeCountdownProgress: View? = null
+    private var episodeCountdownIndex = -1
+
+    private fun updateEpisodeCountdown(nextIndex: Int, secondsLeft: Int) {
+        if (isFinishing || nextIndex !in episodeNames.indices) return
         val root = controlsRoot as? FrameLayout ?: return
-        episodeTransitionHandler.removeCallbacks(hideEpisodeTransition)
-        episodeTransitionOverlay?.let { (it.parent as? ViewGroup)?.removeView(it) }
-        val accent = playerThemeAccent()
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(12), dp(18), dp(12))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(18).toFloat()
-                setColor(0xF20A1018.toInt())
-                setStroke(dp(2), accent)
+        if (episodeTransitionOverlay == null || episodeCountdownIndex != nextIndex) {
+            episodeTransitionOverlay?.let { (it.parent as? ViewGroup)?.removeView(it) }
+            val accent = playerThemeAccent()
+            val panel = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(18), dp(12), dp(18), dp(12))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setColor(0xF20A1018.toInt())
+                    setStroke(dp(2), accent)
+                }
+                elevation = dp(12).toFloat()
+                alpha = 0f
             }
-            elevation = dp(12).toFloat()
-            alpha = 0f
+            panel.addView(TextView(this).apply {
+                text = "Sonraki bölüm başlıyor"
+                textSize = 17f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+            })
+            episodeCountdownTitle = TextView(this).apply {
+                text = episodeNames[nextIndex]
+                textSize = 15f
+                setTextColor(0xFFD4DEE8.toInt())
+                setPadding(0, dp(5), 0, 0)
+                maxLines = 2
+            }
+            panel.addView(episodeCountdownTitle)
+            episodeCountdownTimer = TextView(this).apply {
+                textSize = 14f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(accent)
+                setPadding(0, dp(7), 0, 0)
+            }
+            panel.addView(episodeCountdownTimer)
+            episodeCountdownProgress = View(this).apply { setBackgroundColor(accent) }
+            panel.addView(episodeCountdownProgress, LinearLayout.LayoutParams(-1, dp(3)).apply {
+                topMargin = dp(8)
+            })
+            root.addView(panel, FrameLayout.LayoutParams(dp(520), ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(28) })
+            episodeTransitionOverlay = panel
+            episodeCountdownIndex = nextIndex
+            panel.animate().alpha(1f).setDuration(160).start()
         }
-        panel.addView(TextView(this).apply {
-            text = if (automatic) "Sonraki bölüm başladı" else "Bölüm değiştirildi"
-            textSize = 17f
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(Color.WHITE)
-        })
-        panel.addView(TextView(this).apply {
-            text = episodeNames[index]
-            textSize = 15f
-            setTextColor(0xFFD4DEE8.toInt())
-            setPadding(0, dp(5), 0, 0)
-            maxLines = 2
-        })
-        panel.addView(View(this).apply { setBackgroundColor(accent) },
-            LinearLayout.LayoutParams(-1, dp(3)).apply { topMargin = dp(10) })
-        val params = FrameLayout.LayoutParams(dp(520), ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(28) }
-        root.addView(panel, params)
-        episodeTransitionOverlay = panel
-        panel.animate().alpha(1f).setDuration(180).start()
-        episodeTransitionHandler.postDelayed(hideEpisodeTransition, 4500L)
+        episodeCountdownTitle?.text = episodeNames[nextIndex]
+        episodeCountdownTimer?.text = "Otomatik geçiş: $secondsLeft sn"
+        episodeCountdownProgress?.layoutParams = episodeCountdownProgress?.layoutParams?.apply {
+            width = (dp(500) * (secondsLeft.coerceIn(0, 10) / 10f)).toInt().coerceAtLeast(dp(2))
+        }
+        episodeCountdownProgress?.requestLayout()
+    }
+
+    private fun clearEpisodeCountdown() {
+        episodeTransitionOverlay?.let { overlay ->
+            overlay.animate().cancel()
+            (overlay.parent as? ViewGroup)?.removeView(overlay)
+        }
+        episodeTransitionOverlay = null
+        episodeCountdownTitle = null
+        episodeCountdownTimer = null
+        episodeCountdownProgress = null
+        episodeCountdownIndex = -1
+    }
+
+    private val episodeCountdownRunnable = object : Runnable {
+        override fun run() {
+            val exo = player
+            if (!isFinishing && !isLiveStream && exo != null &&
+                exo.playWhenReady && exo.playbackState == Player.STATE_READY &&
+                episodeUrls.isNotEmpty()) {
+                val current = exo.currentMediaItemIndex
+                val next = current + 1
+                val duration = exo.duration
+                val remaining = if (duration > 0L && duration != C.TIME_UNSET)
+                    duration - exo.currentPosition else Long.MAX_VALUE
+                if (next in episodeUrls.indices && remaining in 1L..10_000L) {
+                    val seconds = kotlin.math.ceil(remaining / 1000.0).toInt().coerceIn(1, 10)
+                    updateEpisodeCountdown(next, seconds)
+                } else if (episodeCountdownOverlay != null) {
+                    clearEpisodeCountdown()
+                }
+            } else if (episodeCountdownOverlay != null) {
+                clearEpisodeCountdown()
+            }
+            if (!isFinishing) episodeTransitionHandler.postDelayed(this, 500L)
+        }
     }
 
     private fun updateContentInfo() {
@@ -753,9 +810,8 @@ class PlayerActivity : Activity() {
                             if (!isLiveStream && episodeUrls.isNotEmpty()) {
                                 val index = exo.currentMediaItemIndex
                                 if (index in episodeUrls.indices) {
-                                    val changedEpisode = index != selectedEpisodeIndex
                                     selectedEpisodeIndex = index
-                                    if (changedEpisode) showEpisodeTransition(index, reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO)
+                                    clearEpisodeCountdown()
                                     updateContentInfo()
                                     currentStreamUrl = episodeUrls[index]
                                     originalStreamUrl = currentStreamUrl
@@ -1192,6 +1248,8 @@ class PlayerActivity : Activity() {
         bufferingSinceMs = 0L
         lastStablePlaybackMs = 0L
         resumeKey = "position_" + url.hashCode().toString()
+        episodeTransitionHandler.removeCallbacks(episodeCountdownRunnable)
+        episodeTransitionHandler.post(episodeCountdownRunnable)
         player?.let { exo -> exo.setMediaItem(createStreamMediaItem(url)); exo.prepare(); exo.playWhenReady = true }
         refreshChannelHighlight()
         updateContentInfo()
@@ -1333,5 +1391,5 @@ class PlayerActivity : Activity() {
 
     override fun onPause() { savePlaybackPosition(); super.onPause() }
     override fun onStop() { savePlaybackPosition(); playerView?.keepScreenOn = false; window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); player?.pause(); super.onStop() }
-    override fun onDestroy() { episodeTransitionHandler.removeCallbacksAndMessages(null); episodeTransitionOverlay?.let { (it.parent as? ViewGroup)?.removeView(it) }; episodeTransitionOverlay = null; uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
+    override fun onDestroy() { episodeTransitionHandler.removeCallbacksAndMessages(null); clearEpisodeCountdown(); uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
 }
