@@ -2833,10 +2833,16 @@ class MainActivity : Activity() {
                     return result
                 }
 
-                fun loadSection(type: String, label: String, categoryAction: String, splitVodSeries: Boolean = false) {
+                fun loadSection(
+                    type: String,
+                    label: String,
+                    categoryAction: String,
+                    splitVodSeries: Boolean = false,
+                    preloadedCategories: List<Pair<String, String>>? = null
+                ) {
                     try {
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label kategorileri alınıyor…") }
-                        val categories = if (type == "itv") {
+                        val categories = preloadedCategories ?: if (type == "itv") {
                             val response = stalkerRequest(source, token, mapOf("type" to "itv", "action" to "get_genres"))
                             val arr = extractArray(response)
                             sectionDiagnostics.add("itv get_genres: ${responseSummary(response, arr)}")
@@ -3274,18 +3280,41 @@ class MainActivity : Activity() {
                     }
                 }
 
-                // Give Live TV an uncontended Stalker session first. This avoids
-                // simultaneous category requests changing session state while ITV is paging.
-                // Once TV is collected, load VOD and Series in parallel to keep total time down.
+                // PHASE 1: Load Live TV alone, then publish it and open the app.
                 val tvTask = thread(name = "kaiser-stalker-tv") {
                     loadSection("itv", "Canlı TV", "get_genres")
                 }
                 tvTask.join()
+
+                val tvPublished = java.util.concurrent.CountDownLatch(1)
+                runOnUiThread {
+                    if (items.any { it.sourceId == source.id && it.type == "Canlı TV" }) {
+                        hasLoadedSource = true
+                        isLoadingSource = false
+                        selectedType = "Canlı TV"
+                        selectedGroup = "Tüm kategoriler"
+                        sidebarMode = "main"
+                        render()
+                        publishHomeChannel()
+                    }
+                    updateLoadingMessage("${source.name}: TV hazır. Film ve dizi kategorileri alınıyor…")
+                    tvPublished.countDown()
+                }
+                tvPublished.await()
+
+                // PHASE 2: Fetch all category lists before requesting any VOD/series items.
+                val vodCategories = readCategories("vod")
+                val seriesCategories = readCategories("series")
+                runOnUiThread {
+                    updateLoadingMessage("${source.name}: ${vodCategories.size} film ve ${seriesCategories.size} dizi kategorisi hazır. İçerikler yükleniyor…")
+                }
+
+                // PHASE 3: Load the contents using the already-fetched category lists.
                 val vodTask = thread(name = "kaiser-stalker-vod") {
-                    loadSection("vod", "Filmler", "get_categories", splitVodSeries = true)
+                    loadSection("vod", "Filmler", "get_categories", splitVodSeries = true, preloadedCategories = vodCategories)
                 }
                 val seriesTask = thread(name = "kaiser-stalker-series") {
-                    loadSection("series", "Diziler", "get_categories")
+                    loadSection("series", "Diziler", "get_categories", preloadedCategories = seriesCategories)
                 }
                 vodTask.join()
                 seriesTask.join()
