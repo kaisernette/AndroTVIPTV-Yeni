@@ -662,6 +662,40 @@ class MainActivity : Activity() {
     private var gradientBackground = true
     private var customBackgroundUri: String? = null
     private var selectedCategorySourceId = ""
+    private fun sourceAccent(mode: String): Int = when (mode) {
+        "xtream" -> Color.rgb(0, 166, 255)
+        "m3u" -> Color.rgb(32, 201, 151)
+        "mac" -> Color.rgb(167, 105, 230)
+        else -> Color.rgb(0, 166, 255)
+    }
+
+    private fun applySourceTheme(source: SavedSource, persist: Boolean = true) {
+        accent = sourceAccent(source.mode)
+        accentBright = when (source.mode) {
+            "xtream" -> Color.rgb(72, 190, 255)
+            "m3u" -> Color.rgb(83, 225, 177)
+            "mac" -> Color.rgb(196, 145, 255)
+            else -> accent
+        }
+        bg = when (source.mode) {
+            "m3u" -> Color.rgb(16, 27, 24)
+            "mac" -> Color.rgb(23, 21, 29)
+            else -> Color.rgb(17, 20, 25)
+        }
+        panel = Color.rgb(8, 10, 14)
+        window.statusBarColor = bg
+        window.navigationBarColor = bg
+        if (persist) {
+            val name = when (source.mode) {
+                "m3u" -> "Orman • Zümrüt"
+                "mac" -> "Koyu • Mor"
+                else -> "Antrasit • Mavi"
+            }
+            prefs.edit().putString("theme_name", name)
+                .putString("active_source_theme_mode", source.mode).apply()
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1920,11 +1954,17 @@ class MainActivity : Activity() {
             for (index in 0 until modeCards.childCount) {
                 val card = modeCards.getChildAt(index) as? LinearLayout ?: continue
                 val active = card.tag == modeId
+                val modeColor = when (modeId) {
+                    xtream.id -> sourceAccent("xtream")
+                    m3u.id -> sourceAccent("m3u")
+                    mac.id -> sourceAccent("mac")
+                    else -> accent
+                }
                 card.background = roundedDrawable(if (active) Color.rgb(3, 25, 43) else panel, 26,
-                    if (active) accent else outline)
+                    if (active) modeColor else outline)
                 card.elevation = if (active) dp(5).toFloat() else 0f
                 (card.getChildAt(1) as? LinearLayout)?.let { labels ->
-                    (labels.getChildAt(0) as? TextView)?.setTextColor(if (active) accentBright else Color.WHITE)
+                    (labels.getChildAt(0) as? TextView)?.setTextColor(if (active) modeColor else Color.WHITE)
                     (labels.getChildAt(1) as? TextView)?.setTextColor(muted)
                 }
             }
@@ -2212,6 +2252,7 @@ class MainActivity : Activity() {
             // Validate the cache against the selected source, not against items
             // belonging to any other saved source.
             val sourceToRestore = last ?: savedSources.lastOrNull()
+            sourceToRestore?.let { applySourceTheme(it, persist = true) }
             val restoredSourceItems = items.filter { it.sourceId == sourceToRestore?.id }
             val cacheHasLiveChannels = restoredSourceItems.any { it.type == "Canlı TV" && it.url.isNotBlank() }
             val cacheHasMovies = restoredSourceItems.any { it.type == "Filmler" }
@@ -2243,6 +2284,7 @@ class MainActivity : Activity() {
         }
     }
     private fun activateSourceFromCache(source: SavedSource) {
+        applySourceTheme(source)
         prefs.edit().putString("last_source_id", source.id)
             .putStringSet("selected_source_ids", setOf(source.id)).apply()
         selectedCategorySourceId = source.id
@@ -2525,6 +2567,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadM3u(source: SavedSource, append: Boolean) {
+        applySourceTheme(source)
         prefs.edit().putString("last_source_id", source.id).apply()
         isLoadingSource = true
         loadProgress = 0
@@ -2784,6 +2827,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadStalker(source: SavedSource, append: Boolean) {
+        applySourceTheme(source)
         // Pin every screen/filter to the newly activated source before loading starts.
         // Keep other sources cached in memory, but never let their categories leak into this view.
         prefs.edit()
@@ -3501,6 +3545,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadXtream(source: SavedSource, append: Boolean) {
+        applySourceTheme(source)
         val base = source.address.trimEnd('/')
         val user = source.username
         val pass = source.password
@@ -6733,6 +6778,7 @@ class MainActivity : Activity() {
                     })
                 } else {
                     savedSources.toList().forEach { source ->
+                        val sourceColor = sourceAccent(source.mode)
                         val sourceRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.CENTER_VERTICAL
@@ -6741,7 +6787,7 @@ class MainActivity : Activity() {
                             background = roundedDrawable(
                                 Color.TRANSPARENT,
                                 0,
-                                Color.rgb(48, 57, 73)
+                                sourceColor
                             )
                         }
                         val sourceInfo = LinearLayout(this).apply {
@@ -6754,10 +6800,10 @@ class MainActivity : Activity() {
                             maxLines = 1
                             ellipsize = android.text.TextUtils.TruncateAt.END
                             setTypeface(null, android.graphics.Typeface.BOLD)
-                            setTextColor(Color.WHITE)
+                            setTextColor(sourceColor)
                         })
                         sourceInfo.addView(TextView(this).apply {
-                            text = "${if (source.mode == "xtream") "Xtream Codes" else "M3U/M3U8"} • ${source.address}"
+                            text = "${when (source.mode) { "xtream" -> "Xtream Codes"; "m3u" -> "M3U/M3U8"; "mac" -> "Stalker Portal"; else -> source.mode }} • ${source.address}"
                             textSize = 11f
                             maxLines = 1
                             ellipsize = android.text.TextUtils.TruncateAt.END
@@ -6777,11 +6823,11 @@ class MainActivity : Activity() {
                             isChecked = selectedIds.contains(source.id)
                             thumbTintList = android.content.res.ColorStateList(
                                 arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                                intArrayOf(accentBright, Color.rgb(145, 153, 168))
+                                intArrayOf(sourceColor, Color.rgb(145, 153, 168))
                             )
                             trackTintList = android.content.res.ColorStateList(
                                 arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                                intArrayOf(accent, Color.rgb(65, 72, 84))
+                                intArrayOf(sourceColor, Color.rgb(65, 72, 84))
                             )
                             setOnCheckedChangeListener { _, checked ->
                                 // Only one source can be active at a time. Selecting this
