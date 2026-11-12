@@ -2886,7 +2886,23 @@ class MainActivity : Activity() {
                             }
                             base[filterKey] = categoryId ?: "*"
 
-                            val attempts = mutableListOf<LinkedHashMap<String, String>>(
+                            val attempts = if (type == "itv") {
+                                // Restore the exact request variants from the known-working TV build.
+                                listOf(
+                                    LinkedHashMap(base),
+                                    LinkedHashMap(base).apply {
+                                        remove(filterKey)
+                                        put(alternateKey, categoryId ?: "*")
+                                    },
+                                    LinkedHashMap(base).apply { remove("sortby") },
+                                    linkedMapOf(
+                                        "type" to type,
+                                        "action" to "get_ordered_list",
+                                        "p" to page.toString(),
+                                        filterKey to (categoryId ?: "*")
+                                    )
+                                )
+                            } else mutableListOf(
                                 LinkedHashMap(base),
                                 LinkedHashMap(base).apply {
                                     remove(filterKey)
@@ -2900,34 +2916,7 @@ class MainActivity : Activity() {
                                     filterKey to (categoryId ?: "*")
                                 )
                             )
-                            if (type == "itv") {
-                                // Live-TV portals differ in how they represent the all-genres
-                                // selector. Keep the proven TV fallback sequence unchanged.
-                                attempts.add(LinkedHashMap(base).apply {
-                                    remove("genre")
-                                    remove("category")
-                                })
-                                attempts.add(LinkedHashMap(base).apply {
-                                    remove("sortby")
-                                    put("genre", "0")
-                                })
-                                attempts.add(LinkedHashMap(base).apply {
-                                    remove("sortby")
-                                    put("category", "0")
-                                })
-                                if (page == 1) {
-                                    attempts.add(LinkedHashMap(base).apply {
-                                        put("p", "0")
-                                        remove("genre")
-                                        remove("category")
-                                    })
-                                    attempts.add(LinkedHashMap(base).apply {
-                                        put("p", "0")
-                                        remove("sortby")
-                                        put("genre", "0")
-                                    })
-                                }
-                            } else if (page == 1) {
+                            if (type != "itv" && page == 1) {
                                 // Some VOD/series portals are zero-based and return an empty
                                 // response for p=1. Retry p=0 only after the normal request
                                 // variants have failed; this does not alter working TV loading.
@@ -2947,9 +2936,9 @@ class MainActivity : Activity() {
                                 responseShape.set(responseSummary(response, arr))
                                 // Keep diagnostics compact: Live TV can span hundreds of pages
                                 // and must not push the VOD/series results out of the dialog.
-                                if (sectionDiagnostics.size < 80 &&
+                                if (sectionDiagnostics.size < 100 &&
                                     ((type != "itv" && page <= 1 && categoryId == categories.firstOrNull()?.first) ||
-                                     (type == "itv" && page == 1 && index == 0))
+                                     (type == "itv" && page == 1))
                                 ) {
                                     sectionDiagnostics.add("$type get_ordered_list deneme=${index + 1} kategori=${categoryId ?: "*"} sayfa=$page: ${responseShape.get()}")
                                 }
@@ -3285,18 +3274,19 @@ class MainActivity : Activity() {
                     }
                 }
 
-                // Start all three catalogues together. Each loader has its own
-                // collection; UI publication remains on the main thread.
+                // Give Live TV an uncontended Stalker session first. This avoids
+                // simultaneous category requests changing session state while ITV is paging.
+                // Once TV is collected, load VOD and Series in parallel to keep total time down.
                 val tvTask = thread(name = "kaiser-stalker-tv") {
                     loadSection("itv", "Canlı TV", "get_genres")
                 }
+                tvTask.join()
                 val vodTask = thread(name = "kaiser-stalker-vod") {
                     loadSection("vod", "Filmler", "get_categories", splitVodSeries = true)
                 }
                 val seriesTask = thread(name = "kaiser-stalker-series") {
                     loadSection("series", "Diziler", "get_categories")
                 }
-                tvTask.join()
                 vodTask.join()
                 seriesTask.join()
 
