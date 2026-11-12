@@ -1594,6 +1594,7 @@ class MainActivity : Activity() {
                     !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
                 }
                 val grouped = categoryItems.groupBy { it.group.ifBlank { "Diğer" } }.toList()
+                    .sortedBy { it.first.lowercase(java.util.Locale.ROOT) }
                 // Keep category navigation separate from the content grid.
                 // The first category receives focus, but opens only after explicit selection.
                 val selectedName = expandedCategory?.first ?: grouped.firstOrNull()?.first
@@ -5074,13 +5075,6 @@ class MainActivity : Activity() {
             if (query.isBlank()) emptyList()
             else visible.take(240).groupBy { it.type }.map { (type, entries) -> "$type • Arama sonuçları" to entries }
         } else if (selectedType == "Tümü") {
-            // Put the user's own recently watched movies and series first on Home.
-            // Keep the row source-aware and use only real playback history entries.
-            val homeRecent = recent.filter { item ->
-                (item.type == "Filmler" || item.type == "Diziler") &&
-                    (if (selectedSourceIds.isNotEmpty()) selectedSourceIds.contains(item.sourceId)
-                    else activeSourceId.isBlank() || item.sourceId == activeSourceId)
-            }.take(8)
             // Weekly Turkey streaming chart, 19–26 Oct 2026. Existing playlist items are
             // prioritized by title; titles missing from the user's source are not fabricated.
             val trendingMovies = listOf(
@@ -5105,17 +5099,16 @@ class MainActivity : Activity() {
                 ranked.addAll(remaining)
                 return ranked
             }
-            // Weekly movie posters stay pinned as the first row on Home.
-            // Recently watched follows them; weekly series remain below.
+            // Playback history remains available from its dedicated history screen.
             (listOf(
                 t("Haftanın Filmleri") to rankedByTrend(activeSourceItems.filter { it.type == "Filmler" }, trendingMovies).take(24),
-                t("Son İzlenenler") to homeRecent,
                 t("Haftanın Dizileri") to rankedByTrend(activeSourceItems.filter { it.type == "Diziler" }, trendingSeries).take(24),
             )).filter { it.second.isNotEmpty() }
         } else if (selectedType == "Filmler" || selectedType == "Diziler") {
             // Trend rows are shown on the home screen only; category screens list categories directly.
             val source = visible.filter { it.type == selectedType }
-            source.groupBy { it.group.ifBlank { "Diğer" } }.map { it.key to it.value }
+            source.groupBy { it.group.ifBlank { "Diğer" } }.toList()
+                .sortedBy { it.first.lowercase(java.util.Locale.ROOT) }
                 .filter { it.second.isNotEmpty() }
         } else if (selectedType == "Son İzlenenler") {
             listOf("Diziler" to visible.filter { it.type == "Diziler" },
@@ -5133,7 +5126,7 @@ class MainActivity : Activity() {
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
         val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
-            ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups.take(8)
+            ?: groups.take(8)
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
