@@ -2849,6 +2849,11 @@ class MainActivity : Activity() {
 
                         runOnUiThread { updateLoadingMessage( "${source.name}: $label yükleniyor…") }
                         val collected = ConcurrentHashMap<String, MediaItem>()
+                        val categoryOrder = categories.mapIndexed { index, pair -> pair.second to index }.toMap()
+                        fun orderedSnapshot(): List<MediaItem> = collected.values.sortedWith(
+                            compareBy<MediaItem> { categoryOrder[it.group] ?: Int.MAX_VALUE }
+                                .thenBy { it.name.lowercase(java.util.Locale.ROOT) }
+                        )
                         val responseShape = java.util.concurrent.atomic.AtomicReference("liste isteği henüz yapılmadı")
                         // Avoid rewriting the entire growing catalogue after every few pages.
                         // Persist the first partial batch, then checkpoint only after 1,000 new items.
@@ -2957,16 +2962,13 @@ class MainActivity : Activity() {
                             return JSONArray()
                         }
 
-                        // Live TV supports a wildcard catalogue query on this portal.
-                        // VOD and Series require category-scoped requests to return their items.
-                        val targets = if (type == "itv" || categories.isEmpty()) {
+                        // Query every provider genre for Live TV as well as every VOD/series
+                        // category. A wildcard ITV request can return only the default language
+                        // subset (often TR), hiding DE/EU and other country groups.
+                        // Keep the portal's category order; use wildcard only when no genres exist.
+                        val targets = if (categories.isEmpty()) {
                             listOf("*" to "Diğer")
                         } else {
-                            // The portal's "*" category reports the GLOBAL catalogue total
-                            // (37k+) even when category pagination is requested. Scanning it
-                            // first causes thousands of redundant requests. Load real
-                            // categories instead; the dedicated all-category view is not
-                            // needed to populate the category catalogue.
                             categories.filterNot { it.first == "*" }
                         }
                         fun pageKeys(array: JSONArray): Set<String> {
@@ -2983,7 +2985,7 @@ class MainActivity : Activity() {
                             val previousCheckpoint = lastCheckpointCount.get()
                             if (!force && currentCount - previousCheckpoint < 1000) return
                             if (!lastCheckpointCount.compareAndSet(previousCheckpoint, currentCount)) return
-                            val snapshot = collected.values.toList()
+                            val snapshot = orderedSnapshot()
                             if (snapshot.isEmpty()) return
                             val publishTypes = if (splitVodSeries) setOf("Filmler", "Diziler") else setOf(label)
                             val publishItems = snapshot.filter { it.type in publishTypes }
@@ -3204,7 +3206,7 @@ class MainActivity : Activity() {
                             categoryExecutor.shutdownNow()
                         }
 
-                        val sectionItems = collected.values.toList()
+                        val sectionItems = orderedSnapshot()
                         if (splitVodSeries) {
                             val sampleFlags = sectionItems.take(8).joinToString(" || ") { item ->
                                 "${item.name}:type=${item.type},url=${item.url.substringBefore('?')}"
@@ -4827,7 +4829,8 @@ class MainActivity : Activity() {
             it.group.contains(query, ignoreCase = true) ||
             it.type.contains(query, ignoreCase = true)
         }
-        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().sorted()
+        // Preserve the provider/category order established during catalogue loading.
+        val groupsAvailable = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct()
         categoryBar.removeAllViews()
         categoryScroll.visibility = View.GONE
         categoryBar.addView(makeButton("Tümü", selectedGroup == "Tüm kategoriler") { selectedGroup = "Tüm kategoriler"; render() },
