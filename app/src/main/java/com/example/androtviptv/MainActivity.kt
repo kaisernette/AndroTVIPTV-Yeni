@@ -3136,35 +3136,36 @@ class MainActivity : Activity() {
                                     val firstKeys = pageKeys(firstPage)
                                     if (firstKeys.isNotEmpty()) seenTvPages.add(firstKeys)
                                     consumePage(firstPage, categoryName)
+                                    // Publish TV immediately; do not hide all channels while
+                                    // hundreds of remaining pages are still being fetched.
+                                    publishPartialSection(force = true)
                                     val calculatedPages = if (reportedTotalItems > 0 && reportedPageSize > 0) {
                                         ((reportedTotalItems + reportedPageSize - 1) / reportedPageSize).coerceAtLeast(1)
                                     } else -1
-                                    val tvPageCeiling = if (calculatedPages > 0) {
-                                        minOf(calculatedPages, 1000)
-                                    } else 1000
                                     sectionDiagnostics.add(
                                         "itv sayfalama hedefi: toplam=$reportedTotalItems, sayfaBoyutu=$reportedPageSize, " +
-                                            "hedefSayfa=$calculatedPages, güvenlikSınırı=$tvPageCeiling"
+                                            "hedefSayfa=$calculatedPages; sayfa sınırı yok, boş/tekrarlı sayfa bitiş ölçütü"
                                     )
                                     var page = 2
-                                    while (page <= tvPageCeiling) {
+                                    while (true) {
                                         val arr = requestList(categoryId, page, captureTvPageMeta)
-                                        if (arr.length() == 0) break
+                                        if (arr.length() == 0) {
+                                            sectionDiagnostics.add("itv sayfalama tamamlandı: boş sayfa=$page, içerik=${collected.size}")
+                                            break
+                                        }
                                         val keys = pageKeys(arr)
                                         if (keys.isNotEmpty() && !seenTvPages.add(keys)) {
                                             sectionDiagnostics.add("itv sayfalama durduruldu: sayfa=$page önceki sayfayı tekrarladı")
                                             break
                                         }
                                         consumePage(arr, categoryName)
+                                        publishPartialSection()
                                         if (page % 5 == 0) {
                                             runOnUiThread {
                                                 updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} içerik)")
                                             }
                                         }
                                         page++
-                                    }
-                                    if (page > tvPageCeiling) {
-                                        sectionDiagnostics.add("itv sayfalama güvenlik sınırına ulaştı: $tvPageCeiling")
                                     }
                                 }
                             } else {
@@ -3206,11 +3207,10 @@ class MainActivity : Activity() {
                                 // page count: it can trigger thousands of needless requests.
                                 // Stalker portals often report a GLOBAL total_items value for
                                 // each category. Do not let that metadata truncate large categories.
-                                // Continue until the portal returns an empty/repeated page. Keep a
-                                // generous emergency ceiling for malformed portals that never end.
-                                val emergencyPageCeiling = 1000
+                                // No artificial page ceiling: collect every category page.
+                                // Empty or repeated pages are the portal's end-of-list signals.
                                 var page = nextPage
-                                while (page <= emergencyPageCeiling) {
+                                while (true) {
                                     val arr = requestList(categoryId, page, capturePageMeta)
                                     if (arr.length() == 0) break
                                     val currentPageKeys = pageKeys(arr)
@@ -3239,9 +3239,6 @@ class MainActivity : Activity() {
                                     if (page % 5 == 0) {
                                         publishPartialSection()
                                     }
-                                }
-                                if (page > emergencyPageCeiling) {
-                                    sectionDiagnostics.add("$type sayfalama güvenlik sınırına ulaştı: kategori=$categoryId, sınır=$emergencyPageCeiling")
                                 }
                             }
                                 })
@@ -3994,17 +3991,15 @@ class MainActivity : Activity() {
     private fun readCachedItems(sourceIdFilter: String? = null): List<MediaItem> {
         val file = cachedItemsFile()
         if (!file.exists() || file.length() <= 0L) return emptyList()
-        if (file.length() > 64L * 1024L * 1024L) {
-            android.util.Log.w("KaiserTV", "Media cache exceeds hard safety limit; skipping restore.")
-            return emptyList()
-        }
-        // Read only the requested source when switching sources. This keeps the
-        // memory ceiling bounded without forcing a network reload for older sources.
-        val restored = ArrayList<MediaItem>(minOf(12000, (file.length() / 180).toInt().coerceAtLeast(64)))
+        // Restore every cached record; the old 12,000-item and 64 MiB guards
+        // silently hid the tail of large Stalker catalogues.
+        // Parsing is streaming so the JSON file itself is never loaded as one string.
+        val estimatedCount = (file.length() / 180).toInt().coerceAtLeast(64)
+        val restored = ArrayList<MediaItem>(estimatedCount)
         java.io.BufferedReader(java.io.InputStreamReader(file.inputStream(), Charsets.UTF_8)).use { input ->
             android.util.JsonReader(input).use { reader ->
                 reader.beginArray()
-                while (reader.hasNext() && restored.size < 12000) {
+                while (reader.hasNext()) {
                     var id = ""
                     var name = ""
                     var url = ""
