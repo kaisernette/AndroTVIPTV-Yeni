@@ -1593,8 +1593,8 @@ class MainActivity : Activity() {
                     (selectedType != "Canlı TV" || it.url.isNotBlank()) &&
                     !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
                 }
+                // Preserve the provider's original category order (including weekday order).
                 val grouped = categoryItems.groupBy { it.group.ifBlank { "Diğer" } }.toList()
-                    .sortedBy { it.first.lowercase(java.util.Locale.ROOT) }
                 // Keep category navigation separate from the content grid.
                 // The first category receives focus, but opens only after explicit selection.
                 val selectedName = expandedCategory?.first ?: grouped.firstOrNull()?.first
@@ -6870,9 +6870,12 @@ class MainActivity : Activity() {
                                         items.filter { it.type == section.first }.map { it.group.ifBlank { "Diğer" } }.distinct()
                                             .forEach { group ->
                                                 val normalized = group.trim()
-                                                val matches = normalized.startsWith(languagePrefix, ignoreCase = true) &&
-                                                    (normalized.length == languagePrefix.length ||
-                                                     normalized[languagePrefix.length] in charArrayOf(' ', '|', '-', '_'))
+                                                // Accept common provider separators after the language tag,
+                                                // including the bullet used by many Turkish TV categories.
+                                                val matches = Regex(
+                                                    "^" + Regex.escape(languagePrefix) + "(?=$|[\\s|•·._-]).*",
+                                                    RegexOption.IGNORE_CASE
+                                                ).matches(normalized)
                                                 val key = section.first + "|" + group
                                                 if (matches) hiddenCategories.remove(key) else hiddenCategories.add(key)
                                             }
