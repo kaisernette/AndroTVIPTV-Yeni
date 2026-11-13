@@ -7428,7 +7428,7 @@ class MainActivity : Activity() {
                         val row = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.CENTER_VERTICAL
-                            minimumHeight = dp(49)
+                            minimumHeight = dp(43)
                             setPadding(dp(4), dp(3), dp(8), dp(3))
                         }
                         row.addView(TextView(this).apply {
@@ -7442,29 +7442,29 @@ class MainActivity : Activity() {
                         })
                         row.addView(TextView(this).apply {
                             text = aboutLabel(item.second)
-                            textSize = 15f
+                            textSize = 13.5f
                             setTextColor(muted)
-                            maxLines = 2
+                            maxLines = 1
                             ellipsize = android.text.TextUtils.TruncateAt.END
-                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.05f))
+                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.95f))
                         row.addView(TextView(this).apply {
                             text = ":"
-                            textSize = 16f
+                            textSize = 14f
                             setTextColor(muted)
                             setPadding(dp(3), 0, dp(5), 0)
                         })
                         row.addView(TextView(this).apply {
                             text = item.third
-                            textSize = 15f
+                            textSize = 13.5f
                             setTypeface(null, android.graphics.Typeface.BOLD)
                             setTextColor(Color.WHITE)
                             maxLines = 2
                             ellipsize = android.text.TextUtils.TruncateAt.END
-                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f))
+                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.35f))
                         column.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
                     columns.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        setMargins(dp(4), 0, dp(8), 0)
+                        setMargins(dp(2), 0, dp(4), 0)
                     })
                 }
                 addInfoColumn(leftItems)
