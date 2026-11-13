@@ -7376,22 +7376,22 @@ class MainActivity : Activity() {
                 fun aboutLabel(key: String) = labels[key] ?: key
 
                 val leftItems = listOf(
-                    Triple("▣", "Uygulama", "KaiserTV+"),
-                    Triple("◷", "Sürüm tarihi", buildDate),
-                    Triple("▱", "Platform", "Android / Android TV"),
-                    Triple("♟", "Minimum Android", "6.0 (API 23)"),
-                    Triple("</>", "Compile SDK", "35"),
-                    Triple("◎", "Target SDK", "35"),
-                    Triple("◇", "Sürüm", version)
+                    "Uygulama" to "KaiserTV+",
+                    "Platform" to "Android / Android TV",
+                    "Minimum Android" to "6.0 (API 23)",
+                    "Compile SDK" to "35",
+                    "Target SDK" to "35",
+                    "Sürüm" to version,
+                    "Sürüm tarihi" to buildDate
                 )
                 val rightItems = listOf(
-                    Triple("♨", "Java", "17"),
-                    Triple("K", "Kotlin", "2.0.21"),
-                    Triple("◆", "Android Gradle Plugin", "8.7.3"),
-                    Triple("◆", "Gradle", "8.9"),
-                    Triple("▶", "Oynatıcı", "AndroidX Media3 ExoPlayer 1.5.1"),
-                    Triple("⌁", "Ağ Kütüphanesi", "OkHttp 4.12.0"),
-                    Triple("▣", "TV Provider", "AndroidX TV Provider 1.1.0")
+                    "Java" to "17",
+                    "Kotlin" to "2.0.21",
+                    "Android Gradle Plugin" to "8.7.3",
+                    "Gradle" to "8.9",
+                    "Oynatıcı" to "AndroidX Media3 ExoPlayer 1.5.1",
+                    "Ağ Kütüphanesi" to "OkHttp 4.12.0",
+                    "TV Provider" to "AndroidX TV Provider 1.1.0"
                 )
 
                 val topBar = LinearLayout(this).apply {
@@ -7413,19 +7413,19 @@ class MainActivity : Activity() {
                 val columns = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.TOP
-                    setPadding(dp(8), dp(2), dp(8), dp(2))
+                    setPadding(dp(8), 0, dp(8), 0)
                 }
-                fun addInfoColumn(items: List<Triple<String, String, String>>) {
+                fun addInfoColumn(items: List<Pair<String, String>>) {
                     val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
                     items.forEach { item ->
                         val row = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.CENTER_VERTICAL
-                            minimumHeight = dp(39)
+                            minimumHeight = dp(33)
                             setPadding(dp(8), dp(2), dp(8), dp(2))
                         }
                         row.addView(TextView(this).apply {
-                            text = aboutLabel(item.second)
+                            text = aboutLabel(item.first)
                             textSize = 14f
                             setTextColor(muted)
                             maxLines = 1
@@ -7438,7 +7438,7 @@ class MainActivity : Activity() {
                             setPadding(dp(3), 0, dp(6), 0)
                         })
                         row.addView(TextView(this).apply {
-                            text = item.third
+                            text = item.second
                             textSize = 14f
                             setTypeface(null, android.graphics.Typeface.BOLD)
                             setTextColor(Color.WHITE)
