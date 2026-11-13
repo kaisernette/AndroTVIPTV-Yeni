@@ -5268,8 +5268,9 @@ class MainActivity : Activity() {
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.TOP
-                // Match the vertical baseline used by the TV, Movies and Series section headings.
-                setPadding(dp(8), 0, dp(8), dp(12))
+                // Home's empty-state title sits slightly higher than the section title on other tabs.
+                // Add the matching top offset so "Keşfetmeye başla" shares the Movies heading baseline.
+                setPadding(dp(8), if (selectedType == "Tümü") dp(22) else 0, dp(8), dp(12))
                 background = ColorDrawable(Color.TRANSPARENT)
             }
             empty.addView(TextView(this).apply {
