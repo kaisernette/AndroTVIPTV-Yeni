@@ -7430,8 +7430,8 @@ class MainActivity : Activity() {
                     }
                     if (rowItems.size < 3) {
                         repeat(3 - rowItems.size) {
-                            row.addView(View(this), LinearLayout.LayoutParams(0, dp(112), 1f).apply {
-                                setMargins(dp(4), dp(4), dp(4), dp(4))
+                            row.addView(View(this), LinearLayout.LayoutParams(0, dp(142), 1f).apply {
+                                setMargins(dp(5), dp(7), dp(5), dp(7))
                             })
                         }
                     }
