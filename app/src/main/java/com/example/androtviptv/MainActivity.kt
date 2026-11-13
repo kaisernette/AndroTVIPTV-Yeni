@@ -1080,13 +1080,13 @@ class MainActivity : Activity() {
         primaryMenuColumn.addView(searchBar, LinearLayout.LayoutParams(-1, dp(44)))
         navBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.BOTTOM
+            gravity = Gravity.TOP
         }
-        // Fixed navigation area: no vertical menu scrolling.
+        // Keep navigation items anchored from the top of the available menu area.
         sidebarMenuScroll = FrameLayout(this).apply {
             clipChildren = true
             clipToPadding = true
-            addView(navBar, FrameLayout.LayoutParams(-1, -1, Gravity.BOTTOM))
+            addView(navBar, FrameLayout.LayoutParams(-1, -1, Gravity.TOP))
         }
         primaryMenuColumn.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         settingsBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
