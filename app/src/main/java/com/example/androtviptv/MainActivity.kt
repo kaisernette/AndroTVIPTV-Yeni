@@ -1138,7 +1138,6 @@ class MainActivity : Activity() {
         dateClockRow.addView(headerDateView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
         dateClockRow.addView(headerTimeView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
         headerClockHandler.removeCallbacks(headerClockRunnable)
-        headerClockRunnable.run()
         main.addView(dateClockRow, 0, LinearLayout.LayoutParams(-1, dp(48)))
 
         main.addView(mainHeader)
@@ -1269,6 +1268,9 @@ class MainActivity : Activity() {
         mainContentScroll.addView(content)
         main.addView(mainContentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
+        dateClockRow.post {
+            headerClockRunnable.run()
+        }
         render()
     }
 
