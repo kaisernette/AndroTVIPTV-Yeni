@@ -622,6 +622,20 @@ class MainActivity : Activity() {
     private lateinit var categoryScroll: HorizontalScrollView
     private lateinit var mainHeader: LinearLayout
     private lateinit var dateClockRow: LinearLayout
+    private val headerClockHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var headerDateView: TextView? = null
+    private var headerTimeView: TextView? = null
+    private val headerClockRunnable = object : Runnable {
+        override fun run() {
+            val now = java.util.Date()
+            headerDateView?.text = java.text.SimpleDateFormat("EEEE, d MMM", java.util.Locale.getDefault()).format(now)
+                .replaceFirstChar { it.uppercase() }
+            headerTimeView?.text = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(now)
+            if (::dateClockRow.isInitialized && dateClockRow.isAttachedToWindow) {
+                headerClockHandler.postDelayed(this, 30_000L)
+            }
+        }
+    }
     private lateinit var content: LinearLayout
     private var detailSeries: MediaItem? = null
     private var detailMovie: MediaItem? = null
@@ -1019,9 +1033,6 @@ class MainActivity : Activity() {
         }
         sidebar.addView(primaryMenuColumn)
 
-        searchBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        primaryMenuColumn.addView(searchBar, LinearLayout.LayoutParams(-1, dp(44)))
-
         brandView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
@@ -1032,6 +1043,9 @@ class MainActivity : Activity() {
         brandView.addView(makeKaiserLogoView(23f), LinearLayout.LayoutParams(-1, -1))
         brandView.contentDescription = "KAISER TV+"
         primaryMenuColumn.addView(brandView, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 58 else 58)))
+
+        searchBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        primaryMenuColumn.addView(searchBar, LinearLayout.LayoutParams(-1, dp(44)))
         navBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
@@ -1099,21 +1113,33 @@ class MainActivity : Activity() {
             contentDescription = "Kaynak ekle"
             setOnClickListener { showConnectionDialog() }
         }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { setMargins(dp(8), 0, dp(4), 0) })
-        // Fixed date and live clock: remains visible while the content below scrolls.
+        // Transparent fixed header: logo stays in the upper-left rail; date/time sit at upper-right.
         dateClockRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
-            setPadding(dp(4), 0, dp(10), dp(8))
-            // Keep the fixed search/date header visually above every scrolling poster,
-            // including cards temporarily raised by their focus animation.
-            setBackgroundColor(bg)
-            clipChildren = true
-            clipToPadding = true
-            elevation = dp(48).toFloat()
-            translationZ = dp(48).toFloat()
+            setPadding(dp(8), 0, dp(12), 0)
+            setBackgroundColor(Color.TRANSPARENT)
+            clipChildren = false
+            clipToPadding = false
+            elevation = dp(24).toFloat()
         }
-        // Top search bar removed; search is opened from the navigation icon.
-        main.addView(dateClockRow, 0, LinearLayout.LayoutParams(-1, 0))
+        headerDateView = TextView(this).apply {
+            textSize = 14f
+            setTextColor(muted)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 0, dp(14), 0)
+        }
+        headerTimeView = TextView(this).apply {
+            textSize = 21f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        dateClockRow.addView(headerDateView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
+        dateClockRow.addView(headerTimeView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
+        headerClockHandler.removeCallbacks(headerClockRunnable)
+        headerClockRunnable.run()
+        main.addView(dateClockRow, 0, LinearLayout.LayoutParams(-1, dp(48)))
 
         main.addView(mainHeader)
 
@@ -4922,10 +4948,6 @@ class MainActivity : Activity() {
                 content.addView(historyHeader)
                 if (history.isEmpty()) {
                     selectedSearchHistory.clear()
-                    content.addView(TextView(this).apply {
-                        text = t("Aradığın film, dizi veya kanal adını yaz.")
-                        textSize = 14f; setTextColor(muted); setPadding(dp(8), dp(8), dp(8), dp(8))
-                    })
                 } else {
                     selectedSearchHistory.retainAll(history.toSet())
                     val historyFlow = WrappingRowLayout(this).apply {
@@ -5158,6 +5180,7 @@ class MainActivity : Activity() {
                     else -> "Kütüphanen seni bekliyor"
                 })
                 textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                setPadding(dp(8), 0, dp(4), 0)
             })
             empty.addView(TextView(this).apply {
                 text = t(when {
@@ -5168,7 +5191,7 @@ class MainActivity : Activity() {
                     items.isEmpty() -> "Başlamak için kendi M3U/M3U8 veya Xtream kaynağını ekle."
                     else -> "Bu bölümde şu anda gösterilecek içerik yok."
                 })
-                textSize = 14f; setTextColor(muted); setPadding(0, 7, 0, 14)
+                textSize = 14f; setTextColor(muted); setPadding(dp(8), 7, dp(4), 14)
             })
             // Kaynak ekleme işlemi ilk açılış formundan yapılır; ikinci CTA kaldırıldı.
             content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
@@ -5303,7 +5326,7 @@ class MainActivity : Activity() {
                 gravity = Gravity.TOP or Gravity.START
                 clipChildren = false
                 clipToPadding = false
-                if (posterGridMode) setPadding(0, dp(14), 0, dp(8))
+                if (posterGridMode) setPadding(0, 0, 0, dp(8))
             }
             // Use localized display labels for comparison so the weekly poster layout
             // remains identical in every app language.
@@ -5333,8 +5356,8 @@ class MainActivity : Activity() {
                         v.elevation = if (hasFocus) dp(22).toFloat() else 0f
                         v.translationZ = if (hasFocus) dp(22).toFloat() else 0f
                         v.cameraDistance = dp(2200).toFloat()
-                        v.animate().scaleX(if (hasFocus) 1.15f else 1f)
-                            .scaleY(if (hasFocus) 1.15f else 1f)
+                        v.animate().scaleX(if (hasFocus) 1.10f else 1f)
+                            .scaleY(if (hasFocus) 1.10f else 1f)
                             // Weekly home posters must never move vertically when focus changes.
                             .translationY(if (weeklyPoster) 0f else if (hasFocus) -dp(10).toFloat() else 0f)
                             .translationZ(if (hasFocus) dp(22).toFloat() else 0f)
