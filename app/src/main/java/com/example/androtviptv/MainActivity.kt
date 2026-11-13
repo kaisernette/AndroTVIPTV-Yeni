@@ -1014,7 +1014,7 @@ class MainActivity : Activity() {
             // Root is a vertical shell: fixed full-width header above the
             // horizontally arranged navigation rail and scrolling content.
             orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 18, 12)
+            setPadding(0, 0, 0, 0)
             setBackgroundColor(bg)
         }
 
@@ -1024,7 +1024,8 @@ class MainActivity : Activity() {
         sidebar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(4), 12, dp(6), 10)
-            background = android.graphics.drawable.ColorDrawable(if (transparentMenu) Color.TRANSPARENT else panel)
+            // Keep the navigation rail on the same uninterrupted theme surface as the header.
+            background = ColorDrawable(Color.TRANSPARENT)
             // Keep rounded category-selection backgrounds fully visible in both themes.
             clipChildren = false
             clipToPadding = false
@@ -1150,31 +1151,35 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
         }
         val headerLogo = makeKaiserLogoView(if (isMobileLayout) 23f else 29f).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(22), 0, 0, 0)
+            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            setPadding(dp(20), 0, 0, 0)
         }
         dateClockRow.addView(headerLogo, LinearLayout.LayoutParams(dp(if (isMobileLayout) 205 else 260), -1))
         dateClockRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
-        val headerSearchButton = makeButton("Ara", false) {
-            detailSeries = null
-            detailMovie = null
-            sidebarMode = "search"
-            searchInputFocusPending = true
-            searchQuery = ""
-            selectedType = "Tümü"
-            selectedGroup = "Tüm kategoriler"
-            expandedCategory = null
-            render()
-        }.apply {
+        val headerSearchButton = ImageView(this).apply {
+            setImageResource(R.drawable.nav_search)
+            imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setPadding(dp(8), dp(8), dp(8), dp(8))
             isFocusable = true
             isFocusableInTouchMode = true
             contentDescription = "Ara"
-            setPadding(dp(12), 0, dp(12), 0)
             background = ColorDrawable(Color.TRANSPARENT)
             nextFocusDownId = View.NO_ID
+            setOnClickListener {
+                detailSeries = null
+                detailMovie = null
+                sidebarMode = "search"
+                searchInputFocusPending = true
+                searchQuery = ""
+                selectedType = "Tümü"
+                selectedGroup = "Tüm kategoriler"
+                expandedCategory = null
+                render()
+            }
         }
         searchNavigationButton = headerSearchButton
-        dateClockRow.addView(headerSearchButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply {
+        dateClockRow.addView(headerSearchButton, LinearLayout.LayoutParams(dp(44), dp(44)).apply {
             setMargins(0, 0, dp(18), 0)
         })
         dateClockRow.addView(headerDateView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
@@ -1315,7 +1320,7 @@ class MainActivity : Activity() {
         main.addView(mainContentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         dateClockRow.isFocusable = false
         dateClockRow.background = ColorDrawable(Color.TRANSPARENT)
-        root.addView(dateClockRow, LinearLayout.LayoutParams(-1, dp(66)))
+        root.addView(dateClockRow, LinearLayout.LayoutParams(-1, dp(54)))
         bodyRow.addView(main, LinearLayout.LayoutParams(0, -1, 1f))
         root.addView(bodyRow, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
