@@ -6805,58 +6805,6 @@ class MainActivity : Activity() {
                 option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                val aboutPanel = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(20), dp(16), dp(20), dp(16))
-                    background = roundedDrawable(panel, 16)
-                }
-                aboutPanel.addView(TextView(this).apply {
-                    text = "KaiserTV+"
-                    textSize = 20f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE)
-                })
-                aboutPanel.addView(TextView(this).apply {
-                    text = "Mobil cihazlar ve Android TV için geliştirilen KaiserTV+, modern arayüzü ve çoklu yayın kaynağı desteğiyle içeriklerinize kolay erişim sağlar."
-                    textSize = 14f
-                    setTextColor(muted)
-                    setPadding(0, dp(7), 0, dp(12))
-                })
-                listOf(
-                    "Sürüm" to "1.0.027",
-                    "Platform" to "Mobil · Android TV",
-                    "Android desteği" to "Android 6.0 ve üzeri",
-                    "Yayın desteği" to "M3U · Xtream · Stalker"
-                ).forEach { item ->
-                    val infoRow = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        setPadding(0, dp(6), 0, dp(6))
-                    }
-                    infoRow.addView(TextView(this).apply {
-                        text = item.first
-                        textSize = 13f
-                        setTextColor(muted)
-                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    infoRow.addView(TextView(this).apply {
-                        text = item.second
-                        textSize = 13f
-                        setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(Color.WHITE)
-                        gravity = Gravity.END
-                    })
-                    aboutPanel.addView(infoRow)
-                }
-                aboutPanel.addView(TextView(this).apply {
-                    text = "© 2026 KaiserTV+ · Tüm hakları saklıdır."
-                    textSize = 11f
-                    setTextColor(muted)
-                    gravity = Gravity.CENTER
-                    setPadding(0, dp(10), 0, 0)
-                })
-                content.addView(aboutPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(dp(8), dp(12), dp(8), dp(12))
-                })
                 if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
                     option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
                 }
@@ -7407,47 +7355,96 @@ class MainActivity : Activity() {
             "about" -> {
                 heading("Hakkında", t("KaiserTV+ uygulama bilgileri"))
                 val aboutPanel = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    setPadding(dp(28), dp(24), dp(28), dp(24))
-                    background = roundedDrawable(Color.rgb(10, 13, 19), 18)
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(20), dp(18), dp(20), dp(18))
+                    background = roundedDrawable(panel, 20, accent)
                 }
-                aboutPanel.addView(makeKaiserLogoView(31f), LinearLayout.LayoutParams(dp(190), dp(58)).apply {
-                    gravity = Gravity.CENTER
-                    bottomMargin = dp(34)
+                val brandColumn = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(8), dp(8), dp(18), dp(8))
+                }
+                brandColumn.addView(makeKaiserLogoView(if (isMobileLayout) 27f else 34f),
+                    LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 52 else 64)))
+                brandColumn.addView(TextView(this).apply {
+                    text = "Mobil cihazlar ve Android TV için geliştirilen KaiserTV+, modern arayüzü ve çoklu yayın kaynağı desteğiyle içeriklerinize kolay erişim sağlar."
+                    textSize = if (isMobileLayout) 12f else 15f
+                    setTextColor(muted)
+                    setPadding(0, dp(14), 0, 0)
+                    gravity = Gravity.START
                 })
-                val packageInfo = packageManager.getPackageInfo(packageName, 0)
-                val version = packageInfo.versionName ?: "Bilinmiyor"
-                val buildDate = try {
-                    java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale("tr", "TR")).format(java.util.Date(packageInfo.lastUpdateTime))
-                } catch (_: Exception) { "Bilinmiyor" }
-                val appSize = try {
-                    val bytes = java.io.File(applicationInfo.sourceDir).length()
-                    String.format(java.util.Locale("tr", "TR"), "%.1f MB", bytes / (1024.0 * 1024.0))
-                } catch (_: Exception) { "Bilinmiyor" }
-                listOf(t("Sürüm") to version, t("Derleme tarihi") to buildDate, t("Uygulama boyutu") to appSize).forEach { item ->
-                    val infoRow = LinearLayout(this).apply {
+                aboutPanel.addView(brandColumn, LinearLayout.LayoutParams(0, -1, 0.88f))
+                aboutPanel.addView(View(this).apply {
+                    setBackgroundColor(accent)
+                    alpha = 0.55f
+                }, LinearLayout.LayoutParams(dp(1), -1).apply {
+                    setMargins(dp(4), dp(8), dp(18), dp(8))
+                })
+                val infoColumn = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                val infoItems = listOf(
+                    Triple("♟", "Android Desteği", "Android 6.0 ve üzeri"),
+                    Triple("▱", "Yayın Desteği", "M3U · Xtream · Stalker"),
+                    Triple("▣", "Platform", "Mobil · Android TV"),
+                    Triple("ⓘ", "Sürüm", "1.0.027")
+                )
+                infoItems.forEachIndexed { index, item ->
+                    val infoCard = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(8), dp(12), dp(8), dp(12))
+                        setPadding(dp(12), dp(10), dp(12), dp(10))
+                        background = roundedDrawable(
+                            Color.argb(105, Color.red(panel), Color.green(panel), Color.blue(panel)),
+                            14, accent
+                        )
                     }
-                    infoRow.addView(TextView(this).apply {
+                    infoCard.addView(TextView(this).apply {
                         text = item.first
-                        textSize = 17f
-                        setTextColor(muted)
-                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    infoRow.addView(TextView(this).apply {
+                        textSize = if (isMobileLayout) 21f else 27f
+                        gravity = Gravity.CENTER
+                        setTextColor(accentBright)
+                    }, LinearLayout.LayoutParams(dp(if (isMobileLayout) 38 else 50), -1))
+                    infoCard.addView(View(this).apply {
+                        setBackgroundColor(accent)
+                        alpha = 0.5f
+                    }, LinearLayout.LayoutParams(dp(1), dp(42)).apply {
+                        setMargins(dp(8), 0, dp(12), 0)
+                    })
+                    val labels = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+                    labels.addView(TextView(this).apply {
                         text = item.second
-                        textSize = 17f
+                        textSize = if (isMobileLayout) 11f else 14f
+                        setTextColor(muted)
+                    })
+                    labels.addView(TextView(this).apply {
+                        text = item.third
+                        textSize = if (isMobileLayout) 13f else 17f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(Color.WHITE)
-                        gravity = Gravity.END
+                        maxLines = 1
                     })
-                    aboutPanel.addView(infoRow)
+                    infoCard.addView(labels, LinearLayout.LayoutParams(0, -1, 1f))
+                    infoColumn.addView(infoCard, LinearLayout.LayoutParams(-1, 0, 1f).apply {
+                        if (index > 0) topMargin = dp(8)
+                    })
                 }
-                content.addView(aboutPanel, LinearLayout.LayoutParams(-1, -1).apply {
+                aboutPanel.addView(infoColumn, LinearLayout.LayoutParams(0, -1, 1.12f))
+                content.addView(aboutPanel, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 300 else 390)).apply {
                     setMargins(dp(8), dp(8), dp(8), dp(8))
                 })
+                content.addView(TextView(this).apply {
+                    text = "© 2026 KaiserTV+ · Tüm hakları saklıdır."
+                    textSize = 12f
+                    setTextColor(muted)
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(10), 0, dp(8))
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
             "history" -> {
                 heading("Geçmiş", t("Daha önce izlediğin içerikler"))
