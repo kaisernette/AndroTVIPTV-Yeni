@@ -7421,39 +7421,30 @@ class MainActivity : Activity() {
                         val row = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.CENTER_VERTICAL
-                            minimumHeight = dp(37)
-                            setPadding(dp(4), dp(1), dp(8), dp(1))
+                            minimumHeight = dp(39)
+                            setPadding(dp(8), dp(2), dp(8), dp(2))
                         }
                         row.addView(TextView(this).apply {
-                            text = item.first
-                            textSize = 23f
-                            setTypeface(null, android.graphics.Typeface.BOLD)
-                            setTextColor(accentBright)
-                            gravity = Gravity.CENTER
-                        }, LinearLayout.LayoutParams(dp(38), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                            rightMargin = dp(8)
-                        })
-                        row.addView(TextView(this).apply {
                             text = aboutLabel(item.second)
-                            textSize = 13.5f
+                            textSize = 14f
                             setTextColor(muted)
                             maxLines = 1
                             ellipsize = android.text.TextUtils.TruncateAt.END
-                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.95f))
+                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.05f))
                         row.addView(TextView(this).apply {
                             text = ":"
                             textSize = 14f
                             setTextColor(muted)
-                            setPadding(dp(3), 0, dp(5), 0)
+                            setPadding(dp(3), 0, dp(6), 0)
                         })
                         row.addView(TextView(this).apply {
                             text = item.third
-                            textSize = 13.5f
+                            textSize = 14f
                             setTypeface(null, android.graphics.Typeface.BOLD)
                             setTextColor(Color.WHITE)
                             maxLines = 2
                             ellipsize = android.text.TextUtils.TruncateAt.END
-                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.35f))
+                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.25f))
                         column.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
                     columns.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
