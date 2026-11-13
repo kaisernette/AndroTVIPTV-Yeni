@@ -3666,13 +3666,13 @@ class MainActivity : Activity() {
             .sortedWith(compareBy<MediaItem> { it.sourceId }.thenBy { it.type }.thenBy { it.id })
             .forEach { item ->
                 digest.update(item.sourceId.toByteArray(Charsets.UTF_8))
-                digest.update(0)
+                digest.update(0.toByte())
                 digest.update(item.type.toByteArray(Charsets.UTF_8))
-                digest.update(0)
+                digest.update(0.toByte())
                 digest.update(item.id.toByteArray(Charsets.UTF_8))
-                digest.update(0)
+                digest.update(0.toByte())
                 digest.update(item.url.toByteArray(Charsets.UTF_8))
-                digest.update(0)
+                digest.update(0.toByte())
             }
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
