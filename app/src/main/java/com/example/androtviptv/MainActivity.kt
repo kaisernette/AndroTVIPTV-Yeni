@@ -7398,19 +7398,19 @@ class MainActivity : Activity() {
                         val card = LinearLayout(this).apply {
                             orientation = LinearLayout.VERTICAL
                             gravity = Gravity.CENTER_VERTICAL
-                            setPadding(dp(12), dp(12), dp(10), dp(12))
+                            setPadding(dp(18), dp(16), dp(18), dp(16))
                             background = roundedDrawable(panel, 14)
                         }
                         card.addView(TextView(this).apply {
                             text = item.third
-                            textSize = 21f
+                            textSize = 34f
                             setTypeface(null, android.graphics.Typeface.BOLD)
                             setTextColor(accentBright)
-                            setPadding(0, 0, 0, dp(5))
+                            setPadding(0, 0, 0, dp(8))
                         })
                         card.addView(TextView(this).apply {
                             text = aboutText(item.first)
-                            textSize = 14f
+                            textSize = 19f
                             setTypeface(null, android.graphics.Typeface.BOLD)
                             setTextColor(Color.WHITE)
                             maxLines = 1
@@ -7418,14 +7418,14 @@ class MainActivity : Activity() {
                         })
                         card.addView(TextView(this).apply {
                             text = item.second
-                            textSize = 12f
+                            textSize = 14f
                             setTextColor(muted)
                             maxLines = 2
                             ellipsize = android.text.TextUtils.TruncateAt.END
-                            setPadding(0, dp(4), 0, 0)
+                            setPadding(0, dp(8), 0, 0)
                         })
-                        row.addView(card, LinearLayout.LayoutParams(0, dp(112), 1f).apply {
-                            setMargins(dp(4), dp(4), dp(4), dp(4))
+                        row.addView(card, LinearLayout.LayoutParams(0, dp(142), 1f).apply {
+                            setMargins(dp(5), dp(7), dp(5), dp(7))
                         })
                     }
                     if (rowItems.size < 3) {
@@ -7435,32 +7435,32 @@ class MainActivity : Activity() {
                             })
                         }
                     }
-                    aboutGrid.addView(row, LinearLayout.LayoutParams(-1, dp(120)))
+                    aboutGrid.addView(row, LinearLayout.LayoutParams(-1, dp(156)))
                 }
 
                 val brandCard = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
-                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    setPadding(dp(18), dp(16), dp(18), dp(16))
                     background = roundedDrawable(panel, 14)
                 }
                 brandCard.addView(TextView(this).apply {
                     text = "KaiserTV+"
-                    textSize = 20f
+                    textSize = 19f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
                 })
                 brandCard.addView(TextView(this).apply {
                     text = "Kaisernet · 2026"
-                    textSize = 13f
+                    textSize = 14f
                     setTextColor(accentBright)
                     gravity = Gravity.CENTER
                     setPadding(0, dp(4), 0, 0)
                 })
                 val lastRow = aboutGrid.getChildAt(1) as? LinearLayout
-                lastRow?.addView(brandCard, 1, LinearLayout.LayoutParams(0, dp(112), 1f).apply {
-                    setMargins(dp(4), dp(4), dp(4), dp(4))
+                lastRow?.addView(brandCard, 1, LinearLayout.LayoutParams(0, dp(142), 1f).apply {
+                    setMargins(dp(5), dp(7), dp(5), dp(7))
                 })
                 content.addView(aboutGrid, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(dp(4), dp(4), dp(4), dp(4))
