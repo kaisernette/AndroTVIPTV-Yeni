@@ -1310,6 +1310,8 @@ class MainActivity : Activity() {
         mainContentScroll = ScrollView(this).apply {
             isFillViewport = true
             isFocusable = false
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
             // Keep scrolling posters inside the content viewport. Cards may still
             // scale within the viewport, but must never draw over the fixed header.
             clipChildren = true
@@ -4650,9 +4652,9 @@ class MainActivity : Activity() {
         // Without this top inset, the first row/cards slide underneath the header.
         content.setPadding(
             if (detailMode) 0 else dp(18),
-            if (detailMode) 0 else dp(18),
+            if (detailMode || selectedType == "Tümü") 0 else dp(18),
             if (detailMode) 0 else dp(30),
-            if (detailMode) 0 else dp(20)
+            if (detailMode) 0 else dp(12)
         )
         val firstEntry = items.isEmpty() && !isLoadingSource
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
@@ -5383,8 +5385,9 @@ class MainActivity : Activity() {
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                minimumHeight = dp(42)
-                setPadding(2, dp(4), 2, dp(6))
+                minimumHeight = dp(38)
+                // Align weekly headings on one baseline just below the fixed header.
+                setPadding(2, 0, 2, dp(2))
             }
             sectionHeader.addView(TextView(this).apply {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
@@ -5417,7 +5420,7 @@ class MainActivity : Activity() {
                 (groupName == t("Haftanın Filmleri") || groupName == t("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
-            val featureCardWidth = dp(if (isMobileLayout) 156 else 140) // Kart genişliği afişle aynı
+            val featureCardWidth = dp(if (isMobileLayout) 144 else 128) // Compact weekly poster width
             val displayedEntries = when {
                 posterGridMode -> entries.take(if (selectedType == "Canlı TV" && !showingExpandedCategory) 8 else mediaItemsLimit)
                 weeklyMovieFeature -> entries.take(8)
@@ -5491,8 +5494,8 @@ class MainActivity : Activity() {
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
-                        if (weeklyPoster) dp(if (isMobileLayout) 156 else 140) else -1,
-                        if (liveCard) dp(if (isMobileLayout) 96 else 88) else if (weeklyPoster) dp(if (isMobileLayout) 234 else 210) else if (posterGridMode) dp(if (isMobileLayout) 224 else 210) else if (homeCard) 230 else 210
+                        if (weeklyPoster) dp(if (isMobileLayout) 144 else 128) else -1,
+                        if (liveCard) dp(if (isMobileLayout) 96 else 88) else if (weeklyPoster) dp(if (isMobileLayout) 216 else 192) else if (posterGridMode) dp(if (isMobileLayout) 224 else 210) else if (homeCard) 230 else 210
                     )
                 }
                 card.addView(poster)
@@ -5586,7 +5589,8 @@ class MainActivity : Activity() {
                     clipChildren = false
                     clipToPadding = false
                     isFillViewport = true
-                    setPadding(dp(18), dp(14), dp(30), dp(12))
+                    overScrollMode = View.OVER_SCROLL_NEVER
+                    setPadding(dp(18), dp(4), dp(30), dp(8))
                     // Keep poster rows anchored to the left, even when there is only one item.
                     row.gravity = Gravity.START or Gravity.CENTER_VERTICAL
                     addView(row)
