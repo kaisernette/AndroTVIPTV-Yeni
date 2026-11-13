@@ -1010,8 +1010,10 @@ class MainActivity : Activity() {
                 return focused
             }
         }.apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, 14, 18, 12)
+            // Root is a vertical shell: fixed full-width header above the
+            // horizontally arranged navigation rail and scrolling content.
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, 18, 12)
             setBackgroundColor(bg)
         }
 
@@ -1027,7 +1029,14 @@ class MainActivity : Activity() {
             clipToPadding = false
         }
         val initialSidebarWidth = if (isMobileLayout) 142 else 150
-        root.addView(sidebar, LinearLayout.LayoutParams(dp(initialSidebarWidth), -1).apply { setMargins(0, 0, dp(if (isMobileLayout) 3 else 8), 0) })
+        val bodyRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            clipChildren = false
+            clipToPadding = false
+        }
+        bodyRow.addView(sidebar, LinearLayout.LayoutParams(dp(initialSidebarWidth), -1).apply {
+            setMargins(0, 0, dp(if (isMobileLayout) 3 else 8), 0)
+        })
 
         val primaryMenuColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1137,8 +1146,38 @@ class MainActivity : Activity() {
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER_VERTICAL
         }
+        val headerLogo = makeKaiserLogoView(if (isMobileLayout) 23f else 29f).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(22), 0, 0, 0)
+        }
+        dateClockRow.addView(headerLogo, LinearLayout.LayoutParams(dp(if (isMobileLayout) 205 else 260), -1))
+        dateClockRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        val headerSearchButton = makeButton("Ara", false) {
+            detailSeries = null
+            detailMovie = null
+            sidebarMode = "search"
+            searchInputFocusPending = true
+            searchQuery = ""
+            selectedType = "Tümü"
+            selectedGroup = "Tüm kategoriler"
+            expandedCategory = null
+            render()
+        }.apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            contentDescription = "Ara"
+            setPadding(dp(12), 0, dp(12), 0)
+            background = ColorDrawable(Color.TRANSPARENT)
+            nextFocusDownId = View.NO_ID
+        }
+        searchNavigationButton = headerSearchButton
+        dateClockRow.addView(headerSearchButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply {
+            setMargins(0, 0, dp(18), 0)
+        })
         dateClockRow.addView(headerDateView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
-        dateClockRow.addView(headerTimeView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
+        dateClockRow.addView(headerTimeView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1).apply {
+            setMargins(dp(14), 0, dp(22), 0)
+        })
         headerClockHandler.removeCallbacks(headerClockRunnable)
         // The clock/date strip is attached later as an overlay above the scrolling viewport.
         // This keeps it fixed while every tab scrolls underneath it.
@@ -1268,25 +1307,14 @@ class MainActivity : Activity() {
             clipChildren = true
             clipToPadding = true
         }
-        content.setPadding(dp(14), dp(76), dp(14), dp(16))
+        content.setPadding(dp(14), dp(18), dp(14), dp(16))
         mainContentScroll.addView(content)
-        val mainContentFrame = FrameLayout(this).apply {
-            clipChildren = false
-            clipToPadding = false
-        }
-        mainContentFrame.addView(mainContentScroll, FrameLayout.LayoutParams(-1, -1))
-        dateClockRow.layoutParams = FrameLayout.LayoutParams(-1, dp(64), Gravity.TOP or Gravity.END)
-        dateClockRow.background = GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(
-                Color.argb(246, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                Color.argb(224, Color.red(bg), Color.green(bg), Color.blue(bg)),
-                Color.argb(0, Color.red(bg), Color.green(bg), Color.blue(bg))
-            )
-        )
+        main.addView(mainContentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         dateClockRow.isFocusable = false
-        mainContentFrame.addView(dateClockRow)
-        main.addView(mainContentFrame, LinearLayout.LayoutParams(-1, 0, 1f))
+        dateClockRow.background = ColorDrawable(Color.TRANSPARENT)
+        root.addView(dateClockRow, LinearLayout.LayoutParams(-1, dp(66)))
+        bodyRow.addView(main, LinearLayout.LayoutParams(0, -1, 1f))
+        root.addView(bodyRow, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
         dateClockRow.post {
             headerClockRunnable.run()
@@ -4608,13 +4636,15 @@ class MainActivity : Activity() {
         // Without this top inset, the first row/cards slide underneath the header.
         content.setPadding(
             if (detailMode) 0 else dp(18),
-            if (detailMode) 0 else dp(82),
+            if (detailMode) 0 else dp(18),
             if (detailMode) 0 else dp(30),
             if (detailMode) 0 else dp(20)
         )
         val firstEntry = items.isEmpty() && !isLoadingSource
         if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
-        if (::brandView.isInitialized) brandView.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
+        // Logo is now part of the full-width fixed top header, never the sidebar.
+        if (::brandView.isInitialized) brandView.visibility = View.GONE
+        if (::searchBar.isInitialized) searchBar.visibility = View.GONE
         if (::rootLayout.isInitialized) {
             rootLayout.setPadding(if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(14),
                 if (detailMode) 0 else dp(18), if (detailMode) 0 else dp(12))
@@ -4638,7 +4668,7 @@ class MainActivity : Activity() {
         }
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
-            if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
+            if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = View.GONE // İçerik sayısı/kaynak adı üst başlıkta gösterilmez.
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
