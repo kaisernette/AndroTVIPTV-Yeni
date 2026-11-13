@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.Bitmap
