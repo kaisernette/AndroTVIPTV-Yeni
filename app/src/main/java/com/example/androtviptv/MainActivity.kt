@@ -2379,13 +2379,10 @@ class MainActivity : Activity() {
             val sourceToRestore = last ?: savedSources.lastOrNull()
             sourceToRestore?.let { applySourceTheme(it, persist = true) }
             val restoredSourceItems = items.filter { it.sourceId == sourceToRestore?.id }
-            val cacheHasLiveChannels = restoredSourceItems.any { it.type == "Canlı TV" && it.url.isNotBlank() }
-            val cacheHasMovies = restoredSourceItems.any { it.type == "Filmler" }
-            val cacheHasSeries = restoredSourceItems.any { it.type == "Diziler" }
-            // A cache missing any major Xtream section must not be treated as complete.
-            // In particular, otherwise TV can open into an empty "Tüm Kanallar" screen.
+            // Xtream sections may legitimately be empty. Validate a completed, source-specific
+            // catalogue snapshot instead of requiring at least one record in every section.
             val cacheNeedsRepair = sourceToRestore?.mode == "xtream" &&
-                (!cacheHasLiveChannels || !cacheHasMovies || !cacheHasSeries)
+                !hasCompleteXtreamCache(sourceToRestore, restoredSourceItems)
             if (items.isNotEmpty() && !cacheNeedsRepair) {
                 val availableGroups = items.map { it.group.ifBlank { "Diğer" } }.toSet()
                 if (selectedGroup != "Tüm kategoriler" && selectedGroup !in availableGroups) {
@@ -3653,6 +3650,26 @@ class MainActivity : Activity() {
         return cmd.removePrefix("ffmpeg ").removePrefix("ffrt ").trim()
     }
 
+    private fun xtreamCacheStateKey(source: SavedSource): String =
+        "xtream_catalog_state_" + source.id
+
+    private fun xtreamCacheSignature(source: SavedSource): String {
+        val raw = listOf(source.address.trim(), source.username, source.password).joinToString("\u001f")
+        return java.security.MessageDigest.getInstance("SHA-256")
+            .digest(raw.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+
+    private fun hasCompleteXtreamCache(source: SavedSource, cached: List<MediaItem>): Boolean {
+        val state = prefs.getString(xtreamCacheStateKey(source), null) ?: return false
+        val parts = state.split(":", limit = 2)
+        if (parts.size != 2 || parts[0] != xtreamCacheSignature(source)) return false
+        val expectedCount = parts[1].toIntOrNull() ?: return false
+        // A positive count guards against marking a catalogue complete before its
+        // asynchronous disk snapshot has actually become available.
+        return expectedCount > 0 && cached.size == expectedCount
+    }
+
     private fun loadXtream(source: SavedSource, append: Boolean) {
         applySourceTheme(source)
         val base = source.address.trimEnd('/')
@@ -3662,7 +3679,10 @@ class MainActivity : Activity() {
             status.text = "Sunucu, kullanıcı adı ve şifre alanlarını doldur."
             return
         }
-        prefs.edit().putString("last_source_id", source.id).apply()
+        prefs.edit()
+            .putString("last_source_id", source.id)
+            .remove(xtreamCacheStateKey(source))
+            .apply()
         isLoadingSource = true
         loadProgress = 0
         status.text = "${source.name}: ${t("TV, filmler ve diziler yükleniyor…")}"
@@ -3839,6 +3859,13 @@ class MainActivity : Activity() {
                         loadProgress = 100
                         status.visibility = View.VISIBLE
                         status.text = if (failedParts.isEmpty()) {
+                            val sourceItemCount = items.count { it.sourceId == source.id }
+                            if (sourceItemCount > 0) {
+                                prefs.edit().putString(
+                                    xtreamCacheStateKey(source),
+                                    "${xtreamCacheSignature(source)}:$sourceItemCount"
+                                ).apply()
+                            }
                             "${source.name}: ${totalLoaded} içerik yüklendi."
                         } else {
                             "${source.name}: ${totalLoaded} içerik yüklendi. Eksik yanıt: ${failedParts.distinct().joinToString()}."
