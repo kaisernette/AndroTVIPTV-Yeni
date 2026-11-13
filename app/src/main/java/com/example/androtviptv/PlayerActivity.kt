@@ -189,8 +189,11 @@ class PlayerActivity : Activity() {
             panel.addView(episodeCountdownProgress, LinearLayout.LayoutParams(-1, dp(3)).apply {
                 topMargin = dp(8)
             })
-            root.addView(panel, FrameLayout.LayoutParams(dp(520), ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(28) })
+            root.addView(panel, FrameLayout.LayoutParams(dp(440), ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.END).apply {
+                topMargin = dp(28)
+                marginEnd = dp(32)
+            })
             episodeTransitionOverlay = panel
             episodeCountdownIndex = nextIndex
             panel.animate().alpha(1f).setDuration(160).start()
@@ -865,6 +868,12 @@ class PlayerActivity : Activity() {
                     }
                     exo.prepare()
                     exo.playWhenReady = true
+                    episodeTransitionHandler.removeCallbacks(episodeCountdownRunnable)
+                    if (!isLiveStream && episodeUrls.size > 1) {
+                        episodeTransitionHandler.post(episodeCountdownRunnable)
+                    } else {
+                        clearEpisodeCountdown()
+                    }
                 }
             playbackHandler.removeCallbacks(playbackWatchdog)
             playbackHandler.postDelayed(playbackWatchdog, 5000L)
@@ -1249,7 +1258,7 @@ class PlayerActivity : Activity() {
         lastStablePlaybackMs = 0L
         resumeKey = "position_" + url.hashCode().toString()
         episodeTransitionHandler.removeCallbacks(episodeCountdownRunnable)
-        episodeTransitionHandler.post(episodeCountdownRunnable)
+        clearEpisodeCountdown()
         player?.let { exo -> exo.setMediaItem(createStreamMediaItem(url)); exo.prepare(); exo.playWhenReady = true }
         refreshChannelHighlight()
         updateContentInfo()
