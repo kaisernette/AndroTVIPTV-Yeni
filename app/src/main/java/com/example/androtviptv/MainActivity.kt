@@ -993,12 +993,6 @@ class MainActivity : Activity() {
                             return firstCategoryFocusView ?: focused
                         }
                     }
-                    if (direction == View.FOCUS_LEFT && contextNavigationStage == 2 &&
-                        ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)) {
-                        showContextNavigationStage(1)
-                        firstCategoryFocusView?.post { firstCategoryFocusView?.requestFocus() }
-                        return firstCategoryFocusView ?: focused
-                    }
                     if (direction == View.FOCUS_RIGHT && contextNavigationStage == 1 &&
                         ::categoryListScroll.isInitialized && isDescendantView(categoryListScroll, focused)) {
                         showContextNavigationStage(2)
@@ -1009,8 +1003,7 @@ class MainActivity : Activity() {
                 val focusIsInSidebar = ::sidebar.isInitialized && isDescendantView(sidebar, focused)
                 val focusIsInContent = ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)
                 val candidate = super.focusSearch(focused, direction)
-                val crossingAllowed = (focusIsInSidebar && direction == View.FOCUS_RIGHT) ||
-                    (focusIsInContent && direction == View.FOCUS_LEFT)
+                val crossingAllowed = focusIsInSidebar && direction == View.FOCUS_RIGHT
                 val candidateIsInSidebar = candidate != null && ::sidebar.isInitialized &&
                     isDescendantView(sidebar, candidate)
                 val crossesBoundary = (focusIsInSidebar && candidate != null && !candidateIsInSidebar) ||
@@ -1188,8 +1181,15 @@ class MainActivity : Activity() {
             isFocusable = true
             isFocusableInTouchMode = true
             contentDescription = "Ara"
-            background = ColorDrawable(Color.TRANSPARENT)
+            background = roundedDrawable(Color.TRANSPARENT, 12)
             nextFocusDownId = View.NO_ID
+            setOnFocusChangeListener { view, hasFocus ->
+                view.background = if (hasFocus) roundedDrawable(panel, 12, accentBright)
+                    else ColorDrawable(Color.TRANSPARENT)
+                view.scaleX = if (hasFocus) 1.10f else 1f
+                view.scaleY = if (hasFocus) 1.10f else 1f
+                view.elevation = if (hasFocus) dp(8).toFloat() else 0f
+            }
             setOnClickListener {
                 detailSeries = null
                 detailMovie = null
@@ -1786,8 +1786,7 @@ class MainActivity : Activity() {
                         setOnKeyListener { _, keyCode, event ->
                             if (event.action == android.view.KeyEvent.ACTION_DOWN &&
                                 keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                                showContextNavigationStage(0)
-                                selectedSidebarFocusView?.post { selectedSidebarFocusView?.requestFocus() }
+                                // Left does not leave the category list; use Back to return home.
                                 true
                             } else if (event.action == android.view.KeyEvent.ACTION_DOWN &&
                                 keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
@@ -1809,6 +1808,7 @@ class MainActivity : Activity() {
                     if (button.id == View.NO_ID) button.id = View.generateViewId()
                     button.nextFocusLeftId = selectedSidebarFocusView?.id ?: View.NO_ID
                     if (categoryIndex == 0) {
+                        button.nextFocusUpId = button.id
                         firstCategoryFocusView = button
                         selectedSidebarFocusView?.let { navButton ->
                             button.nextFocusLeftId = navButton.id
@@ -1822,6 +1822,7 @@ class MainActivity : Activity() {
                             previousCategory.nextFocusDownId = button.id
                         }
                     }
+                    if (categoryIndex == grouped.lastIndex) button.nextFocusDownId = button.id
                     categoryPanel.addView(button, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(0, dp(2), 0, dp(2))
                     })
@@ -4369,15 +4370,17 @@ class MainActivity : Activity() {
             }
 
             if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) {
-                // Return to the main navigation while preserving the tab the user entered from.
-                val returnTab = selectedType
+                // Back from a context tab returns to the populated Home screen.
                 expandedCategory = null
                 selectedGroup = "Tüm kategoriler"
                 focusedCategoryName = null
+                selectedType = "Tümü"
                 sidebarMode = "main"
-                prefs.edit().putString("last_section", returnTab).putString("last_group", "Tüm kategoriler").apply()
+                contextNavigationStage = 0
+                prefs.edit().putString("last_section", "Tümü").putString("last_group", "Tüm kategoriler").apply()
                 rebuildNavigation()
                 render()
+                mainContentScroll.post { mainContentScroll.scrollTo(0, 0) }
                 return
             }
 
@@ -5309,7 +5312,7 @@ class MainActivity : Activity() {
                         setMargins(dp(3), dp(2), dp(3), dp(4))
                     })
                 }
-                if (displayedTvChannels.size < tvChannels.size) {
+                if (selectedGroup == "Tüm kategoriler" && expandedCategory == null && displayedTvChannels.size < tvChannels.size) {
                     content.addView(makeButton("Daha fazla kanal göster  (${displayedTvChannels.size}/${tvChannels.size})", false) {
                         liveChannelsLimit = (liveChannelsLimit + 72).coerceAtMost(tvChannels.size)
                         render()
@@ -5659,7 +5662,7 @@ class MainActivity : Activity() {
 
             if (posterGridMode) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                if (displayedEntries.size < entries.size) {
+                if (selectedGroup == "Tüm kategoriler" && expandedCategory == null && displayedEntries.size < entries.size) {
                     content.addView(makeButton(
                         "Daha fazla içerik göster  (${displayedEntries.size}/${entries.size})", false
                     ) {
@@ -6869,7 +6872,6 @@ class MainActivity : Activity() {
                 if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
                     option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
                 }
-                option("Stalker Bölüm API Tanılaması", "Dizi bölüm isteklerinin ayrı kaydını görüntüle ve kopyala") { showStalkerSeriesEndpointDiagnostics() }
                 option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "language" -> {
