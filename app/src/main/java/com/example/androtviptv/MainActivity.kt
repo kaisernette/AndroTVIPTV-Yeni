@@ -5158,8 +5158,10 @@ class MainActivity : Activity() {
             val displayedTvChannels = tvChannels.take(liveChannelsLimit)
             if (tvChannels.isEmpty()) {
                 content.addView(TextView(this).apply {
-                    text = t("Bu kategoride kanal bulunamadı.")
-                    textSize = 15f; setTextColor(muted); setPadding(dp(8), dp(12), dp(8), dp(12))
+                    text = t("Canlı kanallarını keşfet")
+                    textSize = 16f
+                    setTextColor(muted)
+                    setPadding(dp(8), dp(4), dp(8), dp(12))
                 })
             } else {
                 var channelRow: LinearLayout? = null
@@ -5243,34 +5245,46 @@ class MainActivity : Activity() {
             return
         }
         if (visible.isEmpty() && !(sidebarMode == "search" && query.isBlank())) {
+            // Minimal section-aware title and subtitle; no bordered empty-state panel.
+            val sectionTitle = when {
+                sidebarMode == "search" -> "Arama Sonuçları"
+                selectedType == "Canlı TV" -> "Canlı Yayın"
+                selectedType == "Filmler" -> "Sinema Dünyası"
+                selectedType == "Diziler" -> "Dizi Arşivi"
+                selectedType == "Favoriler" -> "Favori Koleksiyonun"
+                selectedType == "Son İzlenenler" -> "İzlemeye Devam Et"
+                else -> "Keşfetmeye başla"
+            }
+            val sectionSubtitle = when {
+                sidebarMode == "search" -> "Aradığın içerikler burada"
+                selectedType == "Canlı TV" -> "Canlı kanallarını keşfet"
+                selectedType == "Filmler" -> "Filmler arasında keşfe çık"
+                selectedType == "Diziler" -> "Sevdiğin dizileri keşfet"
+                selectedType == "Favoriler" -> "Kaydettiğin içerikler"
+                selectedType == "Son İzlenenler" -> "Son izlediğin içerikler"
+                else -> "Senin için seçilen içerikler"
+            }
             val empty = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
-                setPadding(24, 24, 24, 24); background = roundedDrawable(panel, 18, Color.rgb(42, 49, 64))
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.TOP
+                setPadding(dp(8), dp(2), dp(8), dp(12))
+                background = ColorDrawable(Color.TRANSPARENT)
             }
             empty.addView(TextView(this).apply {
-                text = t(when {
-                    sidebarMode == "search" && query.isBlank() -> "Tüm kaynaklarda ara"
-                    sidebarMode == "search" -> "Arama sonucu bulunamadı"
-                    selectedType == "Favoriler" -> "Henüz favori eklemedin"
-                    selectedType == "Son İzlenenler" -> "İzleme geçmişin burada görünecek"
-                    else -> "Kütüphanen seni bekliyor"
-                })
-                textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
-                setPadding(dp(8), 0, dp(4), 0)
-            })
+                text = t(sectionTitle)
+                textSize = 27f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                setPadding(0, 0, 0, dp(5))
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             empty.addView(TextView(this).apply {
-                text = t(when {
-                    sidebarMode == "search" && query.isBlank() -> "Film, dizi veya kanal adını yaz. Bütün kayıtlı kaynaklar taranır."
-                    sidebarMode == "search" -> "Başka bir kelime deneyebilir veya yazımı kontrol edebilirsin."
-                    selectedType == "Favoriler" -> "Bir içerikte yıldız düğmesine basarak favorilerine ekle."
-                    selectedType == "Son İzlenenler" -> "Bir içerik oynattığında burada kolayca devam edebilirsin."
-                    items.isEmpty() -> "Başlamak için kendi M3U/M3U8 veya Xtream kaynağını ekle."
-                    else -> "Bu bölümde şu anda gösterilecek içerik yok."
-                })
-                textSize = 14f; setTextColor(muted); setPadding(dp(8), 7, dp(4), 14)
+                text = t(sectionSubtitle)
+                textSize = 16f
+                setTextColor(muted)
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(0, 0, 0, dp(12))
             })
-            // Kaynak ekleme işlemi ilk açılış formundan yapılır; ikinci CTA kaldırıldı.
-            content.addView(empty, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 10, 0, 16) })
             if (selectedType in listOf("Favoriler", "Son İzlenenler")) {
                 rebuildNavigation()
                 requestSectionFocusAfterRender()
