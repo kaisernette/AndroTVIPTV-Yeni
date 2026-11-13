@@ -1096,7 +1096,9 @@ class MainActivity : Activity() {
             clipChildren = false
             clipToPadding = false
         }
-        root.addView(main, LinearLayout.LayoutParams(0, -1, 1f))
+        // main is attached exactly once, inside bodyRow below.
+        // Adding it to root here as well causes "child already has a parent"
+        // during Activity startup and the app immediately crashes.
 
         mainHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
