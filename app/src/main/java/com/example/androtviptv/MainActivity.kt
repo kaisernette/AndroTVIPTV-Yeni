@@ -666,6 +666,18 @@ class MainActivity : Activity() {
     private var bg = Color.rgb(17, 20, 25)
     // Shared cinematic anthracite surface used consistently across the app.
     private var panel = Color.rgb(8, 10, 14)
+
+    // Card and panel fill follows the visible swatch of the selected theme.
+    private fun themePanelColor(name: String): Int = when (name) {
+        "Gece • Altın" -> Color.rgb(15, 16, 20)
+        "Gece • Buzul" -> Color.rgb(16, 24, 32)
+        "Orman • Zümrüt" -> Color.rgb(16, 27, 24)
+        "Gece • Yakut" -> Color.rgb(25, 20, 23)
+        "Gece • Lavanta" -> Color.rgb(23, 21, 29)
+        "Lacivert • Turkuaz" -> Color.rgb(16, 24, 32)
+        "Koyu • Mor" -> Color.rgb(23, 21, 29)
+        else -> Color.rgb(8, 10, 14)
+    }
     private var accent = Color.rgb(0, 166, 255)
     private var accentBright = Color.rgb(72, 190, 255)
     // Focus styling is independent from the selectable app theme.
@@ -698,7 +710,7 @@ class MainActivity : Activity() {
             "mac" -> Color.rgb(23, 21, 29)
             else -> Color.rgb(17, 20, 25)
         }
-        panel = Color.rgb(8, 10, 14)
+        panel = themePanelColor(name)
         window.statusBarColor = bg
         window.navigationBarColor = bg
         if (persist) {
@@ -733,11 +745,15 @@ class MainActivity : Activity() {
         gradientBackground = prefs.getBoolean("gradient_background", prefs.getBoolean("glass_panel_background", true))
         customBackgroundUri = prefs.getString("custom_background_uri", null)
         if (!prefs.contains("gradient_background")) prefs.edit().putBoolean("gradient_background", gradientBackground).apply()
-        // Restore the selected KaiserTV Global theme before constructing any views.
-        if (!prefs.getBoolean("global_themes_initialized", false)) {
-            prefs.edit().putString("theme_name", "Antrasit • Mavi").putBoolean("global_themes_initialized", true).apply()
+        // Default to Night • Glacier. Migrate the previous untouched default once.
+        if (!prefs.getBoolean("theme_default_glacier_applied", false)) {
+            val previousTheme = prefs.getString("theme_name", null)
+            if (previousTheme == null || previousTheme == "Antrasit • Mavi") {
+                prefs.edit().putString("theme_name", "Gece • Buzul").apply()
+            }
+            prefs.edit().putBoolean("theme_default_glacier_applied", true).apply()
         }
-        when (prefs.getString("theme_name", "Antrasit • Mavi")) {
+        when (prefs.getString("theme_name", "Gece • Buzul")) {
             "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
             "Gece • Buzul" -> { bg = Color.rgb(0, 0, 0); accent = Color.rgb(84, 198, 217); accentBright = accent }
             "Orman • Zümrüt" -> { bg = Color.rgb(16, 27, 24); accent = Color.rgb(32, 201, 151); accentBright = accent }
@@ -747,7 +763,7 @@ class MainActivity : Activity() {
             "Koyu • Mor" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
             else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
         }
-        panel = Color.rgb(8, 10, 14)
+        panel = themePanelColor(prefs.getString("theme_name", "Gece • Buzul") ?: "Gece • Buzul")
         window.statusBarColor = bg; window.navigationBarColor = bg
         favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
         try {
@@ -7267,7 +7283,7 @@ class MainActivity : Activity() {
                     Triple("Gece • Yakut", Color.rgb(25, 20, 23), Color.rgb(240, 100, 121)),
                     Triple("Gece • Lavanta", Color.rgb(23, 21, 29), Color.rgb(167, 139, 250))
                 )
-                val selectedTheme = prefs.getString("theme_name", "Antrasit • Mavi")
+                val selectedTheme = prefs.getString("theme_name", "Gece • Buzul")
                 themes.chunked(3).forEach { themeRow ->
                     val row = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
@@ -7298,7 +7314,7 @@ class MainActivity : Activity() {
                             }
                             setOnClickListener {
                                 bg = theme.second
-                                panel = Color.rgb(8, 10, 14)
+                                panel = themePanelColor(theme.first)
                                 accent = theme.third
                                 accentBright = theme.third
                                 prefs.edit().putString("theme_name", theme.first).apply()
