@@ -1077,7 +1077,8 @@ class MainActivity : Activity() {
         primaryMenuColumn.tag = "primary-navigation"
         categoryPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(8), dp(78), dp(4), dp(8))
+            // Align the Back label with the content section headings below the fixed top bar.
+            setPadding(dp(8), dp(20), dp(4), dp(8))
             clipChildren = false
         }
         categoryListScroll = ScrollView(this).apply {
@@ -5267,7 +5268,8 @@ class MainActivity : Activity() {
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.TOP
-                setPadding(dp(8), dp(2), dp(8), dp(12))
+                // Match the vertical baseline used by the TV, Movies and Series section headings.
+                setPadding(dp(8), dp(22), dp(8), dp(12))
                 background = ColorDrawable(Color.TRANSPARENT)
             }
             empty.addView(TextView(this).apply {
