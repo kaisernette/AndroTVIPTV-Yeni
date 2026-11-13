@@ -229,10 +229,10 @@ class PlayerActivity : Activity() {
                 if (next in episodeUrls.indices && remaining in 1L..10_000L) {
                     val seconds = kotlin.math.ceil(remaining / 1000.0).toInt().coerceIn(1, 10)
                     updateEpisodeCountdown(next, seconds)
-                } else if (episodeCountdownOverlay != null) {
+                } else if (episodeTransitionOverlay != null) {
                     clearEpisodeCountdown()
                 }
-            } else if (episodeCountdownOverlay != null) {
+            } else if (episodeTransitionOverlay != null) {
                 clearEpisodeCountdown()
             }
             if (!isFinishing) episodeTransitionHandler.postDelayed(this, 500L)
