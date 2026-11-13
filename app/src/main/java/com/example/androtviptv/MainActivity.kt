@@ -2367,16 +2367,29 @@ class MainActivity : Activity() {
         }
 
         if (savedSources.isNotEmpty()) {
-            // Keep the user's last selected source across Activity recreation (including language changes).
+            // Respect the explicit source switches. Older installations did not
+            // persist selected_source_ids, so migrate their last source once.
+            // An explicitly stored empty set means the user disabled every source;
+            // never silently reactivate the built-in demo or another saved source.
             val lastId = prefs.getString("last_source_id", null)
-            val last = savedSources.firstOrNull { it.id == lastId } ?: savedSources.firstOrNull()
-            if (last != null && last.id != lastId) {
-                prefs.edit().putString("last_source_id", last.id).apply()
+            val selectedIds = if (prefs.contains("selected_source_ids")) {
+                prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()
+            } else {
+                val legacyId = lastId?.takeIf { id -> savedSources.any { it.id == id } }
+                val migrated = legacyId?.let { setOf(it) } ?: emptySet()
+                prefs.edit().putStringSet("selected_source_ids", migrated).apply()
+                migrated
+            }
+            val activeSource = savedSources.firstOrNull { it.id in selectedIds }
+            if (activeSource == null) {
+                prefs.edit().putString("last_source_id", "").apply()
+            } else if (activeSource.id != lastId) {
+                prefs.edit().putString("last_source_id", activeSource.id).apply()
             }
 
-            // Validate the cache against the selected source, not against items
-            // belonging to any other saved source.
-            val sourceToRestore = last ?: savedSources.lastOrNull()
+            // Restore only an explicitly enabled source. Cached data belonging
+            // to disabled sources remains on disk but is never auto-activated.
+            val sourceToRestore = activeSource
             sourceToRestore?.let { applySourceTheme(it, persist = true) }
             val restoredSourceItems = items.filter { it.sourceId == sourceToRestore?.id }
             // Xtream sections may legitimately be empty. Validate a completed, source-specific
