@@ -871,6 +871,8 @@ class MainActivity : Activity() {
     private var firstCategoryFocusView: View? = null
     private var selectedSidebarFocusView: View? = null
     private var firstRightContentFocusView: View? = null
+    private var searchNavigationButton: View? = null
+    private var homeNavigationButton: View? = null
     private var initialSidebarFocusPending = true
     private var isLoadingSource = false
     private var loadProgress = 0
@@ -1138,7 +1140,8 @@ class MainActivity : Activity() {
         dateClockRow.addView(headerDateView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
         dateClockRow.addView(headerTimeView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
         headerClockHandler.removeCallbacks(headerClockRunnable)
-        main.addView(dateClockRow, 0, LinearLayout.LayoutParams(-1, dp(48)))
+        // The clock/date strip is attached later as an overlay above the scrolling viewport.
+        // This keeps it fixed while every tab scrolls underneath it.
 
         main.addView(mainHeader)
 
@@ -1265,8 +1268,25 @@ class MainActivity : Activity() {
             clipChildren = true
             clipToPadding = true
         }
+        content.setPadding(dp(14), dp(76), dp(14), dp(16))
         mainContentScroll.addView(content)
-        main.addView(mainContentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        val mainContentFrame = FrameLayout(this).apply {
+            clipChildren = false
+            clipToPadding = false
+        }
+        mainContentFrame.addView(mainContentScroll, FrameLayout.LayoutParams(-1, -1))
+        dateClockRow.layoutParams = FrameLayout.LayoutParams(-1, dp(64), Gravity.TOP or Gravity.END)
+        dateClockRow.background = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(
+                Color.argb(246, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                Color.argb(224, Color.red(bg), Color.green(bg), Color.blue(bg)),
+                Color.argb(0, Color.red(bg), Color.green(bg), Color.blue(bg))
+            )
+        )
+        dateClockRow.isFocusable = false
+        mainContentFrame.addView(dateClockRow)
+        main.addView(mainContentFrame, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
         dateClockRow.post {
             headerClockRunnable.run()
@@ -1319,6 +1339,8 @@ class MainActivity : Activity() {
             categoryPanel.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         }
         navBar.removeAllViews()
+        searchNavigationButton = null
+        homeNavigationButton = null
         if (::searchBar.isInitialized) searchBar.removeAllViews()
         if (::settingsBar.isInitialized) settingsBar.removeAllViews()
         // Re-enable descendant focus immediately after old children are detached.
@@ -1408,6 +1430,10 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL
                 setMargins(0, dp(1), 0, dp(1))
             })
+            when {
+                label == "Ara" -> searchNavigationButton = sidebarButton
+                label.contains("Ana Sayfa") -> homeNavigationButton = sidebarButton
+            }
             if (selected) selectedSidebarFocusView = sidebarButton
         }
 
@@ -1535,6 +1561,15 @@ class MainActivity : Activity() {
                 }
             }
             if (sidebarMode == "main") return
+        }
+
+        // Search is deliberately outside the automatic initial-focus path.
+        // It can only be reached by explicit D-pad navigation from the Home tab.
+        searchNavigationButton?.let { searchButton ->
+            homeNavigationButton?.let { homeButton ->
+                searchButton.nextFocusDownId = homeButton.id
+                homeButton.nextFocusUpId = searchButton.id
+            }
         }
 
         if (sidebarMode == "context") {
@@ -4601,7 +4636,7 @@ class MainActivity : Activity() {
         }
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
-            if (firstEntry || isLoadingSource || detailMode || selectedType == "Ayarlar") View.GONE else View.VISIBLE
+            if (firstEntry || isLoadingSource) View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = View.GONE // İçerik sayısı/kaynak adı üst başlıkta gösterilmez.
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
