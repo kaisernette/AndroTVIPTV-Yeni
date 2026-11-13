@@ -8071,6 +8071,16 @@ class MainActivity : Activity() {
         }
         openingPlayer = true
         try {
+            // Persist the exact playback transition so a TV-side crash can be tied to
+            // the selected item and memory state on the next app launch.
+            runCatching {
+                val runtime = Runtime.getRuntime()
+                val usedMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024L * 1024L)
+                val maxMb = runtime.maxMemory() / (1024L * 1024L)
+                getSharedPreferences("androtv_diagnostics", MODE_PRIVATE).edit()
+                    .putString("last_ui_state", "Oynatıcıya geçiş; tür=${item.type}; içerik=${item.name.take(90)}; urlŞeması=${android.net.Uri.parse(item.url).scheme}; heap=${usedMb}/${maxMb}MB")
+                    .commit()
+            }
             // Önizleme oynatıcısını kapat; tam ekran için yeni ExoPlayer açılacak.
             previewView?.player = null
             previewPlayer?.runCatching { stop() }
