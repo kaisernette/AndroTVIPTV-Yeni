@@ -3660,14 +3660,32 @@ class MainActivity : Activity() {
             .joinToString("") { "%02x".format(it) }
     }
 
+    private fun xtreamCacheContentSignature(cached: List<MediaItem>): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        cached.asSequence()
+            .sortedWith(compareBy<MediaItem> { it.sourceId }.thenBy { it.type }.thenBy { it.id })
+            .forEach { item ->
+                digest.update(item.sourceId.toByteArray(Charsets.UTF_8))
+                digest.update(0)
+                digest.update(item.type.toByteArray(Charsets.UTF_8))
+                digest.update(0)
+                digest.update(item.id.toByteArray(Charsets.UTF_8))
+                digest.update(0)
+                digest.update(item.url.toByteArray(Charsets.UTF_8))
+                digest.update(0)
+            }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
     private fun hasCompleteXtreamCache(source: SavedSource, cached: List<MediaItem>): Boolean {
         val state = prefs.getString(xtreamCacheStateKey(source), null) ?: return false
-        val parts = state.split(":", limit = 2)
-        if (parts.size != 2 || parts[0] != xtreamCacheSignature(source)) return false
+        val parts = state.split(":", limit = 3)
+        if (parts.size != 3 || parts[0] != xtreamCacheSignature(source)) return false
         val expectedCount = parts[1].toIntOrNull() ?: return false
-        // A positive count guards against marking a catalogue complete before its
-        // asynchronous disk snapshot has actually become available.
-        return expectedCount > 0 && cached.size == expectedCount
+        // Compare the actual restored catalogue too: a stale asynchronous disk write
+        // with the same record count must not be mistaken for the latest snapshot.
+        return expectedCount > 0 && cached.size == expectedCount &&
+            parts[2] == xtreamCacheContentSignature(cached)
     }
 
     private fun loadXtream(source: SavedSource, append: Boolean) {
@@ -3863,7 +3881,7 @@ class MainActivity : Activity() {
                             if (sourceItemCount > 0) {
                                 prefs.edit().putString(
                                     xtreamCacheStateKey(source),
-                                    "${xtreamCacheSignature(source)}:$sourceItemCount"
+                                    "${xtreamCacheSignature(source)}:$sourceItemCount:${xtreamCacheContentSignature(items.filter { it.sourceId == source.id })}"
                                 ).apply()
                             }
                             "${source.name}: ${totalLoaded} içerik yüklendi."
