@@ -5206,10 +5206,13 @@ class MainActivity : Activity() {
         }
         val selectedSourceIds = prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()
         val activeSourceId = prefs.getString("last_source_id", "") ?: ""
-        val activeSourceItemsBase = if (selectedSourceIds.size > 1) items.filter { selectedSourceIds.contains(it.sourceId) }
-            else if (selectedSourceIds.size == 1) items.filter { it.sourceId == selectedSourceIds.first() }
-            else if (activeSourceId.isBlank()) items.toList()
-            else items.filter { it.sourceId == activeSourceId }
+        // No enabled source means no catalogue is eligible for display.
+        // Falling back to every cached item here leaked content from disabled sources.
+        val activeSourceItemsBase = when {
+            selectedSourceIds.isNotEmpty() -> items.filter { selectedSourceIds.contains(it.sourceId) }
+            activeSourceId.isNotBlank() -> items.filter { it.sourceId == activeSourceId }
+            else -> emptyList()
+        }
         if (selectedCategorySourceId.isBlank() || activeSourceItemsBase.none { it.sourceId == selectedCategorySourceId }) {
             selectedCategorySourceId = activeSourceId.takeIf { id -> activeSourceItemsBase.any { it.sourceId == id } }
                 ?: activeSourceItemsBase.firstOrNull()?.sourceId.orEmpty()
