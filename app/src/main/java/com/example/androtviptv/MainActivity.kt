@@ -1363,9 +1363,9 @@ class MainActivity : Activity() {
         val hasContext = sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")
         primary?.visibility = if (!hasContext || contextNavigationStage == 0) View.VISIBLE else View.GONE
         if (::categoryListScroll.isInitialized) {
-            categoryListScroll.visibility = if (hasContext && contextNavigationStage == 1) View.VISIBLE else View.GONE
+            categoryListScroll.visibility = if (hasContext && contextNavigationStage in 1..2) View.VISIBLE else View.GONE
         }
-        sidebar.visibility = if (hasContext && contextNavigationStage == 2) View.GONE else View.VISIBLE
+        // Keep the category list visible while focus moves into the content area.
         val width = when {
             hasContext && contextNavigationStage == 1 -> dp(150)
             isMobileLayout -> dp(142)
@@ -1411,7 +1411,7 @@ class MainActivity : Activity() {
         firstCategoryFocusView = null
         if (::categoryPanel.isInitialized) {
             val detailMode = detailSeries != null || detailMovie != null
-            categoryListScroll.visibility = if (!detailMode && sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler") && contextNavigationStage == 1) View.VISIBLE else View.GONE
+            categoryListScroll.visibility = if (!detailMode && sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler") && contextNavigationStage in 1..2) View.VISIBLE else View.GONE
             categoryPanel.removeAllViews()
             categoryPanel.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             // Preserve the category list scroll position across content renders.
@@ -4883,76 +4883,133 @@ class MainActivity : Activity() {
         }
         if (isLoadingSource) {
             loadingMessageView = null
+            val loadingLanguage = prefs.getString("app_language", "system") ?: "system"
+            val activeLanguage = if (loadingLanguage == "system") java.util.Locale.getDefault().language else loadingLanguage
+            fun loadingLabel(key: String): String {
+                val translations = when (activeLanguage) {
+                    "en" -> mapOf("Kütüphanen hazırlanıyor" to "Your library is getting ready", "İçeriklerin senin için düzenleniyor." to "Organizing your content for you.", "Canlı TV" to "Live TV", "Filmler" to "Movies", "Diziler" to "Series", "Yükleme devam ediyor" to "Loading in progress")
+                    "de" -> mapOf("Kütüphanen hazırlanıyor" to "Deine Mediathek wird vorbereitet", "İçeriklerin senin için düzenleniyor." to "Deine Inhalte werden sortiert.", "Canlı TV" to "Live-TV", "Filmler" to "Filme", "Diziler" to "Serien", "Yükleme devam ediyor" to "Ladevorgang läuft")
+                    "fr" -> mapOf("Kütüphanen hazırlanıyor" to "Votre bibliothèque se prépare", "İçeriklerin senin için düzenleniyor." to "Nous organisons vos contenus.", "Canlı TV" to "TV en direct", "Filmler" to "Films", "Diziler" to "Séries", "Yükleme devam ediyor" to "Chargement en cours")
+                    "it" -> mapOf("Kütüphanen hazırlanıyor" to "La tua libreria è in preparazione", "İçeriklerin senin için düzenleniyor." to "Stiamo organizzando i tuoi contenuti.", "Canlı TV" to "TV in diretta", "Filmler" to "Film", "Diziler" to "Serie", "Yükleme devam ediyor" to "Caricamento in corso")
+                    "es" -> mapOf("Kütüphanen hazırlanıyor" to "Tu biblioteca se está preparando", "İçeriklerin senin için düzenleniyor." to "Estamos organizando tus contenidos.", "Canlı TV" to "TV en directo", "Filmler" to "Películas", "Diziler" to "Series", "Yükleme devam ediyor" to "Carga en curso")
+                    "ru" -> mapOf("Kütüphanen hazırlanıyor" to "Подготавливаем вашу библиотеку", "İçeriklerin senin için düzenleniyor." to "Упорядочиваем ваши материалы.", "Canlı TV" to "ТВ", "Filmler" to "Фильмы", "Diziler" to "Сериалы", "Yükleme devam ediyor" to "Загрузка продолжается")
+                    "ar" -> mapOf("Kütüphanen hazırlanıyor" to "يتم تجهيز مكتبتك", "İçeriklerin senin için düzenleniyor." to "نرتب المحتوى من أجلك.", "Canlı TV" to "بث مباشر", "Filmler" to "أفلام", "Diziler" to "مسلسلات", "Yükleme devam ediyor" to "جارٍ التحميل")
+                    else -> emptyMap()
+                }
+                return translations[key] ?: key
+            }
+
             val loadingPanel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(24), dp(24), dp(24), dp(24))
+                setPadding(dp(32), dp(20), dp(32), dp(20))
             }
-            loadingPanel.addView(makeKaiserLogoView(34f), LinearLayout.LayoutParams(dp(230), dp(64)).apply {
+            loadingPanel.addView(TextView(this).apply {
+                text = loadingLabel("Kütüphanen hazırlanıyor")
+                textSize = 27f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            loadingPanel.addView(TextView(this).apply {
+                text = loadingLabel("İçeriklerin senin için düzenleniyor.")
+                textSize = 15f
+                setTextColor(muted)
+                gravity = Gravity.CENTER
+                setPadding(0, dp(8), 0, dp(22))
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+            val statusCard = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                background = roundedDrawable(panel, 20)
+                setPadding(dp(24), dp(20), dp(24), dp(20))
+            }
+            loadingMessageView = TextView(this).apply {
+                text = status.text.toString().ifBlank { loadingLabel("Yükleme devam ediyor") }
+                textSize = 17f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                maxLines = 3
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+            statusCard.addView(loadingMessageView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            val progress = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                isIndeterminate = true
+                progressTintList = android.content.res.ColorStateList.valueOf(accentBright)
+                indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
+                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x334A596B)
+            }
+            statusCard.addView(progress, LinearLayout.LayoutParams(-1, dp(7)).apply {
+                setMargins(0, dp(18), 0, dp(18))
+            })
+            val categoryChips = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+            listOf("Canlı TV", "Filmler", "Diziler").forEach { label ->
+                val chip = TextView(this).apply {
+                    text = loadingLabel(label)
+                    textSize = 13f
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                    background = roundedDrawable(0x334A596B, 18)
+                    setPadding(dp(16), dp(9), dp(16), dp(9))
+                }
+                categoryChips.addView(chip, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(dp(4), 0, dp(4), 0)
+                })
+            }
+            statusCard.addView(categoryChips)
+            loadingPanel.addView(statusCard, LinearLayout.LayoutParams(dp(560), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.CENTER
             })
-            loadingMessageView = TextView(this).apply {
-                text = status.text.toString().ifBlank { "Kaynak yükleniyor…" }
-                textSize = 18f; setTextColor(muted); gravity = Gravity.CENTER
-                setPadding(0, dp(18), 0, 0)
-            }
-            loadingPanel.addView(loadingMessageView)
-            // Tek bir geniş, çerçevesiz görsel alanı; görseller sağdan sola otomatik akar.
+
             val visualViewport = FrameLayout(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(440), dp(145)).apply {
-                    setMargins(0, dp(26), 0, 0)
+                layoutParams = LinearLayout.LayoutParams(dp(440), dp(112)).apply {
+                    gravity = Gravity.CENTER
+                    setMargins(0, dp(14), 0, 0)
                 }
                 clipChildren = true
                 clipToPadding = true
             }
-            // Sadece görseller/karakterler geçiş yapar; metin etiketi gösterilmez.
             val visualItems = listOf(
-                "🎬" to Color.rgb(35, 105, 190),
-                "📺" to Color.rgb(145, 75, 175),
-                "🎞️" to Color.rgb(35, 150, 125),
-                "⚽" to Color.rgb(70, 165, 95),
-                "🏆" to Color.rgb(215, 155, 35),
-                "🦸" to Color.rgb(70, 130, 240),
-                "🥷" to Color.rgb(135, 90, 210),
-                "🐼" to Color.rgb(65, 175, 135),
-                "🐉" to Color.rgb(225, 95, 70),
-                "🎮" to Color.rgb(70, 180, 220)
+                "🎬" to Color.rgb(35, 105, 190), "📺" to Color.rgb(145, 75, 175),
+                "🎞️" to Color.rgb(35, 150, 125), "⚽" to Color.rgb(70, 165, 95),
+                "🏆" to Color.rgb(215, 155, 35), "🎮" to Color.rgb(70, 180, 220)
             )
-            val slide = FrameLayout(this).apply {
-                layoutParams = FrameLayout.LayoutParams(-1, -1)
-            }
-            val visual = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER
-            }
             val visualSymbol = TextView(this).apply {
                 text = visualItems[0].first
-                textSize = 82f
+                textSize = 62f
                 gravity = Gravity.CENTER
-                setShadowLayer(dp(18).toFloat(), 0f, 0f, visualItems[0].second)
+                setShadowLayer(dp(16).toFloat(), 0f, 0f, visualItems[0].second)
             }
-            visual.addView(visualSymbol, LinearLayout.LayoutParams(-1, -1))
-            slide.addView(visual, FrameLayout.LayoutParams(-1, -1))
-            visualViewport.addView(slide)
-            loadingPanel.addView(visualViewport)
+            visualViewport.addView(visualSymbol, FrameLayout.LayoutParams(-1, -1))
             var visualIndex = 0
             val slideRunnable = object : Runnable {
                 override fun run() {
                     if (!visualViewport.isAttachedToWindow) return
-                    val nextIndex = (visualIndex + 1) % visualItems.size
-                    val width = visualViewport.width.toFloat().coerceAtLeast(dp(440).toFloat())
-                    visual.animate().translationX(-width).alpha(0f).setDuration(420L).withEndAction {
-                        visualIndex = nextIndex
+                    visualIndex = (visualIndex + 1) % visualItems.size
+                    visualSymbol.animate().alpha(0f).scaleX(0.75f).scaleY(0.75f).setDuration(220L).withEndAction {
                         visualSymbol.text = visualItems[visualIndex].first
-                        visualSymbol.setShadowLayer(dp(18).toFloat(), 0f, 0f, visualItems[visualIndex].second)
-                        visual.translationX = width
-                        visual.alpha = 0f
-                        visual.animate().translationX(0f).alpha(1f).setDuration(420L).start()
+                        visualSymbol.setShadowLayer(dp(16).toFloat(), 0f, 0f, visualItems[visualIndex].second)
+                        visualSymbol.scaleX = 0.75f
+                        visualSymbol.scaleY = 0.75f
+                        visualSymbol.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(260L).start()
                     }.start()
-                    visualViewport.postDelayed(this, 1900L)
+                    visualViewport.postDelayed(this, 1800L)
                 }
             }
-            visualViewport.postDelayed(slideRunnable, 1300L)
+            visualViewport.postDelayed(slideRunnable, 1400L)
+            loadingPanel.addView(visualViewport)
+
+            loadingPanel.addView(TextView(this).apply {
+                text = "© Kaisernet · 2026"
+                textSize = 12f
+                setTextColor(muted)
+                gravity = Gravity.CENTER
+                setPadding(0, dp(8), 0, 0)
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
             return
         }
