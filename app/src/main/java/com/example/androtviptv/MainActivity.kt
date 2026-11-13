@@ -4887,128 +4887,131 @@ class MainActivity : Activity() {
             val activeLanguage = if (loadingLanguage == "system") java.util.Locale.getDefault().language else loadingLanguage
             fun loadingLabel(key: String): String {
                 val translations = when (activeLanguage) {
-                    "en" -> mapOf("Kütüphanen hazırlanıyor" to "Your library is getting ready", "İçeriklerin senin için düzenleniyor." to "Organizing your content for you.", "Canlı TV" to "Live TV", "Filmler" to "Movies", "Diziler" to "Series", "Yükleme devam ediyor" to "Loading in progress")
-                    "de" -> mapOf("Kütüphanen hazırlanıyor" to "Deine Mediathek wird vorbereitet", "İçeriklerin senin için düzenleniyor." to "Deine Inhalte werden sortiert.", "Canlı TV" to "Live-TV", "Filmler" to "Filme", "Diziler" to "Serien", "Yükleme devam ediyor" to "Ladevorgang läuft")
-                    "fr" -> mapOf("Kütüphanen hazırlanıyor" to "Votre bibliothèque se prépare", "İçeriklerin senin için düzenleniyor." to "Nous organisons vos contenus.", "Canlı TV" to "TV en direct", "Filmler" to "Films", "Diziler" to "Séries", "Yükleme devam ediyor" to "Chargement en cours")
-                    "it" -> mapOf("Kütüphanen hazırlanıyor" to "La tua libreria è in preparazione", "İçeriklerin senin için düzenleniyor." to "Stiamo organizzando i tuoi contenuti.", "Canlı TV" to "TV in diretta", "Filmler" to "Film", "Diziler" to "Serie", "Yükleme devam ediyor" to "Caricamento in corso")
-                    "es" -> mapOf("Kütüphanen hazırlanıyor" to "Tu biblioteca se está preparando", "İçeriklerin senin için düzenleniyor." to "Estamos organizando tus contenidos.", "Canlı TV" to "TV en directo", "Filmler" to "Películas", "Diziler" to "Series", "Yükleme devam ediyor" to "Carga en curso")
-                    "ru" -> mapOf("Kütüphanen hazırlanıyor" to "Подготавливаем вашу библиотеку", "İçeriklerin senin için düzenleniyor." to "Упорядочиваем ваши материалы.", "Canlı TV" to "ТВ", "Filmler" to "Фильмы", "Diziler" to "Сериалы", "Yükleme devam ediyor" to "Загрузка продолжается")
-                    "ar" -> mapOf("Kütüphanen hazırlanıyor" to "يتم تجهيز مكتبتك", "İçeriklerin senin için düzenleniyor." to "نرتب المحتوى من أجلك.", "Canlı TV" to "بث مباشر", "Filmler" to "أفلام", "Diziler" to "مسلسلات", "Yükleme devam ediyor" to "جارٍ التحميل")
+                    "en" -> mapOf("Kütüphanen hazırlanıyor" to "Your library is getting ready", "İçeriklerin senin için düzenleniyor." to "Organizing your content for you.", "Canlı TV" to "Live TV", "Filmler" to "Movies", "Diziler" to "Series", "Hazırlanıyor" to "Preparing", "İpucu" to "TIP", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Quickly access the content you add to Favorites.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Your recent content is saved in Last Watched.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Use categories to filter content easily.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Add multiple sources and keep your content in one place.")
+                    "de" -> mapOf("Kütüphanen hazırlanıyor" to "Deine Mediathek wird vorbereitet", "İçeriklerin senin için düzenleniyor." to "Deine Inhalte werden organisiert.", "Canlı TV" to "Live-TV", "Filmler" to "Filme", "Diziler" to "Serien", "Hazırlanıyor" to "Wird vorbereitet", "İpucu" to "TIPP", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Greife schnell auf deine Favoriten zu.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Zuletzt angesehene Inhalte findest du unter Verlauf.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtere Inhalte einfach nach Kategorien.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Füge mehrere Quellen an einem Ort hinzu.")
+                    "fr" -> mapOf("Kütüphanen hazırlanıyor" to "Votre bibliothèque se prépare", "İçeriklerin senin için düzenleniyor." to "Organisation de vos contenus.", "Canlı TV" to "TV en direct", "Filmler" to "Films", "Diziler" to "Séries", "Hazırlanıyor" to "Préparation", "İpucu" to "ASTUCE", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Retrouvez facilement vos favoris.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Vos derniers contenus sont dans Historique.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtrez facilement avec les catégories.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Regroupez plusieurs sources au même endroit.")
+                    "it" -> mapOf("Kütüphanen hazırlanıyor" to "La tua libreria è in preparazione", "İçeriklerin senin için düzenleniyor." to "Stiamo organizzando i tuoi contenuti.", "Canlı TV" to "TV in diretta", "Filmler" to "Film", "Diziler" to "Serie", "Hazırlanıyor" to "Preparazione", "İpucu" to "SUGGERIMENTO", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Raggiungi facilmente i tuoi preferiti.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "I contenuti recenti sono in Cronologia.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtra facilmente i contenuti per categoria.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Aggiungi più sorgenti in un unico posto.")
+                    "es" -> mapOf("Kütüphanen hazırlanıyor" to "Tu biblioteca se está preparando", "İçeriklerin senin için düzenleniyor." to "Organizando tus contenidos.", "Canlı TV" to "TV en directo", "Filmler" to "Películas", "Diziler" to "Series", "Hazırlanıyor" to "Preparando", "İpucu" to "CONSEJO", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Accede fácilmente a tus favoritos.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Tus últimos contenidos están en Historial.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtra fácilmente por categorías.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Añade varias fuentes en un solo lugar.")
+                    "ru" -> mapOf("Kütüphanen hazırlanıyor" to "Подготавливаем вашу библиотеку", "İçeriklerin senin için düzenleniyor." to "Сортируем ваши материалы.", "Canlı TV" to "ТВ", "Filmler" to "Фильмы", "Diziler" to "Сериалы", "Hazırlanıyor" to "Подготовка", "İpucu" to "СОВЕТ", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Быстрый доступ к избранному.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Недавно просмотренное находится в истории.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Используйте категории для фильтрации.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Добавьте несколько источников в одном месте.")
+                    "ar" -> mapOf("Kütüphanen hazırlanıyor" to "يتم تجهيز مكتبتك", "İçeriklerin senin için düzenleniyor." to "نرتب المحتوى من أجلك.", "Canlı TV" to "بث مباشر", "Filmler" to "أفلام", "Diziler" to "مسلسلات", "Hazırlanıyor" to "قيد التجهيز", "İpucu" to "نصيحة", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "يمكنك الوصول بسهولة إلى المفضلة.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "تجد آخر ما شاهدته في سجل المشاهدة.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "استخدم التصنيفات لتصفية المحتوى.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "أضف مصادر متعددة في مكان واحد.")
                     else -> emptyMap()
                 }
                 return translations[key] ?: key
             }
-
             val loadingPanel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(32), dp(20), dp(32), dp(20))
+                setPadding(dp(28), dp(14), dp(28), dp(10))
             }
             loadingPanel.addView(TextView(this).apply {
                 text = loadingLabel("Kütüphanen hazırlanıyor")
-                textSize = 27f
+                textSize = 29f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             loadingPanel.addView(TextView(this).apply {
                 text = loadingLabel("İçeriklerin senin için düzenleniyor.")
-                textSize = 15f
+                textSize = 16f
                 setTextColor(muted)
                 gravity = Gravity.CENTER
-                setPadding(0, dp(8), 0, dp(22))
+                setPadding(0, dp(7), 0, dp(10))
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-            val statusCard = LinearLayout(this).apply {
+            val tips = listOf(
+                "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin.",
+                "Son izlediğin içerikler İzlediklerim bölümünde saklanır.",
+                "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin.",
+                "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin."
+            )
+            val tipPanel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                background = roundedDrawable(panel, 20)
-                setPadding(dp(24), dp(20), dp(24), dp(20))
+                setPadding(dp(12), dp(4), dp(12), dp(12))
             }
-            loadingMessageView = TextView(this).apply {
-                text = status.text.toString().ifBlank { loadingLabel("Yükleme devam ediyor") }
-                textSize = 17f
+            tipPanel.addView(TextView(this).apply {
+                text = loadingLabel("İpucu")
+                textSize = 13f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(accentBright)
+                gravity = Gravity.CENTER
+            })
+            val tipText = TextView(this).apply {
+                text = loadingLabel(tips[0])
+                textSize = 15f
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
-                maxLines = 3
+                maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(dp(8), dp(3), dp(8), dp(3))
             }
-            statusCard.addView(loadingMessageView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-            val progress = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-                isIndeterminate = true
-                progressTintList = android.content.res.ColorStateList.valueOf(accentBright)
-                indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
-                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x334A596B)
+            tipPanel.addView(tipText, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            var tipIndex = 0
+            val tipRunnable = object : Runnable {
+                override fun run() {
+                    if (!tipPanel.isAttachedToWindow) return
+                    tipIndex = (tipIndex + 1) % tips.size
+                    tipText.animate().alpha(0f).setDuration(180L).withEndAction {
+                        tipText.text = loadingLabel(tips[tipIndex])
+                        tipText.animate().alpha(1f).setDuration(220L).start()
+                    }.start()
+                    tipPanel.postDelayed(this, 4200L)
+                }
             }
-            statusCard.addView(progress, LinearLayout.LayoutParams(-1, dp(7)).apply {
-                setMargins(0, dp(18), 0, dp(18))
+            tipPanel.postDelayed(tipRunnable, 4200L)
+            loadingPanel.addView(tipPanel, LinearLayout.LayoutParams(dp(680), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                gravity = Gravity.CENTER
+                setMargins(0, 0, 0, dp(12))
             })
-            val categoryChips = LinearLayout(this).apply {
+
+            val rings = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
             }
             listOf("Canlı TV", "Filmler", "Diziler").forEach { label ->
-                val chip = TextView(this).apply {
-                    text = loadingLabel(label)
-                    textSize = 13f
+                val ring = FrameLayout(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(dp(142), dp(142)).apply {
+                        setMargins(dp(18), dp(4), dp(18), dp(4))
+                    }
+                }
+                val spinner = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
+                    isIndeterminate = true
+                    indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
+                }
+                ring.addView(spinner, FrameLayout.LayoutParams(-1, -1))
+                val ringLabel = TextView(this).apply {
+                    text = loadingLabel(label) + "\n" + loadingLabel("Hazırlanıyor")
+                    textSize = 15f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
-                    background = roundedDrawable(0x334A596B, 18)
-                    setPadding(dp(16), dp(9), dp(16), dp(9))
+                    maxLines = 2
                 }
-                categoryChips.addView(chip, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    setMargins(dp(4), 0, dp(4), 0)
+                ring.addView(ringLabel, FrameLayout.LayoutParams(-1, -1).apply {
+                    setMargins(dp(18), dp(18), dp(18), dp(18))
                 })
+                rings.addView(ring)
             }
-            statusCard.addView(categoryChips)
-            loadingPanel.addView(statusCard, LinearLayout.LayoutParams(dp(560), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                gravity = Gravity.CENTER
+            loadingPanel.addView(rings, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(0, dp(2), 0, dp(8))
             })
 
-            val visualViewport = FrameLayout(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(440), dp(112)).apply {
-                    gravity = Gravity.CENTER
-                    setMargins(0, dp(14), 0, 0)
-                }
-                clipChildren = true
-                clipToPadding = true
-            }
-            val visualItems = listOf(
-                "🎬" to Color.rgb(35, 105, 190), "📺" to Color.rgb(145, 75, 175),
-                "🎞️" to Color.rgb(35, 150, 125), "⚽" to Color.rgb(70, 165, 95),
-                "🏆" to Color.rgb(215, 155, 35), "🎮" to Color.rgb(70, 180, 220)
-            )
-            val visualSymbol = TextView(this).apply {
-                text = visualItems[0].first
-                textSize = 62f
+            loadingMessageView = TextView(this).apply {
+                text = status.text.toString()
+                textSize = 16f
+                setTextColor(muted)
                 gravity = Gravity.CENTER
-                setShadowLayer(dp(16).toFloat(), 0f, 0f, visualItems[0].second)
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(0, dp(2), 0, dp(8))
             }
-            visualViewport.addView(visualSymbol, FrameLayout.LayoutParams(-1, -1))
-            var visualIndex = 0
-            val slideRunnable = object : Runnable {
-                override fun run() {
-                    if (!visualViewport.isAttachedToWindow) return
-                    visualIndex = (visualIndex + 1) % visualItems.size
-                    visualSymbol.animate().alpha(0f).scaleX(0.75f).scaleY(0.75f).setDuration(220L).withEndAction {
-                        visualSymbol.text = visualItems[visualIndex].first
-                        visualSymbol.setShadowLayer(dp(16).toFloat(), 0f, 0f, visualItems[visualIndex].second)
-                        visualSymbol.scaleX = 0.75f
-                        visualSymbol.scaleY = 0.75f
-                        visualSymbol.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(260L).start()
-                    }.start()
-                    visualViewport.postDelayed(this, 1800L)
-                }
-            }
-            visualViewport.postDelayed(slideRunnable, 1400L)
-            loadingPanel.addView(visualViewport)
-
+            loadingPanel.addView(loadingMessageView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             loadingPanel.addView(TextView(this).apply {
                 text = "© Kaisernet · 2026"
                 textSize = 12f
                 setTextColor(muted)
                 gravity = Gravity.CENTER
-                setPadding(0, dp(8), 0, 0)
+                setPadding(0, dp(2), 0, 0)
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
             return
