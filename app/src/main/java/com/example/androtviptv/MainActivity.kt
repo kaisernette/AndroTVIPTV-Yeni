@@ -7354,117 +7354,136 @@ class MainActivity : Activity() {
 
             }
             "about" -> {
-                heading("Hakkında", t("KaiserTV+ uygulama bilgileri"))
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
-                val version = packageInfo.versionName ?: "Bilinmiyor"
+                val version = packageInfo.versionName ?: "3.0"
                 val buildDate = try {
-                    java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale("tr", "TR")).format(java.util.Date(packageInfo.lastUpdateTime))
+                    java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale("tr", "TR"))
+                        .format(java.util.Date(packageInfo.lastUpdateTime))
                 } catch (_: Exception) { "Bilinmiyor" }
 
                 val selectedLanguage = prefs.getString("app_language", "system") ?: "system"
                 val aboutLanguage = if (selectedLanguage == "system") java.util.Locale.getDefault().language else selectedLanguage
-                fun aboutText(key: String): String {
-                    val translations = when (aboutLanguage) {
-                        "en" -> mapOf("Platform" to "Platform", "Yayın desteği" to "Broadcast support", "Sürüm tarihi" to "Version date", "Sürüm" to "Version", "Oynatıcı" to "Player")
-                        "de" -> mapOf("Platform" to "Plattform", "Yayın desteği" to "Wiedergabequellen", "Sürüm tarihi" to "Versionsdatum", "Sürüm" to "Version", "Oynatıcı" to "Player")
-                        "fr" -> mapOf("Platform" to "Plateforme", "Yayın desteği" to "Sources prises en charge", "Sürüm tarihi" to "Date de version", "Sürüm" to "Version", "Oynatıcı" to "Lecteur")
-                        "it" -> mapOf("Platform" to "Piattaforma", "Yayın desteği" to "Sorgenti supportate", "Sürüm tarihi" to "Data versione", "Sürüm" to "Versione", "Oynatıcı" to "Lettore")
-                        "es" -> mapOf("Platform" to "Plataforma", "Yayın desteği" to "Fuentes compatibles", "Sürüm tarihi" to "Fecha de versión", "Sürüm" to "Versión", "Oynatıcı" to "Reproductor")
-                        "ru" -> mapOf("Platform" to "Платформа", "Yayın desteği" to "Поддержка источников", "Sürüm tarihi" to "Дата версии", "Sürüm" to "Версия", "Oynatıcı" to "Плеер")
-                        "ar" -> mapOf("Platform" to "المنصة", "Yayın desteği" to "مصادر البث المدعومة", "Sürüm tarihi" to "تاريخ الإصدار", "Sürüm" to "الإصدار", "Oynatıcı" to "المشغل")
-                        else -> emptyMap()
-                    }
-                    return translations[key] ?: key
+                val labels = when (aboutLanguage) {
+                    "en" -> mapOf("Yazılım Bilgileri" to "Software Information", "Uygulama" to "Application", "Platform" to "Platform", "Minimum Android" to "Minimum Android", "Compile SDK" to "Compile SDK", "Target SDK" to "Target SDK", "Sürüm" to "Version", "Sürüm tarihi" to "Version date", "Java" to "Java", "Kotlin" to "Kotlin", "Android Gradle Plugin" to "Android Gradle Plugin", "Gradle" to "Gradle", "Oynatıcı" to "Player", "Ağ Kütüphanesi" to "Network Library", "TV Provider" to "TV Provider")
+                    "de" -> mapOf("Yazılım Bilgileri" to "Software-Informationen", "Uygulama" to "App", "Platform" to "Plattform", "Minimum Android" to "Mindestversion Android", "Compile SDK" to "Compile-SDK", "Target SDK" to "Target-SDK", "Sürüm" to "Version", "Sürüm tarihi" to "Versionsdatum", "Java" to "Java", "Kotlin" to "Kotlin", "Android Gradle Plugin" to "Android-Gradle-Plugin", "Gradle" to "Gradle", "Oynatıcı" to "Player", "Ağ Kütüphanesi" to "Netzwerkbibliothek", "TV Provider" to "TV-Provider")
+                    "fr" -> mapOf("Yazılım Bilgileri" to "Informations logicielles", "Uygulama" to "Application", "Platform" to "Plateforme", "Minimum Android" to "Android minimum", "Compile SDK" to "Compile SDK", "Target SDK" to "Target SDK", "Sürüm" to "Version", "Sürüm tarihi" to "Date de version", "Java" to "Java", "Kotlin" to "Kotlin", "Android Gradle Plugin" to "Plugin Android Gradle", "Gradle" to "Gradle", "Oynatıcı" to "Lecteur", "Ağ Kütüphanesi" to "Bibliothèque réseau", "TV Provider" to "TV Provider")
+                    "it" -> mapOf("Yazılım Bilgileri" to "Informazioni software", "Uygulama" to "Applicazione", "Platform" to "Piattaforma", "Minimum Android" to "Android minimo", "Compile SDK" to "Compile SDK", "Target SDK" to "Target SDK", "Sürüm" to "Versione", "Sürüm tarihi" to "Data versione", "Java" to "Java", "Kotlin" to "Kotlin", "Android Gradle Plugin" to "Plugin Android Gradle", "Gradle" to "Gradle", "Oynatıcı" to "Lettore", "Ağ Kütüphanesi" to "Libreria di rete", "TV Provider" to "TV Provider")
+                    "es" -> mapOf("Yazılım Bilgileri" to "Información del software", "Uygulama" to "Aplicación", "Platform" to "Plataforma", "Minimum Android" to "Android mínimo", "Compile SDK" to "Compile SDK", "Target SDK" to "Target SDK", "Sürüm" to "Versión", "Sürüm tarihi" to "Fecha de versión", "Java" to "Java", "Kotlin" to "Kotlin", "Android Gradle Plugin" to "Plugin Android Gradle", "Gradle" to "Gradle", "Oynatıcı" to "Reproductor", "Ağ Kütüphanesi" to "Biblioteca de red", "TV Provider" to "TV Provider")
+                    "ru" -> mapOf("Yazılım Bilgileri" to "Сведения о ПО", "Uygulama" to "Приложение", "Platform" to "Платформа", "Minimum Android" to "Минимальный Android", "Compile SDK" to "Compile SDK", "Target SDK" to "Target SDK", "Sürüm" to "Версия", "Sürüm tarihi" to "Дата версии", "Java" to "Java", "Kotlin" to "Kotlin", "Android Gradle Plugin" to "Android Gradle Plugin", "Gradle" to "Gradle", "Oynatıcı" to "Плеер", "Ağ Kütüphanesi" to "Сетевая библиотека", "TV Provider" to "TV Provider")
+                    "ar" -> mapOf("Yazılım Bilgileri" to "معلومات البرنامج", "Uygulama" to "التطبيق", "Platform" to "المنصة", "Minimum Android" to "أدنى إصدار أندرويد", "Compile SDK" to "Compile SDK", "Target SDK" to "Target SDK", "Sürüm" to "الإصدار", "Sürüm tarihi" to "تاريخ الإصدار", "Java" to "Java", "Kotlin" to "Kotlin", "Android Gradle Plugin" to "Android Gradle Plugin", "Gradle" to "Gradle", "Oynatıcı" to "المشغل", "Ağ Kütüphanesi" to "مكتبة الشبكة", "TV Provider" to "TV Provider")
+                    else -> emptyMap()
                 }
+                fun aboutLabel(key: String) = labels[key] ?: key
 
-                val aboutCards = listOf(
-                    Triple("Platform", "Android TV", "▣"),
-                    Triple("Yayın desteği", "M3U • Xtream • Stalker", "◉"),
-                    Triple("Oynatıcı", "Media3 ExoPlayer", "▶"),
-                    Triple("Sürüm", version, "◇"),
-                    Triple("Sürüm tarihi", buildDate, "◷")
+                val leftItems = listOf(
+                    Triple("▣", "Uygulama", "KaiserTV+"),
+                    Triple("▱", "Platform", "Android / Android TV"),
+                    Triple("♟", "Minimum Android", "6.0 (API 23)"),
+                    Triple("</>", "Compile SDK", "35"),
+                    Triple("◎", "Target SDK", "35"),
+                    Triple("◇", "Sürüm", version)
                 )
-                val aboutGrid = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(4), dp(4), dp(4), dp(4))
+                val rightItems = listOf(
+                    Triple("◷", "Sürüm tarihi", buildDate),
+                    Triple("♨", "Java", "17"),
+                    Triple("K", "Kotlin", "2.0.21"),
+                    Triple("◆", "Android Gradle Plugin", "8.7.3"),
+                    Triple("◆", "Gradle", "8.9"),
+                    Triple("▶", "Oynatıcı", "AndroidX Media3 ExoPlayer 1.5.1"),
+                    Triple("⌁", "Ağ Kütüphanesi", "OkHttp 4.12.0"),
+                    Triple("▣", "TV Provider", "AndroidX TV Provider 1.1.0")
+                )
+
+                val topBar = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(8), dp(4), dp(8), dp(4))
                 }
-                val rows = aboutCards.chunked(3)
-                rows.forEachIndexed { rowIndex, rowItems ->
-                    val row = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                    }
-                    rowItems.forEach { item ->
-                        val card = LinearLayout(this).apply {
-                            orientation = LinearLayout.VERTICAL
+                topBar.addView(View(this), LinearLayout.LayoutParams(0, dp(42), 1f))
+                topBar.addView(makeButton("←  ${t("Geri")}", false) { goBackFromSettings() },
+                    LinearLayout.LayoutParams(dp(118), dp(42)))
+                content.addView(topBar, LinearLayout.LayoutParams(-1, dp(48)))
+
+                val logo = makeKaiserLogoView(31f)
+                content.addView(logo, LinearLayout.LayoutParams(dp(230), dp(68)).apply {
+                    gravity = Gravity.CENTER
+                    topMargin = dp(2)
+                })
+                content.addView(TextView(this).apply {
+                    text = aboutLabel("Yazılım Bilgileri")
+                    textSize = 21f
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(2), 0, dp(18))
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+                val columns = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.TOP
+                    setPadding(dp(8), dp(2), dp(8), dp(2))
+                }
+                fun addInfoColumn(items: List<Triple<String, String, String>>) {
+                    val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                    items.forEach { item ->
+                        val row = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.CENTER_VERTICAL
-                            setPadding(dp(18), dp(16), dp(18), dp(16))
-                            background = roundedDrawable(panel, 14)
+                            minimumHeight = dp(49)
+                            setPadding(dp(4), dp(3), dp(8), dp(3))
                         }
-                        card.addView(TextView(this).apply {
-                            text = item.third
-                            textSize = 34f
+                        row.addView(TextView(this).apply {
+                            text = item.first
+                            textSize = 23f
                             setTypeface(null, android.graphics.Typeface.BOLD)
                             setTextColor(accentBright)
-                            setPadding(0, 0, 0, dp(8))
+                            gravity = Gravity.CENTER
+                        }, LinearLayout.LayoutParams(dp(38), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            rightMargin = dp(8)
                         })
-                        card.addView(TextView(this).apply {
-                            text = aboutText(item.first)
-                            textSize = 19f
-                            setTypeface(null, android.graphics.Typeface.BOLD)
-                            setTextColor(Color.WHITE)
-                            maxLines = 1
-                            ellipsize = android.text.TextUtils.TruncateAt.END
-                        })
-                        card.addView(TextView(this).apply {
-                            text = item.second
-                            textSize = 14f
+                        row.addView(TextView(this).apply {
+                            text = aboutLabel(item.second)
+                            textSize = 15f
                             setTextColor(muted)
                             maxLines = 2
                             ellipsize = android.text.TextUtils.TruncateAt.END
-                            setPadding(0, dp(8), 0, 0)
+                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.05f))
+                        row.addView(TextView(this).apply {
+                            text = ":"
+                            textSize = 16f
+                            setTextColor(muted)
+                            setPadding(dp(3), 0, dp(5), 0)
                         })
-                        row.addView(card, LinearLayout.LayoutParams(0, dp(142), 1f).apply {
-                            setMargins(dp(5), dp(7), dp(5), dp(7))
-                        })
+                        row.addView(TextView(this).apply {
+                            text = item.third
+                            textSize = 15f
+                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(Color.WHITE)
+                            maxLines = 2
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f))
+                        column.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
-                    if (rowItems.size < 3) {
-                        repeat(3 - rowItems.size) {
-                            row.addView(View(this), LinearLayout.LayoutParams(0, dp(142), 1f).apply {
-                                setMargins(dp(5), dp(7), dp(5), dp(7))
-                            })
-                        }
-                    }
-                    aboutGrid.addView(row, LinearLayout.LayoutParams(-1, dp(156)))
+                    columns.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        setMargins(dp(4), 0, dp(8), 0)
+                    })
                 }
+                addInfoColumn(leftItems)
+                addInfoColumn(rightItems)
+                content.addView(columns, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(8), dp(4), dp(8), dp(4))
+                })
 
-                val brandCard = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    setPadding(dp(18), dp(16), dp(18), dp(16))
-                    background = roundedDrawable(panel, 14)
-                }
-                brandCard.addView(TextView(this).apply {
-                    text = "KaiserTV+"
-                    textSize = 19f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
+                val divider = View(this).apply { setBackgroundColor(muted) }
+                content.addView(divider, LinearLayout.LayoutParams(-1, dp(1)).apply {
+                    setMargins(dp(8), dp(12), dp(8), dp(10))
+                })
+                content.addView(TextView(this).apply {
+                    text = "© Kaisernet · 2026"
+                    textSize = 17f
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
-                })
-                brandCard.addView(TextView(this).apply {
-                    text = "Kaisernet · 2026"
-                    textSize = 14f
-                    setTextColor(accentBright)
-                    gravity = Gravity.CENTER
-                    setPadding(0, dp(4), 0, 0)
-                })
-                val lastRow = aboutGrid.getChildAt(1) as? LinearLayout
-                lastRow?.addView(brandCard, 1, LinearLayout.LayoutParams(0, dp(142), 1f).apply {
-                    setMargins(dp(5), dp(7), dp(5), dp(7))
-                })
-                content.addView(aboutGrid, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(dp(4), dp(4), dp(4), dp(4))
-                })
+                    setPadding(0, dp(4), 0, dp(8))
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
             "history" -> {
                 heading("Geçmiş", t("Daha önce izlediğin içerikler"))
