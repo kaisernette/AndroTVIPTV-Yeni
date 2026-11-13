@@ -1078,7 +1078,7 @@ class MainActivity : Activity() {
         categoryPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             // Align the Back label with the content section headings below the fixed top bar.
-            setPadding(dp(8), dp(20), dp(4), dp(8))
+            setPadding(dp(8), dp(18), dp(4), dp(8))
             clipChildren = false
         }
         categoryListScroll = ScrollView(this).apply {
@@ -5139,7 +5139,7 @@ class MainActivity : Activity() {
             val tvHeading = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(8), dp(6), dp(8), dp(12))
+                setPadding(dp(8), 0, dp(8), 0)
             }
             tvHeading.addView(TextView(this).apply {
                 text = if (selectedGroup == "Tüm kategoriler") t("Tüm Kanallar") else selectedGroup
@@ -5269,7 +5269,7 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.TOP
                 // Match the vertical baseline used by the TV, Movies and Series section headings.
-                setPadding(dp(8), dp(22), dp(8), dp(12))
+                setPadding(dp(8), 0, dp(8), dp(12))
                 background = ColorDrawable(Color.TRANSPARENT)
             }
             empty.addView(TextView(this).apply {
@@ -5277,8 +5277,9 @@ class MainActivity : Activity() {
                 textSize = 27f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER_VERTICAL
                 setPadding(0, 0, 0, dp(5))
-            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }, LinearLayout.LayoutParams(-1, dp(46)))
             empty.addView(TextView(this).apply {
                 text = t(sectionSubtitle)
                 textSize = 16f
@@ -5392,9 +5393,9 @@ class MainActivity : Activity() {
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                minimumHeight = dp(38)
-                // Align weekly headings on one baseline just below the fixed header.
-                setPadding(2, 0, 2, dp(2))
+                minimumHeight = dp(46)
+                // Shared title column and vertical frame across Home, TV, Movies, Series, Favorites and History.
+                setPadding(dp(8), 0, dp(8), 0)
             }
             sectionHeader.addView(TextView(this).apply {
                 text = groupName; textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
