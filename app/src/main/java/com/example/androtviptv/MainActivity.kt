@@ -5258,7 +5258,8 @@ class MainActivity : Activity() {
         // Provider category names are already complete for IPTV sources. Avoid scanning
         // tens of thousands of media records on every D-pad/menu render just to rebuild
         // the category rail. Derive names from items only for sources without provider data.
-        val groupsAvailable = if (providerGroups.isNotEmpty()) providerGroups.distinct()
+        val groupsAvailable = if (activeSourceItemsBase.isEmpty()) emptyList()
+            else if (providerGroups.isNotEmpty()) providerGroups.distinct()
             else baseVisible.asSequence().map { it.group.ifBlank { "Diğer" } }.distinct().toList()
         categoryBar.removeAllViews()
         categoryScroll.visibility = View.GONE
@@ -8063,6 +8064,13 @@ class MainActivity : Activity() {
     }
 
     private fun play(item: MediaItem, startOver: Boolean = false) {
+        // Playback must never be possible from a cached/stale card whose source
+        // is currently disabled, even if an old click listener is still attached.
+        val enabledSourceIds = prefs.getStringSet("selected_source_ids", emptySet()) ?: emptySet()
+        if (item.sourceId.isBlank() || item.sourceId !in enabledSourceIds) {
+            Toast.makeText(this, "Bu içeriği oynatmak için ilgili kaynağı etkinleştirin.", Toast.LENGTH_SHORT).show()
+            return
+        }
         if (openingPlayer) return
         if (item.url.startsWith("stalker://") || item.url.startsWith("stalker-vod://") || item.url.startsWith("stalker-episode://")) {
             val source = savedSources.firstOrNull { it.id == item.sourceId && it.mode == "mac" }
