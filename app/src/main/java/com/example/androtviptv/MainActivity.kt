@@ -844,7 +844,7 @@ class MainActivity : Activity() {
     private lateinit var navBar: LinearLayout
     private lateinit var searchBar: LinearLayout
     private lateinit var settingsBar: LinearLayout
-    private lateinit var sidebarMenuScroll: ScrollView
+    private lateinit var sidebarMenuScroll: FrameLayout
     private lateinit var brandView: LinearLayout
     private lateinit var heroPanel: LinearLayout
     private lateinit var quickAccessScroll: HorizontalScrollView
@@ -1065,11 +1065,11 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.BOTTOM
         }
-        sidebarMenuScroll = ScrollView(this).apply {
-            isVerticalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            isFillViewport = true
-            addView(navBar, android.widget.FrameLayout.LayoutParams(-1, -1))
+        // Fixed navigation area: no vertical menu scrolling.
+        sidebarMenuScroll = FrameLayout(this).apply {
+            clipChildren = true
+            clipToPadding = true
+            addView(navBar, FrameLayout.LayoutParams(-1, -1, Gravity.BOTTOM))
         }
         primaryMenuColumn.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         settingsBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -1530,12 +1530,7 @@ class MainActivity : Activity() {
                     else -> normalizedTab
                 }
                 if (normalizedTab == "Ayarlar") {
-                    navBar.addView(View(this).apply {
-                        setBackgroundColor(Color.rgb(76, 87, 105))
-                        isFocusable = false
-                    }, LinearLayout.LayoutParams(-1, dp(1)).apply {
-                        setMargins(dp(10), dp(10), dp(10), dp(10))
-                    })
+                    // No separator line above Settings; keep the menu visually continuous.
                 }
                 if (normalizedTab == "Geçmiş") {
                     addSidebarButton(tab, selectedType == "Son İzlenenler") {
@@ -1629,10 +1624,7 @@ class MainActivity : Activity() {
                 Triple("⚙", "Ayarlar", "Ayarlar")
             )
             compactTabs.forEach { (_, label, key) ->
-                if (key == "Ayarlar") {
-                    navBar.addView(View(this).apply { setBackgroundColor(Color.rgb(76, 87, 105)); isFocusable = false },
-                        LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(10), dp(10), dp(10)) })
-                }
+                // No divider above the Settings item.
                 val isSelected = when (key) {
                     "Ara" -> false
                     "Tümü" -> selectedType == "Tümü"
@@ -1828,9 +1820,7 @@ class MainActivity : Activity() {
             return
         }
 
-        if (sidebarMode == "search") {
-            sidebarMenuScroll.post { sidebarMenuScroll.scrollTo(0, 0) }
-        }
+        // Navigation is fixed in a non-scrollable container.
 
         // Kategori başlığını ve sol kategori listesini göstermiyoruz.
         // Ana menü seçenekleri ana menü modunda kalır; TV ekranındaki kanal listesi korunur.
@@ -4656,8 +4646,9 @@ class MainActivity : Activity() {
             if (detailMode) 0 else dp(30),
             if (detailMode) 0 else dp(12)
         )
-        val firstEntry = items.isEmpty() && !isLoadingSource
-        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
+        // Always open directly on Home; source setup remains available from Settings.
+        val firstEntry = false
+        if (::sidebar.isInitialized) sidebar.visibility = if (firstEntry || detailMode) View.GONE else View.VISIBLE
         // Logo is now part of the full-width fixed top header, never the sidebar.
         if (::brandView.isInitialized) brandView.visibility = View.GONE
         if (::searchBar.isInitialized) searchBar.visibility = View.GONE
@@ -4672,7 +4663,7 @@ class MainActivity : Activity() {
         if (::quickAccessScroll.isInitialized) quickAccessScroll.visibility = View.GONE
         // A series detail is a full-screen page: keep the left category/navigation rail hidden.
         if (::navBar.isInitialized) navBar.visibility =
-            if (firstEntry || isLoadingSource || detailSeries != null) View.GONE else View.VISIBLE
+            if (firstEntry || detailSeries != null) View.GONE else View.VISIBLE
         if (::sidebar.isInitialized && sidebarMode == "context") showContextNavigationStage(contextNavigationStage)
         // Context navigation can re-show its category rail during render.
         // Detail pages must always be edge-to-edge, for BOTH movies and series.
@@ -4684,7 +4675,7 @@ class MainActivity : Activity() {
         }
         if (::mainHeader.isInitialized) mainHeader.visibility = View.GONE
         if (::dateClockRow.isInitialized) dateClockRow.visibility =
-            if (firstEntry || isLoadingSource || detailMode) View.GONE else View.VISIBLE
+            if (firstEntry || detailMode) View.GONE else View.VISIBLE
         if (::status.isInitialized) status.visibility = View.GONE // İçerik sayısı/kaynak adı üst başlıkta gösterilmez.
         if (::categoryScroll.isInitialized) categoryScroll.visibility = View.GONE
         if (firstEntry) {
@@ -5420,7 +5411,7 @@ class MainActivity : Activity() {
                 (groupName == t("Haftanın Filmleri") || groupName == t("Haftanın Dizileri"))
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
-            val featureCardWidth = dp(if (isMobileLayout) 144 else 128) // Compact weekly poster width
+            val featureCardWidth = dp(if (isMobileLayout) 137 else 122) // 5% smaller weekly posters
             val displayedEntries = when {
                 posterGridMode -> entries.take(if (selectedType == "Canlı TV" && !showingExpandedCategory) 8 else mediaItemsLimit)
                 weeklyMovieFeature -> entries.take(8)
@@ -5494,8 +5485,8 @@ class MainActivity : Activity() {
                     setPadding(if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0, if (liveCard) 12 else 0)
                     // Keep the poster's portrait aspect ratio; the card wraps the poster instead of stretching it.
                     layoutParams = LinearLayout.LayoutParams(
-                        if (weeklyPoster) dp(if (isMobileLayout) 144 else 128) else -1,
-                        if (liveCard) dp(if (isMobileLayout) 96 else 88) else if (weeklyPoster) dp(if (isMobileLayout) 216 else 192) else if (posterGridMode) dp(if (isMobileLayout) 224 else 210) else if (homeCard) 230 else 210
+                        if (weeklyPoster) dp(if (isMobileLayout) 137 else 122) else -1,
+                        if (liveCard) dp(if (isMobileLayout) 96 else 88) else if (weeklyPoster) dp(if (isMobileLayout) 205 else 183) else if (posterGridMode) dp(if (isMobileLayout) 224 else 210) else if (homeCard) 230 else 210
                     )
                 }
                 card.addView(poster)
