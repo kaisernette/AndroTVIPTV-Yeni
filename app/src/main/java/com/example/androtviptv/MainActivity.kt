@@ -7397,21 +7397,18 @@ class MainActivity : Activity() {
                 val topBar = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(8), dp(4), dp(8), dp(4))
+                    setPadding(dp(16), dp(4), dp(8), dp(4))
                 }
-                topBar.addView(View(this), LinearLayout.LayoutParams(0, dp(42), 1f))
-                topBar.addView(makeButton("←  ${t("Geri")}", false) { goBackFromSettings() },
-                    LinearLayout.LayoutParams(dp(118), dp(42)))
-                content.addView(topBar, LinearLayout.LayoutParams(-1, dp(48)))
-
-                content.addView(TextView(this).apply {
+                topBar.addView(TextView(this).apply {
                     text = aboutLabel("Yazılım Bilgileri")
                     textSize = 27f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(Color.WHITE)
-                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                    setPadding(dp(16), dp(8), dp(8), dp(16))
-                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    gravity = Gravity.CENTER_VERTICAL
+                }, LinearLayout.LayoutParams(0, dp(48), 1f))
+                topBar.addView(makeButton("←  ${t("Geri")}", false) { goBackFromSettings() },
+                    LinearLayout.LayoutParams(dp(118), dp(42)))
+                content.addView(topBar, LinearLayout.LayoutParams(-1, dp(54)))
 
                 val columns = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -7424,8 +7421,8 @@ class MainActivity : Activity() {
                         val row = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.CENTER_VERTICAL
-                            minimumHeight = dp(43)
-                            setPadding(dp(4), dp(3), dp(8), dp(3))
+                            minimumHeight = dp(37)
+                            setPadding(dp(4), dp(1), dp(8), dp(1))
                         }
                         row.addView(TextView(this).apply {
                             text = item.first
