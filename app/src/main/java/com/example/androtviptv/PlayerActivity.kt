@@ -144,7 +144,6 @@ class PlayerActivity : Activity() {
 
     private var episodeCountdownTitle: TextView? = null
     private var episodeCountdownTimer: TextView? = null
-    private var episodeCountdownProgress: View? = null
     private var episodeCountdownIndex = -1
 
     private fun updateEpisodeCountdown(nextIndex: Int, secondsLeft: Int) {
@@ -155,41 +154,37 @@ class PlayerActivity : Activity() {
             val accent = playerThemeAccent()
             val panel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(18), dp(12), dp(18), dp(12))
+                setPadding(dp(12), dp(8), dp(12), dp(8))
                 background = GradientDrawable().apply {
-                    cornerRadius = dp(18).toFloat()
-                    setColor(0xF20A1018.toInt())
-                    setStroke(dp(2), accent)
+                    cornerRadius = dp(12).toFloat()
+                    setColor(Color.TRANSPARENT)
+                    setStroke(dp(1), accent)
                 }
-                elevation = dp(12).toFloat()
+                elevation = 0f
                 alpha = 0f
             }
             panel.addView(TextView(this).apply {
                 text = "Sonraki bölüm başlıyor"
-                textSize = 17f
+                textSize = 14f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(Color.WHITE)
             })
             episodeCountdownTitle = TextView(this).apply {
                 text = episodeNames[nextIndex]
-                textSize = 15f
+                textSize = 13f
                 setTextColor(0xFFD4DEE8.toInt())
                 setPadding(0, dp(5), 0, 0)
                 maxLines = 2
             }
             panel.addView(episodeCountdownTitle)
             episodeCountdownTimer = TextView(this).apply {
-                textSize = 14f
+                textSize = 12f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(accent)
                 setPadding(0, dp(7), 0, 0)
             }
             panel.addView(episodeCountdownTimer)
-            episodeCountdownProgress = View(this).apply { setBackgroundColor(accent) }
-            panel.addView(episodeCountdownProgress, LinearLayout.LayoutParams(-1, dp(3)).apply {
-                topMargin = dp(8)
-            })
-            root.addView(panel, FrameLayout.LayoutParams(dp(440), ViewGroup.LayoutParams.WRAP_CONTENT,
+            root.addView(panel, FrameLayout.LayoutParams(dp(320), ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP or Gravity.END).apply {
                 topMargin = dp(28)
                 marginEnd = dp(32)
@@ -200,10 +195,6 @@ class PlayerActivity : Activity() {
         }
         episodeCountdownTitle?.text = episodeNames[nextIndex]
         episodeCountdownTimer?.text = "Otomatik geçiş: $secondsLeft sn"
-        episodeCountdownProgress?.layoutParams = episodeCountdownProgress?.layoutParams?.apply {
-            width = (dp(500) * (secondsLeft.coerceIn(0, 10) / 10f)).toInt().coerceAtLeast(dp(2))
-        }
-        episodeCountdownProgress?.requestLayout()
     }
 
     private fun clearEpisodeCountdown() {
@@ -214,7 +205,6 @@ class PlayerActivity : Activity() {
         episodeTransitionOverlay = null
         episodeCountdownTitle = null
         episodeCountdownTimer = null
-        episodeCountdownProgress = null
         episodeCountdownIndex = -1
     }
 
