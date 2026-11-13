@@ -1080,13 +1080,13 @@ class MainActivity : Activity() {
         primaryMenuColumn.addView(searchBar, LinearLayout.LayoutParams(-1, dp(44)))
         navBar = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.TOP
+            gravity = Gravity.CENTER_VERTICAL
         }
-        // Keep navigation items anchored from the top of the available menu area.
+        // Center the navigation items vertically within the available sidebar area.
         sidebarMenuScroll = FrameLayout(this).apply {
             clipChildren = true
             clipToPadding = true
-            addView(navBar, FrameLayout.LayoutParams(-1, -1, Gravity.TOP))
+            addView(navBar, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER))
         }
         primaryMenuColumn.addView(sidebarMenuScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         settingsBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -5576,7 +5576,7 @@ class MainActivity : Activity() {
                         row.addView(expandedPosterRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
                     expandedPosterRow?.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        setMargins(dp(3), 0, dp(3), dp(12))
+                        setMargins(dp(6), 0, dp(6), dp(12))
                     })
                     expandedPosterCount++
                 } else {
