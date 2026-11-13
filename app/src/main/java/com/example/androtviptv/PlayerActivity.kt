@@ -853,7 +853,7 @@ class PlayerActivity : Activity() {
                                 // VOD errors are surfaced instead of repeatedly replacing the
                                 // media item, which can restart buffering and hide the real error.
                                 android.widget.Toast.makeText(
-                                    this,
+                                    this@PlayerActivity,
                                     "Video oynatılamadı (${error.errorCodeName}). Tekrar denemek için yeniden seç.",
                                     android.widget.Toast.LENGTH_LONG
                                 ).show()
