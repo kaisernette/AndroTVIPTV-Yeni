@@ -7377,6 +7377,7 @@ class MainActivity : Activity() {
 
                 val leftItems = listOf(
                     Triple("▣", "Uygulama", "KaiserTV+"),
+                    Triple("◷", "Sürüm tarihi", buildDate),
                     Triple("▱", "Platform", "Android / Android TV"),
                     Triple("♟", "Minimum Android", "6.0 (API 23)"),
                     Triple("</>", "Compile SDK", "35"),
@@ -7384,7 +7385,6 @@ class MainActivity : Activity() {
                     Triple("◇", "Sürüm", version)
                 )
                 val rightItems = listOf(
-                    Triple("◷", "Sürüm tarihi", buildDate),
                     Triple("♨", "Java", "17"),
                     Triple("K", "Kotlin", "2.0.21"),
                     Triple("◆", "Android Gradle Plugin", "8.7.3"),
@@ -7404,17 +7404,13 @@ class MainActivity : Activity() {
                     LinearLayout.LayoutParams(dp(118), dp(42)))
                 content.addView(topBar, LinearLayout.LayoutParams(-1, dp(48)))
 
-                val logo = makeKaiserLogoView(31f)
-                content.addView(logo, LinearLayout.LayoutParams(dp(230), dp(68)).apply {
-                    gravity = Gravity.CENTER
-                    topMargin = dp(2)
-                })
                 content.addView(TextView(this).apply {
                     text = aboutLabel("Yazılım Bilgileri")
-                    textSize = 21f
+                    textSize = 27f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(Color.WHITE)
-                    gravity = Gravity.CENTER
-                    setPadding(0, dp(2), 0, dp(18))
+                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                    setPadding(dp(16), dp(8), dp(8), dp(16))
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
                 val columns = LinearLayout(this).apply {
