@@ -1033,8 +1033,10 @@ class MainActivity : Activity() {
         val initialSidebarWidth = if (isMobileLayout) 142 else 150
         val bodyRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            clipChildren = false
-            clipToPadding = false
+            // Hard clipping prevents scaled/focused poster cards from drawing
+            // into the fixed header while the content scrolls.
+            clipChildren = true
+            clipToPadding = true
         }
         bodyRow.addView(sidebar, LinearLayout.LayoutParams(dp(initialSidebarWidth), -1).apply {
             setMargins(0, 0, dp(if (isMobileLayout) 3 else 8), 0)
@@ -1094,8 +1096,8 @@ class MainActivity : Activity() {
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, 0)
-            clipChildren = false
-            clipToPadding = false
+            clipChildren = true
+            clipToPadding = true
         }
         // main is attached exactly once, inside bodyRow below.
         // Adding it to root here as well causes "child already has a parent"
@@ -1142,6 +1144,7 @@ class MainActivity : Activity() {
             textSize = 14f
             setTextColor(muted)
             gravity = Gravity.CENTER_VERTICAL
+            translationY = -dp(3).toFloat()
             setPadding(0, 0, dp(14), 0)
         }
         headerTimeView = TextView(this).apply {
@@ -1149,14 +1152,17 @@ class MainActivity : Activity() {
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER_VERTICAL
+            translationY = -dp(3).toFloat()
         }
         val headerLogo = makeKaiserLogoView(if (isMobileLayout) 23f else 29f).apply {
             gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            translationY = -dp(3).toFloat()
             setPadding(dp(20), 0, 0, 0)
         }
         dateClockRow.addView(headerLogo, LinearLayout.LayoutParams(dp(if (isMobileLayout) 205 else 260), -1))
         dateClockRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
         val headerSearchButton = ImageView(this).apply {
+            translationY = -dp(3).toFloat()
             setImageResource(R.drawable.nav_search)
             imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
@@ -1320,7 +1326,7 @@ class MainActivity : Activity() {
         main.addView(mainContentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         dateClockRow.isFocusable = false
         dateClockRow.background = ColorDrawable(Color.TRANSPARENT)
-        root.addView(dateClockRow, LinearLayout.LayoutParams(-1, dp(54)))
+        root.addView(dateClockRow, LinearLayout.LayoutParams(-1, dp(48)))
         bodyRow.addView(main, LinearLayout.LayoutParams(0, -1, 1f))
         root.addView(bodyRow, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
