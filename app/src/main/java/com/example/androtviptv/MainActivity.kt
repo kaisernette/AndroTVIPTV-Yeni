@@ -5263,7 +5263,7 @@ class MainActivity : Activity() {
                 selectedType == "Diziler" -> "Sevdiğin dizileri keşfet"
                 selectedType == "Favoriler" -> "Kaydettiğin içerikler"
                 selectedType == "Son İzlenenler" -> "Son izlediğin içerikler"
-                else -> "Senin için seçilen içerikler"
+                else -> "KaiserTV+ ile sevdiğin içerikleri keşfetmenin keyfini çıkarmaya hazır mısın? Ayarlar bölümünden kendi yayın kaynağını ekleyerek hemen başlayabilirsin..."
             }
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
