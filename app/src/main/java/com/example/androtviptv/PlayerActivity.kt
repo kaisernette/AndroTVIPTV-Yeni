@@ -66,7 +66,7 @@ class PlayerActivity : Activity() {
     private val playbackWatchdog = object : Runnable {
         override fun run() {
             val exo = player
-            if (exo != null && exo.playWhenReady && !isFinishing) {
+            if (exo != null && exo.playWhenReady && !isFinishing && isLiveStream) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (exo.playbackState == Player.STATE_BUFFERING) {
                     if (bufferingSinceMs == 0L) bufferingSinceMs = now
@@ -847,7 +847,17 @@ class PlayerActivity : Activity() {
                                 retryCount = 0
                                 android.util.Log.w("KaiserTVPlayer", "HLS fallback failed; returning to original stream")
                             }
-                            restartCurrentStream("Akış hatası: ${error.errorCodeName}")
+                            if (isLiveStream) {
+                                restartCurrentStream("Canlı yayın hatası: ${error.errorCodeName}")
+                            } else {
+                                // VOD errors are surfaced instead of repeatedly replacing the
+                                // media item, which can restart buffering and hide the real error.
+                                android.widget.Toast.makeText(
+                                    this,
+                                    "Video oynatılamadı (${error.errorCodeName}). Tekrar denemek için yeniden seç.",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
                         }
                     })
                     val resumePosition = if (isLiveStream) 0L else playbackPrefs.getLong(resumeKey, 0L)
