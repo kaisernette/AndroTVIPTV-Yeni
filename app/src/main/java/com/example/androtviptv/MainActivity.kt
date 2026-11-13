@@ -7355,47 +7355,115 @@ class MainActivity : Activity() {
             }
             "about" -> {
                 heading("Hakkında", t("KaiserTV+ uygulama bilgileri"))
-                val aboutPanel = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    setPadding(dp(28), dp(24), dp(28), dp(24))
-                    background = roundedDrawable(Color.rgb(10, 13, 19), 18)
-                }
-                aboutPanel.addView(makeKaiserLogoView(31f), LinearLayout.LayoutParams(dp(190), dp(58)).apply {
-                    gravity = Gravity.CENTER
-                    bottomMargin = dp(34)
-                })
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
                 val version = packageInfo.versionName ?: "Bilinmiyor"
                 val buildDate = try {
                     java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale("tr", "TR")).format(java.util.Date(packageInfo.lastUpdateTime))
                 } catch (_: Exception) { "Bilinmiyor" }
-                val appSize = try {
-                    val bytes = java.io.File(applicationInfo.sourceDir).length()
-                    String.format(java.util.Locale("tr", "TR"), "%.1f MB", bytes / (1024.0 * 1024.0))
-                } catch (_: Exception) { "Bilinmiyor" }
-                listOf(t("Sürüm") to version, t("Derleme tarihi") to buildDate, t("Uygulama boyutu") to appSize).forEach { item ->
-                    val infoRow = LinearLayout(this).apply {
+
+                val selectedLanguage = prefs.getString("app_language", "system") ?: "system"
+                val aboutLanguage = if (selectedLanguage == "system") java.util.Locale.getDefault().language else selectedLanguage
+                fun aboutText(key: String): String {
+                    val translations = when (aboutLanguage) {
+                        "en" -> mapOf("Platform" to "Platform", "Yayın desteği" to "Broadcast support", "Sürüm tarihi" to "Version date", "Sürüm" to "Version", "Oynatıcı" to "Player")
+                        "de" -> mapOf("Platform" to "Plattform", "Yayın desteği" to "Wiedergabequellen", "Sürüm tarihi" to "Versionsdatum", "Sürüm" to "Version", "Oynatıcı" to "Player")
+                        "fr" -> mapOf("Platform" to "Plateforme", "Yayın desteği" to "Sources prises en charge", "Sürüm tarihi" to "Date de version", "Sürüm" to "Version", "Oynatıcı" to "Lecteur")
+                        "it" -> mapOf("Platform" to "Piattaforma", "Yayın desteği" to "Sorgenti supportate", "Sürüm tarihi" to "Data versione", "Sürüm" to "Versione", "Oynatıcı" to "Lettore")
+                        "es" -> mapOf("Platform" to "Plataforma", "Yayın desteği" to "Fuentes compatibles", "Sürüm tarihi" to "Fecha de versión", "Sürüm" to "Versión", "Oynatıcı" to "Reproductor")
+                        "ru" -> mapOf("Platform" to "Платформа", "Yayın desteği" to "Поддержка источников", "Sürüm tarihi" to "Дата версии", "Sürüm" to "Версия", "Oynatıcı" to "Плеер")
+                        "ar" -> mapOf("Platform" to "المنصة", "Yayın desteği" to "مصادر البث المدعومة", "Sürüm tarihi" to "تاريخ الإصدار", "Sürüm" to "الإصدار", "Oynatıcı" to "المشغل")
+                        else -> emptyMap()
+                    }
+                    return translations[key] ?: key
+                }
+
+                val aboutCards = listOf(
+                    Triple("Platform", "Android TV", "▣"),
+                    Triple("Yayın desteği", "M3U • Xtream • Stalker", "◉"),
+                    Triple("Oynatıcı", "Media3 ExoPlayer", "▶"),
+                    Triple("Sürüm", version, "◇"),
+                    Triple("Sürüm tarihi", buildDate, "◷")
+                )
+                val aboutGrid = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(4), dp(4), dp(4), dp(4))
+                }
+                val rows = aboutCards.chunked(3)
+                rows.forEachIndexed { rowIndex, rowItems ->
+                    val row = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(8), dp(12), dp(8), dp(12))
                     }
-                    infoRow.addView(TextView(this).apply {
-                        text = item.first
-                        textSize = 17f
-                        setTextColor(muted)
-                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    infoRow.addView(TextView(this).apply {
-                        text = item.second
-                        textSize = 17f
-                        setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(Color.WHITE)
-                        gravity = Gravity.END
-                    })
-                    aboutPanel.addView(infoRow)
+                    rowItems.forEach { item ->
+                        val card = LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            setPadding(dp(12), dp(12), dp(10), dp(12))
+                            background = roundedDrawable(panel, 14)
+                        }
+                        card.addView(TextView(this).apply {
+                            text = item.third
+                            textSize = 21f
+                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(accentBright)
+                            setPadding(0, 0, 0, dp(5))
+                        })
+                        card.addView(TextView(this).apply {
+                            text = aboutText(item.first)
+                            textSize = 14f
+                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(Color.WHITE)
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                        })
+                        card.addView(TextView(this).apply {
+                            text = item.second
+                            textSize = 12f
+                            setTextColor(muted)
+                            maxLines = 2
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            setPadding(0, dp(4), 0, 0)
+                        })
+                        row.addView(card, LinearLayout.LayoutParams(0, dp(112), 1f).apply {
+                            setMargins(dp(4), dp(4), dp(4), dp(4))
+                        })
+                    }
+                    if (rowItems.size < 3) {
+                        repeat(3 - rowItems.size) {
+                            row.addView(View(this), LinearLayout.LayoutParams(0, dp(112), 1f).apply {
+                                setMargins(dp(4), dp(4), dp(4), dp(4))
+                            })
+                        }
+                    }
+                    aboutGrid.addView(row, LinearLayout.LayoutParams(-1, dp(120)))
                 }
-                content.addView(aboutPanel, LinearLayout.LayoutParams(-1, -1).apply {
-                    setMargins(dp(8), dp(8), dp(8), dp(8))
+
+                val brandCard = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    background = roundedDrawable(panel, 14)
+                }
+                brandCard.addView(TextView(this).apply {
+                    text = "KaiserTV+"
+                    textSize = 20f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                })
+                brandCard.addView(TextView(this).apply {
+                    text = "Kaisernet · 2026"
+                    textSize = 13f
+                    setTextColor(accentBright)
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(4), 0, 0)
+                })
+                val lastRow = aboutGrid.getChildAt(1) as? LinearLayout
+                lastRow?.addView(brandCard, 1, LinearLayout.LayoutParams(0, dp(112), 1f).apply {
+                    setMargins(dp(4), dp(4), dp(4), dp(4))
+                })
+                content.addView(aboutGrid, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(4), dp(4), dp(4), dp(4))
                 })
             }
             "history" -> {
