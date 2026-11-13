@@ -993,6 +993,12 @@ class MainActivity : Activity() {
                             return firstCategoryFocusView ?: focused
                         }
                     }
+                    if (direction == View.FOCUS_LEFT && contextNavigationStage == 2 &&
+                        ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)) {
+                        showContextNavigationStage(1)
+                        firstCategoryFocusView?.post { firstCategoryFocusView?.requestFocus() }
+                        return firstCategoryFocusView ?: focused
+                    }
                     if (direction == View.FOCUS_RIGHT && contextNavigationStage == 1 &&
                         ::categoryListScroll.isInitialized && isDescendantView(categoryListScroll, focused)) {
                         showContextNavigationStage(2)
@@ -1003,7 +1009,8 @@ class MainActivity : Activity() {
                 val focusIsInSidebar = ::sidebar.isInitialized && isDescendantView(sidebar, focused)
                 val focusIsInContent = ::mainContentScroll.isInitialized && isDescendantView(mainContentScroll, focused)
                 val candidate = super.focusSearch(focused, direction)
-                val crossingAllowed = focusIsInSidebar && direction == View.FOCUS_RIGHT
+                val crossingAllowed = (focusIsInSidebar && direction == View.FOCUS_RIGHT) ||
+                    (focusIsInContent && direction == View.FOCUS_LEFT)
                 val candidateIsInSidebar = candidate != null && ::sidebar.isInitialized &&
                     isDescendantView(sidebar, candidate)
                 val crossesBoundary = (focusIsInSidebar && candidate != null && !candidateIsInSidebar) ||
@@ -1811,7 +1818,8 @@ class MainActivity : Activity() {
                         button.nextFocusUpId = button.id
                         firstCategoryFocusView = button
                         selectedSidebarFocusView?.let { navButton ->
-                            button.nextFocusLeftId = navButton.id
+                            // Keep left navigation inside the category list; the main menu is not opened here.
+                            button.nextFocusLeftId = button.id
                             navButton.nextFocusRightId = button.id
                         }
                     } else {
@@ -4370,17 +4378,16 @@ class MainActivity : Activity() {
             }
 
             if (sidebarMode == "context" && selectedType in listOf("Canlı TV", "Filmler", "Diziler")) {
-                // Back from a context tab returns to the populated Home screen.
+                // Back leaves the category/content workspace and preserves the selected tab.
+                val returnTab = selectedType
                 expandedCategory = null
                 selectedGroup = "Tüm kategoriler"
                 focusedCategoryName = null
-                selectedType = "Tümü"
                 sidebarMode = "main"
                 contextNavigationStage = 0
-                prefs.edit().putString("last_section", "Tümü").putString("last_group", "Tüm kategoriler").apply()
+                prefs.edit().putString("last_section", returnTab).putString("last_group", "Tüm kategoriler").apply()
                 rebuildNavigation()
                 render()
-                mainContentScroll.post { mainContentScroll.scrollTo(0, 0) }
                 return
             }
 
