@@ -4604,9 +4604,11 @@ class MainActivity : Activity() {
         if (!detailMode && ::rootLayout.isInitialized && ::mainContentScroll.isInitialized) {
             applyThemeSurfaces()
         }
+        // Reserve space for the fixed date/clock overlay on every tab.
+        // Without this top inset, the first row/cards slide underneath the header.
         content.setPadding(
             if (detailMode) 0 else dp(18),
-            if (detailMode) 0 else dp(18),
+            if (detailMode) 0 else dp(82),
             if (detailMode) 0 else dp(30),
             if (detailMode) 0 else dp(20)
         )
