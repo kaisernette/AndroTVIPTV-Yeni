@@ -7084,6 +7084,12 @@ class MainActivity : Activity() {
                                 if (checked) {
                                     activateSourceFromCache(source)
                                 } else {
+                                    // Remove provider-only category labels as well as the
+                                    // visible catalogue. Otherwise stale categories remain
+                                    // in the archive rail after the last source is disabled.
+                                    synchronized(providerCategoryNames) {
+                                        providerCategoryNames.clear()
+                                    }
                                     selectedCategorySourceId = ""
                                     selectedGroup = "Tüm kategoriler"
                                     expandedCategory = null
