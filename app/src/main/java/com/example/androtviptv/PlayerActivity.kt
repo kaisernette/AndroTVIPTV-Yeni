@@ -789,8 +789,9 @@ class PlayerActivity : Activity() {
             val mediaItem = createStreamMediaItem(currentStreamUrl)
             val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
                 .setEnableDecoderFallback(true)
+            // Keep TV-box memory use predictable while retaining enough startup buffer.
             val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(30000, 90000, 2500, 7000)
+                .setBufferDurationsMs(15000, 45000, 1500, 4000)
                 .build()
             player = ExoPlayer.Builder(this, renderersFactory)
                 .setMediaSourceFactory(mediaSourceFactory)
