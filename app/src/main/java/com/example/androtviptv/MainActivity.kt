@@ -710,15 +710,16 @@ class MainActivity : Activity() {
             "mac" -> Color.rgb(23, 21, 29)
             else -> Color.rgb(17, 20, 25)
         }
-        panel = themePanelColor(name)
+        val sourceThemeName = when (source.mode) {
+            "m3u" -> "Orman • Zümrüt"
+            "mac" -> "Koyu • Mor"
+            else -> "Antrasit • Mavi"
+        }
+        panel = themePanelColor(sourceThemeName)
         window.statusBarColor = bg
         window.navigationBarColor = bg
         if (persist) {
-            val name = when (source.mode) {
-                "m3u" -> "Orman • Zümrüt"
-                "mac" -> "Koyu • Mor"
-                else -> "Antrasit • Mavi"
-            }
+            val name = sourceThemeName
             prefs.edit().putString("theme_name", name)
                 .putString("active_source_theme_mode", source.mode).apply()
         }
