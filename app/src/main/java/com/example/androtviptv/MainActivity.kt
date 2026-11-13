@@ -6805,7 +6805,58 @@ class MainActivity : Activity() {
                 option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Hakkında", "Uygulama sürümü ve teknik bilgiler") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                val aboutPanel = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(20), dp(16), dp(20), dp(16))
+                    background = roundedDrawable(panel, 16)
+                }
+                aboutPanel.addView(TextView(this).apply {
+                    text = "KaiserTV+"
+                    textSize = 20f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                })
+                aboutPanel.addView(TextView(this).apply {
+                    text = "Mobil cihazlar ve Android TV için geliştirilen KaiserTV+, modern arayüzü ve çoklu yayın kaynağı desteğiyle içeriklerinize kolay erişim sağlar."
+                    textSize = 14f
+                    setTextColor(muted)
+                    setPadding(0, dp(7), 0, dp(12))
+                })
+                listOf(
+                    "Sürüm" to "1.0.027",
+                    "Platform" to "Mobil · Android TV",
+                    "Android desteği" to "Android 6.0 ve üzeri",
+                    "Yayın desteği" to "M3U · Xtream · Stalker"
+                ).forEach { item ->
+                    val infoRow = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(0, dp(6), 0, dp(6))
+                    }
+                    infoRow.addView(TextView(this).apply {
+                        text = item.first
+                        textSize = 13f
+                        setTextColor(muted)
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    infoRow.addView(TextView(this).apply {
+                        text = item.second
+                        textSize = 13f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.END
+                    })
+                    aboutPanel.addView(infoRow)
+                }
+                aboutPanel.addView(TextView(this).apply {
+                    text = "© 2026 KaiserTV+ · Tüm hakları saklıdır."
+                    textSize = 11f
+                    setTextColor(muted)
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(10), 0, 0)
+                })
+                content.addView(aboutPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(8), dp(12), dp(8), dp(12))
+                })
                 if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
                     option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
                 }
