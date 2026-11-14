@@ -7781,19 +7781,29 @@ class MainActivity : Activity() {
                         setPadding(dp(14), dp(12), dp(14), dp(12))
                     })
                 } else {
+                    fun accountButton(label: String, primary: Boolean, action: () -> Unit): Button {
+                        val button = makeButton(label, primary, action)
+                        fun applyStyle(focused: Boolean) {
+                            button.background = buttonBackground(if (focused || primary) accent else panel)
+                            button.setTextColor(if (focused || primary) Color.rgb(7, 18, 22) else Color.WHITE)
+                        }
+                        applyStyle(false)
+                        button.setOnFocusChangeListener { _, focused -> applyStyle(focused) }
+                        return button
+                    }
                     val form = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.TOP
                         background = roundedDrawable(panel, 20)
-                        setPadding(dp(18), dp(16), dp(18), dp(16))
+                        setPadding(dp(18), dp(14), dp(18), dp(14))
                     }
                     val accountModeKey = "account_form_mode"
                     var accountMode = prefs.getString(accountModeKey, "login") ?: "login"
                     val accountTabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-                    accountTabs.addView(makeButton(accountText("Giriş yap"), accountMode == "login") {
+                    accountTabs.addView(accountButton(accountText("Giriş yap"), accountMode == "login") {
                         prefs.edit().putString(accountModeKey, "login").apply(); render()
                     }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { rightMargin = dp(6) })
-                    accountTabs.addView(makeButton(accountText("Hesap oluştur"), accountMode == "create") {
+                    accountTabs.addView(accountButton(accountText("Hesap oluştur"), accountMode == "create") {
                         prefs.edit().putString(accountModeKey, "create").apply(); render()
                     }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(6) })
                     form.addView(accountTabs, LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(10) })
@@ -7806,10 +7816,13 @@ class MainActivity : Activity() {
                     })
                     val emailField = accountInput(accountText("E-posta"))
                     val passwordField = accountInput("Şifre", true)
-                    form.addView(emailField, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+                    val emailRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                    emailRow.addView(emailField, LinearLayout.LayoutParams(0, dp(48), 1f))
+                    emailRow.addView(View(this), LinearLayout.LayoutParams(dp(90), dp(48)))
+                    form.addView(emailRow, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
                     val passwordRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     passwordRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(48), 1f))
-                    val passwordToggle = makeButton(accountText("Göster"), false) {
+                    val passwordToggle = accountButton(accountText("Göster"), false) {
                         val visible = passwordField.inputType == (android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD)
                         passwordField.inputType = if (visible) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                         passwordField.setSelection(passwordField.text?.length ?: 0)
@@ -7821,7 +7834,7 @@ class MainActivity : Activity() {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER_HORIZONTAL
                     }
-                    emailActions.addView(makeButton(accountText(if (accountMode == "create") "Hesap oluştur" else "Giriş yap"), true) {
+                    emailActions.addView(accountButton(accountText(if (accountMode == "create") "Hesap oluştur" else "Giriş yap"), true) {
                         val email = emailField.text.toString().trim()
                         val passwordValue = passwordField.text.toString()
                         if (email.isBlank() || passwordValue.isBlank()) {
@@ -7850,7 +7863,7 @@ class MainActivity : Activity() {
                     }, LinearLayout.LayoutParams(-1, dp(46)))
                     form.addView(emailActions, LinearLayout.LayoutParams(-1, dp(46)).apply { bottomMargin = dp(4) })
 
-                    form.addView(makeButton(accountText("Şifremi unuttum"), false) {
+                    form.addView(accountButton(accountText("Şifremi unuttum"), false) {
                         val email = emailField.text.toString().trim()
                         if (email.isBlank()) accountMessage(accountText("Şifre sıfırlamak için e-posta adresini yaz."))
                         else accountRepository.sendPasswordReset(email)
@@ -7858,7 +7871,7 @@ class MainActivity : Activity() {
                             .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
                     }, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(2) })
 
-                    form.addView(makeButton(accountText("Google ile devam et"), false) {
+                    form.addView(accountButton(accountText("Google ile devam et"), false) {
                         try {
                             launchGoogleSignIn(
                                 accountRepository,
@@ -8095,18 +8108,42 @@ class MainActivity : Activity() {
                     setPadding(dp(10), dp(18), dp(10), dp(10))
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                 val activeCard = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(16), dp(12), dp(16), dp(12)); background = roundedDrawable(panel, 14)
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    setPadding(dp(16), dp(16), dp(16), dp(14))
+                    background = roundedDrawable(panel, 18)
                 }
-                val activeAvatar = avatarImage(prefs.getString(avatarKey(activeProfile), null), 52, true)
-                activeCard.addView(activeAvatar, LinearLayout.LayoutParams(dp(52), dp(52)))
-                val activeText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                activeText.addView(TextView(this).apply { text = t("Aktif Profil"); textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
-                activeText.addView(TextView(this).apply { text = activeProfile; textSize = 14f; setTextColor(accentBright); setPadding(0, dp(3), 0, 0) })
-                activeCard.addView(activeText, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(12), 0, 0, 0) })
-                content.addView(activeCard, LinearLayout.LayoutParams(-1, dp(78)).apply { setMargins(dp(6), 0, dp(6), dp(10)) })
+                val avatarLine = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER
+                }
+                avatarLine.addView(avatarImage(prefs.getString(avatarKey(activeProfile), null), 76, true),
+                    LinearLayout.LayoutParams(dp(76), dp(76)))
+                avatarLine.addView(makeButton("+", true) { showProfileEditor() },
+                    LinearLayout.LayoutParams(dp(48), dp(48)).apply { leftMargin = dp(14) })
+                activeCard.addView(avatarLine)
+                activeCard.addView(TextView(this).apply {
+                    text = activeProfile
+                    textSize = 20f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(8), 0, dp(8))
+                })
+                activeCard.addView(TextView(this).apply {
+                    text = t("Profil Ayarları")
+                    textSize = 13f
+                    setTextColor(accentBright)
+                    gravity = Gravity.CENTER
+                    setPadding(0, 0, 0, dp(8))
+                })
+                activeCard.addView(makeButton(t("Düzenle"), false) { showProfileEditor(activeProfile) },
+                    LinearLayout.LayoutParams(dp(150), dp(40)))
+                content.addView(activeCard, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(6), 0, dp(6), dp(10))
+                })
 
-                profileNames.forEach { profileName ->
+                profileNames.filter { it != activeProfile }.forEach { profileName ->
                     val selected = profileName == activeProfile
                     val row = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
@@ -8947,12 +8984,7 @@ class MainActivity : Activity() {
             "history" -> {
                 heading("Geçmiş", t("Daha önce izlediğin içerikler"))
                 val selectedHistoryKeys = mutableSetOf<String>()
-                val actions = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                    setPadding(0, dp(4), 0, dp(10))
-                }
-                val selectDelete = makeButton(t("Seçileni Sil"), true) {
+                val selectDelete = makeButton("⌫", true) {
                     val keys = selectedHistoryKeys.toSet()
                     if (keys.isEmpty()) {
                         Toast.makeText(this, t("Önce içerik seç."), Toast.LENGTH_SHORT).show()
@@ -8967,7 +8999,7 @@ class MainActivity : Activity() {
                             }.show()
                     }
                 }
-                val clearAll = makeButton(t("Geçmişi Sil"), false) {
+                val clearAll = makeButton("🗑", false) {
                     if (recent.isEmpty()) {
                         Toast.makeText(this, t("Geçmiş zaten boş."), Toast.LENGTH_SHORT).show()
                     } else {
@@ -8981,15 +9013,14 @@ class MainActivity : Activity() {
                             }.show()
                     }
                 }
-                actions.addView(selectDelete, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(dp(4), 0, dp(6), 0) })
-                actions.addView(clearAll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(dp(4), 0, dp(4), 0) })
-                content.addView(actions, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                selectDelete.contentDescription = t("Seçileni Sil")
+                clearAll.contentDescription = t("Geçmişi Sil")
 
-                // İzlediklerim yalnızca film ve dizi geçmişini gösterir; canlı TV
-                // kanal geçmişi bu ekrandan çıkarıldı.
+                // Film, dizi ve canlı TV geçmişi ayrı sekmelerde listelenir.
                 val historySections = listOf(
                     Triple("Filmler", "▰", "Filmler"),
-                    Triple("Diziler", "▤", "Diziler")
+                    Triple("Diziler", "▤", "Diziler"),
+                    Triple("Canlı TV", "▣", "TV")
                 )
                 val historyTabs = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -9133,6 +9164,18 @@ class MainActivity : Activity() {
                 content.addView(historyList, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(dp(2), dp(8), dp(2), dp(8))
                 })
+                val historyActionsBottom = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(8), dp(4), dp(6))
+                }
+                historyActionsBottom.addView(selectDelete, LinearLayout.LayoutParams(dp(52), dp(44)).apply {
+                    setMargins(dp(5), 0, dp(5), 0)
+                })
+                historyActionsBottom.addView(clearAll, LinearLayout.LayoutParams(dp(52), dp(44)).apply {
+                    setMargins(dp(5), 0, dp(5), 0)
+                })
+                content.addView(historyActionsBottom, LinearLayout.LayoutParams(-1, dp(56)))
             }
         }
     }
