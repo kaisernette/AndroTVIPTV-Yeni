@@ -568,6 +568,93 @@ class MainActivity : Activity() {
             )
             else -> emptyMap()
         }
+        val profileUiTranslations = when (language) {
+            "en" -> mapOf(
+                "Profiller" to "Profiles", "Kullanıcı profillerini oluştur ve yönet" to "Create and manage user profiles",
+                "Profil Yönetimi" to "Profile Management", "Kullanıcı profillerinizi oluşturun ve yönetin." to "Create and manage your user profiles.",
+                "Profil Ekle" to "Add Profile", "Aktif Profil" to "Active Profile", "Uygulamada kullanılacak profil." to "Profile used in the app.",
+                "Etkinleştir" to "Activate", "Aktif" to "Active", "Düzenle" to "Edit", "Sil" to "Delete",
+                "Profil adı" to "Profile name", "Yeni profil adını girin." to "Enter the new profile name.",
+                "Profil oluştur" to "Create profile", "Profil düzenle" to "Edit profile", "Profil silinsin mi?" to "Delete profile?",
+                "Bu profil silinsin mi?" to "Do you want to delete this profile?", "En az bir profil kalmalı." to "At least one profile must remain.",
+                "Profil adı boş olamaz." to "Profile name cannot be empty.", "Profil zaten mevcut." to "This profile already exists.",
+                "Profil seçildi." to "Profile selected.", "Ana Profil" to "Main Profile",
+                "Profiller cihazda saklanır. Profil verilerinin ayrıştırılması sonraki aşamada tamamlanacaktır." to "Profiles are stored on this device. Separating profile data will be completed in a later step."
+            )
+            "de" -> mapOf(
+                "Profiller" to "Profile", "Kullanıcı profillerini oluştur ve yönet" to "Benutzerprofile erstellen und verwalten",
+                "Profil Yönetimi" to "Profilverwaltung", "Kullanıcı profillerinizi oluşturun ve yönetin." to "Erstellen und verwalten Sie Ihre Benutzerprofile.",
+                "Profil Ekle" to "Profil hinzufügen", "Aktif Profil" to "Aktives Profil", "Uygulamada kullanılacak profil." to "Das in der App verwendete Profil.",
+                "Etkinleştir" to "Aktivieren", "Aktif" to "Aktiv", "Düzenle" to "Bearbeiten", "Sil" to "Löschen",
+                "Profil adı" to "Profilname", "Yeni profil adını girin." to "Geben Sie den neuen Profilnamen ein.",
+                "Profil oluştur" to "Profil erstellen", "Profil düzenle" to "Profil bearbeiten", "Profil silinsin mi?" to "Profil löschen?",
+                "Bu profil silinsin mi?" to "Möchten Sie dieses Profil löschen?", "En az bir profil kalmalı." to "Mindestens ein Profil muss bleiben.",
+                "Profil adı boş olamaz." to "Der Profilname darf nicht leer sein.", "Profil zaten mevcut." to "Dieses Profil ist bereits vorhanden.",
+                "Profil seçildi." to "Profil ausgewählt.", "Ana Profil" to "Hauptprofil",
+                "Profiller cihazda saklanır. Profil verilerinin ayrıştırılması sonraki aşamada tamamlanacaktır." to "Profile werden auf diesem Gerät gespeichert. Die Trennung der Profildaten folgt in einem späteren Schritt."
+            )
+            "fr" -> mapOf(
+                "Profiller" to "Profils", "Kullanıcı profillerini oluştur ve yönet" to "Créer et gérer les profils utilisateur",
+                "Profil Yönetimi" to "Gestion des profils", "Kullanıcı profillerinizi oluşturun ve yönetin." to "Créez et gérez vos profils utilisateur.",
+                "Profil Ekle" to "Ajouter un profil", "Aktif Profil" to "Profil actif", "Uygulamada kullanılacak profil." to "Profil utilisé dans l’application.",
+                "Etkinleştir" to "Activer", "Aktif" to "Actif", "Düzenle" to "Modifier", "Sil" to "Supprimer",
+                "Profil adı" to "Nom du profil", "Yeni profil adını girin." to "Saisissez le nouveau nom du profil.",
+                "Profil oluştur" to "Créer le profil", "Profil düzenle" to "Modifier le profil", "Profil silinsin mi?" to "Supprimer le profil ?",
+                "Bu profil silinsin mi?" to "Voulez-vous supprimer ce profil ?", "En az bir profil kalmalı." to "Au moins un profil doit être conservé.",
+                "Profil adı boş olamaz." to "Le nom du profil ne peut pas être vide.", "Profil zaten mevcut." to "Ce profil existe déjà.",
+                "Profil seçildi." to "Profil sélectionné.", "Ana Profil" to "Profil principal",
+                "Profiller cihazda saklanır. Profil verilerinin ayrıştırılması sonraki aşamada tamamlanacaktır." to "Les profils sont stockés sur cet appareil. La séparation des données sera réalisée dans une prochaine étape."
+            )
+            "it" -> mapOf(
+                "Profiller" to "Profili", "Kullanıcı profillerini oluştur ve yönet" to "Crea e gestisci i profili utente",
+                "Profil Yönetimi" to "Gestione profili", "Kullanıcı profillerinizi oluşturun ve yönetin." to "Crea e gestisci i tuoi profili utente.",
+                "Profil Ekle" to "Aggiungi profilo", "Aktif Profil" to "Profilo attivo", "Uygulamada kullanılacak profil." to "Profilo utilizzato nell’app.",
+                "Etkinleştir" to "Attiva", "Aktif" to "Attivo", "Düzenle" to "Modifica", "Sil" to "Elimina",
+                "Profil adı" to "Nome profilo", "Yeni profil adını girin." to "Inserisci il nuovo nome del profilo.",
+                "Profil oluştur" to "Crea profilo", "Profil düzenle" to "Modifica profilo", "Profil silinsin mi?" to "Eliminare il profilo?",
+                "Bu profil silinsin mi?" to "Vuoi eliminare questo profilo?", "En az bir profil kalmalı." to "Deve rimanere almeno un profilo.",
+                "Profil adı boş olamaz." to "Il nome del profilo non può essere vuoto.", "Profil zaten mevcut." to "Questo profilo esiste già.",
+                "Profil seçildi." to "Profil selezionato.", "Ana Profil" to "Profilo principale",
+                "Profiller cihazda saklanır. Profil verilerinin ayrıştırılması sonraki aşamada tamamlanacaktır." to "I profili sono salvati su questo dispositivo. La separazione dei dati sarà completata in una fase successiva."
+            )
+            "es" -> mapOf(
+                "Profiller" to "Perfiles", "Kullanıcı profillerini oluştur ve yönet" to "Crea y administra perfiles de usuario",
+                "Profil Yönetimi" to "Administración de perfiles", "Kullanıcı profillerinizi oluşturun ve yönetin." to "Crea y administra tus perfiles de usuario.",
+                "Profil Ekle" to "Añadir perfil", "Aktif Profil" to "Perfil activo", "Uygulamada kullanılacak profil." to "Perfil que se usará en la aplicación.",
+                "Etkinleştir" to "Activar", "Aktif" to "Activo", "Düzenle" to "Editar", "Sil" to "Eliminar",
+                "Profil adı" to "Nombre del perfil", "Yeni profil adını girin." to "Introduce el nuevo nombre del perfil.",
+                "Profil oluştur" to "Crear perfil", "Profil düzenle" to "Editar perfil", "Profil silinsin mi?" to "¿Eliminar perfil?",
+                "Bu profil silinsin mi?" to "¿Quieres eliminar este perfil?", "En az bir profil kalmalı." to "Debe quedar al menos un perfil.",
+                "Profil adı boş olamaz." to "El nombre del perfil no puede estar vacío.", "Profil zaten mevcut." to "Este perfil ya existe.",
+                "Profil seçildi." to "Perfil seleccionado.", "Ana Profil" to "Perfil principal",
+                "Profiller cihazda saklanır. Profil verilerinin ayrıştırılması sonraki aşamada tamamlanacaktır." to "Los perfiles se guardan en este dispositivo. La separación de los datos se completará en una etapa posterior."
+            )
+            "ru" -> mapOf(
+                "Profiller" to "Профили", "Kullanıcı profillerini oluştur ve yönet" to "Создавайте и управляйте профилями пользователей",
+                "Profil Yönetimi" to "Управление профилями", "Kullanıcı profillerinizi oluşturun ve yönetin." to "Создавайте профили пользователей и управляйте ими.",
+                "Profil Ekle" to "Добавить профиль", "Aktif Profil" to "Активный профиль", "Uygulamada kullanılacak profil." to "Профиль, используемый в приложении.",
+                "Etkinleştir" to "Активировать", "Aktif" to "Активен", "Düzenle" to "Изменить", "Sil" to "Удалить",
+                "Profil adı" to "Имя профиля", "Yeni profil adını girin." to "Введите новое имя профиля.",
+                "Profil oluştur" to "Создать профиль", "Profil düzenle" to "Изменить профиль", "Profil silinsin mi?" to "Удалить профиль?",
+                "Bu profil silinsin mi?" to "Вы действительно хотите удалить этот профиль?", "En az bir profil kalmalı." to "Должен остаться хотя бы один профиль.",
+                "Profil adı boş olamaz." to "Имя профиля не может быть пустым.", "Profil zaten mevcut." to "Такой профиль уже существует.",
+                "Profil seçildi." to "Профиль выбран.", "Ana Profil" to "Основной профиль",
+                "Profiller cihazda saklanır. Profil verilerinin ayrıştırılması sonraki aşamada tamamlanacaktır." to "Профили хранятся на этом устройстве. Разделение данных профилей будет добавлено на следующем этапе."
+            )
+            "ar" -> mapOf(
+                "Profiller" to "الملفات الشخصية", "Kullanıcı profillerini oluştur ve yönet" to "إنشاء ملفات المستخدمين وإدارتها",
+                "Profil Yönetimi" to "إدارة الملفات الشخصية", "Kullanıcı profillerinizi oluşturun ve yönetin." to "أنشئ ملفات المستخدمين وأدرها.",
+                "Profil Ekle" to "إضافة ملف شخصي", "Aktif Profil" to "الملف النشط", "Uygulamada kullanılacak profil." to "الملف المستخدم في التطبيق.",
+                "Etkinleştir" to "تفعيل", "Aktif" to "نشط", "Düzenle" to "تعديل", "Sil" to "حذف",
+                "Profil adı" to "اسم الملف الشخصي", "Yeni profil adını girin." to "أدخل اسم الملف الشخصي الجديد.",
+                "Profil oluştur" to "إنشاء ملف شخصي", "Profil düzenle" to "تعديل الملف الشخصي", "Profil silinsin mi?" to "حذف الملف الشخصي؟",
+                "Bu profil silinsin mi?" to "هل تريد حذف هذا الملف الشخصي؟", "En az bir profil kalmalı." to "يجب الاحتفاظ بملف شخصي واحد على الأقل.",
+                "Profil adı boş olamaz." to "لا يمكن أن يكون اسم الملف الشخصي فارغاً.", "Profil zaten mevcut." to "هذا الملف الشخصي موجود بالفعل.",
+                "Profil seçildi." to "تم اختيار الملف الشخصي.", "Ana Profil" to "الملف الرئيسي",
+                "Profiller cihazda saklanır. Profil verilerinin ayrıştırılması sonraki aşamada tamamlanacaktır." to "تُحفظ الملفات الشخصية على هذا الجهاز. وسيتم فصل بيانات كل ملف في مرحلة لاحقة."
+            )
+            else -> emptyMap()
+        }
         val dynamicLabels = when (language) {
             "en" -> mapOf("Haftanın Filmleri" to "Movies of the Week", "Haftanın Dizileri" to "Series of the Week", "Çıkış Yap" to "Exit", "Vazgeç" to "Cancel")
             "de" -> mapOf("Haftanın Filmleri" to "Filme der Woche", "Haftanın Dizileri" to "Serien der Woche", "Çıkış Yap" to "Beenden", "Vazgeç" to "Abbrechen")
@@ -578,7 +665,7 @@ class MainActivity : Activity() {
             "ar" -> mapOf("Haftanın Filmleri" to "أفلام الأسبوع", "Haftanın Dizileri" to "مسلسلات الأسبوع", "Çıkış Yap" to "خروج", "Vazgeç" to "إلغاء")
             else -> emptyMap()
         }
-        return dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
+        return profileUiTranslations[value] ?: dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
     }
     // Android TV cihazlarında aynı anda daha az görsel işi yürüt; RAM'e göre güvenli bitmap bütçesi kullan.
     // Bound background poster work: an unbounded queue can exhaust small TV boxes.
@@ -7109,6 +7196,7 @@ class MainActivity : Activity() {
                 setOnClickListener { action() }
             }
             val contentIcon = when (title) {
+                "Profiller" -> "◉"
                 "Kaynak Yönetimi" -> "▤"
                 "Dil / Language" -> "文"
                 "İçerik Ayarları" -> "▦"
@@ -7160,11 +7248,172 @@ class MainActivity : Activity() {
                 option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Profiller", "Kullanıcı profillerini oluştur ve yönet") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Hakkında", "Uygulama sürümü ve teknik bilgiler") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
                     option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
                 }
                 option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
+            "profiles" -> {
+                val profilePrefsKey = "user_profiles"
+                val activeProfileKey = "active_user_profile"
+                fun readProfiles(): MutableList<String> {
+                    val stored = prefs.getString(profilePrefsKey, null)
+                    val names = runCatching {
+                        val array = org.json.JSONArray(stored ?: "[\\"Ana Profil\\"]")
+                        MutableList(array.length()) { index -> array.optString(index).trim() }.filter { it.isNotBlank() }.toMutableList()
+                    }.getOrElse { mutableListOf("Ana Profil") }
+                    if (names.isEmpty()) names.add("Ana Profil")
+                    return names
+                }
+                fun saveProfiles(names: List<String>) {
+                    val array = org.json.JSONArray()
+                    names.forEach { array.put(it) }
+                    prefs.edit().putString(profilePrefsKey, array.toString()).apply()
+                }
+                var profileNames = readProfiles()
+                var activeProfile = prefs.getString(activeProfileKey, profileNames.first()) ?: profileNames.first()
+                if (activeProfile !in profileNames) {
+                    activeProfile = profileNames.first()
+                    prefs.edit().putString(activeProfileKey, activeProfile).apply()
+                }
+
+                heading("Profil Yönetimi", "Kullanıcı profillerinizi oluşturun ve yönetin.")
+                val activeCard = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(16), dp(12), dp(16), dp(12))
+                    background = roundedDrawable(panel, 14)
+                }
+                activeCard.addView(TextView(this).apply {
+                    text = "◉"; textSize = 28f; setTextColor(accentBright); gravity = Gravity.CENTER
+                }, LinearLayout.LayoutParams(dp(48), dp(48)))
+                val activeText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                activeText.addView(TextView(this).apply {
+                    text = t("Aktif Profil"); textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                })
+                activeText.addView(TextView(this).apply {
+                    text = activeProfile; textSize = 14f; setTextColor(accentBright); setPadding(0, dp(3), 0, 0)
+                })
+                activeCard.addView(activeText, LinearLayout.LayoutParams(0, -2, 1f))
+                content.addView(activeCard, LinearLayout.LayoutParams(-1, dp(76)).apply {
+                    setMargins(dp(6), dp(0), dp(6), dp(10))
+                })
+
+                profileNames.forEachIndexed { index, profileName ->
+                    val selected = profileName == activeProfile
+                    val row = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(12), dp(9), dp(10), dp(9))
+                        background = roundedDrawable(if (selected) panel else panel, 14)
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                        setOnFocusChangeListener { view, focused ->
+                            view.background = roundedDrawable(if (focused || selected) accent else panel, 14)
+                        }
+                        setOnClickListener {
+                            prefs.edit().putString(activeProfileKey, profileName).apply()
+                            android.widget.Toast.makeText(this@MainActivity, t("Profil seçildi."), android.widget.Toast.LENGTH_SHORT).show()
+                            render()
+                        }
+                    }
+                    val avatar = TextView(this).apply {
+                        text = profileName.take(1).uppercase(java.util.Locale.getDefault())
+                        textSize = 23f; setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE); gravity = Gravity.CENTER
+                        background = android.graphics.drawable.GradientDrawable().apply {
+                            shape = android.graphics.drawable.GradientDrawable.OVAL
+                            setColor(if (selected) accent else (0xFF34445F).toInt())
+                        }
+                    }
+                    row.addView(avatar, LinearLayout.LayoutParams(dp(52), dp(52)))
+                    val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                    details.addView(TextView(this).apply {
+                        text = profileName; textSize = 17f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                    })
+                    details.addView(TextView(this).apply {
+                        text = if (selected) t("Aktif") else t("Etkinleştir")
+                        textSize = 12f; setTextColor(if (selected) accentBright else muted); setPadding(0, dp(3), 0, 0)
+                    })
+                    row.addView(details, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(12), 0, dp(8), 0) })
+                    row.addView(makeButton(t("Düzenle"), false) {
+                        val editInput = android.widget.EditText(this@MainActivity).apply {
+                            setSingleLine(true); setText(profileName); setSelection(text.length)
+                        }
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle(t("Profil düzenle"))
+                            .setView(editInput)
+                            .setNegativeButton(t("İptal"), null)
+                            .setPositiveButton(t("Kaydet")) { _, _ ->
+                                val updatedName = editInput.text.toString().trim()
+                                when {
+                                    updatedName.isBlank() -> android.widget.Toast.makeText(this@MainActivity, t("Profil adı boş olamaz."), android.widget.Toast.LENGTH_SHORT).show()
+                                    profileNames.any { it.equals(updatedName, true) && !it.equals(profileName, true) } -> android.widget.Toast.makeText(this@MainActivity, t("Profil zaten mevcut."), android.widget.Toast.LENGTH_SHORT).show()
+                                    else -> {
+                                        profileNames[index] = updatedName
+                                        saveProfiles(profileNames)
+                                        if (activeProfile == profileName) prefs.edit().putString(activeProfileKey, updatedName).apply()
+                                        render()
+                                    }
+                                }
+                            }.show()
+                    }, LinearLayout.LayoutParams(dp(82), dp(40)))
+                    row.addView(makeButton(t("Sil"), false) {
+                        if (profileNames.size <= 1) {
+                            android.widget.Toast.makeText(this@MainActivity, t("En az bir profil kalmalı."), android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            AlertDialog.Builder(this@MainActivity)
+                                .setTitle(t("Profil silinsin mi?"))
+                                .setMessage(t("Bu profil silinsin mi?"))
+                                .setNegativeButton(t("İptal"), null)
+                                .setPositiveButton(t("Sil")) { _, _ ->
+                                    profileNames.removeAt(index)
+                                    saveProfiles(profileNames)
+                                    if (activeProfile == profileName) {
+                                        activeProfile = profileNames.first()
+                                        prefs.edit().putString(activeProfileKey, activeProfile).apply()
+                                    }
+                                    render()
+                                }.show()
+                        }
+                    }, LinearLayout.LayoutParams(dp(68), dp(40)).apply { setMargins(dp(6), 0, 0, 0) })
+                    content.addView(row, LinearLayout.LayoutParams(-1, dp(76)).apply {
+                        setMargins(dp(6), dp(4), dp(6), dp(4))
+                    })
+                }
+
+                content.addView(makeButton("+  ${t("Profil Ekle")}", false) {
+                    val input = android.widget.EditText(this@MainActivity).apply {
+                        hint = t("Profil adı"); setSingleLine(true)
+                    }
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle(t("Profil oluştur"))
+                        .setMessage(t("Yeni profil adını girin."))
+                        .setView(input)
+                        .setNegativeButton(t("İptal"), null)
+                        .setPositiveButton(t("Kaydet")) { _, _ ->
+                            val newName = input.text.toString().trim()
+                            when {
+                                newName.isBlank() -> android.widget.Toast.makeText(this@MainActivity, t("Profil adı boş olamaz."), android.widget.Toast.LENGTH_SHORT).show()
+                                profileNames.any { it.equals(newName, true) } -> android.widget.Toast.makeText(this@MainActivity, t("Profil zaten mevcut."), android.widget.Toast.LENGTH_SHORT).show()
+                                else -> {
+                                    profileNames.add(newName)
+                                    saveProfiles(profileNames)
+                                    prefs.edit().putString(activeProfileKey, newName).apply()
+                                    render()
+                                }
+                            }
+                        }.show()
+                }, LinearLayout.LayoutParams(-1, dp(48)).apply {
+                    setMargins(dp(6), dp(10), dp(6), dp(8))
+                })
+                content.addView(TextView(this).apply {
+                    text = t("Profiller cihazda saklanır. Profil verilerinin ayrıştırılması sonraki aşamada tamamlanacaktır.")
+                    textSize = 12f; setTextColor(muted); setPadding(dp(8), dp(8), dp(8), dp(12))
+                })
             }
             "language" -> {
                 val currentLanguage = prefs.getString("app_language", "system") ?: "system"
