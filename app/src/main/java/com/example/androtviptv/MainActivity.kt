@@ -1805,7 +1805,7 @@ class MainActivity : Activity() {
                     isOutsideTouchable = true; setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                     elevation = dp(18).toFloat()
                 }
-                profilePopup.showAsDropDown(anchor as View, -dp(190), dp(4), Gravity.END)
+                profilePopup.showAsDropDown(anchor as View, 0, dp(8), Gravity.END)
                 popupContent.post { popupContent.getChildAt(1)?.requestFocus() }
             }
             if (isMobileLayout) {
