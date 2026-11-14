@@ -5003,87 +5003,179 @@ class MainActivity : Activity() {
             val loadingPanel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(if (isMobileLayout) 10 else 24), dp(12), dp(if (isMobileLayout) 10 else 24), dp(12))
+                setPadding(dp(if (isMobileLayout) 8 else 22), dp(8), dp(if (isMobileLayout) 8 else 22), dp(8))
             }
 
-            val loadingCard = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setPadding(dp(if (isMobileLayout) 14 else 28), dp(if (isMobileLayout) 18 else 26), dp(if (isMobileLayout) 14 else 28), dp(18))
-                background = roundedDrawable(panel, 22)
-            }
-            loadingCard.addView(TextView(this).apply {
+            val title = TextView(this).apply {
                 text = loadingLabel("Kütüphanen hazırlanıyor")
-                textSize = if (isMobileLayout) 21f else 28f
+                textSize = if (isMobileLayout) 21f else 29f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
-            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }
+            loadingPanel.addView(title, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-            loadingCard.addView(TextView(this).apply {
+            loadingPanel.addView(TextView(this).apply {
                 text = loadingLabel("İçeriklerin senin için düzenleniyor.")
-                textSize = if (isMobileLayout) 13f else 16f
+                textSize = if (isMobileLayout) 12f else 16f
                 setTextColor(muted)
                 gravity = Gravity.CENTER
-                setPadding(0, dp(7), 0, dp(if (isMobileLayout) 14 else 22))
+                setPadding(0, dp(6), 0, dp(if (isMobileLayout) 10 else 18))
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-            val mainSpinner = android.widget.ProgressBar(this).apply {
-                isIndeterminate = true
-                indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
+            // Transparent orbit: only a fine neon path and moving light particles are drawn.
+            val orbitStage = FrameLayout(this)
+            val orbitHeight = dp(if (isMobileLayout) 210 else 300)
+            val orbitCanvas = object : View(this) {
+                private val orbitPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    style = android.graphics.Paint.Style.STROKE
+                    strokeWidth = dp(1.2f).toFloat()
+                    color = accentBright
+                    alpha = 150
+                }
+                private val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    style = android.graphics.Paint.Style.FILL
+                    color = accentBright
+                    setShadowLayer(dp(7).toFloat(), 0f, 0f, accentBright)
+                }
+                private var phase = 0f
+                override fun onDraw(canvas: android.graphics.Canvas) {
+                    super.onDraw(canvas)
+                    val cx = width / 2f
+                    val cy = height * 0.57f
+                    val rx = width * if (isMobileLayout) 0.43f else 0.42f
+                    val ry = height * 0.25f
+                    val oval = android.graphics.RectF(cx - rx, cy - ry, cx + rx, cy + ry)
+                    canvas.drawOval(oval, orbitPaint)
+                    // Subtle connecting line through the three category nodes.
+                    val linePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        color = accentBright
+                        alpha = 95
+                        strokeWidth = dp(1f).toFloat()
+                    }
+                    canvas.drawLine(cx - rx * 0.72f, cy - ry * 0.55f, cx + rx * 0.72f, cy - ry * 0.55f, linePaint)
+                    for (i in 0..3) {
+                        val angle = phase + i * (Math.PI / 2.0)
+                        val x = cx + kotlin.math.cos(angle).toFloat() * rx
+                        val y = cy + kotlin.math.sin(angle).toFloat() * ry
+                        canvas.drawCircle(x, y, dp(2.2f).toFloat(), glowPaint)
+                    }
+                    phase += 0.035f
+                    if (isAttachedToWindow) postInvalidateDelayed(32L)
+                }
+            }.apply {
+                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+                isFocusable = false
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
-            loadingCard.addView(mainSpinner, LinearLayout.LayoutParams(dp(if (isMobileLayout) 42 else 54), dp(if (isMobileLayout) 42 else 54)).apply {
-                gravity = Gravity.CENTER
-                bottomMargin = dp(if (isMobileLayout) 14 else 24)
-            })
+            orbitStage.addView(orbitCanvas, FrameLayout.LayoutParams(-1, -1))
 
             val categoryRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
             }
-            listOf("Canlı TV", "Filmler", "Diziler").forEach { label ->
-                val tile = LinearLayout(this).apply {
+            listOf(
+                Triple("Canlı TV", "▣", true),
+                Triple("Filmler", "◉", false),
+                Triple("Diziler", "▷", false)
+            ).forEachIndexed { index, item ->
+                val node = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
-                    setPadding(dp(if (isMobileLayout) 5 else 12), dp(12), dp(if (isMobileLayout) 5 else 12), dp(12))
-                    background = roundedDrawable(Color.argb(30, 255, 255, 255), 14)
                 }
-                tile.addView(TextView(this).apply {
-                    text = loadingLabel(label)
+                val iconSize = dp(if (isMobileLayout) 54 else if (index == 1) 92 else 76)
+                val iconCircle = TextView(this).apply {
+                    text = item.second
+                    textSize = if (isMobileLayout) 25f else if (index == 1) 38f else 31f
+                    setTextColor(accentBright)
+                    gravity = Gravity.CENTER
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        shape = android.graphics.drawable.GradientDrawable.OVAL
+                        setColor(Color.TRANSPARENT)
+                        setStroke(dp(if (index == 1) 2 else 1).toInt(), accentBright)
+                    }
+                    elevation = 0f
+                }
+                node.addView(iconCircle, LinearLayout.LayoutParams(iconSize, iconSize))
+                node.addView(TextView(this).apply {
+                    text = loadingLabel(item.first)
                     textSize = if (isMobileLayout) 11f else 15f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
+                    setPadding(0, dp(6), 0, 0)
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                val categoryProgress = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-                    isIndeterminate = true
-                    indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
-                    progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.argb(48, 255, 255, 255))
+                if (item.third) {
+                    node.addView(TextView(this).apply {
+                        text = "✓"
+                        textSize = if (isMobileLayout) 14f else 18f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(accentBright)
+                        gravity = Gravity.CENTER
+                    })
+                } else {
+                    val smallProgress = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                        isIndeterminate = true
+                        indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
+                        progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
+                    }
+                    node.addView(smallProgress, LinearLayout.LayoutParams(dp(if (isMobileLayout) 42 else 64), dp(3)).apply {
+                        topMargin = dp(8)
+                    })
                 }
-                tile.addView(categoryProgress, LinearLayout.LayoutParams(-1, dp(4)).apply {
-                    topMargin = dp(12)
-                })
-                categoryRow.addView(tile, LinearLayout.LayoutParams(0, dp(if (isMobileLayout) 62 else 82), 1f).apply {
-                    setMargins(dp(if (isMobileLayout) 3 else 8), 0, dp(if (isMobileLayout) 3 else 8), 0)
+                categoryRow.addView(node, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    setMargins(dp(if (isMobileLayout) 2 else 8), 0, dp(if (isMobileLayout) 2 else 8), 0)
                 })
             }
-            loadingCard.addView(categoryRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            orbitStage.addView(categoryRow, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
+            loadingPanel.addView(orbitStage, LinearLayout.LayoutParams(-1, orbitHeight).apply {
+                topMargin = dp(if (isMobileLayout) 2 else 8)
+                bottomMargin = dp(if (isMobileLayout) 4 else 12)
+            })
+
+            // Fully transparent overall progress: no card, no filled container.
+            val overallRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            overallRow.addView(TextView(this).apply {
+                text = loadingLabel("Genel Yükleme")
+                textSize = if (isMobileLayout) 11f else 14f
+                setTextColor(Color.WHITE)
+                maxLines = 1
+            }, LinearLayout.LayoutParams(dp(if (isMobileLayout) 82 else 125), ViewGroup.LayoutParams.WRAP_CONTENT))
+            val overallProgress = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                isIndeterminate = true
+                indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
+                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
+                background = ColorDrawable(Color.TRANSPARENT)
+            }
+            overallRow.addView(overallProgress, LinearLayout.LayoutParams(0, dp(4), 1f).apply {
+                setMargins(dp(8), 0, dp(8), 0)
+            })
+            overallRow.addView(TextView(this).apply {
+                text = " "
+                textSize = if (isMobileLayout) 11f else 14f
+                setTextColor(muted)
+                minWidth = dp(12)
+            })
+            loadingPanel.addView(overallRow, LinearLayout.LayoutParams(-1, dp(28)).apply {
+                width = if (isMobileLayout) ViewGroup.LayoutParams.MATCH_PARENT else dp(700)
+                gravity = Gravity.CENTER
+            })
 
             loadingMessageView = TextView(this).apply {
                 text = status.text.toString()
-                textSize = if (isMobileLayout) 12f else 15f
-                setTextColor(Color.WHITE)
+                textSize = if (isMobileLayout) 11f else 14f
+                setTextColor(muted)
                 gravity = Gravity.CENTER
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                setPadding(dp(14), dp(12), dp(14), dp(12))
-                background = roundedDrawable(Color.argb(34, 255, 255, 255), 16)
+                setPadding(0, dp(12), 0, dp(4))
             }
-            loadingCard.addView(loadingMessageView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(if (isMobileLayout) 14 else 26)
-            })
+            loadingPanel.addView(loadingMessageView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
             val tips = listOf(
                 "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin.",
@@ -5091,48 +5183,44 @@ class MainActivity : Activity() {
                 "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin.",
                 "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin."
             )
-            val tipPanel = LinearLayout(this).apply {
+            val tipRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
-                setPadding(dp(8), dp(14), dp(8), 0)
+                setPadding(dp(4), dp(8), dp(4), 0)
             }
-            tipPanel.addView(TextView(this).apply {
-                text = loadingLabel("İpucu") + "  ·  "
-                textSize = if (isMobileLayout) 11f else 13f
+            tipRow.addView(TextView(this).apply {
+                text = loadingLabel("İpucu") + " · "
+                textSize = if (isMobileLayout) 10f else 12f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(accentBright)
             })
             val tipText = TextView(this).apply {
                 text = loadingLabel(tips[0])
-                textSize = if (isMobileLayout) 11f else 13f
+                textSize = if (isMobileLayout) 10f else 12f
                 setTextColor(muted)
                 gravity = Gravity.CENTER
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
             }
-            tipPanel.addView(tipText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            tipRow.addView(tipText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             var tipIndex = 0
             val tipRunnable = object : Runnable {
                 override fun run() {
-                    if (!tipPanel.isAttachedToWindow) return
+                    if (!tipRow.isAttachedToWindow) return
                     tipIndex = (tipIndex + 1) % tips.size
                     tipText.animate().alpha(0f).setDuration(160L).withEndAction {
                         tipText.text = loadingLabel(tips[tipIndex])
                         tipText.animate().alpha(1f).setDuration(200L).start()
                     }.start()
-                    tipPanel.postDelayed(this, 4200L)
+                    tipRow.postDelayed(this, 4200L)
                 }
             }
-            tipPanel.postDelayed(tipRunnable, 4200L)
+            tipRow.postDelayed(tipRunnable, 4200L)
+            loadingPanel.addView(tipRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                width = if (isMobileLayout) ViewGroup.LayoutParams.MATCH_PARENT else dp(700)
+                gravity = Gravity.CENTER
+            })
 
-            loadingPanel.addView(loadingCard, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                width = if (isMobileLayout) ViewGroup.LayoutParams.MATCH_PARENT else dp(760)
-                gravity = Gravity.CENTER
-            })
-            loadingPanel.addView(tipPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                width = if (isMobileLayout) ViewGroup.LayoutParams.MATCH_PARENT else dp(760)
-                gravity = Gravity.CENTER
-            })
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
             return
         }
