@@ -219,23 +219,41 @@ class MainActivity : Activity() {
             switchToProfile(profile)
             return
         }
+        val pinDialog = android.app.Dialog(this)
+        val pinPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(20), dp(22), dp(18))
+            background = roundedDrawable(panel, 20, accent)
+        }
+        pinPanel.addView(TextView(this).apply {
+            text = t("Profil PIN'i"); textSize = 20f
+            setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+        })
+        pinPanel.addView(TextView(this).apply {
+            text = profile; textSize = 13f; setTextColor(muted); setPadding(0, dp(5), 0, dp(14))
+        })
         val pinInput = EditText(this).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = t("PIN kodu")
+            hint = t("PIN kodu"); setSingleLine(true)
             filters = arrayOf(android.text.InputFilter.LengthFilter(8))
+            setTextColor(Color.WHITE); setHintTextColor(muted)
+            background = roundedDrawable(bg, 12, accent)
+            setPadding(dp(14), dp(10), dp(14), dp(10))
         }
-        AlertDialog.Builder(this)
-            .setTitle(t("Profil PIN'i"))
-            .setView(pinInput)
-            .setNegativeButton(t("İptal"), null)
-            .setPositiveButton(t("Onayla")) { _, _ ->
-                if (hashProfilePin(pinInput.text.toString()) == savedPinHash) {
-                    switchToProfile(profile)
-                } else {
-                    Toast.makeText(this, t("PIN hatalı."), Toast.LENGTH_SHORT).show()
-                }
-            }
-            .show()
+        pinPanel.addView(pinInput, LinearLayout.LayoutParams(-1, dp(52)))
+        val pinActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
+        pinActions.addView(makeButton(t("İptal"), false) { pinDialog.dismiss() })
+        pinActions.addView(makeButton(t("Onayla"), true) {
+            if (hashProfilePin(pinInput.text.toString()) == savedPinHash) {
+                pinDialog.dismiss(); switchToProfile(profile)
+            } else Toast.makeText(this, t("PIN hatalı."), Toast.LENGTH_SHORT).show()
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(dp(8), 0, 0, 0) })
+        pinPanel.addView(pinActions, LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(0, dp(14), 0, 0) })
+        pinDialog.setContentView(pinPanel)
+        pinDialog.show()
+        pinDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        pinDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.82f).toInt().coerceAtMost(dp(420)), ViewGroup.LayoutParams.WRAP_CONTENT)
+        pinInput.requestFocus()
     }
 
     private fun t(value: String): String {
@@ -1736,25 +1754,58 @@ class MainActivity : Activity() {
                     MutableList(json.length()) { index -> json.optString(index).trim() }
                         .filter { it.isNotBlank() }
                 }.getOrElse { listOf("Ana Profil") }.ifEmpty { listOf("Ana Profil") }
-                val active = activeProfileName()
-                val labels = names.map { name -> if (name == active) "✓  $name" else name }.toTypedArray()
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle(t("Kullanıcılar"))
-                    .setItems(labels) { _, which ->
-                        selectProfileWithPin(names[which])
+                val popupContent = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(14), dp(14), dp(14), dp(12))
+                    background = roundedDrawable(panel, 18, accent)
+                }
+                popupContent.addView(TextView(this@MainActivity).apply {
+                    text = t("Kullanıcılar"); textSize = 17f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE); setPadding(dp(5), dp(3), dp(5), dp(10))
+                })
+                names.forEach { profile ->
+                    val active = profile == activeProfileName()
+                    val item = TextView(this@MainActivity).apply {
+                        text = (if (active) "✓  " else "    ") + profile
+                        textSize = 15f; setTextColor(if (active) accentBright else Color.WHITE)
+                        gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), 0, dp(10), 0)
+                        background = roundedDrawable(if (active) panel else Color.TRANSPARENT, 10)
+                        isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+                        setOnFocusChangeListener { v, focused ->
+                            v.background = roundedDrawable(if (focused) accent else if (active) panel else Color.TRANSPARENT, 10)
+                            (v as TextView).setTextColor(if (focused) Color.BLACK else if (active) accentBright else Color.WHITE)
+                        }
+                        setOnClickListener { profilePopup.dismiss(); selectProfileWithPin(profile) }
                     }
-                    .setPositiveButton(t("Ayarlar")) { _, _ ->
-                        settingsPage = "main"
-                        selectedType = "Ayarlar"
-                        prefs.edit().putString("last_settings_page", settingsPage)
-                            .putString("last_section", "Ayarlar").apply()
-                        selectedGroup = "Tüm kategoriler"
-                        sidebarMode = "settings"
-                        rebuildNavigation()
-                        render()
+                    popupContent.addView(item, LinearLayout.LayoutParams(-1, dp(44)).apply { setMargins(0, dp(2), 0, dp(2)) })
+                }
+                popupContent.addView(View(this@MainActivity).apply { setBackgroundColor(0x554C5B70) },
+                    LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(8), 0, dp(8)) })
+                val settingsItem = TextView(this@MainActivity).apply {
+                    text = "⚙  " + t("Ayarlar"); textSize = 15f
+                    setTextColor(Color.WHITE); gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(12), 0, dp(10), 0); background = roundedDrawable(Color.TRANSPARENT, 10)
+                    isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+                    setOnFocusChangeListener { v, focused ->
+                        v.background = roundedDrawable(if (focused) accent else Color.TRANSPARENT, 10)
+                        (v as TextView).setTextColor(if (focused) Color.BLACK else Color.WHITE)
                     }
-                    .setNegativeButton(t("Kapat"), null)
-                    .show()
+                    setOnClickListener {
+                        profilePopup.dismiss()
+                        settingsPage = "main"; selectedType = "Ayarlar"
+                        prefs.edit().putString("last_settings_page", settingsPage).putString("last_section", "Ayarlar").apply()
+                        selectedGroup = "Tüm kategoriler"; sidebarMode = "settings"
+                        rebuildNavigation(); render()
+                    }
+                }
+                popupContent.addView(settingsItem, LinearLayout.LayoutParams(-1, dp(46)))
+                val profilePopup = android.widget.PopupWindow(popupContent, dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+                    isOutsideTouchable = true; setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                    elevation = dp(18).toFloat()
+                }
+                profilePopup.showAsDropDown(headerProfileButton, -dp(190), dp(4), Gravity.END)
+                popupContent.post { popupContent.getChildAt(1)?.requestFocus() }
             }
             if (isMobileLayout) {
                 isFocusable = false
