@@ -5023,116 +5023,62 @@ class MainActivity : Activity() {
                 setPadding(0, dp(6), 0, dp(if (isMobileLayout) 10 else 18))
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-            // Transparent orbit: only a fine neon path and moving light particles are drawn.
+            // Compact single neon ring, matching the supplied loading-screen reference.
             val orbitStage = FrameLayout(this)
-            val orbitHeight = dp(if (isMobileLayout) 150 else 230)
-            val orbitCanvas = object : View(this) {
-                private val orbitPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            val ringSize = dp(if (isMobileLayout) 104 else 158)
+            val ring = object : View(this) {
+                private val basePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     style = android.graphics.Paint.Style.STROKE
-                    strokeWidth = dp(1).toFloat()
-                    color = accentBright
-                    alpha = 150
+                    strokeWidth = dp(if (isMobileLayout) 1 else 2).toFloat()
+                    color = Color.rgb(0, 170, 255)
+                    alpha = 190
                 }
                 private val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    style = android.graphics.Paint.Style.FILL
-                    color = accentBright
-                    setShadowLayer(dp(7).toFloat(), 0f, 0f, accentBright)
+                    style = android.graphics.Paint.Style.STROKE
+                    strokeCap = android.graphics.Paint.Cap.ROUND
+                    strokeWidth = dp(if (isMobileLayout) 3 else 4).toFloat()
+                    color = Color.rgb(0, 225, 255)
+                    setShadowLayer(dp(8).toFloat(), 0f, 0f, Color.rgb(0, 190, 255))
                 }
-                private var phase = 0f
+                private var angle = -90f
                 override fun onDraw(canvas: android.graphics.Canvas) {
                     super.onDraw(canvas)
                     val cx = width / 2f
-                    val cy = height * 0.57f
-                    val rx = width * if (isMobileLayout) 0.43f else 0.42f
-                    val ry = height * 0.25f
-                    val oval = android.graphics.RectF(cx - rx, cy - ry, cx + rx, cy + ry)
-                    canvas.drawOval(oval, orbitPaint)
-                    // Subtle connecting line through the three category nodes.
-                    val linePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                        color = accentBright
-                        alpha = 95
-                        strokeWidth = dp(1).toFloat()
-                    }
-                    canvas.drawLine(cx - rx * 0.72f, cy - ry * 0.55f, cx + rx * 0.72f, cy - ry * 0.55f, linePaint)
-                    for (i in 0..3) {
-                        val angle = phase + i * (Math.PI / 2.0)
-                        val x = cx + kotlin.math.cos(angle).toFloat() * rx
-                        val y = cy + kotlin.math.sin(angle).toFloat() * ry
-                        canvas.drawCircle(x, y, dp(2).toFloat(), glowPaint)
-                    }
-                    phase += 0.035f
-                    if (isAttachedToWindow) postInvalidateDelayed(32L)
+                    val cy = height / 2f
+                    val radius = minOf(width, height) * 0.43f
+                    canvas.drawCircle(cx, cy, radius, basePaint)
+                    val bounds = android.graphics.RectF(cx - radius, cy - radius, cx + radius, cy + radius)
+                    canvas.drawArc(bounds, angle, 62f, false, glowPaint)
+                    angle = (angle + 2.0f) % 360f
+                    if (isAttachedToWindow) postInvalidateDelayed(34L)
                 }
             }.apply {
                 setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                 isFocusable = false
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
-            orbitStage.addView(orbitCanvas, FrameLayout.LayoutParams(-1, -1))
-
-            val categoryRow = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
+            orbitStage.addView(ring, FrameLayout.LayoutParams(ringSize, ringSize, Gravity.CENTER))
+            val ringCenter = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
             }
-            listOf(
-                Triple("Canlı TV", "▣", true),
-                Triple("Filmler", "◉", false),
-                Triple("Diziler", "▷", false)
-            ).forEachIndexed { index, item ->
-                val node = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                }
-                val iconSize = dp(if (isMobileLayout) 54 else if (index == 1) 92 else 76)
-                val iconCircle = TextView(this).apply {
-                    text = item.second
-                    textSize = if (isMobileLayout) 25f else if (index == 1) 38f else 31f
-                    setTextColor(accentBright)
-                    gravity = Gravity.CENTER
-                    background = android.graphics.drawable.GradientDrawable().apply {
-                        shape = android.graphics.drawable.GradientDrawable.OVAL
-                        setColor(Color.TRANSPARENT)
-                        setStroke(dp(if (index == 1) 2 else 1).toInt(), accentBright)
-                    }
-                    elevation = 0f
-                }
-                node.addView(iconCircle, LinearLayout.LayoutParams(iconSize, iconSize))
-                node.addView(TextView(this).apply {
-                    text = loadingLabel(item.first)
-                    textSize = if (isMobileLayout) 11f else 15f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE)
-                    gravity = Gravity.CENTER
-                    maxLines = 1
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                    setPadding(0, dp(6), 0, 0)
-                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                if (item.third) {
-                    node.addView(TextView(this).apply {
-                        text = "✓"
-                        textSize = if (isMobileLayout) 14f else 18f
-                        setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(accentBright)
-                        gravity = Gravity.CENTER
-                    })
-                } else {
-                    val smallProgress = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-                        isIndeterminate = true
-                        indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
-                        progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
-                    }
-                    node.addView(smallProgress, LinearLayout.LayoutParams(dp(if (isMobileLayout) 42 else 64), dp(3)).apply {
-                        topMargin = dp(8)
-                    })
-                }
-                categoryRow.addView(node, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                    setMargins(dp(if (isMobileLayout) 2 else 8), 0, dp(if (isMobileLayout) 2 else 8), 0)
-                })
-            }
-            orbitStage.addView(categoryRow, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
-            loadingPanel.addView(orbitStage, LinearLayout.LayoutParams(-1, orbitHeight).apply {
-                topMargin = dp(if (isMobileLayout) 2 else 8)
-                bottomMargin = dp(if (isMobileLayout) 4 else 12)
+            ringCenter.addView(TextView(this).apply {
+                text = "▶"
+                textSize = if (isMobileLayout) 19f else 27f
+                setTextColor(Color.rgb(0, 220, 255))
+                gravity = Gravity.CENTER
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            ringCenter.addView(TextView(this).apply {
+                text = "KaiserTV+"
+                textSize = if (isMobileLayout) 12f else 18f
+                setTypeface(null, android.graphics.Typeface.BOLD_ITALIC)
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            orbitStage.addView(ringCenter, FrameLayout.LayoutParams(ringSize, ringSize, Gravity.CENTER))
+            loadingPanel.addView(orbitStage, LinearLayout.LayoutParams(-1, dp(if (isMobileLayout) 126 else 184)).apply {
+                topMargin = dp(if (isMobileLayout) 2 else 6)
+                bottomMargin = dp(if (isMobileLayout) 2 else 6)
             })
 
             // Real poster ribbon: use artwork already present in the loaded source catalogue.
