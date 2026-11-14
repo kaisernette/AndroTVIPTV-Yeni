@@ -1744,7 +1744,7 @@ class MainActivity : Activity() {
                         selectProfileWithPin(names[which])
                     }
                     .setPositiveButton(t("Ayarlar")) { _, _ ->
-                        settingsPage = "profiles"
+                        settingsPage = "main"
                         selectedType = "Ayarlar"
                         prefs.edit().putString("last_settings_page", settingsPage)
                             .putString("last_section", "Ayarlar").apply()
@@ -7750,6 +7750,7 @@ class MainActivity : Activity() {
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
+                option("Profiller", "Kullanıcı profillerini görüntüle ve yönet") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Genel Ayarlar", "Uygulama davranışı, açılış ve dil") { settingsPage = "general"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Oynatma Ayarları", "Devam etme, sonraki bölüm ve ses") { settingsPage = "playback"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Görünüm ve Kişiselleştirme", "Tema, kartlar ve arayüz düzeni") { settingsPage = "appearance"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
