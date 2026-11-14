@@ -8131,7 +8131,7 @@ class MainActivity : Activity() {
 
             }
             "playback" -> {
-                heading("Oynatma Ayarları", "Video ve ses tercihlerini düzenle.")
+                heading(settingsPageText("Oynatma Ayarları"), settingsPageText("Video ve ses tercihlerini düzenle."))
                 fun playbackChoice(title: String, key: String, options: List<Pair<String, String>>) {
                     val panelView = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -8164,7 +8164,7 @@ class MainActivity : Activity() {
                     LinearLayout.LayoutParams(-1, dp(58)).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
             }
             "notifications" -> {
-                heading("Bildirimler", "Uygulama bildirim tercihlerini yönet.")
+                heading(settingsPageText("Bildirimler"), settingsPageText("Uygulama bildirim tercihlerini yönet."))
                 val notificationSwitch = Switch(this).apply {
                     text = settingsPageText("Bildirimlere izin ver")
                     setTextColor(Color.WHITE)
@@ -8180,7 +8180,7 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
             }
             "storage" -> {
-                heading("Depolama", "Önbellek boyutunu görüntüle ve temizle.")
+                heading(settingsPageText("Depolama"), settingsPageText("Önbellek boyutunu görüntüle ve temizle."))
                 fun cacheSize(): Long = runCatching { cacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() } }.getOrDefault(0L)
                 fun sizeLabel(bytes: Long): String = if (bytes >= 1024L * 1024L) String.format(java.util.Locale.ROOT, "%.1f MB", bytes / (1024f * 1024f)) else String.format(java.util.Locale.ROOT, "%.0f KB", bytes / 1024f)
                 val info = TextView(this).apply {
@@ -8195,7 +8195,7 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(6), dp(4), dp(6), dp(7)) })
             }
             "parental" -> {
-                heading("Ebeveyn Kontrolü", "İçerik erişimini profil bazında sınırlandır.")
+                heading(settingsPageText("Ebeveyn Kontrolü"), settingsPageText("İçerik erişimini profil bazında sınırlandır."))
                 val profiles = runCatching {
                     val arr = JSONArray(prefs.getString("user_profiles", JSONArray().put("Ana Profil").toString()))
                     (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }
