@@ -7842,7 +7842,10 @@ class MainActivity : Activity() {
                     val form = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.TOP
-                        background = roundedDrawable(panel, 20)
+                        background = roundedDrawable(
+                            Color.argb(112, Color.red(panel), Color.green(panel), Color.blue(panel)), 20,
+                            Color.argb(90, Color.red(accent), Color.green(accent), Color.blue(accent))
+                        )
                         setPadding(dp(18), dp(14), dp(18), dp(14))
                     }
                     form.addView(TextView(this).apply {
@@ -7932,10 +7935,10 @@ class MainActivity : Activity() {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.TOP
                     }
-                    // The password column owns both account links, one below the other.
+                    // Align the two text actions beneath the password field, side by side.
                     linksRow.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1.25f).apply { rightMargin = dp(6) })
                     val passwordLinks = LinearLayout(this).apply {
-                        orientation = LinearLayout.VERTICAL
+                        orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER
                     }
                     fun accountTextLink(label: String, action: () -> Unit): TextView =
@@ -7944,48 +7947,80 @@ class MainActivity : Activity() {
                             textSize = 14f
                             gravity = Gravity.CENTER
                             setTextColor(Color.WHITE)
-                            setPadding(dp(6), dp(7), dp(6), dp(7))
+                            setPadding(dp(10), dp(7), dp(10), dp(7))
                             isFocusable = true
+                            isFocusableInTouchMode = true
                             isClickable = true
                             background = roundedDrawable(Color.TRANSPARENT, 10)
                             setOnClickListener { action() }
                             setOnFocusChangeListener { view, focused ->
-                                view.background = roundedDrawable(if (focused) panel else Color.TRANSPARENT, 10,
-                                    if (focused) accentBright else Color.TRANSPARENT)
+                                view.background = roundedDrawable(
+                                    if (focused) Color.argb(105, Color.red(accent), Color.green(accent), Color.blue(accent)) else Color.TRANSPARENT,
+                                    10, if (focused) accentBright else Color.TRANSPARENT
+                                )
                                 setTextColor(if (focused) accentBright else Color.WHITE)
                             }
                         }
+                    passwordLinks.addView(accountTextLink("Kaydol") {
+                        submitEmailAccount(true)
+                    }, LinearLayout.LayoutParams(0, dp(40), 1f))
                     passwordLinks.addView(accountTextLink("Şifremi unuttum") {
                         val email = emailField.text.toString().trim()
                         if (email.isBlank()) accountMessage(accountText("Şifre sıfırlamak için e-posta adresini yaz."))
                         else accountRepository.sendPasswordReset(email)
                             .addOnSuccessListener { accountMessage(accountText("Şifre sıfırlama bağlantısı gönderildi.")) }
                             .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
-                    }, LinearLayout.LayoutParams(-1, dp(36)))
-                    passwordLinks.addView(accountTextLink("Kaydol") {
-                        submitEmailAccount(true)
-                    }, LinearLayout.LayoutParams(-1, dp(36)))
+                    }, LinearLayout.LayoutParams(0, dp(40), 1f))
                     linksRow.addView(passwordLinks, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.25f).apply { rightMargin = dp(6) })
 
                     val googleColumn = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                     }
-                    googleColumn.addView(accountTextLink("Google") {
-                        try {
-                            launchGoogleSignIn(
-                                accountRepository,
-                                onSignedIn = {
-                                    accountMessage(accountText("Giriş başarılı."))
-                                    settingsPage = "account"
-                                    render()
-                                },
-                                onError = { message -> accountMessage(message) }
-                            )
-                        } catch (error: Exception) {
-                            accountMessage(error.localizedMessage ?: accountText("Google ile giriş başlatılamadı."))
+                    val googleButton = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                        background = roundedDrawable(Color.TRANSPARENT, 12)
+                        setPadding(dp(10), dp(7), dp(10), dp(7))
+                        setOnClickListener {
+                            try {
+                                launchGoogleSignIn(
+                                    accountRepository,
+                                    onSignedIn = {
+                                        accountMessage(accountText("Giriş başarılı."))
+                                        settingsPage = "account"
+                                        render()
+                                    },
+                                    onError = { message -> accountMessage(message) }
+                                )
+                            } catch (error: Exception) {
+                                accountMessage(error.localizedMessage ?: accountText("Google ile giriş başlatılamadı."))
+                            }
                         }
-                    }, LinearLayout.LayoutParams(-1, dp(36)))
+                        setOnFocusChangeListener { view, focused ->
+                            view.background = roundedDrawable(
+                                if (focused) Color.argb(105, Color.red(accent), Color.green(accent), Color.blue(accent)) else Color.TRANSPARENT,
+                                12, if (focused) accentBright else Color.TRANSPARENT
+                            )
+                        }
+                    }
+                    googleButton.addView(TextView(this).apply {
+                        text = "G"
+                        textSize = 20f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.rgb(66, 133, 244))
+                        gravity = Gravity.CENTER
+                    }, LinearLayout.LayoutParams(dp(26), dp(36)))
+                    googleButton.addView(TextView(this).apply {
+                        text = accountText("Google")
+                        textSize = 14f
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                    })
+                    googleColumn.addView(googleButton, LinearLayout.LayoutParams(-1, dp(40)))
                     linksRow.addView(googleColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.8f))
                     form.addView(linksRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
