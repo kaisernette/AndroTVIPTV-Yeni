@@ -2216,8 +2216,9 @@ class MainActivity : Activity() {
                         setOnClickListener {
                             focusedCategoryName = name
                             selectedGroup = name
+                            // Keep the complete category snapshot; never apply the old 12-card preview cap.
                             expandedCategory = name to entries
-                            mediaItemsLimit = 12
+                            mediaItemsLimit = entries.size
                             focusFirstContentOnRender = true
                             render()
                         }
@@ -6242,6 +6243,7 @@ class MainActivity : Activity() {
                 // When a user opens a category from the sidebar, show its entire catalogue.
                 // The old 12-item cap had no "more" control in this view, hiding the rest.
                 showingExpandedCategory -> entries
+                selectedType in listOf("Filmler", "Diziler") -> entries
                 posterGridMode -> entries.take(if (selectedType == "Canlı TV") 8 else mediaItemsLimit)
                 weeklyMovieFeature -> entries.take(8)
                 else -> entries
@@ -6395,7 +6397,8 @@ class MainActivity : Activity() {
 
             if (posterGridMode) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                if (selectedGroup == "Tüm kategoriler" && expandedCategory == null && displayedEntries.size < entries.size) {
+                if (selectedType !in listOf("Filmler", "Diziler") &&
+                    selectedGroup == "Tüm kategoriler" && expandedCategory == null && displayedEntries.size < entries.size) {
                     content.addView(makeButton(
                         "Daha fazla içerik göster  (${displayedEntries.size}/${entries.size})", false
                     ) {
