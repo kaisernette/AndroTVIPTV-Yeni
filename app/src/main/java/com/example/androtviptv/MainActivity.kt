@@ -126,15 +126,90 @@ class MainActivity : Activity() {
     companion object {
         @Volatile var openTvTabOnResume: Boolean = false
         const val EXTRA_TV_HOME_ITEM_KEY = "kaisertv_tv_home_item_key"
+        fun profileScope(name: String): String =
+            "profile_" + name.trim().lowercase(java.util.Locale.ROOT).hashCode().toUInt().toString(16)
+        fun profilePref(name: String, key: String): String = "${profileScope(name)}_$key"
     }
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("androtv", Context.MODE_PRIVATE)
-        val selected = prefs.getString("app_language", "system") ?: "system"
+        val activeName = prefs.getString("active_user_profile", "Ana Profil") ?: "Ana Profil"
+        val selected = prefs.getString(profilePref(activeName, "app_language"),
+            prefs.getString("app_language", "system")) ?: "system"
         val locale = if (selected == "system") java.util.Locale.getDefault() else java.util.Locale.forLanguageTag(selected)
         java.util.Locale.setDefault(locale)
         val configuration = android.content.res.Configuration(newBase.resources.configuration)
         configuration.setLocale(locale)
         super.attachBaseContext(newBase.createConfigurationContext(configuration))
+    }
+
+    private fun activeProfileName(): String = prefs.getString("active_user_profile", "Ana Profil") ?: "Ana Profil"
+    private fun profileDataKey(key: String, profile: String = activeProfileName()): String = profilePref(profile, key)
+    private fun hashProfilePin(pin: String): String =
+        java.security.MessageDigest.getInstance("SHA-256").digest(pin.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+
+    private fun saveActiveProfileSettings() {
+        val profile = activeProfileName()
+        prefs.edit()
+            .putString(profileDataKey("theme_name", profile), prefs.getString("theme_name", "Gece • Buzul"))
+            .putString(profileDataKey("app_language", profile), prefs.getString("app_language", "system"))
+            .apply()
+    }
+
+    private fun restoreProfileSettings(profile: String = activeProfileName()) {
+        val editor = prefs.edit()
+        prefs.getString(profileDataKey("theme_name", profile), null)?.let { editor.putString("theme_name", it) }
+        prefs.getString(profileDataKey("app_language", profile), null)?.let { editor.putString("app_language", it) }
+        editor.apply()
+    }
+
+    private fun applyThemeFromPreferences() {
+        when (prefs.getString("theme_name", "Gece • Buzul")) {
+            "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
+            "Gece • Buzul" -> { bg = Color.rgb(0, 0, 0); accent = Color.rgb(84, 198, 217); accentBright = accent }
+            "Orman • Zümrüt" -> { bg = Color.rgb(16, 27, 24); accent = Color.rgb(32, 201, 151); accentBright = accent }
+            "Gece • Yakut" -> { bg = Color.rgb(25, 20, 23); accent = Color.rgb(240, 100, 121); accentBright = accent }
+            "Gece • Lavanta" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
+            "Lacivert • Turkuaz" -> { bg = Color.rgb(16, 24, 32); accent = Color.rgb(84, 198, 217); accentBright = accent }
+            "Koyu • Mor" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
+            else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
+        }
+        panel = themePanelColor(prefs.getString("theme_name", "Gece • Buzul") ?: "Gece • Buzul")
+        window.statusBarColor = bg
+        window.navigationBarColor = bg
+    }
+
+    private fun loadActiveProfileData() {
+        favorites.clear()
+        recent.clear()
+        val profile = activeProfileName()
+        val favKey = profileDataKey("favorites", profile)
+        val recentKey = profileDataKey("recent", profile)
+        val legacyFavorites = prefs.getStringSet("favorites", emptySet()) ?: emptySet()
+        val storedFavorites = prefs.getStringSet(favKey, null)
+        favorites.addAll(storedFavorites ?: if (profile == "Ana Profil") legacyFavorites else emptySet())
+        if (storedFavorites == null && favorites.isNotEmpty()) prefs.edit().putStringSet(favKey, favorites.toSet()).apply()
+        val legacyRecent = prefs.getString("recent", "[]") ?: "[]"
+        val storedRecent = prefs.getString(recentKey, null) ?: if (profile == "Ana Profil") legacyRecent else "[]"
+        runCatching {
+            val array = JSONArray(storedRecent)
+            for (i in 0 until array.length()) {
+                val o = array.optJSONObject(i) ?: continue
+                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors"), o.optString("rating"), o.optString("releaseDate"), o.optString("genre")))
+            }
+        }
+        if (!prefs.contains(recentKey) && recent.isNotEmpty()) persistRecentHistory()
+    }
+
+    private fun switchToProfile(profile: String) {
+        if (profile == activeProfileName()) return
+        saveActiveProfileSettings()
+        prefs.edit().putStringSet(profileDataKey("favorites"), favorites.toSet()).apply()
+        persistRecentHistory()
+        prefs.edit().putString("active_user_profile", profile).apply()
+        restoreProfileSettings(profile)
+        loadActiveProfileData()
+        recreate()
     }
 
     private fun t(value: String): String {
@@ -836,6 +911,7 @@ class MainActivity : Activity() {
                 .apply()
         }
         diagnostics.edit().putBoolean("session_active", true).apply()
+        restoreProfileSettings()
         transparentMenu = prefs.getBoolean("transparent_menu", true)
         if (!prefs.getBoolean("global_oval_style_applied", false)) {
             prefs.edit().putBoolean("oval_buttons", true).putBoolean("global_oval_style_applied", true).apply()
@@ -852,26 +928,8 @@ class MainActivity : Activity() {
             }
             prefs.edit().putBoolean("theme_default_glacier_applied", true).apply()
         }
-        when (prefs.getString("theme_name", "Gece • Buzul")) {
-            "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
-            "Gece • Buzul" -> { bg = Color.rgb(0, 0, 0); accent = Color.rgb(84, 198, 217); accentBright = accent }
-            "Orman • Zümrüt" -> { bg = Color.rgb(16, 27, 24); accent = Color.rgb(32, 201, 151); accentBright = accent }
-            "Gece • Yakut" -> { bg = Color.rgb(25, 20, 23); accent = Color.rgb(240, 100, 121); accentBright = accent }
-            "Gece • Lavanta" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
-            "Lacivert • Turkuaz" -> { bg = Color.rgb(16, 24, 32); accent = Color.rgb(84, 198, 217); accentBright = accent }
-            "Koyu • Mor" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
-            else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
-        }
-        panel = themePanelColor(prefs.getString("theme_name", "Gece • Buzul") ?: "Gece • Buzul")
-        window.statusBarColor = bg; window.navigationBarColor = bg
-        favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
-        try {
-            val saved = JSONArray(getSharedPreferences("androtv", MODE_PRIVATE).getString("recent", "[]"))
-            for (i in 0 until saved.length()) {
-                val o = saved.optJSONObject(i) ?: continue
-                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors"), o.optString("rating"), o.optString("releaseDate"), o.optString("genre")))
-            }
-        } catch (_: Exception) { }
+        applyThemeFromPreferences()
+        loadActiveProfileData()
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         // Show the app's own loading UI immediately. Disk cache parsing can be expensive
         // on low-memory Android TV devices, so never perform it on the main thread.
@@ -1366,7 +1424,7 @@ class MainActivity : Activity() {
                     paint.color = accent
                     canvas.drawCircle(cx, cy, radius, paint)
                     paint.style = android.graphics.Paint.Style.STROKE
-                    paint.strokeWidth = dp(1.5f).toFloat()
+                    paint.strokeWidth = dp(2).toFloat()
                     paint.color = accentBright
                     canvas.drawCircle(cx, cy, radius, paint)
                     paint.style = android.graphics.Paint.Style.FILL
@@ -2497,7 +2555,7 @@ class MainActivity : Activity() {
         }
         return makeButton("Favori", false) {
             if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+            prefs.edit().putStringSet(profileDataKey("favorites"), favorites.toSet()).apply()
             render()
         }.apply {
             updateFavoriteStyle(this, false)
@@ -4803,7 +4861,7 @@ class MainActivity : Activity() {
         metaScroll.addView(meta)
         info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
         info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
-        info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
+        info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet(profileDataKey("favorites"), favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
         body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog
         dialog.show()
@@ -6030,7 +6088,7 @@ class MainActivity : Activity() {
                                 favorites.add(item.favoriteKey)
                                 true
                             }
-                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            prefs.edit().putStringSet(profileDataKey("favorites"), favorites.toSet()).apply()
                             Toast.makeText(this@MainActivity,
                                 if (added) "${item.name} favorilere eklendi" else "${item.name} favorilerden çıkarıldı",
                                 Toast.LENGTH_SHORT).show()
@@ -6089,7 +6147,7 @@ class MainActivity : Activity() {
                     if (sidebarMode != "search") {
                         actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
                             if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            prefs.edit().putStringSet(profileDataKey("favorites"), favorites.toSet()).apply()
                             render()
                         }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                     }
@@ -7551,7 +7609,8 @@ class MainActivity : Activity() {
                                 v.scaleY = if (focused) 1.035f else 1f
                             }
                             setOnClickListener {
-                                prefs.edit().putString("app_language", entry.first).apply()
+                                prefs.edit().putString("app_language", entry.first)
+                                    .putString(profileDataKey("app_language"), entry.first).apply()
                                 val locale = if (entry.first == "system") java.util.Locale.getDefault()
                                     else java.util.Locale.forLanguageTag(entry.first)
                                 java.util.Locale.setDefault(locale)
@@ -8018,7 +8077,8 @@ class MainActivity : Activity() {
                                 panel = themePanelColor(theme.first)
                                 accent = theme.third
                                 accentBright = theme.third
-                                prefs.edit().putString("theme_name", theme.first).apply()
+                                prefs.edit().putString("theme_name", theme.first)
+                                    .putString(profileDataKey("theme_name"), theme.first).apply()
                                 applyThemeSurfaces()
                                 settingsPage = "themes"
                                 render()
@@ -8548,7 +8608,7 @@ class MainActivity : Activity() {
     private fun persistRecentHistory() {
         val arr = JSONArray()
         recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId).put("sourceId", r.sourceId)) }
-        getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
+        prefs.edit().putString(profileDataKey("recent"), arr.toString()).apply()
     }
 
     private fun saveRecent(item: MediaItem) {
