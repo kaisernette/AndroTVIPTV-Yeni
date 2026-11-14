@@ -6239,9 +6239,12 @@ class MainActivity : Activity() {
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(if (isMobileLayout) 137 else 122) // 5% smaller weekly posters
             val displayedEntries = when {
-                posterGridMode -> entries.take(if (selectedType == "Canlı TV" && !showingExpandedCategory) 8 else mediaItemsLimit)
+                // When a user opens a category from the sidebar, show its entire catalogue.
+                // The old 12-item cap had no "more" control in this view, hiding the rest.
+                showingExpandedCategory -> entries
+                posterGridMode -> entries.take(if (selectedType == "Canlı TV") 8 else mediaItemsLimit)
                 weeklyMovieFeature -> entries.take(8)
-                else -> entries.take(5)
+                else -> entries
             }
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
@@ -6356,7 +6359,8 @@ class MainActivity : Activity() {
                 if (posterGridMode) {
                     if (itemIndex == displayedEntries.lastIndex) card.nextFocusRightId = sectionCountView.id
                     // Live TV uses a fixed eight-card row, matching the requested TV layout.
-                    val gridColumns = if (liveTvEightColumnGrid) 8 else if (fiveColumnMediaGrid) 5 else 4
+                    val gridColumns = if (liveTvEightColumnGrid) { if (isMobileLayout) 4 else 8 }
+                        else if (fiveColumnMediaGrid) { if (isMobileLayout) 3 else 5 } else 4
                     if (expandedPosterCount % gridColumns == 0) {
                         expandedPosterRow = LinearLayout(this).apply {
                             orientation = LinearLayout.HORIZONTAL
@@ -6378,7 +6382,8 @@ class MainActivity : Activity() {
                 }
             }
             // Keep the final poster row aligned to the same five-column grid.
-            val finalGridColumns = if (liveTvEightColumnGrid) { if (isMobileLayout) 4 else 8 } else if (fiveColumnMediaGrid) { if (isMobileLayout) 3 else 5 } else 4
+            val finalGridColumns = if (liveTvEightColumnGrid) { if (isMobileLayout) 4 else 8 }
+                else if (fiveColumnMediaGrid) { if (isMobileLayout) 3 else 5 } else 4
             if (posterGridMode && expandedPosterCount > 0 && expandedPosterCount % finalGridColumns != 0) {
                 val remainingSlots = finalGridColumns - (expandedPosterCount % finalGridColumns)
                 repeat(remainingSlots) {
@@ -8071,28 +8076,115 @@ class MainActivity : Activity() {
                 val profilePrefsKey = "user_profiles"
                 val activeProfileKey = "active_user_profile"
                 val avatarChoices = listOf(
-                    "anime_bearded", "anime_blonde_glasses", "anime_blue_headphones", "anime_brown_cap",
-                    "anime_dark_hair", "anime_ice_elf", "anime_masked_silver", "anime_pink_cat",
-                    "anime_purple_hair", "anime_red_beanie", "anime_silver_hair", "anime_yellow_hood"
+                    "anime_bearded", "anime_dark_hair", "anime_masked_silver", "anime_silver_hair",
+                    "anime_blonde_glasses", "anime_ice_elf", "anime_pink_cat", "anime_purple_hair",
+                    "anime_red_beanie", "anime_yellow_hood", "anime_brown_cap", "anime_blue_headphones"
                 )
-                val avatarSheet = runCatching {
-                    assets.open("avatars/anime_avatar_sheet.webp").use { BitmapFactory.decodeStream(it) }
-                }.getOrNull()
                 fun normalizedAvatar(value: String?): String =
                     value?.takeIf { it in avatarChoices } ?: "anime_blue_headphones"
+
+                // Draw avatars as crisp vector portraits at runtime. This avoids the old
+                // sprite-sheet cell offsets that produced cropped faces and blank bands.
+                fun avatarBitmap(id: String): Bitmap {
+                    val size = 256
+                    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                    val canvas = android.graphics.Canvas(bitmap)
+                    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                    fun color(value: Long) = value.toInt()
+                    fun fill(value: Long) { paint.style = android.graphics.Paint.Style.FILL; paint.color = color(value); paint.shader = null }
+                    val palette = when (id) {
+                        "anime_bearded" -> longArrayOf(0xff243b59,0xffd99a70,0xff20242e,0xff283e60,0xff4a2d22)
+                        "anime_dark_hair" -> longArrayOf(0xff243c57,0xffefbd98,0xff171a25,0xff202b3e,0xff33211b)
+                        "anime_masked_silver" -> longArrayOf(0xff24374f,0xffe8b997,0xffc8d2df,0xff293c55,0xffb8c4d5)
+                        "anime_silver_hair" -> longArrayOf(0xff33415b,0xffdca987,0xffd9e2ed,0xff25384c,0xffd3dbe7)
+                        "anime_blonde_glasses" -> longArrayOf(0xff60445c,0xfff0c7a7,0xffe7c18c,0xffa84f55,0xff7a4b35)
+                        "anime_ice_elf" -> longArrayOf(0xff344b75,0xffedc7ae,0xffd9e8ff,0xff536b9b,0xffb9d5ee)
+                        "anime_pink_cat" -> longArrayOf(0xff70405f,0xfff2c4aa,0xffe5a0a9,0xffb44e70,0xff71384c)
+                        "anime_purple_hair" -> longArrayOf(0xff493e70,0xffe8b99f,0xff543c78,0xff382c5a,0xffc16d9e)
+                        "anime_red_beanie" -> longArrayOf(0xff63445b,0xffefc09d,0xffc55b51,0xff34425e,0xff8e493f)
+                        "anime_yellow_hood" -> longArrayOf(0xff526b79,0xffedc49d,0xff4b3329,0xffe6aa36,0xff7b4c32)
+                        "anime_brown_cap" -> longArrayOf(0xff405e7b,0xffe7b48d,0xff70432b,0xffe0a13b,0xff4b3024)
+                        else -> longArrayOf(0xff304c6c,0xffedc09e,0xff332c4b,0xff7055b8,0xff3a2b2c)
+                    }
+                    val bgTop = color(palette[0]); val skin = color(palette[1]); val hair = color(palette[2])
+                    val shirt = color(palette[3]); val hairDark = color(palette[4])
+                    paint.shader = android.graphics.LinearGradient(0f,0f,256f,256f,bgTop,color(0xff101c2a),android.graphics.Shader.TileMode.CLAMP)
+                    canvas.drawRect(0f,0f,256f,256f,paint); paint.shader = null
+                    // shoulders and upper body
+                    fill(palette[3]); val body = android.graphics.Path().apply {
+                        moveTo(18f,256f); lineTo(28f,220f); quadTo(52f,185f,92f,184f)
+                        lineTo(164f,184f); quadTo(208f,188f,228f,220f); lineTo(238f,256f); close()
+                    }; canvas.drawPath(body,paint)
+                    fill(0xfff1f3f6); canvas.drawRoundRect(105f,174f,151f,218f,14f,14f,paint)
+                    fill(skin); canvas.drawRoundRect(105f,154f,151f,205f,16f,16f,paint)
+                    // ears and face
+                    canvas.drawOval(47f,91f,79f,143f,paint); canvas.drawOval(177f,91f,209f,143f,paint)
+                    canvas.drawOval(61f,42f,195f,190f,paint)
+                    // hair cap and side locks
+                    fill(hair); val topHair = android.graphics.Path().apply {
+                        moveTo(55f,112f); quadTo(42f,32f,119f,24f); quadTo(193f,15f,204f,87f)
+                        lineTo(193f,116f); quadTo(169f,73f,143f,69f); quadTo(103f,92f,65f,121f); close()
+                    }; canvas.drawPath(topHair,paint)
+                    canvas.drawOval(48f,83f,78f,157f,paint); canvas.drawOval(178f,80f,208f,153f,paint)
+                    // eyes, brows, nose and smile
+                    fill(0xff29252b); canvas.drawRoundRect(88f,111f,105f,120f,5f,5f,paint)
+                    canvas.drawRoundRect(151f,111f,168f,120f,5f,5f,paint)
+                    fill(hairDark); canvas.drawRoundRect(84f,99f,108f,105f,4f,4f,paint)
+                    canvas.drawRoundRect(148f,99f,172f,105f,4f,4f,paint)
+                    fill(0xffc88779); canvas.drawOval(123f,119f,133f,146f,paint)
+                    fill(0xff9e4e54); canvas.drawRoundRect(108f,153f,148f,160f,4f,4f,paint)
+                    // hairstyle variation
+                    when (id) {
+                        "anime_bearded" -> {
+                            fill(hairDark); canvas.drawOval(83f,137f,174f,190f,paint)
+                            fill(skin); canvas.drawRoundRect(105f,144f,151f,174f,12f,12f,paint)
+                            fill(hairDark); canvas.drawRoundRect(105f,162f,151f,184f,10f,10f,paint)
+                        }
+                        "anime_blonde_glasses" -> {
+                            paint.style=android.graphics.Paint.Style.STROKE; paint.strokeWidth=5f; paint.color=0xff302c36
+                            canvas.drawRoundRect(77f,103f,116f,132f,9f,9f,paint); canvas.drawRoundRect(140f,103f,179f,132f,9f,9f,paint)
+                            canvas.drawLine(116f,116f,140f,116f,paint); paint.style=android.graphics.Paint.Style.FILL
+                        }
+                        "anime_masked_silver" -> {
+                            fill(0xffd8e0eb); canvas.drawRoundRect(76f,125f,180f,160f,12f,12f,paint)
+                        }
+                        "anime_silver_hair" -> {
+                            fill(0xffe7edf6); val fringe=android.graphics.Path().apply { moveTo(57f,94f); lineTo(81f,28f); lineTo(113f,66f); lineTo(139f,19f); lineTo(162f,69f); lineTo(198f,38f); lineTo(194f,113f); lineTo(158f,82f); lineTo(127f,113f); lineTo(95f,83f); close() }; canvas.drawPath(fringe,paint)
+                        }
+                        "anime_ice_elf" -> {
+                            fill(0xffd8e8f6); val ear=android.graphics.Path().apply { moveTo(66f,110f); lineTo(20f,67f); lineTo(57f,144f); close() }; canvas.drawPath(ear,paint)
+                            val ear2=android.graphics.Path().apply { moveTo(190f,110f); lineTo(236f,67f); lineTo(199f,144f); close() }; canvas.drawPath(ear2,paint)
+                        }
+                        "anime_pink_cat" -> {
+                            fill(0xffd86b9b); val ears=android.graphics.Path().apply { moveTo(78f,69f); lineTo(72f,15f); lineTo(119f,53f); close(); moveTo(137f,53f); lineTo(184f,15f); lineTo(178f,69f); close() }; canvas.drawPath(ears,paint)
+                        }
+                        "anime_red_beanie" -> {
+                            fill(0xffb84f55); canvas.drawRoundRect(54f,28f,202f,78f,25f,25f,paint)
+                        }
+                        "anime_yellow_hood" -> {
+                            fill(0xffe6ad37); paint.style=android.graphics.Paint.Style.STROKE; paint.strokeWidth=15f
+                            canvas.drawArc(37f,20f,219f,216f,185f,170f,false,paint); paint.style=android.graphics.Paint.Style.FILL
+                        }
+                        "anime_brown_cap" -> {
+                            fill(0xff6d4932); canvas.drawRoundRect(54f,26f,202f,79f,24f,24f,paint)
+                            canvas.drawRoundRect(44f,68f,212f,83f,8f,8f,paint)
+                        }
+                        "anime_blue_headphones" -> {
+                            fill(0xff4d78c7); paint.style=android.graphics.Paint.Style.STROKE; paint.strokeWidth=12f
+                            canvas.drawArc(44f,28f,212f,187f,180f,180f,false,paint); paint.style=android.graphics.Paint.Style.FILL
+                            canvas.drawRoundRect(35f,93f,61f,145f,10f,10f,paint); canvas.drawRoundRect(195f,93f,221f,145f,10f,10f,paint)
+                        }
+                    }
+                    if (id == "anime_brown_cap" || id == "anime_yellow_hood" || id == "anime_blue_headphones") {
+                        fill(0xff29252b); canvas.drawCircle(96f,113f,5f,paint); canvas.drawCircle(160f,113f,5f,paint)
+                    }
+                    return bitmap
+                }
                 fun avatarImage(value: String?, sizeDp: Int, selected: Boolean = false): ImageView {
                     val id = normalizedAvatar(value)
-                    val index = avatarChoices.indexOf(id).coerceAtLeast(0)
-                    val bitmap = avatarSheet?.let {
-                        runCatching {
-                            val cellW = it.width / 4
-                            val cellH = it.height / 3
-                            Bitmap.createBitmap(it, (index % 4) * cellW, (index / 4) * cellH, cellW, cellH)
-                        }.getOrNull()
-                    }
                     return ImageView(this@MainActivity).apply {
                         scaleType = ImageView.ScaleType.CENTER_CROP
-                        setImageBitmap(bitmap)
+                        setImageBitmap(avatarBitmap(id))
                         background = roundedDrawable(bg, dp(sizeDp / 2))
                         foreground = roundedDrawable(Color.TRANSPARENT, dp(sizeDp / 2),
                             if (selected) accentBright else Color.TRANSPARENT)
@@ -8206,10 +8298,10 @@ class MainActivity : Activity() {
                         "boy" to "Erkek Çocuk"
                     )
                     fun categoryFor(id: String): String = when (id) {
-                        "anime_bearded", "anime_dark_hair", "anime_masked_silver", "anime_silver_hair", "anime_blue_headphones" -> "male"
+                        "anime_bearded", "anime_dark_hair", "anime_masked_silver", "anime_silver_hair" -> "male"
                         "anime_blonde_glasses", "anime_ice_elf", "anime_pink_cat", "anime_purple_hair" -> "female"
-                        "anime_brown_cap" -> "boy"
                         "anime_red_beanie", "anime_yellow_hood" -> "girl"
+                        "anime_brown_cap", "anime_blue_headphones" -> "boy"
                         else -> "all"
                     }
                     val avatarGrid = android.widget.GridLayout(this@MainActivity).apply {
