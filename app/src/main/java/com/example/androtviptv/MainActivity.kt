@@ -2414,6 +2414,19 @@ class MainActivity : Activity() {
                 render()
                 when (sourceToRestore.mode) { "xtream" -> loadXtream(sourceToRestore, true); "mac" -> loadStalker(sourceToRestore, true); else -> loadM3u(sourceToRestore, true) }
             } else {
+                // A cold start with every source disabled must reset all transient
+                // archive/navigation state. The cached media file is intentionally
+                // retained, but no cached category or item may remain visible/playable.
+                synchronized(providerCategoryNames) { providerCategoryNames.clear() }
+                selectedCategorySourceId = ""
+                selectedGroup = "Tüm kategoriler"
+                expandedCategory = null
+                focusedCategoryName = null
+                selectedType = "Tümü"
+                sidebarMode = "main"
+                isLoadingSource = false
+                status.visibility = View.VISIBLE
+                status.text = "Etkin kaynak yok. İçerikleri görmek için bir kaynak açın."
                 render()
             }
         }
