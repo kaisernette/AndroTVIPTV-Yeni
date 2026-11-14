@@ -2344,26 +2344,25 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) { }
 
-        // Keep a built-in mock source available for the demo. If this is the
-        // first version that registers it, make it the initial source once;
-        // existing user sources remain saved and can still be selected later.
-        val demoSource = SavedSource(
-            "kaisertv-demo-222",
-            "KaiserTV+ Demo",
-            "xtream",
-            "https://xtream-codes-mock-server.vercel.app",
-            "test_user",
-            "test_pass"
-        )
-        val previousLastSourceId = prefs.getString("last_source_id", null)
-        val demoWasAlreadySaved = savedSources.any { it.id == demoSource.id }
-        if (!demoWasAlreadySaved) {
-            savedSources.add(demoSource)
-            persistSources()
-            // Use the demo only on a fresh installation with no previously selected source.
-            if (previousLastSourceId.isNullOrBlank()) {
-                prefs.edit().putString("last_source_id", demoSource.id).apply()
-            }
+        // Remove the bundled demo source and any content it previously cached.
+        // User-added sources and their catalogues remain untouched.
+        val demoSourceId = "kaisertv-demo-222"
+        val hadDemoSource = savedSources.removeAll { it.id == demoSourceId }
+        if (hadDemoSource) persistSources()
+
+        val hadDemoItems = items.removeAll { it.sourceId == demoSourceId }
+        if (hadDemoItems) saveCachedItems()
+
+        val hadDemoHistory = recent.removeAll { it.sourceId == demoSourceId }
+        if (hadDemoHistory) persistRecentHistory()
+
+        val selectedIds = prefs.getStringSet("selected_source_ids", emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (selectedIds.remove(demoSourceId)) {
+            prefs.edit().putStringSet("selected_source_ids", selectedIds).apply()
+        }
+
+        if (prefs.getString("last_source_id", null) == demoSourceId) {
+            prefs.edit().putString("last_source_id", savedSources.firstOrNull()?.id ?: "").apply()
         }
 
         if (savedSources.isNotEmpty()) {
