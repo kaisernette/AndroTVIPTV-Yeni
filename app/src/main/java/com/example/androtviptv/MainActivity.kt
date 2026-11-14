@@ -8158,62 +8158,186 @@ class MainActivity : Activity() {
                     val oldName = existingName
                     val currentAvatar = oldName?.let { prefs.getString(avatarKey(it), null) }
                     var selectedAvatar = normalizedAvatar(currentAvatar)
-                    val form = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
-                    val nameInput = field("Profil adı", oldName.orEmpty())
-                    form.addView(nameInput, LinearLayout.LayoutParams(-1, dp(50)))
-                    form.addView(TextView(this@MainActivity).apply {
-                        text = t("Avatar seç"); textSize = 14f; setTextColor(muted); setPadding(0, dp(12), 0, dp(6))
+                    var selectedCategory = "all"
+                    val form = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.TOP
+                    }
+                    val previewColumn = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER
+                        setPadding(dp(8), dp(8), dp(14), dp(8))
+                        background = roundedDrawable(Color.argb(65, Color.red(accent), Color.green(accent), Color.blue(accent)), 18)
+                    }
+                    previewColumn.addView(TextView(this@MainActivity).apply {
+                        text = t("Profil önizleme"); textSize = 13f; setTextColor(muted)
+                        gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(12))
                     })
-                    val avatarGrid = android.widget.GridLayout(this@MainActivity).apply { columnCount = 4; alignmentMode = android.widget.GridLayout.ALIGN_BOUNDS }
+                    val avatarPreview = avatarImage(selectedAvatar, 112, true).apply {
+                        isFocusable = false
+                        isClickable = false
+                    }
+                    previewColumn.addView(avatarPreview, LinearLayout.LayoutParams(dp(112), dp(112)))
+                    previewColumn.addView(TextView(this@MainActivity).apply {
+                        text = oldName ?: t("Yeni profil"); textSize = 13f; setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER; maxLines = 1; setPadding(0, dp(10), 0, 0)
+                    }, LinearLayout.LayoutParams(dp(132), ViewGroup.LayoutParams.WRAP_CONTENT))
+                    form.addView(previewColumn, LinearLayout.LayoutParams(dp(154), ViewGroup.LayoutParams.MATCH_PARENT).apply {
+                        rightMargin = dp(16)
+                    })
+
+                    val rightColumn = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                    }
+                    val nameInput = field("Profil adı", oldName.orEmpty())
+                    rightColumn.addView(nameInput, LinearLayout.LayoutParams(-1, dp(48)))
+                    rightColumn.addView(TextView(this@MainActivity).apply {
+                        text = t("Avatar seç"); textSize = 15f; setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE); setPadding(0, dp(10), 0, dp(6))
+                    })
+                    val categories = listOf(
+                        "all" to "Tümü",
+                        "male" to "Erkek",
+                        "female" to "Kadın",
+                        "girl" to "Kız Çocuk",
+                        "boy" to "Erkek Çocuk"
+                    )
+                    fun categoryFor(id: String): String = when (id) {
+                        "anime_bearded", "anime_dark_hair", "anime_masked_silver", "anime_silver_hair", "anime_blue_headphones" -> "male"
+                        "anime_blonde_glasses", "anime_ice_elf", "anime_pink_cat", "anime_purple_hair" -> "female"
+                        "anime_brown_cap" -> "boy"
+                        "anime_red_beanie", "anime_yellow_hood" -> "girl"
+                        else -> "all"
+                    }
+                    val avatarGrid = android.widget.GridLayout(this@MainActivity).apply {
+                        columnCount = 5
+                        alignmentMode = android.widget.GridLayout.ALIGN_BOUNDS
+                        useDefaultMargins = false
+                    }
                     val avatarViews = mutableListOf<Pair<String, ImageView>>()
-                    avatarChoices.forEach { avatarId ->
-                        val avatarView = avatarImage(avatarId, 48, avatarId == selectedAvatar).apply {
-                            setOnClickListener {
-                                selectedAvatar = avatarId
-                                avatarViews.forEach { (id, view) ->
-                                    view.background = roundedDrawable(if (id == avatarId) accent else bg, dp(24),
-                                        if (id == avatarId) accentBright else Color.TRANSPARENT)
+                    fun updateAvatarSelection() {
+                        avatarPreview.setImageDrawable(null)
+                        avatarPreview.setImageDrawable(avatarImage(selectedAvatar, 112, true).drawable)
+                        avatarViews.forEach { (id, view) ->
+                            val selected = id == selectedAvatar
+                            view.background = roundedDrawable(
+                                if (selected) Color.argb(115, Color.red(accent), Color.green(accent), Color.blue(accent)) else panel,
+                                dp(32),
+                                if (selected || view.hasFocus()) accentBright else Color.TRANSPARENT
+                            )
+                        }
+                    }
+                    fun showAvatarCategory(category: String) {
+                        selectedCategory = category
+                        avatarGrid.removeAllViews()
+                        avatarViews.clear()
+                        val visibleAvatars = avatarChoices.filter { category == "all" || categoryFor(it) == category }
+                        visibleAvatars.forEach { avatarId ->
+                            val avatarView = avatarImage(avatarId, 58, avatarId == selectedAvatar).apply {
+                                isFocusable = true
+                                isFocusableInTouchMode = true
+                                isClickable = true
+                                background = roundedDrawable(
+                                    if (avatarId == selectedAvatar) Color.argb(115, Color.red(accent), Color.green(accent), Color.blue(accent)) else panel,
+                                    dp(32),
+                                    if (avatarId == selectedAvatar) accentBright else Color.TRANSPARENT
+                                )
+                                setPadding(dp(3), dp(3), dp(3), dp(3))
+                                setOnClickListener {
+                                    selectedAvatar = avatarId
+                                    avatarPreview.setImageDrawable(avatarImage(selectedAvatar, 112, true).drawable)
+                                    avatarViews.forEach { (id, view) ->
+                                        val selected = id == selectedAvatar
+                                        view.background = roundedDrawable(
+                                            if (selected) Color.argb(115, Color.red(accent), Color.green(accent), Color.blue(accent)) else panel,
+                                            dp(32), if (selected || view.hasFocus()) accentBright else Color.TRANSPARENT
+                                        )
+                                    }
+                                }
+                                setOnFocusChangeListener { view, focused ->
+                                    val selected = avatarId == selectedAvatar
+                                    view.background = roundedDrawable(
+                                        if (selected || focused) Color.argb(115, Color.red(accent), Color.green(accent), Color.blue(accent)) else panel,
+                                        dp(32), if (selected || focused) accentBright else Color.TRANSPARENT
+                                    )
+                                    view.scaleX = if (focused) 1.08f else 1f
+                                    view.scaleY = if (focused) 1.08f else 1f
                                 }
                             }
+                            avatarViews.add(avatarId to avatarView)
+                            avatarGrid.addView(avatarView, android.widget.GridLayout.LayoutParams().apply {
+                                width = dp(66); height = dp(66)
+                                setMargins(dp(4), dp(4), dp(4), dp(4))
+                            })
                         }
-                        avatarViews.add(avatarId to avatarView)
-                        avatarGrid.addView(avatarView, android.widget.GridLayout.LayoutParams().apply {
-                            width = dp(54); height = dp(54); setMargins(dp(5), dp(4), dp(5), dp(4))
+                    }
+                    val categoryStrip = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+                    categories.forEach { (key, label) ->
+                        val chip = TextView(this@MainActivity).apply {
+                            text = t(label); textSize = 11f; gravity = Gravity.CENTER
+                            setPadding(dp(9), dp(8), dp(9), dp(8))
+                            isFocusable = true; isClickable = true
+                            background = roundedDrawable(if (key == selectedCategory) accent else panel, 18,
+                                if (key == selectedCategory) accentBright else Color.TRANSPARENT)
+                            setTextColor(if (key == selectedCategory) Color.rgb(7, 18, 22) else Color.WHITE)
+                            setOnClickListener {
+                                showAvatarCategory(key)
+                                categoryStrip.childrenSequence().filterIsInstance<TextView>().forEach { item ->
+                                    val active = item.tag == key
+                                    item.background = roundedDrawable(if (active) accent else panel, 18,
+                                        if (active) accentBright else Color.TRANSPARENT)
+                                    item.setTextColor(if (active) Color.rgb(7, 18, 22) else Color.WHITE)
+                                }
+                            }
+                            tag = key
+                        }
+                        categoryStrip.addView(chip, LinearLayout.LayoutParams(0, dp(38), 1f).apply {
+                            setMargins(dp(2), 0, dp(2), 0)
                         })
                     }
-                    form.addView(avatarGrid)
-                    form.addView(TextView(this@MainActivity).apply {
-                        text = t("PIN koruması (isteğe bağlı)"); textSize = 14f; setTextColor(muted); setPadding(0, dp(12), 0, dp(6))
+                    val categoryScroll = HorizontalScrollView(this@MainActivity).apply {
+                        isHorizontalScrollBarEnabled = false
+                        overScrollMode = View.OVER_SCROLL_NEVER
+                        addView(categoryStrip, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    }
+                    rightColumn.addView(categoryScroll, LinearLayout.LayoutParams(-1, dp(42)))
+                    val avatarScroll = ScrollView(this@MainActivity).apply {
+                        isVerticalScrollBarEnabled = false
+                        overScrollMode = View.OVER_SCROLL_NEVER
+                        addView(avatarGrid, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    }
+                    rightColumn.addView(avatarScroll, LinearLayout.LayoutParams(-1, dp(158)))
+                    showAvatarCategory("all")
+                    rightColumn.addView(TextView(this@MainActivity).apply {
+                        text = t("PIN koruması (isteğe bağlı)"); textSize = 13f; setTextColor(muted)
+                        setPadding(0, dp(7), 0, dp(4))
                     })
                     val existingPin = oldName?.let { prefs.getString(pinKey(it), "") }.orEmpty()
                     val pinInput = field("Yeni PIN (4-8 rakam)", "", true)
                     val confirmInput = field("PIN tekrar", "", true)
-                    form.addView(pinInput, LinearLayout.LayoutParams(-1, dp(50)))
-                    form.addView(confirmInput, LinearLayout.LayoutParams(-1, dp(50)).apply { setMargins(0, dp(7), 0, 0) })
-                    form.addView(TextView(this@MainActivity).apply {
+                    rightColumn.addView(pinInput, LinearLayout.LayoutParams(-1, dp(42)))
+                    rightColumn.addView(confirmInput, LinearLayout.LayoutParams(-1, dp(42)).apply { topMargin = dp(5) })
+                    rightColumn.addView(TextView(this@MainActivity).apply {
                         text = if (existingPin.isNotBlank()) t("PIN'i boş bırak mevcut PIN'i korur; kaldırmak için PIN'i temizle.") else t("PIN belirlemezsen profil PIN'siz açılır.")
-                        textSize = 11f; setTextColor(muted); setPadding(dp(2), dp(6), dp(2), 0)
+                        textSize = 10f; setTextColor(muted); setPadding(dp(2), dp(4), dp(2), 0)
                     })
-                    // Keep the action row outside the scroll area so it is always reachable.
-                    val editorScroll = ScrollView(this@MainActivity).apply {
-                        isFillViewport = false
-                        isVerticalScrollBarEnabled = false
-                        overScrollMode = View.OVER_SCROLL_NEVER
-                        descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-                    }
-                    editorScroll.addView(form, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    form.addView(rightColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+
                     val editorBody = LinearLayout(this@MainActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(editorScroll, LinearLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.42f).toInt().coerceAtLeast(dp(190))))
+                        addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
-                    val dialog = themedDialog(if (oldName == null) "Profil oluştur" else "Profil düzenle", editorBody)
+                    val dialog = themedDialog(if (oldName == null) "Yeni Profil Oluştur" else "Profili Düzenle", editorBody)
                     val actions = LinearLayout(this@MainActivity).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                        setPadding(0, dp(10), 0, 0)
+                        setPadding(0, dp(12), 0, 0)
                     }
                     actions.addView(makeButton(t("İptal"), false) { dialog.dismiss() },
-                        LinearLayout.LayoutParams(dp(104), dp(46)))
+                        LinearLayout.LayoutParams(dp(132), dp(46)))
                     actions.addView(makeButton(t("Kaydet"), true) {
                         val newName = nameInput.text.toString().trim()
                         val pin = pinInput.text.toString()
@@ -8248,14 +8372,14 @@ class MainActivity : Activity() {
                                 render()
                             }
                         }
-                    }, LinearLayout.LayoutParams(dp(104), dp(44)).apply { setMargins(dp(8), 0, 0, 0) })
-                    editorBody.addView(actions, LinearLayout.LayoutParams(-1, dp(58)))
+                    }, LinearLayout.LayoutParams(dp(132), dp(46)).apply { leftMargin = dp(10) })
+                    editorBody.addView(actions, LinearLayout.LayoutParams(-1, dp(60)))
                     dialog.show()
-                    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                    dialog.window?.setLayout(
-                        (resources.displayMetrics.widthPixels * 0.86f).toInt().coerceAtMost(dp(560)),
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
+                    dialog.window?.apply {
+                        setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                        setLayout((resources.displayMetrics.widthPixels * 0.88f).toInt().coerceAtMost(dp(980)),
+                            ViewGroup.LayoutParams.WRAP_CONTENT)
+                    }
                     nameInput.requestFocus()
                 }
                 fun confirmDelete(name: String) {
