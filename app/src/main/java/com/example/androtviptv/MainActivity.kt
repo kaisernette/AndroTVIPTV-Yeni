@@ -24,7 +24,9 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import java.util.concurrent.Executor
 import android.view.Gravity
@@ -150,6 +152,51 @@ class MainActivity : Activity() {
             return
         }
 
+        val manager = CredentialManager.create(this)
+        val mainExecutor = Executor { command -> runOnUiThread(command) }
+
+        fun completeGoogleCredential(result: GetCredentialResponse) {
+            val credential = result.credential
+            if (credential !is CustomCredential ||
+                credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+            ) {
+                onError("Google hesabından geçerli kimlik bilgisi alınamadı.")
+                return
+            }
+            try {
+                val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                repository.signInWithGoogleIdToken(googleCredential.idToken)
+                    .addOnSuccessListener { onSignedIn() }
+                    .addOnFailureListener { error ->
+                        onError(error.localizedMessage ?: "Google ile giriş tamamlanamadı.")
+                    }
+            } catch (error: Exception) {
+                onError(error.localizedMessage ?: "Google kimlik bilgisi okunamadı.")
+            }
+        }
+
+        fun launchInteractiveGoogleSignIn() {
+            val signInOption = GetSignInWithGoogleOption.Builder(webClientId).build()
+            val signInRequest = GetCredentialRequest.Builder()
+                .addCredentialOption(signInOption)
+                .build()
+            manager.getCredentialAsync(
+                this,
+                signInRequest,
+                CancellationSignal(),
+                mainExecutor,
+                object : CredentialManagerCallback<GetCredentialResponse, GetCredentialException> {
+                    override fun onResult(result: GetCredentialResponse) {
+                        completeGoogleCredential(result)
+                    }
+
+                    override fun onError(error: GetCredentialException) {
+                        onError(error.localizedMessage ?: "Google hesabı seçilemedi. Cihazda Google hesabı ve güncel Google Play hizmetleri bulunduğunu kontrol edin.")
+                    }
+                }
+            )
+        }
+
         val googleOption = GetGoogleIdOption.Builder()
             .setServerClientId(webClientId)
             .setFilterByAuthorizedAccounts(false)
@@ -158,8 +205,6 @@ class MainActivity : Activity() {
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(googleOption)
             .build()
-        val manager = CredentialManager.create(this)
-        val mainExecutor = Executor { command -> runOnUiThread(command) }
 
         manager.getCredentialAsync(
             this,
@@ -168,27 +213,15 @@ class MainActivity : Activity() {
             mainExecutor,
             object : CredentialManagerCallback<GetCredentialResponse, GetCredentialException> {
                 override fun onResult(result: GetCredentialResponse) {
-                    val credential = result.credential
-                    if (credential !is CustomCredential ||
-                        credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                    ) {
-                        onError("Google hesabından geçerli kimlik bilgisi alınamadı.")
-                        return
-                    }
-                    try {
-                        val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                        repository.signInWithGoogleIdToken(googleCredential.idToken)
-                            .addOnSuccessListener { onSignedIn() }
-                            .addOnFailureListener { error ->
-                                onError(error.localizedMessage ?: "Google ile giriş tamamlanamadı.")
-                            }
-                    } catch (error: Exception) {
-                        onError(error.localizedMessage ?: "Google kimlik bilgisi okunamadı.")
-                    }
+                    completeGoogleCredential(result)
                 }
 
                 override fun onError(error: GetCredentialException) {
-                    onError(error.localizedMessage ?: "Google giriş işlemi iptal edildi veya başarısız oldu.")
+                    if (error is NoCredentialException) {
+                        launchInteractiveGoogleSignIn()
+                    } else {
+                        onError(error.localizedMessage ?: "Google giriş işlemi başarısız oldu.")
+                    }
                 }
             }
         )
