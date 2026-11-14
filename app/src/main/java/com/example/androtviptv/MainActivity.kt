@@ -1327,6 +1327,38 @@ class MainActivity : Activity() {
         dateClockRow.addView(headerTimeView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1).apply {
             setMargins(dp(14), 0, dp(22), 0)
         })
+        val headerProfileButton = TextView(this).apply {
+            text = "●"; textSize = 30f; gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(accent); setStroke(dp(2), accentBright) }
+            isFocusable = !isMobileLayout; isClickable = true; contentDescription = t("Profil")
+            setOnClickListener { anchorView ->
+                val names = runCatching { val j = JSONArray(prefs.getString("user_profiles", JSONArray().put("Ana Profil").toString())); MutableList(j.length()) { j.optString(it) }.filter { it.isNotBlank() } }.getOrElse { listOf("Ana Profil") }
+                lateinit var popup: android.widget.PopupWindow
+                val panelView = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(14), dp(14), dp(12)); background = roundedDrawable(panel, 18, accent) }
+                panelView.addView(TextView(this@MainActivity).apply { text = t("Kullanıcılar"); textSize = 18f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE); setPadding(dp(6), dp(2), dp(6), dp(10)) })
+                names.forEach { name ->
+                    val active = name == (prefs.getString("active_user_profile", "Ana Profil") ?: "Ana Profil")
+                    val item = TextView(this@MainActivity).apply {
+                        text = (if (active) "✓  " else "    ") + name; textSize = 16f; gravity = Gravity.CENTER_VERTICAL; setTextColor(if (active) Color.BLACK else Color.WHITE); setPadding(dp(14), 0, dp(12), 0); background = roundedDrawable(if (active) accent else Color.TRANSPARENT, 12); isFocusable = true; isClickable = true
+                        setOnFocusChangeListener { v, focused -> v.background = roundedDrawable(if (focused || active) accent else Color.TRANSPARENT, 12); (v as TextView).setTextColor(if (focused || active) Color.BLACK else Color.WHITE) }
+                        setOnClickListener { popup.dismiss(); prefs.edit().putString("active_user_profile", name).apply(); render() }
+                    }
+                    panelView.addView(item, LinearLayout.LayoutParams(-1, dp(46)).apply { setMargins(0, dp(3), 0, dp(3)) })
+                }
+                panelView.addView(View(this@MainActivity).apply { setBackgroundColor(0x554C5B70) }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(9), 0, dp(9)) })
+                val settings = TextView(this@MainActivity).apply {
+                    text = "⚙  " + t("Ayarlar"); textSize = 16f; gravity = Gravity.CENTER_VERTICAL; setTextColor(Color.WHITE); setPadding(dp(14), 0, dp(12), 0); isFocusable = true; isClickable = true
+                    setOnFocusChangeListener { v, focused -> v.background = roundedDrawable(if (focused) accent else Color.TRANSPARENT, 12); (v as TextView).setTextColor(if (focused) Color.BLACK else Color.WHITE) }
+                    setOnClickListener { popup.dismiss(); settingsPage = "main"; sidebarMode = "settings"; selectedType = "Ayarlar"; prefs.edit().putString("last_settings_page", "main").putString("last_section", "Ayarlar").apply(); rebuildNavigation(); render() }
+                }
+                panelView.addView(settings, LinearLayout.LayoutParams(-1, dp(48)))
+                popup = android.widget.PopupWindow(panelView, dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, true).apply { isOutsideTouchable = true; setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)); elevation = dp(18).toFloat() }
+                popup.showAsDropDown(anchorView as View, 0, dp(8), Gravity.END)
+                panelView.post { panelView.getChildAt(1)?.requestFocus() }
+            }
+        }
+        dateClockRow.addView(headerProfileButton, LinearLayout.LayoutParams(dp(54), dp(54)).apply { setMargins(dp(14), 0, dp(8), 0) })
         headerClockHandler.removeCallbacks(headerClockRunnable)
         // The clock/date strip is attached later as an overlay above the scrolling viewport.
         // This keeps it fixed while every tab scrolls underneath it.
