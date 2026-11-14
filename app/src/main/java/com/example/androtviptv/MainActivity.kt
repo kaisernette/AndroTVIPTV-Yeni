@@ -1542,7 +1542,9 @@ class MainActivity : Activity() {
                             fun activateProfile() {
                                 popup.dismiss()
                                 prefs.edit().putString("active_user_profile", name).apply()
-                                render()
+                                // Restart on every profile switch so profile-scoped state is
+                                // reloaded consistently from that profile's saved preferences.
+                                recreate()
                             }
                             if (savedPinHash.isBlank()) {
                                 activateProfile()
