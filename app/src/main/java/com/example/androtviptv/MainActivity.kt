@@ -898,7 +898,150 @@ class MainActivity : Activity() {
             )
             else -> emptyMap()
         }
-        return settingsSectionTranslations[value] ?: profileShortcutTranslations[value] ?: profileUiTranslations[value] ?: dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
+        val settingsDescriptionTranslations = when (language) {
+            "en" -> emptyMap()
+            "de" -> mapOf(
+                "Uygulama davranışı, açılış ve dil" to "App-Verhalten, Start und Sprache", "Devam etme, sonraki bölüm ve ses" to "Fortsetzen, nächste Folge und Audio",
+                "Tema, kartlar ve arayüz düzeni" to "Design, Karten und Oberflächenlayout", "Önbellek ve bellek kullanımı" to "Cache- und Speichernutzung",
+                "Odak, yazı boyutu ve hareketler" to "Fokus, Textgröße und Animationen", "Bağlantı, hata kayıtları ve sürüm" to "Verbindung, Fehlerprotokolle und Version",
+                "Yaş sınırı ve içerik PIN koruması" to "Altersfreigabe und Inhalts-PIN", "Ana ekran bölümleri ve kategori sırası" to "Startseitenbereiche und Kategorienreihenfolge",
+                "Altyazı dili, boyutu ve görünümü" to "Untertitelsprache, Größe und Darstellung",
+                "Uygulama açıldığında son kullanılan bölümü hatırla." to "Beim Start den zuletzt verwendeten Bereich wiederherstellen.",
+                "Uygulamadan çıkarken onay penceresi göster." to "Vor dem Beenden eine Bestätigung anzeigen.",
+                "Ana ekrandaki saat ve tarih bilgisini göster." to "Uhrzeit und Datum auf dem Startbildschirm anzeigen.",
+                "Kaynak güncellemesi tamamlandığında bilgi ver." to "Nach Abschluss einer Quellenaktualisierung informieren.",
+                "Daha önce izlediğin içerikte son konumu kullan." to "Die letzte Wiedergabeposition wiederherstellen.",
+                "Bölüm bitince sıradaki bölüme geçişi etkinleştir." to "Nach Ende einer Folge automatisch zur nächsten wechseln.",
+                "İçerik seçildiğinde oynatmayı doğrudan başlat." to "Die Wiedergabe nach Auswahl eines Inhalts direkt starten.",
+                "Uygun altyazı bulunduğunda varsayılan olarak aç." to "Verfügbare Untertitel standardmäßig aktivieren.",
+                "Poster belleğini daha verimli kullan." to "Poster-Speicher effizienter nutzen.",
+                "Kumanda ile seçili öğeyi daha net vurgula." to "Das fokussierte Element deutlicher hervorheben.",
+                "İçerik erişimi için ek güvenlik tercihleri." to "Zusätzliche Sicherheitseinstellungen für Inhalte.",
+                "Ana ekranda TV içerik alanını göster." to "Den TV-Bereich auf dem Startbildschirm anzeigen.",
+                "Ana ekranda film içerik alanını göster." to "Den Filmbereich auf dem Startbildschirm anzeigen.",
+                "Ana ekranda dizi içerik alanını göster." to "Den Serienbereich auf dem Startbildschirm anzeigen.",
+                "Ana ekranda belgesel içerik alanını göster." to "Den Dokumentarbereich auf dem Startbildschirm anzeigen.",
+                "Ana ekranda çizgi film içerik alanını göster." to "Den Cartoon-Bereich auf dem Startbildschirm anzeigen.",
+                "Ana ekranda spor içerik alanını göster." to "Den Sportbereich auf dem Startbildschirm anzeigen."
+            )
+            "fr" -> mapOf(
+                "Uygulama davranışı, açılış ve dil" to "Comportement, démarrage et langue", "Devam etme, sonraki bölüm ve ses" to "Reprise, épisode suivant et audio",
+                "Tema, kartlar ve arayüz düzeni" to "Thèmes, cartes et disposition", "Önbellek ve bellek kullanımı" to "Cache et mémoire",
+                "Odak, yazı boyutu ve hareketler" to "Focus, taille du texte et animations", "Bağlantı, hata kayıtları ve sürüm" to "Connexion, journaux d’erreurs et version",
+                "Yaş sınırı ve içerik PIN koruması" to "Limite d’âge et code PIN du contenu", "Ana ekran bölümleri ve kategori sırası" to "Sections et ordre des catégories de l’accueil",
+                "Altyazı dili, boyutu ve görünümü" to "Langue, taille et apparence des sous-titres",
+                "Uygulama açıldığında son kullanılan bölümü hatırla." to "Restaurer la dernière section utilisée au démarrage.",
+                "Uygulamadan çıkarken onay penceresi göster." to "Demander confirmation avant de quitter.",
+                "Ana ekrandaki saat ve tarih bilgisini göster." to "Afficher l’heure et la date sur l’accueil.",
+                "Kaynak güncellemesi tamamlandığında bilgi ver." to "Signaler la fin de l’actualisation des sources.",
+                "Daha önce izlediğin içerikte son konumu kullan." to "Reprendre à la dernière position de lecture.",
+                "Bölüm bitince sıradaki bölüme geçişi etkinleştir." to "Passer automatiquement à l’épisode suivant.",
+                "İçerik seçildiğinde oynatmayı doğrudan başlat." to "Lancer directement la lecture après sélection.",
+                "Uygun altyazı bulunduğunda varsayılan olarak aç." to "Activer les sous-titres disponibles par défaut.",
+                "Kumanda ile seçili öğeyi daha net vurgula." to "Mettre davantage en évidence l’élément sélectionné.",
+                "İçerik erişimi için ek güvenlik tercihleri." to "Options de sécurité supplémentaires pour les contenus.",
+                "Ana ekranda TV içerik alanını göster." to "Afficher la section TV sur l’accueil.",
+                "Ana ekranda film içerik alanını göster." to "Afficher la section Films sur l’accueil.",
+                "Ana ekranda dizi içerik alanını göster." to "Afficher la section Séries sur l’accueil.",
+                "Ana ekranda belgesel içerik alanını göster." to "Afficher la section Documentaires sur l’accueil.",
+                "Ana ekranda çizgi film içerik alanını göster." to "Afficher la section Dessins animés sur l’accueil.",
+                "Ana ekranda spor içerik alanını göster." to "Afficher la section Sports sur l’accueil."
+            )
+            "it" -> mapOf(
+                "Uygulama davranışı, açılış ve dil" to "Comportamento, avvio e lingua", "Devam etme, sonraki bölüm ve ses" to "Ripresa, episodio successivo e audio",
+                "Tema, kartlar ve arayüz düzeni" to "Temi, schede e layout", "Önbellek ve bellek kullanımı" to "Cache e memoria",
+                "Odak, yazı boyutu ve hareketler" to "Focus, dimensione testo e animazioni", "Bağlantı, hata kayıtları ve sürüm" to "Connessione, registri errori e versione",
+                "Yaş sınırı ve içerik PIN koruması" to "Limite d’età e PIN contenuti", "Ana ekran bölümleri ve kategori sırası" to "Sezioni e ordine categorie della schermata iniziale",
+                "Altyazı dili, boyutu ve görünümü" to "Lingua, dimensione e aspetto dei sottotitoli",
+                "Uygulama açıldığında son kullanılan bölümü hatırla." to "Ripristina all’avvio l’ultima sezione utilizzata.",
+                "Uygulamadan çıkarken onay penceresi göster." to "Chiedi conferma prima di uscire.",
+                "Ana ekrandaki saat ve tarih bilgisini göster." to "Mostra ora e data nella schermata iniziale.",
+                "Kaynak güncellemesi tamamlandığında bilgi ver." to "Avvisa al termine dell’aggiornamento delle sorgenti.",
+                "Daha önce izlediğin içerikte son konumu kullan." to "Riprendi dall’ultima posizione di riproduzione.",
+                "Bölüm bitince sıradaki bölüme geçişi etkinleştir." to "Passa automaticamente all’episodio successivo.",
+                "İçerik seçildiğinde oynatmayı doğrudan başlat." to "Avvia subito la riproduzione dopo la selezione.",
+                "Uygun altyazı bulunduğunda varsayılan olarak aç." to "Attiva automaticamente i sottotitoli disponibili.",
+                "Kumanda ile seçili öğeyi daha net vurgula." to "Evidenzia più chiaramente l’elemento selezionato.",
+                "İçerik erişimi için ek güvenlik tercihleri." to "Opzioni di sicurezza aggiuntive per i contenuti.",
+                "Ana ekranda TV içerik alanını göster." to "Mostra la sezione TV nella schermata iniziale.",
+                "Ana ekranda film içerik alanını göster." to "Mostra la sezione Film nella schermata iniziale.",
+                "Ana ekranda dizi içerik alanını göster." to "Mostra la sezione Serie nella schermata iniziale.",
+                "Ana ekranda belgesel içerik alanını göster." to "Mostra la sezione Documentari nella schermata iniziale.",
+                "Ana ekranda çizgi film içerik alanını göster." to "Mostra la sezione Cartoni nella schermata iniziale.",
+                "Ana ekranda spor içerik alanını göster." to "Mostra la sezione Sport nella schermata iniziale."
+            )
+            "es" -> mapOf(
+                "Uygulama davranışı, açılış ve dil" to "Comportamiento, inicio e idioma", "Devam etme, sonraki bölüm ve ses" to "Reanudar, siguiente episodio y audio",
+                "Tema, kartlar ve arayüz düzeni" to "Temas, tarjetas y diseño", "Önbellek ve bellek kullanımı" to "Caché y memoria",
+                "Odak, yazı boyutu ve hareketler" to "Enfoque, tamaño de texto y animaciones", "Bağlantı, hata kayıtları ve sürüm" to "Conexión, registros de errores y versión",
+                "Yaş sınırı ve içerik PIN koruması" to "Límite de edad y PIN de contenido", "Ana ekran bölümleri ve kategori sırası" to "Secciones y orden de categorías de inicio",
+                "Altyazı dili, boyutu ve görünümü" to "Idioma, tamaño y aspecto de subtítulos",
+                "Uygulama açıldığında son kullanılan bölümü hatırla." to "Restaurar al iniciar la última sección utilizada.",
+                "Uygulamadan çıkarken onay penceresi göster." to "Pedir confirmación antes de salir.",
+                "Ana ekrandaki saat ve tarih bilgisini göster." to "Mostrar hora y fecha en la pantalla de inicio.",
+                "Kaynak güncellemesi tamamlandığında bilgi ver." to "Avisar cuando termine la actualización de fuentes.",
+                "Daha önce izlediğin içerikte son konumu kullan." to "Reanudar desde la última posición de reproducción.",
+                "Bölüm bitince sıradaki bölüme geçişi etkinleştir." to "Pasar automáticamente al siguiente episodio.",
+                "İçerik seçildiğinde oynatmayı doğrudan başlat." to "Iniciar la reproducción al seleccionar contenido.",
+                "Uygun altyazı bulunduğunda varsayılan olarak aç." to "Activar automáticamente los subtítulos disponibles.",
+                "Kumanda ile seçili öğeyi daha net vurgula." to "Resaltar claramente el elemento enfocado.",
+                "İçerik erişimi için ek güvenlik tercihleri." to "Opciones adicionales de seguridad para el contenido.",
+                "Ana ekranda TV içerik alanını göster." to "Mostrar la sección TV en la pantalla de inicio.",
+                "Ana ekranda film içerik alanını göster." to "Mostrar la sección Películas en la pantalla de inicio.",
+                "Ana ekranda dizi içerik alanını göster." to "Mostrar la sección Series en la pantalla de inicio.",
+                "Ana ekranda belgesel içerik alanını göster." to "Mostrar la sección Documentales en la pantalla de inicio.",
+                "Ana ekranda çizgi film içerik alanını göster." to "Mostrar la sección Dibujos animados en la pantalla de inicio.",
+                "Ana ekranda spor içerik alanını göster." to "Mostrar la sección Deportes en la pantalla de inicio."
+            )
+            "ru" -> mapOf(
+                "Uygulama davranışı, açılış ve dil" to "Поведение, запуск и язык приложения", "Devam etme, sonraki bölüm ve ses" to "Продолжение, следующая серия и звук",
+                "Tema, kartlar ve arayüz düzeni" to "Темы, карточки и оформление", "Önbellek ve bellek kullanımı" to "Кэш и использование памяти",
+                "Odak, yazı boyutu ve hareketler" to "Фокус, размер текста и анимация", "Bağlantı, hata kayıtları ve sürüm" to "Подключение, журналы ошибок и версия",
+                "Yaş sınırı ve içerik PIN koruması" to "Возрастные ограничения и PIN контента", "Ana ekran bölümleri ve kategori sırası" to "Разделы и порядок категорий главного экрана",
+                "Altyazı dili, boyutu ve görünümü" to "Язык, размер и оформление субтитров",
+                "Uygulama açıldığında son kullanılan bölümü hatırla." to "При запуске восстанавливать последний использованный раздел.",
+                "Uygulamadan çıkarken onay penceresi göster." to "Запрашивать подтверждение перед выходом.",
+                "Ana ekrandaki saat ve tarih bilgisini göster." to "Показывать время и дату на главном экране.",
+                "Kaynak güncellemesi tamamlandığında bilgi ver." to "Уведомлять о завершении обновления источников.",
+                "Daha önce izlediğin içerikte son konumu kullan." to "Продолжать просмотр с последней позиции.",
+                "Bölüm bitince sıradaki bölüme geçişi etkinleştir." to "Автоматически переходить к следующей серии.",
+                "İçerik seçildiğinde oynatmayı doğrudan başlat." to "Сразу запускать воспроизведение после выбора.",
+                "Uygun altyazı bulunduğunda varsayılan olarak aç." to "Автоматически включать доступные субтитры.",
+                "Kumanda ile seçili öğeyi daha net vurgula." to "Ярче выделять выбранный элемент.",
+                "İçerik erişimi için ek güvenlik tercihleri." to "Дополнительные параметры безопасности контента.",
+                "Ana ekranda TV içerik alanını göster." to "Показывать раздел ТВ на главном экране.",
+                "Ana ekranda film içerik alanını göster." to "Показывать раздел фильмов на главном экране.",
+                "Ana ekranda dizi içerik alanını göster." to "Показывать раздел сериалов на главном экране.",
+                "Ana ekranda belgesel içerik alanını göster." to "Показывать раздел документальных фильмов на главном экране.",
+                "Ana ekranda çizgi film içerik alanını göster." to "Показывать раздел мультфильмов на главном экране.",
+                "Ana ekranda spor içerik alanını göster." to "Показывать раздел спорта на главном экране."
+            )
+            "ar" -> mapOf(
+                "Uygulama davranışı, açılış ve dil" to "سلوك التطبيق وبدء التشغيل واللغة", "Devam etme, sonraki bölüm ve ses" to "الاستئناف والحلقة التالية والصوت",
+                "Tema, kartlar ve arayüz düzeni" to "السمات والبطاقات وتخطيط الواجهة", "Önbellek ve bellek kullanımı" to "ذاكرة التخزين المؤقت واستخدام الذاكرة",
+                "Odak, yazı boyutu ve hareketler" to "التركيز وحجم النص والحركة", "Bağlantı, hata kayıtları ve sürüm" to "الاتصال وسجلات الأخطاء والإصدار",
+                "Yaş sınırı ve içerik PIN koruması" to "التصنيف العمري ورمز PIN للمحتوى", "Ana ekran bölümleri ve kategori sırası" to "أقسام الشاشة الرئيسية وترتيب الفئات",
+                "Altyazı dili, boyutu ve görünümü" to "لغة الترجمة وحجمها ومظهرها",
+                "Uygulama açıldığında son kullanılan bölümü hatırla." to "استعادة آخر قسم مستخدم عند تشغيل التطبيق.",
+                "Uygulamadan çıkarken onay penceresi göster." to "طلب التأكيد قبل الخروج.",
+                "Ana ekrandaki saat ve tarih bilgisini göster." to "إظهار الوقت والتاريخ على الشاشة الرئيسية.",
+                "Kaynak güncellemesi tamamlandığında bilgi ver." to "إشعار عند اكتمال تحديث المصادر.",
+                "Daha önce izlediğin içerikte son konumu kullan." to "استئناف التشغيل من آخر موضع.",
+                "Bölüm bitince sıradaki bölüme geçişi etkinleştir." to "الانتقال تلقائياً إلى الحلقة التالية.",
+                "İçerik seçildiğinde oynatmayı doğrudan başlat." to "بدء التشغيل مباشرة بعد اختيار المحتوى.",
+                "Uygun altyazı bulunduğunda varsayılan olarak aç." to "تفعيل الترجمات المتاحة تلقائياً.",
+                "Kumanda ile seçili öğeyi daha net vurgula." to "تمييز العنصر المحدد بوضوح أكبر.",
+                "İçerik erişimi için ek güvenlik tercihleri." to "خيارات أمان إضافية للوصول إلى المحتوى.",
+                "Ana ekranda TV içerik alanını göster." to "إظهار قسم التلفاز على الشاشة الرئيسية.",
+                "Ana ekranda film içerik alanını göster." to "إظهار قسم الأفلام على الشاشة الرئيسية.",
+                "Ana ekranda dizi içerik alanını göster." to "إظهار قسم المسلسلات على الشاشة الرئيسية.",
+                "Ana ekranda belgesel içerik alanını göster." to "إظهار قسم الوثائقيات على الشاشة الرئيسية.",
+                "Ana ekranda çizgi film içerik alanını göster." to "إظهار قسم الرسوم المتحركة على الشاشة الرئيسية.",
+                "Ana ekranda spor içerik alanını göster." to "إظهار قسم الرياضة على الشاشة الرئيسية."
+            )
+            else -> emptyMap()
+        }
+        return settingsDescriptionTranslations[value] ?: settingsSectionTranslations[value] ?: profileShortcutTranslations[value] ?: profileUiTranslations[value] ?: dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
     }
     // Android TV cihazlarında aynı anda daha az görsel işi yürüt; RAM'e göre güvenli bitmap bütçesi kullan.
     // Bound background poster work: an unbounded queue can exhaust small TV boxes.
