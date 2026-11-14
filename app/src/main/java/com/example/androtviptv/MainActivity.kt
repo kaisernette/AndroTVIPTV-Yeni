@@ -1747,7 +1747,8 @@ class MainActivity : Activity() {
                 }
             }
             addView(avatar, FrameLayout.LayoutParams(dp(42), dp(42), Gravity.CENTER))
-            setOnClickListener {
+            setOnClickListener { anchor ->
+                lateinit var profilePopup: android.widget.PopupWindow
                 val names = runCatching {
                     val json = JSONArray(prefs.getString("user_profiles", null)
                         ?: JSONArray().put("Ana Profil").toString())
@@ -1800,11 +1801,11 @@ class MainActivity : Activity() {
                     }
                 }
                 popupContent.addView(settingsItem, LinearLayout.LayoutParams(-1, dp(46)))
-                val profilePopup = android.widget.PopupWindow(popupContent, dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+                profilePopup = android.widget.PopupWindow(popupContent, dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
                     isOutsideTouchable = true; setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                     elevation = dp(18).toFloat()
                 }
-                profilePopup.showAsDropDown(headerProfileButton, -dp(190), dp(4), Gravity.END)
+                profilePopup.showAsDropDown(anchor as View, -dp(190), dp(4), Gravity.END)
                 popupContent.post { popupContent.getChildAt(1)?.requestFocus() }
             }
             if (isMobileLayout) {
