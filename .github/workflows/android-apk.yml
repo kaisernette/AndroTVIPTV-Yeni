@@ -40,6 +40,9 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug
 
+      - name: Show Android signing fingerprints
+        run: gradle signingReport
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
