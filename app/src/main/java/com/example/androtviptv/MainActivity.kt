@@ -1188,17 +1188,29 @@ class MainActivity : Activity() {
             // Touch navigation should not move focus to the header search icon
             // when category rows are rebuilt after a tap. Keep it focusable on TV,
             // while leaving the mobile search icon fully clickable.
+            // The header search is a touch target on phones, not a focus target.
+            // Keep D-pad focus navigation exclusively on Android TV.
             isFocusable = !isMobileLayout
             isFocusableInTouchMode = !isMobileLayout
             contentDescription = "Ara"
             background = roundedDrawable(Color.TRANSPARENT, 12)
             nextFocusDownId = View.NO_ID
             setOnFocusChangeListener { view, hasFocus ->
-                view.background = if (hasFocus) roundedDrawable(panel, 12, accentBright)
-                    else ColorDrawable(Color.TRANSPARENT)
-                view.scaleX = if (hasFocus) 1.10f else 1f
-                view.scaleY = if (hasFocus) 1.10f else 1f
-                view.elevation = if (hasFocus) dp(8).toFloat() else 0f
+                if (isMobileLayout) {
+                    // Some Android builds can transiently focus clickable ImageViews
+                    // while rebuilding category content. Never show a focus ring on mobile.
+                    view.background = ColorDrawable(Color.TRANSPARENT)
+                    view.scaleX = 1f
+                    view.scaleY = 1f
+                    view.elevation = 0f
+                    if (hasFocus) view.post { view.clearFocus() }
+                } else {
+                    view.background = if (hasFocus) roundedDrawable(panel, 12, accentBright)
+                        else ColorDrawable(Color.TRANSPARENT)
+                    view.scaleX = if (hasFocus) 1.10f else 1f
+                    view.scaleY = if (hasFocus) 1.10f else 1f
+                    view.elevation = if (hasFocus) dp(8).toFloat() else 0f
+                }
             }
             setOnClickListener {
                 detailSeries = null
@@ -1210,6 +1222,13 @@ class MainActivity : Activity() {
                 selectedGroup = "Tüm kategoriler"
                 expandedCategory = null
                 render()
+            }
+            // setOnClickListener makes the icon clickable; explicitly re-assert that
+            // it must not enter the phone's keyboard/touch focus chain.
+            if (isMobileLayout) {
+                isFocusable = false
+                isFocusableInTouchMode = false
+                clearFocus()
             }
         }
         searchNavigationButton = headerSearchButton
