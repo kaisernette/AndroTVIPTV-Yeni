@@ -7625,10 +7625,10 @@ class MainActivity : Activity() {
                 option("Tema ve Görünüm", "Arayüz tasarımını kişiselleştir") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Dil Seçimi", "Uygulama dilini değiştir") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İzleme Geçmişi", "İzleme geçmişini görüntüle ve yönet") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Oynatma Ayarları", "Video ve ses tercihlerini düzenle") { showSettingsNotice("Oynatma Ayarları") }
-                option("Depolama", "Önbellek ve uygulama verileri") { showSettingsNotice("Depolama") }
-                option("Ebeveyn Kontrolü", "İçerik erişimini sınırlandır") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Bildirimler", "Bildirim tercihlerini düzenle") { showSettingsNotice("Bildirimler") }
+                option("Oynatma Ayarları", "Video ve ses tercihlerini düzenle") { settingsPage = "playback"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Depolama", "Önbellek ve uygulama verileri") { settingsPage = "storage"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Ebeveyn Kontrolü", "İçerik erişimini sınırlandır") { settingsPage = "parental"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Bildirimler", "Bildirim tercihlerini düzenle") { settingsPage = "notifications"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Hakkında", "Sürüm ve uygulama bilgileri") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "account" -> {
@@ -7706,8 +7706,18 @@ class MainActivity : Activity() {
                         background = roundedDrawable(panel, 22)
                         setPadding(dp(22), dp(20), dp(22), dp(20))
                     }
+                    val accountModeKey = "account_form_mode"
+                    var accountMode = prefs.getString(accountModeKey, "login") ?: "login"
+                    val accountTabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+                    accountTabs.addView(makeButton(accountText("Giriş yap"), accountMode == "login") {
+                        prefs.edit().putString(accountModeKey, "login").apply(); render()
+                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { rightMargin = dp(6) })
+                    accountTabs.addView(makeButton(accountText("Hesap oluştur"), accountMode == "create") {
+                        prefs.edit().putString(accountModeKey, "create").apply(); render()
+                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(6) })
+                    form.addView(accountTabs, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(10) })
                     form.addView(TextView(this).apply {
-                        text = accountText("KaiserTV+ hesabına giriş yap")
+                        text = accountText(if (accountMode == "create") "KaiserTV+ hesabı oluştur" else "KaiserTV+ hesabına giriş yap")
                         textSize = 22f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(Color.WHITE)
@@ -7721,13 +7731,21 @@ class MainActivity : Activity() {
                     val emailField = accountInput(accountText("E-posta"))
                     val passwordField = accountInput("Şifre", true)
                     form.addView(emailField, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(10) })
-                    form.addView(passwordField, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(14) })
+                    val passwordRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                    passwordRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(52), 1f))
+                    val passwordToggle = makeButton(accountText("Göster"), false) {
+                        val visible = passwordField.inputType == (android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD)
+                        passwordField.inputType = if (visible) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                        passwordField.setSelection(passwordField.text?.length ?: 0)
+                    }
+                    passwordRow.addView(passwordToggle, LinearLayout.LayoutParams(dp(92), dp(48)).apply { leftMargin = dp(8) })
+                    form.addView(passwordRow, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(14) })
 
                     val emailActions = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
                     }
-                    emailActions.addView(makeButton(accountText("Giriş yap"), true) {
+                    emailActions.addView(makeButton(accountText(if (accountMode == "create") "Hesap oluştur" else "Giriş yap"), true) {
                         val email = emailField.text.toString().trim()
                         val passwordValue = passwordField.text.toString()
                         if (email.isBlank() || passwordValue.isBlank()) {
@@ -7758,6 +7776,8 @@ class MainActivity : Activity() {
                         }
                     }, LinearLayout.LayoutParams(0, dp(48), 1f))
                     form.addView(emailActions, LinearLayout.LayoutParams(-1, dp(48)))
+                    if (accountMode == "create") emailActions.getChildAt(0).visibility = View.GONE
+                    else emailActions.getChildAt(1).visibility = View.GONE
 
                     form.addView(makeButton(accountText("Şifremi unuttum"), false) {
                         val email = emailField.text.toString().trim()
@@ -7816,10 +7836,14 @@ class MainActivity : Activity() {
                     val id = normalizedAvatar(value)
                     val index = avatarChoices.indexOf(id).coerceAtLeast(0)
                     val bitmap = avatarSheet?.let {
-                        runCatching { Bitmap.createBitmap(it, (index % 4) * 64, (index / 4) * 64, 64, 64) }.getOrNull()
+                        runCatching {
+                            val cellW = it.width / 4
+                            val cellH = it.height / 3
+                            Bitmap.createBitmap(it, (index % 4) * cellW, (index / 4) * cellH, cellW, cellH)
+                        }.getOrNull()
                     }
                     return ImageView(this@MainActivity).apply {
-                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        scaleType = ImageView.ScaleType.FIT_CENTER
                         setImageBitmap(bitmap)
                         background = roundedDrawable(if (selected) accent else bg, dp(sizeDp / 2), if (selected) accentBright else Color.TRANSPARENT)
                         clipToOutline = true
@@ -7867,7 +7891,7 @@ class MainActivity : Activity() {
                     dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                     dialog.setOnShowListener {
                         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.86f).toInt().coerceAtMost(dp(560)), ViewGroup.LayoutParams.WRAP_CONTENT)
+                        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.62f).toInt().coerceAtMost(dp(620)), ViewGroup.LayoutParams.WRAP_CONTENT)
                     }
                     return dialog
                 }
@@ -7888,7 +7912,7 @@ class MainActivity : Activity() {
                     form.addView(TextView(this@MainActivity).apply {
                         text = t("Avatar seç"); textSize = 14f; setTextColor(muted); setPadding(0, dp(12), 0, dp(6))
                     })
-                    val avatarGrid = android.widget.GridLayout(this@MainActivity).apply { columnCount = 6 }
+                    val avatarGrid = android.widget.GridLayout(this@MainActivity).apply { columnCount = 4; alignmentMode = android.widget.GridLayout.ALIGN_BOUNDS }
                     val avatarViews = mutableListOf<Pair<String, ImageView>>()
                     avatarChoices.forEach { avatarId ->
                         val avatarView = avatarImage(avatarId, 48, avatarId == selectedAvatar).apply {
@@ -7902,7 +7926,7 @@ class MainActivity : Activity() {
                         }
                         avatarViews.add(avatarId to avatarView)
                         avatarGrid.addView(avatarView, android.widget.GridLayout.LayoutParams().apply {
-                            width = dp(48); height = dp(48); setMargins(dp(3), dp(3), dp(3), dp(3))
+                            width = dp(54); height = dp(54); setMargins(dp(5), dp(4), dp(5), dp(4))
                         })
                     }
                     form.addView(avatarGrid)
@@ -7928,7 +7952,7 @@ class MainActivity : Activity() {
                     editorScroll.addView(form, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     val editorBody = LinearLayout(this@MainActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(editorScroll, LinearLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.56f).toInt().coerceAtLeast(dp(220))))
+                        addView(editorScroll, LinearLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.42f).toInt().coerceAtLeast(dp(190))))
                     }
                     val dialog = themedDialog(if (oldName == null) "Profil oluştur" else "Profil düzenle", editorBody)
                     val actions = LinearLayout(this@MainActivity).apply {
@@ -8047,27 +8071,42 @@ class MainActivity : Activity() {
                                     hint = t("Profil PIN kodu")
                                     inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
                                     setSingleLine(true)
+                                    setTextColor(Color.WHITE)
+                                    setHintTextColor(muted)
+                                    background = roundedDrawable(bg, 12, accent)
+                                    setPadding(dp(14), dp(10), dp(14), dp(10))
                                 }
-                                val pinDialog = AlertDialog.Builder(this@MainActivity)
-                                    .setTitle(profileName)
-                                    .setMessage(t("Bu profile geçmek için PIN gir."))
-                                    .setView(pinField)
-                                    .setNegativeButton(t("İptal"), null)
-                                    .setPositiveButton(t("Devam"), null)
-                                    .create()
-                                pinDialog.setOnShowListener {
-                                    pinDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                                        val enteredHash = runCatching { profileHash(pinField.text.toString()) }.getOrDefault("")
-                                        if (enteredHash == savedHash) {
-                                            pinDialog.dismiss()
-                                            activate()
-                                        } else {
-                                            pinField.error = t("PIN hatalı")
-                                            pinField.text?.clear()
-                                        }
+                                val pinBody = LinearLayout(this@MainActivity).apply {
+                                    orientation = LinearLayout.VERTICAL
+                                    addView(TextView(this@MainActivity).apply {
+                                        text = t("Bu profile geçmek için PIN gir.")
+                                        textSize = 15f
+                                        setTextColor(Color.WHITE)
+                                        setPadding(0, 0, 0, dp(12))
+                                    })
+                                    addView(pinField, LinearLayout.LayoutParams(-1, dp(48)))
+                                }
+                                val pinDialog = themedDialog(profileName, pinBody)
+                                val pinActions = LinearLayout(this@MainActivity).apply {
+                                    orientation = LinearLayout.HORIZONTAL
+                                    gravity = Gravity.END
+                                    setPadding(0, dp(12), 0, 0)
+                                }
+                                pinActions.addView(makeButton(t("İptal"), false) { pinDialog.dismiss() }, LinearLayout.LayoutParams(dp(104), dp(44)))
+                                pinActions.addView(makeButton(t("Devam"), true) {
+                                    val enteredHash = runCatching { profileHash(pinField.text.toString()) }.getOrDefault("")
+                                    if (enteredHash == savedHash) {
+                                        pinDialog.dismiss()
+                                        activate()
+                                    } else {
+                                        pinField.error = t("PIN hatalı")
+                                        pinField.text?.clear()
                                     }
-                                }
+                                }, LinearLayout.LayoutParams(dp(104), dp(44)).apply { leftMargin = dp(8) })
+                                pinBody.addView(pinActions)
                                 pinDialog.show()
+                                pinDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                                pinDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.48f).toInt().coerceAtMost(dp(480)), ViewGroup.LayoutParams.WRAP_CONTENT)
                                 pinField.requestFocus()
                             }
                         }, LinearLayout.LayoutParams(dp(104), dp(40)))
@@ -8080,6 +8119,104 @@ class MainActivity : Activity() {
                 content.addView(makeButton("+  ${t("Profil Ekle")}", true) { showProfileEditor() },
                     LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(6), dp(10), dp(6), dp(8)) })
 
+            }
+            "playback" -> {
+                heading("Oynatma Ayarları", "Video ve ses tercihlerini düzenle.")
+                fun playbackChoice(title: String, key: String, options: List<Pair<String, String>>) {
+                    val panelView = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        background = roundedDrawable(panel, 16)
+                        setPadding(dp(16), dp(12), dp(16), dp(12))
+                    }
+                    panelView.addView(TextView(this).apply { text = t(title); textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, android.graphics.Typeface.BOLD) })
+                    val spinner = Spinner(this)
+                    spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, options.map { t(it.second) })
+                    val saved = prefs.getString(key, options.first().first) ?: options.first().first
+                    spinner.setSelection(options.indexOfFirst { it.first == saved }.coerceAtLeast(0))
+                    spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                        override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+                        override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                            prefs.edit().putString(key, options[position].first).apply()
+                        }
+                    }
+                    panelView.addView(spinner)
+                    content.addView(panelView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
+                }
+                playbackChoice("Arabellek", "player_buffer", listOf("normal" to "Normal", "small" to "Düşük", "large" to "Yüksek"))
+                playbackChoice("Ekran oranı", "player_aspect", listOf("fit" to "Sığdır", "fill" to "Doldur", "zoom" to "Yakınlaştır"))
+                val resumeSwitch = Switch(this).apply {
+                    text = t("Kaldığın yerden devam et")
+                    setTextColor(Color.WHITE)
+                    isChecked = prefs.getBoolean("player_resume", true)
+                    setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean("player_resume", checked).apply() }
+                }
+                content.addView(LinearLayout(this).apply { background = roundedDrawable(panel, 16); setPadding(dp(16), dp(8), dp(16), dp(8)); addView(resumeSwitch) },
+                    LinearLayout.LayoutParams(-1, dp(58)).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
+            }
+            "notifications" -> {
+                heading("Bildirimler", "Uygulama bildirim tercihlerini yönet.")
+                val notificationSwitch = Switch(this).apply {
+                    text = t("Bildirimlere izin ver")
+                    setTextColor(Color.WHITE)
+                    isChecked = prefs.getBoolean("notifications_enabled", true)
+                    setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean("notifications_enabled", checked).apply() }
+                }
+                content.addView(LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    background = roundedDrawable(panel, 16)
+                    setPadding(dp(16), dp(12), dp(16), dp(12))
+                    addView(notificationSwitch)
+                    addView(TextView(this@MainActivity).apply { text = t("Bu tercih uygulama içi bildirimleri kontrol eder."); textSize = 13f; setTextColor(muted) })
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
+            }
+            "storage" -> {
+                heading("Depolama", "Önbellek boyutunu görüntüle ve temizle.")
+                fun cacheSize(): Long = runCatching { cacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() } }.getOrDefault(0L)
+                fun sizeLabel(bytes: Long): String = if (bytes >= 1024L * 1024L) String.format(java.util.Locale.ROOT, "%.1f MB", bytes / (1024f * 1024f)) else String.format(java.util.Locale.ROOT, "%.0f KB", bytes / 1024f)
+                val info = TextView(this).apply {
+                    text = t("Önbellek boyutu") + ": " + sizeLabel(cacheSize())
+                    textSize = 17f; setTextColor(Color.WHITE); setPadding(dp(16), dp(14), dp(16), dp(14)); background = roundedDrawable(panel, 16)
+                }
+                content.addView(info, LinearLayout.LayoutParams(-1, dp(56)).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
+                content.addView(makeButton(t("Önbelleği temizle"), true) {
+                    val ok = runCatching { cacheDir.deleteRecursively(); cacheDir.mkdirs() }.isSuccess
+                    info.text = t("Önbellek boyutu") + ": " + sizeLabel(cacheSize())
+                    Toast.makeText(this@MainActivity, if (ok) t("Önbellek temizlendi.") else t("Önbellek temizlenemedi."), Toast.LENGTH_LONG).show()
+                }, LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(6), dp(4), dp(6), dp(7)) })
+            }
+            "parental" -> {
+                heading("Ebeveyn Kontrolü", "İçerik erişimini profil bazında sınırlandır.")
+                val profiles = runCatching {
+                    val arr = JSONArray(prefs.getString("user_profiles", JSONArray().put("Ana Profil").toString()))
+                    (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }
+                }.getOrDefault(listOf("Ana Profil"))
+                val active = prefs.getString("active_user_profile", profiles.firstOrNull() ?: "Ana Profil") ?: "Ana Profil"
+                val panelView = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    background = roundedDrawable(panel, 16)
+                    setPadding(dp(16), dp(14), dp(16), dp(14))
+                }
+                panelView.addView(TextView(this).apply { text = t("Etkin profil") + ": " + active; textSize = 17f; setTextColor(Color.WHITE) })
+                panelView.addView(TextView(this).apply { text = t("Yaş sınırı"); textSize = 14f; setTextColor(muted); setPadding(0, dp(10), 0, dp(4)) })
+                val ageLabels = listOf("Tüm yaşlar", "7+", "13+", "16+", "18+")
+                val ageValues = listOf("all", "7", "13", "16", "18")
+                val key = "parental_max_age_$active"
+                val current = prefs.getString(key, "all") ?: "all"
+                val spinner = Spinner(this)
+                spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, ageLabels.map { t(it) })
+                spinner.setSelection(ageValues.indexOf(current).coerceAtLeast(0))
+                spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                    override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+                    override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                        prefs.edit().putString(key, ageValues[position]).apply()
+                    }
+                }
+                panelView.addView(spinner)
+                panelView.addView(TextView(this).apply {
+                    text = t("Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz.")
+                    textSize = 13f; setTextColor(muted); setPadding(0, dp(10), 0, 0)
+                })
+                content.addView(panelView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
             }
             "language" -> {
                 val currentLanguage = prefs.getString("app_language", "system") ?: "system"
