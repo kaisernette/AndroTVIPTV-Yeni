@@ -7290,17 +7290,21 @@ class MainActivity : Activity() {
             "profiles" -> {
                 val profilePrefsKey = "user_profiles"
                 val activeProfileKey = "active_user_profile"
+                val avatarChoices = listOf("👤", "😀", "😎", "🦊", "🐼", "🐱", "🐯", "🦁", "🐸", "🐨", "⚽", "🎮", "🎬", "🌟")
+                fun avatarKey(name: String) = "profile_avatar_$name"
+                fun pinKey(name: String) = "profile_pin_$name"
+                fun profileHash(value: String): String = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
                 fun readProfiles(): MutableList<String> {
-                    val stored = prefs.getString(profilePrefsKey, null)
                     val names = runCatching {
-                        val array = org.json.JSONArray(stored ?: org.json.JSONArray().put("Ana Profil").toString())
-                        MutableList(array.length()) { index -> array.optString(index).trim() }.filter { it.isNotBlank() }.toMutableList()
+                        val array = JSONArray(prefs.getString(profilePrefsKey, JSONArray().put("Ana Profil").toString()))
+                        MutableList(array.length()) { array.optString(it).trim() }.filter { it.isNotBlank() }.distinctBy { it.lowercase(java.util.Locale.ROOT) }.toMutableList()
                     }.getOrElse { mutableListOf("Ana Profil") }
                     if (names.isEmpty()) names.add("Ana Profil")
                     return names
                 }
                 fun saveProfiles(names: List<String>) {
-                    val array = org.json.JSONArray()
+                    val array = JSONArray()
                     names.forEach { array.put(it) }
                     prefs.edit().putString(profilePrefsKey, array.toString()).apply()
                 }
@@ -7310,142 +7314,178 @@ class MainActivity : Activity() {
                     activeProfile = profileNames.first()
                     prefs.edit().putString(activeProfileKey, activeProfile).apply()
                 }
+                fun themedDialog(title: String, body: View): android.app.Dialog {
+                    val dialog = android.app.Dialog(this@MainActivity)
+                    val shell = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(22), dp(20), dp(22), dp(18))
+                        background = roundedDrawable(panel, 20, accent)
+                    }
+                    shell.addView(TextView(this@MainActivity).apply {
+                        text = t(title); textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE); setPadding(0, 0, 0, dp(14))
+                    })
+                    shell.addView(body)
+                    dialog.setContentView(shell)
+                    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                    dialog.setOnShowListener {
+                        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.86f).toInt().coerceAtMost(dp(560)), ViewGroup.LayoutParams.WRAP_CONTENT)
+                    }
+                    return dialog
+                }
+                fun field(hintText: String, value: String = "", password: Boolean = false): EditText = EditText(this@MainActivity).apply {
+                    hint = t(hintText); setSingleLine(true); setText(value)
+                    setTextColor(Color.WHITE); setHintTextColor(muted)
+                    background = roundedDrawable(bg, 12, accent)
+                    setPadding(dp(14), dp(10), dp(14), dp(10))
+                    if (password) inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+                }
+                fun showProfileEditor(existingName: String? = null) {
+                    val oldName = existingName
+                    val currentAvatar = oldName?.let { prefs.getString(avatarKey(it), "👤") } ?: "👤"
+                    var selectedAvatar = currentAvatar ?: "👤"
+                    val form = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+                    val nameInput = field("Profil adı", oldName.orEmpty())
+                    form.addView(nameInput, LinearLayout.LayoutParams(-1, dp(50)))
+                    form.addView(TextView(this@MainActivity).apply {
+                        text = t("Avatar seç"); textSize = 14f; setTextColor(muted); setPadding(0, dp(12), 0, dp(6))
+                    })
+                    val avatarGrid = android.widget.GridLayout(this@MainActivity).apply { columnCount = 7 }
+                    val avatarViews = mutableListOf<TextView>()
+                    avatarChoices.forEach { emoji ->
+                        val avatarView = TextView(this@MainActivity).apply {
+                            text = emoji; textSize = 24f; gravity = Gravity.CENTER
+                            background = roundedDrawable(if (emoji == selectedAvatar) accent else bg, 12, if (emoji == selectedAvatar) accentBright else Color.TRANSPARENT)
+                            isFocusable = true; isClickable = true
+                            setOnClickListener {
+                                selectedAvatar = emoji
+                                avatarViews.forEach { it.background = roundedDrawable(if (it.text == emoji) accent else bg, 12, if (it.text == emoji) accentBright else Color.TRANSPARENT) }
+                            }
+                        }
+                        avatarViews.add(avatarView)
+                        avatarGrid.addView(avatarView, android.widget.GridLayout.LayoutParams().apply {
+                            width = dp(42); height = dp(42); setMargins(dp(2), dp(2), dp(2), dp(2))
+                        })
+                    }
+                    form.addView(avatarGrid)
+                    form.addView(TextView(this@MainActivity).apply {
+                        text = t("PIN koruması (isteğe bağlı)"); textSize = 14f; setTextColor(muted); setPadding(0, dp(12), 0, dp(6))
+                    })
+                    val existingPin = oldName?.let { prefs.getString(pinKey(it), "") }.orEmpty()
+                    val pinInput = field("Yeni PIN (4-8 rakam)", "", true)
+                    val confirmInput = field("PIN tekrar", "", true)
+                    form.addView(pinInput, LinearLayout.LayoutParams(-1, dp(50)))
+                    form.addView(confirmInput, LinearLayout.LayoutParams(-1, dp(50)).apply { setMargins(0, dp(7), 0, 0) })
+                    form.addView(TextView(this@MainActivity).apply {
+                        text = if (existingPin.isNotBlank()) t("PIN'i boş bırak mevcut PIN'i korur; kaldırmak için PIN'i temizle.") else t("PIN belirlemezsen profil PIN'siz açılır.")
+                        textSize = 11f; setTextColor(muted); setPadding(dp(2), dp(6), dp(2), 0)
+                    })
+                    val dialog = themedDialog(if (oldName == null) "Profil oluştur" else "Profil düzenle", form)
+                    val actions = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
+                    actions.addView(makeButton(t("İptal"), false) { dialog.dismiss() })
+                    actions.addView(makeButton(t("Kaydet"), true) {
+                        val newName = nameInput.text.toString().trim()
+                        val pin = pinInput.text.toString()
+                        val confirm = confirmInput.text.toString()
+                        when {
+                            newName.isBlank() -> Toast.makeText(this@MainActivity, t("Profil adı boş olamaz."), Toast.LENGTH_SHORT).show()
+                            profileNames.any { it.equals(newName, true) && !it.equals(oldName, true) } -> Toast.makeText(this@MainActivity, t("Profil zaten mevcut."), Toast.LENGTH_SHORT).show()
+                            pin.isNotEmpty() && (pin.length !in 4..8 || !pin.all { it.isDigit() }) -> Toast.makeText(this@MainActivity, t("PIN 4-8 rakam olmalı."), Toast.LENGTH_SHORT).show()
+                            pin.isNotEmpty() && pin != confirm -> Toast.makeText(this@MainActivity, t("PIN kodları eşleşmiyor."), Toast.LENGTH_SHORT).show()
+                            else -> {
+                                val editor = prefs.edit()
+                                if (oldName == null) profileNames.add(newName) else {
+                                    val index = profileNames.indexOf(oldName)
+                                    if (index >= 0) profileNames[index] = newName
+                                    if (oldName != newName) {
+                                        listOf("avatar", "pin").forEach { suffix ->
+                                            val from = "profile_${suffix}_$oldName"
+                                            val to = "profile_${suffix}_$newName"
+                                            prefs.getString(from, null)?.let { editor.putString(to, it) }
+                                            editor.remove(from)
+                                        }
+                                        if (activeProfile == oldName) { activeProfile = newName; editor.putString(activeProfileKey, newName) }
+                                    }
+                                }
+                                editor.putString(avatarKey(newName), selectedAvatar)
+                                if (pin.isNotEmpty()) editor.putString(pinKey(newName), profileHash(pin))
+                                else if (oldName == null || pinInput.text.isNotEmpty()) editor.remove(pinKey(newName))
+                                editor.apply()
+                                saveProfiles(profileNames)
+                                dialog.dismiss()
+                                render()
+                            }
+                        }
+                    }, LinearLayout.LayoutParams(dp(104), dp(44)).apply { setMargins(dp(8), 0, 0, 0) })
+                    form.addView(actions, LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(0, dp(14), 0, 0) })
+                    dialog.show()
+                    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                    dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.86f).toInt().coerceAtMost(dp(560)), ViewGroup.LayoutParams.WRAP_CONTENT)
+                    nameInput.requestFocus()
+                }
+                fun confirmDelete(name: String) {
+                    val body = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+                    body.addView(TextView(this@MainActivity).apply { text = t("Bu profil silinsin mi?"); textSize = 15f; setTextColor(Color.WHITE) })
+                    val dialog = themedDialog("Profil silinsin mi?", body)
+                    val actions = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
+                    actions.addView(makeButton(t("İptal"), false) { dialog.dismiss() })
+                    actions.addView(makeButton(t("Sil"), true) {
+                        if (profileNames.size > 1) {
+                            profileNames.remove(name)
+                            saveProfiles(profileNames)
+                            prefs.edit().remove(avatarKey(name)).remove(pinKey(name)).apply()
+                            if (activeProfile == name) {
+                                activeProfile = profileNames.first()
+                                prefs.edit().putString(activeProfileKey, activeProfile).apply()
+                            }
+                            dialog.dismiss(); render()
+                        }
+                    }, LinearLayout.LayoutParams(dp(88), dp(44)).apply { setMargins(dp(8), 0, 0, 0) })
+                    body.addView(actions, LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(0, dp(14), 0, 0) })
+                    dialog.show()
+                }
 
                 heading("Profil Yönetimi", "Kullanıcı profillerinizi oluşturun ve yönetin.")
                 val activeCard = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(16), dp(12), dp(16), dp(12))
-                    background = roundedDrawable(panel, 14)
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(16), dp(12), dp(16), dp(12)); background = roundedDrawable(panel, 14)
                 }
-                activeCard.addView(TextView(this).apply {
-                    text = "◉"; textSize = 28f; setTextColor(accentBright); gravity = Gravity.CENTER
-                }, LinearLayout.LayoutParams(dp(48), dp(48)))
+                val activeAvatar = TextView(this).apply {
+                    text = prefs.getString(avatarKey(activeProfile), "👤"); textSize = 27f; gravity = Gravity.CENTER
+                    background = roundedDrawable(accent, 50)
+                }
+                activeCard.addView(activeAvatar, LinearLayout.LayoutParams(dp(52), dp(52)))
                 val activeText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                activeText.addView(TextView(this).apply {
-                    text = t("Aktif Profil"); textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
-                })
-                activeText.addView(TextView(this).apply {
-                    text = activeProfile; textSize = 14f; setTextColor(accentBright); setPadding(0, dp(3), 0, 0)
-                })
-                activeCard.addView(activeText, LinearLayout.LayoutParams(0, -2, 1f))
-                content.addView(activeCard, LinearLayout.LayoutParams(-1, dp(76)).apply {
-                    setMargins(dp(6), dp(0), dp(6), dp(10))
-                })
+                activeText.addView(TextView(this).apply { text = t("Aktif Profil"); textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
+                activeText.addView(TextView(this).apply { text = activeProfile; textSize = 14f; setTextColor(accentBright); setPadding(0, dp(3), 0, 0) })
+                activeCard.addView(activeText, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(12), 0, 0, 0) })
+                content.addView(activeCard, LinearLayout.LayoutParams(-1, dp(78)).apply { setMargins(dp(6), 0, dp(6), dp(10)) })
 
-                profileNames.forEachIndexed { index, profileName ->
+                profileNames.forEach { profileName ->
                     val selected = profileName == activeProfile
                     val row = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(12), dp(9), dp(10), dp(9))
-                        background = roundedDrawable(if (selected) panel else panel, 14)
-                        isFocusable = true
-                        isFocusableInTouchMode = true
-                        isClickable = true
-                        setOnFocusChangeListener { view, focused ->
-                            view.background = roundedDrawable(if (focused || selected) accent else panel, 14)
-                        }
-                        setOnClickListener {
-                            prefs.edit().putString(activeProfileKey, profileName).apply()
-                            android.widget.Toast.makeText(this@MainActivity, t("Profil seçildi."), android.widget.Toast.LENGTH_SHORT).show()
-                            render()
-                        }
+                        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(12), dp(9), dp(10), dp(9)); background = roundedDrawable(panel, 14)
                     }
-                    val avatar = TextView(this).apply {
-                        text = profileName.take(1).uppercase(java.util.Locale.getDefault())
-                        textSize = 23f; setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(Color.WHITE); gravity = Gravity.CENTER
-                        background = android.graphics.drawable.GradientDrawable().apply {
-                            shape = android.graphics.drawable.GradientDrawable.OVAL
-                            setColor(if (selected) accent else (0xFF34445F).toInt())
-                        }
-                    }
-                    row.addView(avatar, LinearLayout.LayoutParams(dp(52), dp(52)))
+                    row.addView(TextView(this).apply {
+                        text = prefs.getString(avatarKey(profileName), "👤"); textSize = 25f; gravity = Gravity.CENTER
+                        background = roundedDrawable(if (selected) accent else bg, 50)
+                    }, LinearLayout.LayoutParams(dp(50), dp(50)))
                     val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                    details.addView(TextView(this).apply { text = profileName; textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
                     details.addView(TextView(this).apply {
-                        text = profileName; textSize = 17f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
-                    })
-                    details.addView(TextView(this).apply {
-                        text = if (selected) t("Aktif") else t("Etkinleştir")
+                        text = (if (selected) t("Aktif") else t("Etkinleştir")) + if (prefs.getString(pinKey(profileName), "").isNullOrBlank()) "" else "  •  PIN"
                         textSize = 12f; setTextColor(if (selected) accentBright else muted); setPadding(0, dp(3), 0, 0)
                     })
-                    row.addView(details, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(12), 0, dp(8), 0) })
-                    row.addView(makeButton(t("Düzenle"), false) {
-                        val editInput = android.widget.EditText(this@MainActivity).apply {
-                            setSingleLine(true); setText(profileName); setSelection(text.length)
-                        }
-                        AlertDialog.Builder(this@MainActivity)
-                            .setTitle(t("Profil düzenle"))
-                            .setView(editInput)
-                            .setNegativeButton(t("İptal"), null)
-                            .setPositiveButton(t("Kaydet")) { _, _ ->
-                                val updatedName = editInput.text.toString().trim()
-                                when {
-                                    updatedName.isBlank() -> android.widget.Toast.makeText(this@MainActivity, t("Profil adı boş olamaz."), android.widget.Toast.LENGTH_SHORT).show()
-                                    profileNames.any { it.equals(updatedName, true) && !it.equals(profileName, true) } -> android.widget.Toast.makeText(this@MainActivity, t("Profil zaten mevcut."), android.widget.Toast.LENGTH_SHORT).show()
-                                    else -> {
-                                        profileNames[index] = updatedName
-                                        saveProfiles(profileNames)
-                                        if (activeProfile == profileName) prefs.edit().putString(activeProfileKey, updatedName).apply()
-                                        render()
-                                    }
-                                }
-                            }.show()
-                    }, LinearLayout.LayoutParams(dp(82), dp(40)))
-                    row.addView(makeButton(t("Sil"), false) {
-                        if (profileNames.size <= 1) {
-                            android.widget.Toast.makeText(this@MainActivity, t("En az bir profil kalmalı."), android.widget.Toast.LENGTH_SHORT).show()
-                        } else {
-                            AlertDialog.Builder(this@MainActivity)
-                                .setTitle(t("Profil silinsin mi?"))
-                                .setMessage(t("Bu profil silinsin mi?"))
-                                .setNegativeButton(t("İptal"), null)
-                                .setPositiveButton(t("Sil")) { _, _ ->
-                                    profileNames.removeAt(index)
-                                    saveProfiles(profileNames)
-                                    if (activeProfile == profileName) {
-                                        activeProfile = profileNames.first()
-                                        prefs.edit().putString(activeProfileKey, activeProfile).apply()
-                                    }
-                                    render()
-                                }.show()
-                        }
-                    }, LinearLayout.LayoutParams(dp(68), dp(40)).apply { setMargins(dp(6), 0, 0, 0) })
-                    content.addView(row, LinearLayout.LayoutParams(-1, dp(76)).apply {
-                        setMargins(dp(6), dp(4), dp(6), dp(4))
-                    })
+                    row.addView(details, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(10), 0, dp(6), 0) })
+                    row.addView(makeButton(t("Düzenle"), false) { showProfileEditor(profileName) }, LinearLayout.LayoutParams(dp(82), dp(40)))
+                    row.addView(makeButton(t("Sil"), false) { if (profileNames.size <= 1) Toast.makeText(this@MainActivity, t("En az bir profil kalmalı."), Toast.LENGTH_SHORT).show() else confirmDelete(profileName) },
+                        LinearLayout.LayoutParams(dp(68), dp(40)).apply { setMargins(dp(5), 0, 0, 0) })
+                    content.addView(row, LinearLayout.LayoutParams(-1, dp(70)).apply { setMargins(dp(6), dp(4), dp(6), dp(4)) })
                 }
-
-                content.addView(makeButton("+  ${t("Profil Ekle")}", false) {
-                    val input = android.widget.EditText(this@MainActivity).apply {
-                        hint = t("Profil adı"); setSingleLine(true)
-                    }
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle(t("Profil oluştur"))
-                        .setMessage(t("Yeni profil adını girin."))
-                        .setView(input)
-                        .setNegativeButton(t("İptal"), null)
-                        .setPositiveButton(t("Kaydet")) { _, _ ->
-                            val newName = input.text.toString().trim()
-                            when {
-                                newName.isBlank() -> android.widget.Toast.makeText(this@MainActivity, t("Profil adı boş olamaz."), android.widget.Toast.LENGTH_SHORT).show()
-                                profileNames.any { it.equals(newName, true) } -> android.widget.Toast.makeText(this@MainActivity, t("Profil zaten mevcut."), android.widget.Toast.LENGTH_SHORT).show()
-                                else -> {
-                                    profileNames.add(newName)
-                                    saveProfiles(profileNames)
-                                    prefs.edit().putString(activeProfileKey, newName).apply()
-                                    render()
-                                }
-                            }
-                        }.show()
-                }, LinearLayout.LayoutParams(-1, dp(48)).apply {
-                    setMargins(dp(6), dp(10), dp(6), dp(8))
-                })
-                content.addView(TextView(this).apply {
-                    text = t("Profiller cihazda saklanır. Profil verilerinin ayrıştırılması sonraki aşamada tamamlanacaktır.")
-                    textSize = 12f; setTextColor(muted); setPadding(dp(8), dp(8), dp(8), dp(12))
-                })
+                content.addView(makeButton("+  ${t("Profil Ekle")}", true) { showProfileEditor() },
+                    LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(6), dp(10), dp(6), dp(8)) })
             }
             "language" -> {
                 val currentLanguage = prefs.getString("app_language", "system") ?: "system"
