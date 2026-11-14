@@ -8186,7 +8186,8 @@ class MainActivity : Activity() {
                 fun avatarImage(value: String?, sizeDp: Int, selected: Boolean = false): ImageView {
                     val id = normalizedAvatar(value)
                     return ImageView(this@MainActivity).apply {
-                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        setBackgroundColor(Color.TRANSPARENT)
                         setImageBitmap(avatarBitmap(id))
                         background = roundedDrawable(bg, dp(sizeDp / 2))
                         foreground = roundedDrawable(Color.TRANSPARENT, dp(sizeDp / 2),
@@ -8271,7 +8272,7 @@ class MainActivity : Activity() {
                         gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(12))
                     })
                     val avatarPreview = avatarImage(selectedAvatar, 112, true).apply {
-                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        scaleType = ImageView.ScaleType.FIT_CENTER
                         isFocusable = false
                         isClickable = false
                     }
