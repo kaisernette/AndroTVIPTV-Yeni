@@ -212,6 +212,32 @@ class MainActivity : Activity() {
         recreate()
     }
 
+    private fun selectProfileWithPin(profile: String) {
+        if (profile == activeProfileName()) return
+        val savedPinHash = prefs.getString(profileDataKey("pin_hash", profile), null)
+        if (savedPinHash.isNullOrBlank()) {
+            switchToProfile(profile)
+            return
+        }
+        val pinInput = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            hint = t("PIN kodu")
+            filters = arrayOf(android.text.InputFilter.LengthFilter(8))
+        }
+        AlertDialog.Builder(this)
+            .setTitle(t("Profil PIN'i"))
+            .setView(pinInput)
+            .setNegativeButton(t("İptal"), null)
+            .setPositiveButton(t("Onayla")) { _, _ ->
+                if (hashProfilePin(pinInput.text.toString()) == savedPinHash) {
+                    switchToProfile(profile)
+                } else {
+                    Toast.makeText(this, t("PIN hatalı."), Toast.LENGTH_SHORT).show()
+                }
+            }
+            .show()
+    }
+
     private fun t(value: String): String {
         val selected = prefs.getString("app_language", "system") ?: "system"
         val language = if (selected == "system") java.util.Locale.getDefault().language else selected
@@ -644,13 +670,13 @@ class MainActivity : Activity() {
             else -> emptyMap()
         }
         val profileShortcutTranslations = when (language) {
-            "en" -> mapOf("Profil" to "Profile", "Profil seç" to "Choose profile", "Profil Yönetimi" to "Profile Management", "Kapat" to "Close")
-            "de" -> mapOf("Profil" to "Profil", "Profil seç" to "Profil auswählen", "Profil Yönetimi" to "Profilverwaltung", "Kapat" to "Schließen")
-            "fr" -> mapOf("Profil" to "Profil", "Profil seç" to "Choisir un profil", "Profil Yönetimi" to "Gestion des profils", "Kapat" to "Fermer")
-            "it" -> mapOf("Profil" to "Profilo", "Profil seç" to "Scegli profilo", "Profil Yönetimi" to "Gestione profili", "Kapat" to "Chiudi")
-            "es" -> mapOf("Profil" to "Perfil", "Profil seç" to "Elegir perfil", "Profil Yönetimi" to "Administración de perfiles", "Kapat" to "Cerrar")
-            "ru" -> mapOf("Profil" to "Профиль", "Profil seç" to "Выбрать профиль", "Profil Yönetimi" to "Управление профилями", "Kapat" to "Закрыть")
-            "ar" -> mapOf("Profil" to "الملف الشخصي", "Profil seç" to "اختيار الملف الشخصي", "Profil Yönetimi" to "إدارة الملفات الشخصية", "Kapat" to "إغلاق")
+            "en" -> mapOf("Profil" to "Profile", "Profil seç" to "Choose profile", "Profil Yönetimi" to "Profile Management", "Kapat" to "Close", "Kullanıcılar" to "Users", "PIN kodu" to "PIN", "Profil PIN'i" to "Profile PIN", "Onayla" to "Confirm", "PIN hatalı." to "Incorrect PIN.")
+            "de" -> mapOf("Profil" to "Profil", "Profil seç" to "Profil auswählen", "Profil Yönetimi" to "Profilverwaltung", "Kapat" to "Schließen", "Kullanıcılar" to "Benutzer", "PIN kodu" to "PIN", "Profil PIN'i" to "Profil-PIN", "Onayla" to "Bestätigen", "PIN hatalı." to "Falsche PIN.")
+            "fr" -> mapOf("Profil" to "Profil", "Profil seç" to "Choisir un profil", "Profil Yönetimi" to "Gestion des profils", "Kapat" to "Fermer", "Kullanıcılar" to "Utilisateurs", "PIN kodu" to "Code PIN", "Profil PIN'i" to "Code PIN du profil", "Onayla" to "Confirmer", "PIN hatalı." to "Code PIN incorrect.")
+            "it" -> mapOf("Profil" to "Profilo", "Profil seç" to "Scegli profilo", "Profil Yönetimi" to "Gestione profili", "Kapat" to "Chiudi", "Kullanıcılar" to "Utenti", "PIN kodu" to "PIN", "Profil PIN'i" to "PIN del profilo", "Onayla" to "Conferma", "PIN hatalı." to "PIN errato.")
+            "es" -> mapOf("Profil" to "Perfil", "Profil seç" to "Elegir perfil", "Profil Yönetimi" to "Administración de perfiles", "Kapat" to "Cerrar", "Kullanıcılar" to "Usuarios", "PIN kodu" to "PIN", "Profil PIN'i" to "PIN del perfil", "Onayla" to "Confirmar", "PIN hatalı." to "PIN incorrecto.")
+            "ru" -> mapOf("Profil" to "Профиль", "Profil seç" to "Выбрать профиль", "Profil Yönetimi" to "Управление профилями", "Kapat" to "Закрыть", "Kullanıcılar" to "Пользователи", "PIN kodu" to "PIN-код", "Profil PIN'i" to "PIN профиля", "Onayla" to "Подтвердить", "PIN hatalı." to "Неверный PIN.")
+            "ar" -> mapOf("Profil" to "الملف الشخصي", "Profil seç" to "اختيار الملف الشخصي", "Profil Yönetimi" to "إدارة الملفات الشخصية", "Kapat" to "إغلاق", "Kullanıcılar" to "المستخدمون", "PIN kodu" to "رمز PIN", "Profil PIN'i" to "رمز PIN للملف", "Onayla" to "تأكيد", "PIN hatalı." to "رمز PIN غير صحيح.")
             else -> emptyMap()
         }
         val profileUiTranslations = when (language) {
@@ -1439,18 +1465,31 @@ class MainActivity : Activity() {
             }
             addView(avatar, FrameLayout.LayoutParams(dp(42), dp(42), Gravity.CENTER))
             setOnClickListener {
-                // The top-right avatar is the single entry point for all profile actions.
-                // Open the profile hub directly instead of showing a second profile dialog.
-                settingsPage = "profiles"
-                selectedType = "Ayarlar"
-                prefs.edit()
-                    .putString("last_settings_page", settingsPage)
-                    .putString("last_section", "Ayarlar")
-                    .apply()
-                selectedGroup = "Tüm kategoriler"
-                sidebarMode = "settings"
-                rebuildNavigation()
-                render()
+                val names = runCatching {
+                    val json = JSONArray(prefs.getString("user_profiles", null)
+                        ?: JSONArray().put("Ana Profil").toString())
+                    MutableList(json.length()) { index -> json.optString(index).trim() }
+                        .filter { it.isNotBlank() }
+                }.getOrElse { listOf("Ana Profil") }.ifEmpty { listOf("Ana Profil") }
+                val active = activeProfileName()
+                val labels = names.map { name -> if (name == active) "✓  $name" else name }.toTypedArray()
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(t("Kullanıcılar"))
+                    .setItems(labels) { _, which ->
+                        selectProfileWithPin(names[which])
+                    }
+                    .setPositiveButton(t("Ayarlar")) { _, _ ->
+                        settingsPage = "profiles"
+                        selectedType = "Ayarlar"
+                        prefs.edit().putString("last_settings_page", settingsPage)
+                            .putString("last_section", "Ayarlar").apply()
+                        selectedGroup = "Tüm kategoriler"
+                        sidebarMode = "settings"
+                        rebuildNavigation()
+                        render()
+                    }
+                    .setNegativeButton(t("Kapat"), null)
+                    .show()
             }
             if (isMobileLayout) {
                 isFocusable = false
@@ -7451,9 +7490,7 @@ class MainActivity : Activity() {
                             view.background = roundedDrawable(if (focused || selected) accent else panel, 14)
                         }
                         setOnClickListener {
-                            prefs.edit().putString(activeProfileKey, profileName).apply()
-                            android.widget.Toast.makeText(this@MainActivity, t("Profil seçildi."), android.widget.Toast.LENGTH_SHORT).show()
-                            render()
+                            selectProfileWithPin(profileName)
                         }
                     }
                     val avatar = TextView(this).apply {
