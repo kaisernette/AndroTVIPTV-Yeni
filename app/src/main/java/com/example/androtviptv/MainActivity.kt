@@ -1185,8 +1185,11 @@ class MainActivity : Activity() {
             imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            isFocusable = true
-            isFocusableInTouchMode = true
+            // Touch navigation should not move focus to the header search icon
+            // when category rows are rebuilt after a tap. Keep it focusable on TV,
+            // while leaving the mobile search icon fully clickable.
+            isFocusable = !isMobileLayout
+            isFocusableInTouchMode = !isMobileLayout
             contentDescription = "Ara"
             background = roundedDrawable(Color.TRANSPARENT, 12)
             nextFocusDownId = View.NO_ID
