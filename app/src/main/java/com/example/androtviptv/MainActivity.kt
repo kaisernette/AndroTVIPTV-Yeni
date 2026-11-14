@@ -7615,6 +7615,21 @@ class MainActivity : Activity() {
                 })
             }
         }
+        fun settingsPageText(key: String): String {
+            val selected = prefs.getString("app_language", "system") ?: "system"
+            val lang = if (selected == "system") java.util.Locale.getDefault().language else selected
+            val dict = when (lang) {
+                "en" -> mapOf("Oynatma Ayarları" to "Playback Settings", "Video ve ses tercihlerini düzenle." to "Adjust video and audio preferences.", "Arabellek" to "Buffer", "Ekran oranı" to "Aspect ratio", "Sığdır" to "Fit", "Doldur" to "Fill", "Yakınlaştır" to "Zoom", "Kaldığın yerden devam et" to "Resume playback", "Bildirimler" to "Notifications", "Uygulama bildirim tercihlerini yönet." to "Manage app notification preferences.", "Bildirimlere izin ver" to "Allow notifications", "Bu tercih uygulama içi bildirimleri kontrol eder." to "This controls in-app notification preferences.", "Depolama" to "Storage", "Önbellek boyutunu görüntüle ve temizle." to "View and clear the cache.", "Önbellek boyutu" to "Cache size", "Önbelleği temizle" to "Clear cache", "Önbellek temizlendi." to "Cache cleared.", "Önbellek temizlenemedi." to "Could not clear cache.", "Ebeveyn Kontrolü" to "Parental Controls", "İçerik erişimini profil bazında sınırlandır." to "Limit content access by profile.", "Etkin profil" to "Active profile", "Yaş sınırı" to "Age limit", "Tüm yaşlar" to "All ages", "7+" to "7+", "13+" to "13+", "16+" to "16+", "18+" to "18+", "Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz." to "The age limit is saved for this profile. Content cannot be classified automatically if the provider supplies no rating.", "Göster" to "Show"),
+                "de" -> mapOf("Oynatma Ayarları" to "Wiedergabeeinstellungen", "Video ve ses tercihlerini düzenle." to "Video- und Audiooptionen anpassen.", "Arabellek" to "Puffer", "Ekran oranı" to "Seitenverhältnis", "Sığdır" to "Einpassen", "Doldur" to "Ausfüllen", "Yakınlaştır" to "Vergrößern", "Kaldığın yerden devam et" to "Wiedergabe fortsetzen", "Bildirimler" to "Benachrichtigungen", "Uygulama bildirim tercihlerini yönet." to "App-Benachrichtigungen verwalten.", "Bildirimlere izin ver" to "Benachrichtigungen erlauben", "Bu tercih uygulama içi bildirimleri kontrol eder." to "Steuert App-interne Benachrichtigungen.", "Depolama" to "Speicher", "Önbellek boyutunu görüntüle ve temizle." to "Cache anzeigen und leeren.", "Önbellek boyutu" to "Cachegröße", "Önbelleği temizle" to "Cache leeren", "Önbellek temizlendi." to "Cache geleert.", "Önbellek temizlenemedi." to "Cache konnte nicht geleert werden.", "Ebeveyn Kontrolü" to "Jugendschutz", "İçerik erişimini profil bazında sınırlandır." to "Inhaltszugriff je Profil begrenzen.", "Etkin profil" to "Aktives Profil", "Yaş sınırı" to "Altersgrenze", "Tüm yaşlar" to "Alle Altersgruppen", "7+" to "7+", "13+" to "13+", "16+" to "16+", "18+" to "18+", "Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz." to "Die Altersgrenze wird für dieses Profil gespeichert. Ohne Anbieterbewertung ist keine automatische Einstufung möglich.", "Göster" to "Anzeigen"),
+                "fr" -> mapOf("Oynatma Ayarları" to "Paramètres de lecture", "Video ve ses tercihlerini düzenle." to "Régler les préférences audio et vidéo.", "Arabellek" to "Mémoire tampon", "Ekran oranı" to "Format d’image", "Sığdır" to "Ajuster", "Doldur" to "Remplir", "Yakınlaştır" to "Zoom", "Kaldığın yerden devam et" to "Reprendre la lecture", "Bildirimler" to "Notifications", "Uygulama bildirim tercihlerini yönet." to "Gérer les notifications de l’application.", "Bildirimlere izin ver" to "Autoriser les notifications", "Bu tercih uygulama içi bildirimleri kontrol eder." to "Contrôle les notifications intégrées à l’application.", "Depolama" to "Stockage", "Önbellek boyutunu görüntüle ve temizle." to "Afficher et vider le cache.", "Önbellek boyutu" to "Taille du cache", "Önbelleği temizle" to "Vider le cache", "Önbellek temizlendi." to "Cache vidé.", "Önbellek temizlenemedi." to "Impossible de vider le cache.", "Ebeveyn Kontrolü" to "Contrôle parental", "İçerik erişimini profil bazında sınırlandır." to "Limiter l’accès au contenu par profil.", "Etkin profil" to "Profil actif", "Yaş sınırı" to "Limite d’âge", "Tüm yaşlar" to "Tous les âges", "7+" to "7+", "13+" to "13+", "16+" to "16+", "18+" to "18+", "Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz." to "La limite est enregistrée pour ce profil. Sans classification du fournisseur, aucun classement automatique n’est possible.", "Göster" to "Afficher"),
+                "it" -> mapOf("Oynatma Ayarları" to "Impostazioni riproduzione", "Video ve ses tercihlerini düzenle." to "Regola le preferenze audio e video.", "Arabellek" to "Buffer", "Ekran oranı" to "Proporzioni", "Sığdır" to "Adatta", "Doldur" to "Riempi", "Yakınlaştır" to "Zoom", "Kaldığın yerden devam et" to "Riprendi la riproduzione", "Bildirimler" to "Notifiche", "Uygulama bildirim tercihlerini yönet." to "Gestisci le notifiche dell’app.", "Bildirimlere izin ver" to "Consenti notifiche", "Bu tercih uygulama içi bildirimleri kontrol eder." to "Controlla le notifiche dell’app.", "Depolama" to "Archiviazione", "Önbellek boyutunu görüntüle ve temizle." to "Visualizza e svuota la cache.", "Önbellek boyutu" to "Dimensione cache", "Önbelleği temizle" to "Svuota cache", "Önbellek temizlendi." to "Cache svuotata.", "Önbellek temizlenemedi." to "Impossibile svuotare la cache.", "Ebeveyn Kontrolü" to "Controllo genitori", "İçerik erişimini profil bazında sınırlandır." to "Limita l’accesso ai contenuti per profilo.", "Etkin profil" to "Profilo attivo", "Yaş sınırı" to "Limite di età", "Tüm yaşlar" to "Tutte le età", "7+" to "7+", "13+" to "13+", "16+" to "16+", "18+" to "18+", "Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz." to "Il limite è salvato per questo profilo. Senza una classificazione del provider non è possibile classificare automaticamente.", "Göster" to "Mostra"),
+                "es" -> mapOf("Oynatma Ayarları" to "Ajustes de reproducción", "Video ve ses tercihlerini düzenle." to "Ajusta las preferencias de audio y vídeo.", "Arabellek" to "Búfer", "Ekran oranı" to "Relación de aspecto", "Sığdır" to "Ajustar", "Doldur" to "Rellenar", "Yakınlaştır" to "Zoom", "Kaldığın yerden devam et" to "Continuar reproducción", "Bildirimler" to "Notificaciones", "Uygulama bildirim tercihlerini yönet." to "Gestiona las notificaciones de la aplicación.", "Bildirimlere izin ver" to "Permitir notificaciones", "Bu tercih uygulama içi bildirimleri kontrol eder." to "Controla las notificaciones de la aplicación.", "Depolama" to "Almacenamiento", "Önbellek boyutunu görüntüle ve temizle." to "Ver y borrar la caché.", "Önbellek boyutu" to "Tamaño de caché", "Önbelleği temizle" to "Borrar caché", "Önbellek temizlendi." to "Caché borrada.", "Önbellek temizlenemedi." to "No se pudo borrar la caché.", "Ebeveyn Kontrolü" to "Control parental", "İçerik erişimini profil bazında sınırlandır." to "Limita el acceso al contenido por perfil.", "Etkin profil" to "Perfil activo", "Yaş sınırı" to "Límite de edad", "Tüm yaşlar" to "Todas las edades", "7+" to "7+", "13+" to "13+", "16+" to "16+", "18+" to "18+", "Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz." to "El límite se guarda para este perfil. Sin clasificación del proveedor, no es posible clasificar automáticamente.", "Göster" to "Mostrar"),
+                "ru" -> mapOf("Oynatma Ayarları" to "Настройки воспроизведения", "Video ve ses tercihlerini düzenle." to "Настройка видео и звука.", "Arabellek" to "Буфер", "Ekran oranı" to "Соотношение сторон", "Sığdır" to "Вписать", "Doldur" to "Заполнить", "Yakınlaştır" to "Увеличить", "Kaldığın yerden devam et" to "Продолжить просмотр", "Bildirimler" to "Уведомления", "Uygulama bildirim tercihlerini yönet." to "Настройка уведомлений приложения.", "Bildirimlere izin ver" to "Разрешить уведомления", "Bu tercih uygulama içi bildirimleri kontrol eder." to "Управляет уведомлениями приложения.", "Depolama" to "Хранилище", "Önbellek boyutunu görüntüle ve temizle." to "Просмотр и очистка кэша.", "Önbellek boyutu" to "Размер кэша", "Önbelleği temizle" to "Очистить кэш", "Önbellek temizlendi." to "Кэш очищен.", "Önbellek temizlenemedi." to "Не удалось очистить кэш.", "Ebeveyn Kontrolü" to "Родительский контроль", "İçerik erişimini profil bazında sınırlandır." to "Ограничение доступа к контенту по профилям.", "Etkin profil" to "Активный профиль", "Yaş sınırı" to "Возрастное ограничение", "Tüm yaşlar" to "Для всех возрастов", "7+" to "7+", "13+" to "13+", "16+" to "16+", "18+" to "18+", "Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz." to "Ограничение сохраняется для профиля. Без рейтинга поставщика автоматическая классификация невозможна.", "Göster" to "Показать"),
+                "ar" -> mapOf("Oynatma Ayarları" to "إعدادات التشغيل", "Video ve ses tercihlerini düzenle." to "ضبط تفضيلات الفيديو والصوت.", "Arabellek" to "التخزين المؤقت", "Ekran oranı" to "نسبة العرض", "Sığdır" to "ملاءمة", "Doldur" to "ملء", "Yakınlaştır" to "تكبير", "Kaldığın yerden devam et" to "متابعة التشغيل", "Bildirimler" to "الإشعارات", "Uygulama bildirim tercihlerini yönet." to "إدارة إشعارات التطبيق.", "Bildirimlere izin ver" to "السماح بالإشعارات", "Bu tercih uygulama içi bildirimleri kontrol eder." to "يتحكم هذا الخيار في إشعارات التطبيق.", "Depolama" to "التخزين", "Önbellek boyutunu görüntüle ve temizle." to "عرض ذاكرة التخزين المؤقت ومسحها.", "Önbellek boyutu" to "حجم ذاكرة التخزين", "Önbelleği temizle" to "مسح ذاكرة التخزين", "Önbellek temizlendi." to "تم مسح ذاكرة التخزين.", "Önbellek temizlenemedi." to "تعذر مسح ذاكرة التخزين.", "Ebeveyn Kontrolü" to "الرقابة الأبوية", "İçerik erişimini profil bazında sınırlandır." to "تقييد الوصول إلى المحتوى حسب الملف الشخصي.", "Etkin profil" to "الملف النشط", "Yaş sınırı" to "الحد العمري", "Tüm yaşlar" to "كل الأعمار", "7+" to "7+", "13+" to "13+", "16+" to "16+", "18+" to "18+", "Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz." to "يُحفظ الحد العمري لهذا الملف. لا يمكن التصنيف التلقائي دون تصنيف من مزود المحتوى.", "Göster" to "إظهار")
+                else -> emptyMap()
+            }
+            return dict[key] ?: key
+        }
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
@@ -7733,7 +7748,7 @@ class MainActivity : Activity() {
                     form.addView(emailField, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(10) })
                     val passwordRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     passwordRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(52), 1f))
-                    val passwordToggle = makeButton(accountText("Göster"), false) {
+                    val passwordToggle = makeButton(accountTexsettingsPageText("Göster"), false) {
                         val visible = passwordField.inputType == (android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD)
                         passwordField.inputType = if (visible) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                         passwordField.setSelection(passwordField.text?.length ?: 0)
@@ -8140,7 +8155,7 @@ class MainActivity : Activity() {
                 playbackChoice("Arabellek", "player_buffer", listOf("normal" to "Normal", "small" to "Düşük", "large" to "Yüksek"))
                 playbackChoice("Ekran oranı", "player_aspect", listOf("fit" to "Sığdır", "fill" to "Doldur", "zoom" to "Yakınlaştır"))
                 val resumeSwitch = Switch(this).apply {
-                    text = t("Kaldığın yerden devam et")
+                    text = settingsPageText("Kaldığın yerden devam et")
                     setTextColor(Color.WHITE)
                     isChecked = prefs.getBoolean("player_resume", true)
                     setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean("player_resume", checked).apply() }
@@ -8151,7 +8166,7 @@ class MainActivity : Activity() {
             "notifications" -> {
                 heading("Bildirimler", "Uygulama bildirim tercihlerini yönet.")
                 val notificationSwitch = Switch(this).apply {
-                    text = t("Bildirimlere izin ver")
+                    text = settingsPageText("Bildirimlere izin ver")
                     setTextColor(Color.WHITE)
                     isChecked = prefs.getBoolean("notifications_enabled", true)
                     setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean("notifications_enabled", checked).apply() }
@@ -8161,7 +8176,7 @@ class MainActivity : Activity() {
                     background = roundedDrawable(panel, 16)
                     setPadding(dp(16), dp(12), dp(16), dp(12))
                     addView(notificationSwitch)
-                    addView(TextView(this@MainActivity).apply { text = t("Bu tercih uygulama içi bildirimleri kontrol eder."); textSize = 13f; setTextColor(muted) })
+                    addView(TextView(this@MainActivity).apply { text = settingsPageText("Bu tercih uygulama içi bildirimleri kontrol eder."); textSize = 13f; setTextColor(muted) })
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
             }
             "storage" -> {
@@ -8169,14 +8184,14 @@ class MainActivity : Activity() {
                 fun cacheSize(): Long = runCatching { cacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() } }.getOrDefault(0L)
                 fun sizeLabel(bytes: Long): String = if (bytes >= 1024L * 1024L) String.format(java.util.Locale.ROOT, "%.1f MB", bytes / (1024f * 1024f)) else String.format(java.util.Locale.ROOT, "%.0f KB", bytes / 1024f)
                 val info = TextView(this).apply {
-                    text = t("Önbellek boyutu") + ": " + sizeLabel(cacheSize())
+                    text = settingsPageText("Önbellek boyutu") + ": " + sizeLabel(cacheSize())
                     textSize = 17f; setTextColor(Color.WHITE); setPadding(dp(16), dp(14), dp(16), dp(14)); background = roundedDrawable(panel, 16)
                 }
                 content.addView(info, LinearLayout.LayoutParams(-1, dp(56)).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
-                content.addView(makeButton(t("Önbelleği temizle"), true) {
+                content.addView(makeButton(settingsPageText("Önbelleği temizle"), true) {
                     val ok = runCatching { cacheDir.deleteRecursively(); cacheDir.mkdirs() }.isSuccess
-                    info.text = t("Önbellek boyutu") + ": " + sizeLabel(cacheSize())
-                    Toast.makeText(this@MainActivity, if (ok) t("Önbellek temizlendi.") else t("Önbellek temizlenemedi."), Toast.LENGTH_LONG).show()
+                    info.text = settingsPageText("Önbellek boyutu") + ": " + sizeLabel(cacheSize())
+                    Toast.makeText(this@MainActivity, if (ok) settingsPageText("Önbellek temizlendi.") else settingsPageText("Önbellek temizlenemedi."), Toast.LENGTH_LONG).show()
                 }, LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(6), dp(4), dp(6), dp(7)) })
             }
             "parental" -> {
@@ -8191,8 +8206,8 @@ class MainActivity : Activity() {
                     background = roundedDrawable(panel, 16)
                     setPadding(dp(16), dp(14), dp(16), dp(14))
                 }
-                panelView.addView(TextView(this).apply { text = t("Etkin profil") + ": " + active; textSize = 17f; setTextColor(Color.WHITE) })
-                panelView.addView(TextView(this).apply { text = t("Yaş sınırı"); textSize = 14f; setTextColor(muted); setPadding(0, dp(10), 0, dp(4)) })
+                panelView.addView(TextView(this).apply { text = settingsPageText("Etkin profil") + ": " + active; textSize = 17f; setTextColor(Color.WHITE) })
+                panelView.addView(TextView(this).apply { text = settingsPageText("Yaş sınırı"); textSize = 14f; setTextColor(muted); setPadding(0, dp(10), 0, dp(4)) })
                 val ageLabels = listOf("Tüm yaşlar", "7+", "13+", "16+", "18+")
                 val ageValues = listOf("all", "7", "13", "16", "18")
                 val key = "parental_max_age_$active"
@@ -8208,7 +8223,7 @@ class MainActivity : Activity() {
                 }
                 panelView.addView(spinner)
                 panelView.addView(TextView(this).apply {
-                    text = t("Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz.")
+                    text = settingsPageText("Yaş sınırı bu profil için kaydedilir. İçerik sağlayıcısı yaş bilgisi sunmuyorsa otomatik sınıflandırma yapılamaz.")
                     textSize = 13f; setTextColor(muted); setPadding(0, dp(10), 0, 0)
                 })
                 content.addView(panelView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), dp(5), dp(6), dp(7)) })
