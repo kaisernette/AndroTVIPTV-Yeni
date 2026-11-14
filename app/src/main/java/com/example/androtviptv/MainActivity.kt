@@ -5029,7 +5029,7 @@ class MainActivity : Activity() {
             val orbitCanvas = object : View(this) {
                 private val orbitPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     style = android.graphics.Paint.Style.STROKE
-                    strokeWidth = dp(1.2f).toFloat()
+                    strokeWidth = dp(1).toFloat()
                     color = accentBright
                     alpha = 150
                 }
@@ -5051,14 +5051,14 @@ class MainActivity : Activity() {
                     val linePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                         color = accentBright
                         alpha = 95
-                        strokeWidth = dp(1f).toFloat()
+                        strokeWidth = dp(1).toFloat()
                     }
                     canvas.drawLine(cx - rx * 0.72f, cy - ry * 0.55f, cx + rx * 0.72f, cy - ry * 0.55f, linePaint)
                     for (i in 0..3) {
                         val angle = phase + i * (Math.PI / 2.0)
                         val x = cx + kotlin.math.cos(angle).toFloat() * rx
                         val y = cy + kotlin.math.sin(angle).toFloat() * ry
-                        canvas.drawCircle(x, y, dp(2.2f).toFloat(), glowPaint)
+                        canvas.drawCircle(x, y, dp(2).toFloat(), glowPaint)
                     }
                     phase += 0.035f
                     if (isAttachedToWindow) postInvalidateDelayed(32L)
