@@ -7261,7 +7261,7 @@ class MainActivity : Activity() {
                 fun readProfiles(): MutableList<String> {
                     val stored = prefs.getString(profilePrefsKey, null)
                     val names = runCatching {
-                        val array = org.json.JSONArray(stored ?: "[\\"Ana Profil\\"]")
+                        val array = org.json.JSONArray(stored ?: org.json.JSONArray().put("Ana Profil").toString())
                         MutableList(array.length()) { index -> array.optString(index).trim() }.filter { it.isNotBlank() }.toMutableList()
                     }.getOrElse { mutableListOf("Ana Profil") }
                     if (names.isEmpty()) names.add("Ana Profil")
