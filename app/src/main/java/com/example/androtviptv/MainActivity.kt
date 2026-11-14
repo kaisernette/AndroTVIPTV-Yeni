@@ -7772,7 +7772,7 @@ class MainActivity : Activity() {
                         render()
                     }, LinearLayout.LayoutParams(dp(180), dp(46)).apply { topMargin = dp(18) })
                     content.addView(accountPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                        setMargins(dp(8), dp(8), dp(8), dp(12))
+                        setMargins(dp(8), dp(4), dp(8), dp(8))
                     })
                     content.addView(TextView(this).apply {
                         text = accountText("Cihaz sınırı: Hesap başına en fazla 3 cihaz. Cihaz kaydı, Firebase App Check ve sunucu kurulumu tamamlandığında etkinleşecek.")
@@ -7783,8 +7783,9 @@ class MainActivity : Activity() {
                 } else {
                     val form = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
-                        background = roundedDrawable(panel, 22)
-                        setPadding(dp(22), dp(20), dp(22), dp(20))
+                        gravity = Gravity.TOP
+                        background = roundedDrawable(panel, 20)
+                        setPadding(dp(18), dp(16), dp(18), dp(16))
                     }
                     val accountModeKey = "account_form_mode"
                     var accountMode = prefs.getString(accountModeKey, "login") ?: "login"
@@ -7795,30 +7796,30 @@ class MainActivity : Activity() {
                     accountTabs.addView(makeButton(accountText("Hesap oluştur"), accountMode == "create") {
                         prefs.edit().putString(accountModeKey, "create").apply(); render()
                     }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(6) })
-                    form.addView(accountTabs, LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(14) })
+                    form.addView(accountTabs, LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(10) })
                     form.addView(TextView(this).apply {
                         text = accountText(if (accountMode == "create") "KaiserTV+ hesabı oluştur" else "KaiserTV+ hesabına giriş yap")
-                        textSize = 20f
+                        textSize = 18f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(Color.WHITE)
-                        setPadding(0, dp(2), 0, dp(14))
+                        setPadding(0, 0, 0, dp(10))
                     })
                     val emailField = accountInput(accountText("E-posta"))
                     val passwordField = accountInput("Şifre", true)
-                    form.addView(emailField, LinearLayout.LayoutParams(-1, dp(50)).apply { bottomMargin = dp(10) })
+                    form.addView(emailField, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
                     val passwordRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                    passwordRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(50), 1f))
+                    passwordRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(48), 1f))
                     val passwordToggle = makeButton(accountText("Göster"), false) {
                         val visible = passwordField.inputType == (android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD)
                         passwordField.inputType = if (visible) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                         passwordField.setSelection(passwordField.text?.length ?: 0)
                     }
-                    passwordRow.addView(passwordToggle, LinearLayout.LayoutParams(dp(92), dp(48)).apply { leftMargin = dp(8) })
-                    form.addView(passwordRow, LinearLayout.LayoutParams(-1, dp(50)).apply { bottomMargin = dp(12) })
+                    passwordRow.addView(passwordToggle, LinearLayout.LayoutParams(dp(84), dp(46)).apply { leftMargin = dp(6) })
+                    form.addView(passwordRow, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(10) })
 
                     val emailActions = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER_HORIZONTAL
                     }
                     emailActions.addView(makeButton(accountText(if (accountMode == "create") "Hesap oluştur" else "Giriş yap"), true) {
                         val email = emailField.text.toString().trim()
@@ -7846,8 +7847,8 @@ class MainActivity : Activity() {
                                     .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("Giriş başarısız.")) }
                             } catch (error: Exception) { accountMessage(error.localizedMessage ?: accountText("Giriş yapılamadı.")) }
                         }
-                    }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { rightMargin = dp(8) })
-                    form.addView(emailActions, LinearLayout.LayoutParams(-1, dp(48)))
+                    }, LinearLayout.LayoutParams(-1, dp(46)))
+                    form.addView(emailActions, LinearLayout.LayoutParams(-1, dp(46)).apply { bottomMargin = dp(4) })
 
                     form.addView(makeButton(accountText("Şifremi unuttum"), false) {
                         val email = emailField.text.toString().trim()
@@ -7855,7 +7856,7 @@ class MainActivity : Activity() {
                         else accountRepository.sendPasswordReset(email)
                             .addOnSuccessListener { accountMessage(accountText("Şifre sıfırlama bağlantısı gönderildi.")) }
                             .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
-                    }, LinearLayout.LayoutParams(dp(210), dp(44)).apply { topMargin = dp(10) })
+                    }, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(2) })
 
                     form.addView(makeButton(accountText("Google ile devam et"), false) {
                         try {
@@ -7871,7 +7872,7 @@ class MainActivity : Activity() {
                         } catch (error: Exception) {
                             accountMessage(error.localizedMessage ?: accountText("Google ile giriş başlatılamadı."))
                         }
-                    }, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(16) })
+                    }, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(4) })
                     content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(dp(8), dp(8), dp(8), dp(12))
                     })
