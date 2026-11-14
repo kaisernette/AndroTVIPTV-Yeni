@@ -5152,8 +5152,8 @@ class MainActivity : Activity() {
                     }
                 }
                 posterStage.addView(edgeFade, FrameLayout.LayoutParams(-1, -1))
-                posterStage.post {
-                    if (!posterStage.isAttachedToWindow) return@post
+                posterStage.post posterStageLayout@{
+                    if (posterStage.isAttachedToWindow) {
                     val segmentWidth = posterStage.width
                     if (segmentWidth > 0) {
                         for (i in 0 until posterTrack.childCount) {
@@ -5173,6 +5173,7 @@ class MainActivity : Activity() {
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
