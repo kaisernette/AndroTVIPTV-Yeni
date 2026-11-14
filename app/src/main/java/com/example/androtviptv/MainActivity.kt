@@ -17,6 +17,16 @@ import android.util.LruCache
 import android.util.JsonReader
 import android.util.JsonToken
 import android.os.Bundle
+import android.os.CancellationSignal
+import androidx.credentials.CredentialManager
+import androidx.credentials.CredentialManagerCallback
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import java.util.concurrent.Executor
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -124,6 +134,66 @@ private class WrappingRowLayout(context: Context) : ViewGroup(context) {
 }
 
 class MainActivity : Activity() {
+    private fun launchGoogleSignIn(
+        repository: AccountRepository,
+        onSignedIn: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val webClientId = try {
+            getString(R.string.default_web_client_id)
+        } catch (_: Exception) {
+            onError("Google OAuth Web istemci kimliği bulunamadı. Firebase yapılandırmasını kontrol edin.")
+            return
+        }
+        if (webClientId.isBlank()) {
+            onError("Google OAuth Web istemci kimliği boş.")
+            return
+        }
+
+        val googleOption = GetGoogleIdOption.Builder()
+            .setServerClientId(webClientId)
+            .setFilterByAuthorizedAccounts(false)
+            .setAutoSelectEnabled(false)
+            .build()
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleOption)
+            .build()
+        val manager = CredentialManager.create(this)
+        val mainExecutor = Executor { command -> runOnUiThread(command) }
+
+        manager.getCredentialAsync(
+            this,
+            request,
+            CancellationSignal(),
+            mainExecutor,
+            object : CredentialManagerCallback<GetCredentialResponse, GetCredentialException> {
+                override fun onResult(result: GetCredentialResponse) {
+                    val credential = result.credential
+                    if (credential !is CustomCredential ||
+                        credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                    ) {
+                        onError("Google hesabından geçerli kimlik bilgisi alınamadı.")
+                        return
+                    }
+                    try {
+                        val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                        repository.signInWithGoogleIdToken(googleCredential.idToken)
+                            .addOnSuccessListener { onSignedIn() }
+                            .addOnFailureListener { error ->
+                                onError(error.localizedMessage ?: "Google ile giriş tamamlanamadı.")
+                            }
+                    } catch (error: Exception) {
+                        onError(error.localizedMessage ?: "Google kimlik bilgisi okunamadı.")
+                    }
+                }
+
+                override fun onError(error: GetCredentialException) {
+                    onError(error.localizedMessage ?: "Google giriş işlemi iptal edildi veya başarısız oldu.")
+                }
+            }
+        )
+    }
+
     companion object {
         @Volatile var openTvTabOnResume: Boolean = false
         const val EXTRA_TV_HOME_ITEM_KEY = "kaisertv_tv_home_item_key"
@@ -7459,7 +7529,19 @@ class MainActivity : Activity() {
                     }, LinearLayout.LayoutParams(dp(210), dp(44)).apply { topMargin = dp(10) })
 
                     form.addView(makeButton(accountText("Google ile devam et"), false) {
-                        accountMessage(accountText("Google girişi için Firebase OAuth istemci kimliği ve Credential Manager bağlantısı henüz yapılandırılmadı."))
+                        try {
+                            launchGoogleSignIn(
+                                accountRepository,
+                                onSignedIn = {
+                                    accountMessage(accountText("Giriş başarılı."))
+                                    settingsPage = "account"
+                                    render()
+                                },
+                                onError = { message -> accountMessage(message) }
+                            )
+                        } catch (error: Exception) {
+                            accountMessage(error.localizedMessage ?: accountText("Google ile giriş başlatılamadı."))
+                        }
                     }, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(16) })
                     content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(dp(8), dp(8), dp(8), dp(12))
