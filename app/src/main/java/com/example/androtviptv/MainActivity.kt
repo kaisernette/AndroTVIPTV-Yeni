@@ -7417,18 +7417,192 @@ class MainActivity : Activity() {
                 })
             }
         }
+        fun settingRow(title: String, detail: String, checked: Boolean? = null, action: () -> Unit) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                background = roundedDrawable(panel, 14)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                isClickable = true
+                setOnFocusChangeListener { view, focused ->
+                    view.background = roundedDrawable(if (focused) accent else panel, 14)
+                    val fg = if (focused) Color.rgb(8, 13, 22) else Color.WHITE
+                    val sub = if (focused) Color.rgb(25, 38, 54) else muted
+                    (view as ViewGroup).let { box ->
+                        (box.getChildAt(0) as? LinearLayout)?.let { column ->
+                            (column.getChildAt(0) as? TextView)?.setTextColor(fg)
+                            (column.getChildAt(1) as? TextView)?.setTextColor(sub)
+                        }
+                        (box.getChildAt(1) as? TextView)?.let { it.setTextColor(fg) }
+                    }
+                }
+                setOnClickListener { action() }
+            }
+            val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            column.addView(TextView(this).apply {
+                text = t(title); textSize = 17f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+            })
+            column.addView(TextView(this).apply {
+                text = t(detail); textSize = 12f; setTextColor(muted); setPadding(0, dp(4), 0, 0)
+            })
+            row.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(TextView(this).apply {
+                text = checked?.let { if (it) t("Açık") else t("Kapalı") } ?: "›"
+                textSize = 14f; setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(accentBright); gravity = Gravity.CENTER
+                background = roundedDrawable(panel, 18)
+                setPadding(dp(12), dp(7), dp(12), dp(7))
+            })
+            content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(dp(6), dp(4), dp(6), dp(4))
+            })
+        }
+        fun settingToggle(title: String, detail: String, key: String, defaultValue: Boolean = false) {
+            val current = prefs.getBoolean(key, defaultValue)
+            settingRow(title, detail, current) {
+                prefs.edit().putBoolean(key, !prefs.getBoolean(key, defaultValue)).apply()
+                render()
+            }
+        }
+        fun settingChoice(title: String, detail: String, key: String, choices: List<String>, defaultValue: String) {
+            val current = prefs.getString(key, defaultValue) ?: defaultValue
+            settingRow(title, "$detail · $current") {
+                AlertDialog.Builder(this)
+                    .setTitle(t(title))
+                    .setItems(choices.map { t(it) }.toTypedArray()) { _, which ->
+                        prefs.edit().putString(key, choices[which]).apply()
+                        render()
+                    }
+                    .setNegativeButton(t("İptal"), null)
+                    .show()
+            }
+        }
+        fun settingAction(title: String, detail: String, action: () -> Unit) {
+            settingRow(title, detail, null, action)
+        }
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
-                option("Kaynak Yönetimi", "M3U / Xtream kaynak ekle, düzenle") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Hakkında", "Uygulama sürümü ve teknik bilgiler") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
-                    option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
+                option("Genel Ayarlar", "Uygulama davranışı, açılış ve dil") { settingsPage = "general"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Oynatma Ayarları", "Devam etme, sonraki bölüm ve ses") { settingsPage = "playback"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Görünüm ve Kişiselleştirme", "Tema, kartlar ve arayüz düzeni") { settingsPage = "appearance"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Kaynak Yönetimi", "M3U, Xtream ve MAC kaynaklarını yönet") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Performans ve Depolama", "Önbellek ve bellek kullanımı") { settingsPage = "performance"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Kumanda ve Erişilebilirlik", "Odak, yazı boyutu ve hareketler") { settingsPage = "remote"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Sistem ve Tanılama", "Bağlantı, hata kayıtları ve sürüm") { settingsPage = "diagnostics"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("İçerik Kontrolü", "Yaş sınırı ve içerik PIN koruması") { settingsPage = "parental"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Ana Ekranı Düzenle", "Ana ekran bölümleri ve kategori sırası") { settingsPage = "home_layout"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Gelişmiş Altyazı", "Altyazı dili, boyutu ve görünümü") { settingsPage = "subtitles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
+            "general" -> {
+                heading("Genel Ayarlar", "KaiserTV+ uygulamasının genel davranışını düzenle.")
+                settingToggle("Son bölüme devam et", "Uygulama açıldığında son kullanılan bölümü hatırla.", "setting_resume_last_section", true)
+                settingToggle("Çıkışta onay iste", "Uygulamadan çıkarken onay penceresi göster.", "setting_confirm_exit", false)
+                settingToggle("Saat ve tarihi göster", "Ana ekrandaki saat ve tarih bilgisini göster.", "setting_show_clock", true)
+                settingToggle("Kaynak yenileme bildirimi", "Kaynak güncellemesi tamamlandığında bilgi ver.", "setting_source_refresh_notice", true)
+                settingAction("Dil / Language", "Uygulamanın görüntü dilini seç.") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                settingAction("İzleme Geçmişi", "Son izlenen film ve dizileri görüntüle.") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
+            "playback" -> {
+                heading("Oynatma Ayarları", "Video, ses ve bölüm geçişi tercihleri.")
+                settingToggle("Kaldığın yerden oynat", "Daha önce izlediğin içerikte son konumu kullan.", "setting_resume_playback", true)
+                settingToggle("Otomatik sonraki bölüm", "Bölüm bitince sıradaki bölüme geçişi etkinleştir.", "setting_auto_next_episode", true)
+                settingToggle("Oynatıcıyı otomatik aç", "İçerik seçildiğinde oynatmayı doğrudan başlat.", "setting_auto_play", false)
+                settingToggle("Altyazıları otomatik etkinleştir", "Uygun altyazı bulunduğunda varsayılan olarak aç.", "setting_subtitles_enabled", false)
+                settingChoice("Varsayılan ses dili", "Tercih edilen ses dili", "setting_audio_language", listOf("Cihaz dili", "Türkçe", "İngilizce", "Almanca", "Fransızca", "İtalyanca", "İspanyolca", "Rusça", "Arapça"), "Cihaz dili")
+                settingAction("Gelişmiş Altyazı", "Altyazı görünümünü ayrıntılı düzenle.") { settingsPage = "subtitles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
+            "appearance" -> {
+                heading("Görünüm ve Kişiselleştirme", "KaiserTV+ arayüzünü kendi zevkine göre düzenle.")
+                settingAction("Tema seçimi", "Renk, arka plan ve vurgu rengini değiştir.") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                settingToggle("Yumuşak animasyonlar", "Menü ve kart geçişlerindeki animasyonları kullan.", "setting_ui_animations", true)
+                settingToggle("Poster ön yükleme", "Görünür alana yaklaşan posterleri önceden hazırla.", "setting_poster_prefetch", false)
+                settingToggle("Yarı saydam menü", "Desteklenen menülerde arka planı yarı saydam göster.", "transparent_menu", true)
+                settingChoice("Kart boyutu", "Ana ekrandaki içerik kartlarının boyutu", "setting_card_size", listOf("Küçük", "Normal", "Büyük"), "Normal")
+                settingAction("Kategori düzeni", "İçerik kategorilerini gizle ve sırala.") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
+            "performance" -> {
+                heading("Performans ve Depolama", "Önbellek ve bellek kullanımını yönet.")
+                val posterDir = java.io.File(filesDir, "poster_cache")
+                val posterBytes = runCatching { posterDir.walkTopDown().filter { it.isFile }.sumOf { it.length() } }.getOrDefault(0L)
+                val memory = Runtime.getRuntime()
+                settingAction("Poster önbelleği", "Disk: ${android.text.format.Formatter.formatShortFileSize(this, posterBytes)} · Bellek: ${android.text.format.Formatter.formatShortFileSize(this, posterCache.size().toLong())}") { }
+                settingAction("Görsel önbelleğini temizle", "İndirilen poster kopyalarını sil; kaynakları ve favorileri koru.") {
+                    AlertDialog.Builder(this).setMessage(t("Poster önbelleği temizlensin mi?"))
+                        .setNegativeButton(t("İptal"), null)
+                        .setPositiveButton(t("Temizle")) { _, _ ->
+                            posterCache.evictAll()
+                            runCatching { posterDir.deleteRecursively() }
+                            Toast.makeText(this, t("Görsel önbelleği temizlendi."), Toast.LENGTH_SHORT).show()
+                            render()
+                        }.show()
                 }
-                option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                settingAction("Bellek kullanımı", "Kullanılan: ${android.text.format.Formatter.formatShortFileSize(this, memory.totalMemory() - memory.freeMemory())} · Boş: ${android.text.format.Formatter.formatShortFileSize(this, memory.freeMemory())}") { }
+                settingToggle("Düşük bellek modu", "Poster belleğini daha tutumlu kullanmayı tercih et.", "setting_low_memory_mode", true)
+                settingToggle("Animasyonları azalt", "Daha düşük donanımlı cihazlarda hareketleri azalt.", "setting_reduce_animations", false)
+            }
+            "remote" -> {
+                heading("Kumanda ve Erişilebilirlik", "Android TV kumandası ve okunabilirlik ayarları.")
+                settingToggle("Belirgin odak efekti", "Kumanda ile seçili öğeyi daha net vurgula.", "setting_focus_highlight", true)
+                settingToggle("Odak büyütme", "Odaklanan kartı hafifçe büyüt.", "setting_focus_scale", true)
+                settingToggle("Hareketleri azalt", "Arayüz animasyonlarını azalt.", "setting_reduce_animations", false)
+                settingChoice("Yazı boyutu", "Menü ve açıklama metinleri", "setting_text_size", listOf("Küçük", "Normal", "Büyük"), "Normal")
+                settingChoice("Odak geçiş hızı", "Kumanda odağının geçiş hissi", "setting_focus_speed", listOf("Yavaş", "Normal", "Hızlı"), "Normal")
+            }
+            "diagnostics" -> {
+                heading("Sistem ve Tanılama", "Bağlantı ve uygulama durumunu kontrol et.")
+                val activeSources = runCatching { prefs.getString("sources", "[]") ?: "[]" }.getOrDefault("[]")
+                settingAction("Uygulama bilgileri", "Sürüm ve teknik bileşenleri görüntüle.") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                settingAction("Kaynak bağlantıları", "Kayıtlı yayın kaynaklarını yönet.") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                settingAction("Stalker / MAC tanılama", "Son MAC katalog sonucunu ve hata ayrıntılarını görüntüle.") { showStalkerDiagnostics() }
+                settingAction("Bellek durumu", "Kullanılan bellek: ${android.text.format.Formatter.formatShortFileSize(this, Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())}") { }
+                settingAction("Tanılama kayıtları", "Son yükleme ve bağlantı sorunlarının kayıtları.") {
+                    val diagnosticPrefs = getSharedPreferences("androtv_diagnostics", MODE_PRIVATE)
+                    val summary = diagnosticPrefs.all.entries.take(30).joinToString("\n") { "${it.key}: ${it.value}" }.ifBlank { t("Henüz tanılama kaydı yok.") }
+                    AlertDialog.Builder(this).setTitle(t("Tanılama kayıtları")).setMessage(summary)
+                        .setPositiveButton(t("Kapat"), null).show()
+                }
+            }
+            "parental" -> {
+                heading("İçerik Kontrolü", "İçerik erişimi için ek güvenlik tercihleri.")
+                settingToggle("İçerik kontrolünü etkinleştir", "Yaş sınırı tercihlerini etkinleştir.", "setting_parental_enabled", false)
+                settingChoice("İçerik yaş sınırı", "Gösterilmesine izin verilen içerik düzeyi", "setting_parental_rating", listOf("Tüm yaşlar", "7+", "13+", "16+", "18+"), "Tüm yaşlar")
+                settingAction("Ebeveyn PIN'i oluştur / değiştir", "İçerik kontrolü için ayrı bir PIN belirle.") {
+                    val input = EditText(this).apply {
+                        inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+                        hint = t("4-8 haneli PIN")
+                        filters = arrayOf(android.text.InputFilter.LengthFilter(8))
+                    }
+                    val hasPin = !prefs.getString("parental_pin_hash", null).isNullOrBlank()
+                    AlertDialog.Builder(this).setTitle(t(if (hasPin) "PIN değiştir" else "PIN oluştur")).setView(input)
+                        .setNegativeButton(t("İptal"), null)
+                        .setNeutralButton(t(if (hasPin) "PIN kaldır" else "Kapat")) { _, _ -> if (hasPin) prefs.edit().remove("parental_pin_hash").apply() }
+                        .setPositiveButton(t("Kaydet")) { _, _ ->
+                            val pin = input.text.toString()
+                            if (pin.length in 4..8 && pin.all { it.isDigit() }) prefs.edit().putString("parental_pin_hash", hashProfilePin(pin)).apply()
+                            else Toast.makeText(this, t("PIN 4-8 rakam olmalı."), Toast.LENGTH_SHORT).show()
+                        }.show()
+                }
+            }
+            "home_layout" -> {
+                heading("Ana Ekranı Düzenle", "Ana ekranda gösterilecek bölümleri ve kategori ayarlarını seç.")
+                settingToggle("Canlı TV bölümü", "Ana ekranda TV içerik alanını göster.", "home_show_tv", true)
+                settingToggle("Filmler bölümü", "Ana ekranda film içerik alanını göster.", "home_show_movies", true)
+                settingToggle("Diziler bölümü", "Ana ekranda dizi içerik alanını göster.", "home_show_series", true)
+                settingToggle("Belgeseller bölümü", "Ana ekranda belgesel içerik alanını göster.", "home_show_documentaries", true)
+                settingToggle("Çizgi filmler bölümü", "Ana ekranda çizgi film içerik alanını göster.", "home_show_cartoon", true)
+                settingToggle("Spor bölümü", "Ana ekranda spor içerik alanını göster.", "home_show_sports", true)
+                settingAction("Kategori gizleme ve sıralama", "TV, film ve dizi kategorilerini düzenle.") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
+            "subtitles" -> {
+                heading("Gelişmiş Altyazı", "Altyazı dilini ve görünümünü kişiselleştir.")
+                settingToggle("Altyazıları etkinleştir", "Uygun altyazı bulunduğunda göster.", "setting_subtitles_enabled", false)
+                settingChoice("Altyazı dili", "Tercih edilen altyazı dili", "setting_subtitle_language", listOf("Otomatik", "Türkçe", "İngilizce", "Almanca", "Fransızca", "İtalyanca", "İspanyolca", "Rusça", "Arapça"), "Otomatik")
+                settingChoice("Altyazı boyutu", "Ekrandaki yazı boyutu", "setting_subtitle_size", listOf("Küçük", "Normal", "Büyük", "Çok büyük"), "Normal")
+                settingChoice("Altyazı konumu", "Ekrandaki dikey konum", "setting_subtitle_position", listOf("Alt", "Orta", "Üst"), "Alt")
+                settingToggle("Altyazı arka planı", "Okunabilirlik için yazı arkasında zemin kullan.", "setting_subtitle_background", false)
             }
             "profiles" -> {
                 val profilePrefsKey = "user_profiles"
