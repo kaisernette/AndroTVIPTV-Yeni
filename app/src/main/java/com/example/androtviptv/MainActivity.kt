@@ -5030,15 +5030,15 @@ class MainActivity : Activity() {
                 private val basePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     style = android.graphics.Paint.Style.STROKE
                     strokeWidth = dp(if (isMobileLayout) 1 else 2).toFloat()
-                    color = Color.rgb(0, 170, 255)
+                    color = accentBright
                     alpha = 190
                 }
                 private val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     style = android.graphics.Paint.Style.STROKE
                     strokeCap = android.graphics.Paint.Cap.ROUND
                     strokeWidth = dp(if (isMobileLayout) 3 else 4).toFloat()
-                    color = Color.rgb(0, 225, 255)
-                    setShadowLayer(dp(8).toFloat(), 0f, 0f, Color.rgb(0, 190, 255))
+                    color = accentBright
+                    setShadowLayer(dp(8).toFloat(), 0f, 0f, accentBright)
                 }
                 private var angle = -90f
                 override fun onDraw(canvas: android.graphics.Canvas) {
@@ -5065,7 +5065,7 @@ class MainActivity : Activity() {
             ringCenter.addView(TextView(this).apply {
                 text = "▶"
                 textSize = if (isMobileLayout) 19f else 27f
-                setTextColor(Color.rgb(0, 220, 255))
+                setTextColor(accentBright)
                 gravity = Gravity.CENTER
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
             ringCenter.addView(TextView(this).apply {
@@ -5093,9 +5093,9 @@ class MainActivity : Activity() {
                     clipToPadding = false
                     background = ColorDrawable(Color.TRANSPARENT)
                 }
-                val posterHeight = dp(if (isMobileLayout) 48 else 82)
-                val posterWidth = dp(if (isMobileLayout) 68 else 124)
-                val posterGap = dp(if (isMobileLayout) 7 else 14)
+                // Edge-to-edge rectangular artwork; no circular crops, gaps, card fill or backlight.
+                val posterHeight = dp(if (isMobileLayout) 58 else 124)
+                val posterWidth = dp(if (isMobileLayout) 92 else 166)
                 val posterTrack = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -5106,37 +5106,31 @@ class MainActivity : Activity() {
                     loadingPosters.forEach { media ->
                         val poster = ImageView(this).apply {
                             scaleType = ImageView.ScaleType.CENTER_CROP
-                            background = roundedDrawable(Color.rgb(5, 20, 42), 10, Color.argb(130, 0, 190, 255))
-                            clipToOutline = true
+                            setBackgroundColor(Color.TRANSPARENT)
+                            clipToOutline = false
                             elevation = 0f
                         }
-                        posterTrack.addView(poster, LinearLayout.LayoutParams(posterWidth, posterHeight).apply {
-                            setMargins(0, 0, posterGap, 0)
-                        })
+                        posterTrack.addView(poster, LinearLayout.LayoutParams(posterWidth, posterHeight))
                         loadPoster(media.icon, poster)
                     }
                 }
-                val waveView = object : View(this) {
-                    private val wavePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                        style = android.graphics.Paint.Style.STROKE
-                        strokeWidth = dp(2).toFloat()
-                        color = Color.rgb(0, 174, 255)
-                        alpha = 150
-                    }
+                posterStage.addView(posterTrack, FrameLayout.LayoutParams(-2, -1, Gravity.CENTER_VERTICAL))
+                // Fade only the top and bottom edges into the active theme background.
+                val edgeFade = object : View(this) {
+                    private val fadePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
                     override fun onDraw(canvas: android.graphics.Canvas) {
                         super.onDraw(canvas)
-                        val w = width.toFloat()
                         val h = height.toFloat()
-                        val path = android.graphics.Path().apply {
-                            moveTo(0f, h * 0.18f)
-                            cubicTo(w * 0.18f, h * 0.02f, w * 0.28f, h * 0.92f, w * 0.50f, h * 0.62f)
-                            cubicTo(w * 0.72f, h * 0.30f, w * 0.84f, h * 0.08f, w, h * 0.36f)
-                        }
-                        canvas.drawPath(path, wavePaint)
+                        val fade = dp(if (isMobileLayout) 12 else 24).toFloat()
+                        fadePaint.shader = android.graphics.LinearGradient(0f, 0f, 0f, fade,
+                            bg, Color.TRANSPARENT, android.graphics.Shader.TileMode.CLAMP)
+                        canvas.drawRect(0f, 0f, width.toFloat(), fade, fadePaint)
+                        fadePaint.shader = android.graphics.LinearGradient(0f, h - fade, 0f, h,
+                            Color.TRANSPARENT, bg, android.graphics.Shader.TileMode.CLAMP)
+                        canvas.drawRect(0f, h - fade, width.toFloat(), h, fadePaint)
                     }
                 }
-                posterStage.addView(waveView, FrameLayout.LayoutParams(-1, -1))
-                posterStage.addView(posterTrack, FrameLayout.LayoutParams(-2, -1, Gravity.CENTER_VERTICAL))
+                posterStage.addView(edgeFade, FrameLayout.LayoutParams(-1, -1))
                 posterTrack.post {
                     val cycleWidth = posterTrack.width / 2
                     if (cycleWidth > 0 && posterTrack.isAttachedToWindow) {
@@ -5151,7 +5145,7 @@ class MainActivity : Activity() {
                         }
                     }
                 }
-                loadingPanel.addView(posterStage, LinearLayout.LayoutParams(-1, posterHeight + dp(if (isMobileLayout) 8 else 14)).apply {
+                loadingPanel.addView(posterStage, LinearLayout.LayoutParams(-1, posterHeight).apply {
                     topMargin = dp(if (isMobileLayout) 4 else 8)
                 })
             }
