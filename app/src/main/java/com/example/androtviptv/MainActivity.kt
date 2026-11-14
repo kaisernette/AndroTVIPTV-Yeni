@@ -7141,6 +7141,7 @@ class MainActivity : Activity() {
     }
 
     private fun renderSettingsScreen() {
+        // Profile redesign baseline: profile editor, avatar selection and PIN settings are themed below.
         // Settings is a dedicated full-screen workspace: hide the entire left navigation rail.
         if (::sidebar.isInitialized) sidebar.visibility = View.GONE
         mainHeader.visibility = View.GONE
