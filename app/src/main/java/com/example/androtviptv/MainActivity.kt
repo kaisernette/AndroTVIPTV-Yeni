@@ -5113,7 +5113,7 @@ class MainActivity : Activity() {
                 clipToPadding = false
                 setBackgroundColor(Color.TRANSPARENT)
             }
-            val posterHeight = dp(if (isMobileLayout) 58 else 124)
+            val posterHeight = dp(if (isMobileLayout) 66 else 160)
             val posterTrack = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -5140,9 +5140,11 @@ class MainActivity : Activity() {
                 repeat(2) {
                     loadingArtworks.forEach { artwork ->
                         posterTrack.addView(ImageView(this).apply {
-                            scaleType = ImageView.ScaleType.FIT_XY
+                            // Preserve the source artwork ratio; never stretch a poster to fill its cell.
+                            scaleType = ImageView.ScaleType.FIT_CENTER
                             setBackgroundColor(Color.TRANSPARENT)
                             setImageBitmap(artwork)
+                            adjustViewBounds = false
                             clipToOutline = false
                             contentDescription = null
                             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -5170,20 +5172,30 @@ class MainActivity : Activity() {
                         val viewportWidth = posterStage.width
                         if (viewportWidth > 0) {
                             val posterWidth = (viewportWidth / loadingArtworks.size).coerceAtLeast(1)
+                            val loopDistance = posterWidth * loadingArtworks.size
                             for (i in 0 until posterTrack.childCount) {
                                 posterTrack.getChildAt(i).layoutParams =
                                     LinearLayout.LayoutParams(posterWidth, posterHeight)
                             }
+                            // Give the track an explicit two-set width so the loop distance is exact.
+                            posterTrack.layoutParams = FrameLayout.LayoutParams(
+                                loopDistance * 2,
+                                posterHeight,
+                                Gravity.CENTER_VERTICAL
+                            )
                             posterTrack.requestLayout()
                             posterTrack.post {
-                                if (posterTrack.isAttachedToWindow && posterTrack.width > viewportWidth) {
-                                    android.animation.ValueAnimator.ofFloat(0f, -viewportWidth.toFloat()).apply {
-                                        duration = 24000L
+                                if (posterTrack.isAttachedToWindow && posterTrack.width >= loopDistance * 2) {
+                                    posterTrack.translationX = 0f
+                                    android.animation.ValueAnimator.ofFloat(0f, -loopDistance.toFloat()).apply {
+                                        duration = 18000L
                                         repeatCount = android.animation.ValueAnimator.INFINITE
                                         interpolator = android.view.animation.LinearInterpolator()
                                         addUpdateListener { animator ->
                                             if (posterTrack.isAttachedToWindow) {
                                                 posterTrack.translationX = animator.animatedValue as Float
+                                            } else {
+                                                cancel()
                                             }
                                         }
                                         start()
