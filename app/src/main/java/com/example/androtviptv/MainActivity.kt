@@ -902,7 +902,7 @@ class MainActivity : Activity() {
         val stored = runCatching {
             val json = JSONArray(prefs.getString("user_profiles", JSONArray().put("Ana Profil").toString()))
             MutableList(json.length()) { json.optString(it).trim() }.filter { it.isNotBlank() }.toMutableList()
-        }.getOrElse { mutableListOf("Ana Profil") }
+        }.getOrElse { mutableListOf("Misafir") }
         val names = if (stored.isEmpty()) mutableListOf("Misafir") else stored
         if ("Ana Profil" in names && "Misafir" !in names) {
             val index = names.indexOf("Ana Profil")
@@ -2783,7 +2783,9 @@ class MainActivity : Activity() {
             // Only trust a source-specific completed Xtream snapshot. M3U and Stalker
             // do not yet persist a verifiable completion manifest, so refresh them fully
             // instead of exposing a possibly partial/stale cache at startup.
-            val canOpenCompletedCache = sourceToRestore?.mode == "xtream" &&
+            // Reuse saved catalogues for every source type when possible, rather than
+            // downloading the complete M3U/Stalker catalogue again on each app launch.
+            val canOpenCompletedCache = sourceToRestore != null &&
                 restoredSourceItems.isNotEmpty() && !cacheNeedsRepair
             if (canOpenCompletedCache) {
                 val availableGroups = items.map { it.group.ifBlank { "Diğer" } }.toSet()
@@ -7810,18 +7812,8 @@ class MainActivity : Activity() {
                         background = roundedDrawable(panel, 20)
                         setPadding(dp(18), dp(14), dp(18), dp(14))
                     }
-                    val accountModeKey = "account_form_mode"
-                    var accountMode = prefs.getString(accountModeKey, "login") ?: "login"
-                    val accountTabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-                    accountTabs.addView(accountButton(accountText("Giriş yap"), accountMode == "login") {
-                        prefs.edit().putString(accountModeKey, "login").apply(); render()
-                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { rightMargin = dp(6) })
-                    accountTabs.addView(accountButton(accountText("Hesap oluştur"), accountMode == "create") {
-                        prefs.edit().putString(accountModeKey, "create").apply(); render()
-                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(6) })
-                    form.addView(accountTabs, LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(10) })
                     form.addView(TextView(this).apply {
-                        text = accountText(if (accountMode == "create") "KaiserTV+ hesabı oluştur" else "KaiserTV+ hesabına giriş yap")
+                        text = accountText("KaiserTV+ hesabına giriş yap")
                         textSize = 18f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(Color.WHITE)
@@ -7843,16 +7835,12 @@ class MainActivity : Activity() {
                     passwordRow.addView(passwordToggle, LinearLayout.LayoutParams(dp(84), dp(46)).apply { leftMargin = dp(6) })
                     form.addView(passwordRow, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(10) })
 
-                    val emailActions = LinearLayout(this).apply {
-                        orientation = LinearLayout.VERTICAL
-                        gravity = Gravity.CENTER_HORIZONTAL
-                    }
-                    emailActions.addView(accountButton(accountText(if (accountMode == "create") "Hesap oluştur" else "Giriş yap"), true) {
+                    fun submitEmailAccount(create: Boolean) {
                         val email = emailField.text.toString().trim()
                         val passwordValue = passwordField.text.toString()
                         if (email.isBlank() || passwordValue.isBlank()) {
                             accountMessage(accountText("E-posta ve şifreyi doldur."))
-                        } else if (accountMode == "create") {
+                        } else if (create) {
                             if (passwordValue.length < 6) {
                                 accountMessage(accountText("Geçerli e-posta gir ve en az 6 karakterli şifre belirle."))
                             } else {
@@ -7873,18 +7861,18 @@ class MainActivity : Activity() {
                                     .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("Giriş başarısız.")) }
                             } catch (error: Exception) { accountMessage(error.localizedMessage ?: accountText("Giriş yapılamadı.")) }
                         }
-                    }, LinearLayout.LayoutParams(-1, dp(46)))
-                    form.addView(emailActions, LinearLayout.LayoutParams(-1, dp(46)).apply { bottomMargin = dp(4) })
-
-                    form.addView(accountButton(accountText("Şifremi unuttum"), false) {
-                        val email = emailField.text.toString().trim()
-                        if (email.isBlank()) accountMessage(accountText("Şifre sıfırlamak için e-posta adresini yaz."))
-                        else accountRepository.sendPasswordReset(email)
-                            .addOnSuccessListener { accountMessage(accountText("Şifre sıfırlama bağlantısı gönderildi.")) }
-                            .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
-                    }, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(2) })
-
-                    form.addView(accountButton(accountText("Google ile devam et"), false) {
+                    }
+                    val accountActionRow = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER
+                    }
+                    accountActionRow.addView(accountButton(accountText("Giriş yap"), true) {
+                        submitEmailAccount(false)
+                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(5) })
+                    accountActionRow.addView(accountButton(accountText("Kaydol"), false) {
+                        submitEmailAccount(true)
+                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(5); rightMargin = dp(5) })
+                    accountActionRow.addView(accountButton(accountText("Google"), false) {
                         try {
                             launchGoogleSignIn(
                                 accountRepository,
@@ -7898,7 +7886,16 @@ class MainActivity : Activity() {
                         } catch (error: Exception) {
                             accountMessage(error.localizedMessage ?: accountText("Google ile giriş başlatılamadı."))
                         }
-                    }, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(4) })
+                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(5) })
+                    form.addView(accountActionRow, LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(6) })
+
+                    form.addView(accountButton(accountText("Şifremi unuttum"), false) {
+                        val email = emailField.text.toString().trim()
+                        if (email.isBlank()) accountMessage(accountText("Şifre sıfırlamak için e-posta adresini yaz."))
+                        else accountRepository.sendPasswordReset(email)
+                            .addOnSuccessListener { accountMessage(accountText("Şifre sıfırlama bağlantısı gönderildi.")) }
+                            .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
+                    }, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(5) })
                     content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(dp(8), dp(8), dp(8), dp(12))
                     })
@@ -7944,7 +7941,7 @@ class MainActivity : Activity() {
                     .digest(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
                 fun readProfiles(): MutableList<String> {
                     val names = runCatching {
-                        val array = JSONArray(prefs.getString(profilePrefsKey, JSONArray().put("Ana Profil").toString()))
+                        val array = JSONArray(prefs.getString(profilePrefsKey, JSONArray().put("Misafir").toString()))
                         MutableList(array.length()) { array.optString(it).trim() }.filter { it.isNotBlank() }.distinctBy { it.lowercase(java.util.Locale.ROOT) }.toMutableList()
                     }.getOrElse { mutableListOf("Ana Profil") }
                     if (names.isEmpty()) names.add("Ana Profil")
@@ -8124,7 +8121,7 @@ class MainActivity : Activity() {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER_HORIZONTAL
                     setPadding(dp(16), dp(16), dp(16), dp(14))
-                    background = roundedDrawable(panel, 18)
+                    background = ColorDrawable(Color.TRANSPARENT)
                 }
                 val avatarLine = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -8143,15 +8140,6 @@ class MainActivity : Activity() {
                     gravity = Gravity.CENTER
                     setPadding(0, dp(8), 0, dp(8))
                 })
-                activeCard.addView(TextView(this).apply {
-                    text = t("Profil Ayarları")
-                    textSize = 13f
-                    setTextColor(accentBright)
-                    gravity = Gravity.CENTER
-                    setPadding(0, 0, 0, dp(8))
-                })
-                activeCard.addView(makeButton(t("Düzenle"), false) { showProfileEditor(activeProfile) },
-                    LinearLayout.LayoutParams(dp(150), dp(40)))
                 content.addView(activeCard, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(dp(6), 0, dp(6), dp(10))
                 })
@@ -8224,13 +8212,10 @@ class MainActivity : Activity() {
                             }
                         }, LinearLayout.LayoutParams(dp(104), dp(40)))
                     }
-                    row.addView(makeButton(t("Düzenle"), false) { showProfileEditor(profileName) }, LinearLayout.LayoutParams(dp(82), dp(40)))
                     row.addView(makeButton(t("Sil"), false) { if (profileNames.size <= 1) Toast.makeText(this@MainActivity, t("En az bir profil kalmalı."), Toast.LENGTH_SHORT).show() else confirmDelete(profileName) },
                         LinearLayout.LayoutParams(dp(68), dp(40)).apply { setMargins(dp(5), 0, 0, 0) })
                     content.addView(row, LinearLayout.LayoutParams(-1, dp(70)).apply { setMargins(dp(6), dp(4), dp(6), dp(4)) })
                 }
-                content.addView(makeButton("+  ${t("Profil Ekle")}", true) { showProfileEditor() },
-                    LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(6), dp(10), dp(6), dp(8)) })
 
             }
             "playback" -> {
