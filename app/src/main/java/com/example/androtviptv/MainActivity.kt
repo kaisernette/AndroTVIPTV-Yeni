@@ -2778,13 +2778,13 @@ class MainActivity : Activity() {
             val restoredSourceItems = items.filter { it.sourceId == sourceToRestore?.id }
             // Xtream sections may legitimately be empty. Validate a completed, source-specific
             // catalogue snapshot instead of requiring at least one record in every section.
-            val cacheNeedsRepair = sourceToRestore?.mode == "xtream" &&
-                !hasCompleteXtreamCache(sourceToRestore, restoredSourceItems)
-            // Only trust a source-specific completed Xtream snapshot. M3U and Stalker
-            // do not yet persist a verifiable completion manifest, so refresh them fully
-            // instead of exposing a possibly partial/stale cache at startup.
-            // Reuse saved catalogues for every source type when possible, rather than
-            // downloading the complete M3U/Stalker catalogue again on each app launch.
+            val cacheNeedsRepair = sourceToRestore != null && when (sourceToRestore.mode) {
+                "xtream" -> !hasCompleteXtreamCache(sourceToRestore, restoredSourceItems)
+                "m3u", "mac" -> !hasCompleteSourceCatalogCache(sourceToRestore, restoredSourceItems)
+                else -> true
+            }
+            // Only a source-specific, content-verified completed snapshot may open
+            // immediately. Partial M3U/Stalker checkpoints are never treated as complete.
             val canOpenCompletedCache = sourceToRestore != null &&
                 restoredSourceItems.isNotEmpty() && !cacheNeedsRepair
             if (canOpenCompletedCache) {
@@ -3091,7 +3091,7 @@ class MainActivity : Activity() {
 
     private fun loadM3u(source: SavedSource, append: Boolean) {
         applySourceTheme(source)
-        prefs.edit().putString("last_source_id", source.id).apply()
+        prefs.edit().putString("last_source_id", source.id).remove(sourceCatalogStateKey(source)).apply()
         isLoadingSource = true
         loadProgress = 0
         status.text = "${source.name}: ${t("TV, filmler ve diziler yükleniyor…")}"
@@ -3104,6 +3104,7 @@ class MainActivity : Activity() {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
                     saveCachedItems()
+                    markSourceCatalogCacheComplete(source)
                     selectedGroup = "Tüm kategoriler"
                     status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."
                     isLoadingSource = false
@@ -3356,6 +3357,7 @@ class MainActivity : Activity() {
         prefs.edit()
             .putString("last_source_id", source.id)
             .putStringSet("selected_source_ids", setOf(source.id))
+            .remove(sourceCatalogStateKey(source))
             .apply()
         selectedCategorySourceId = source.id
         selectedType = "Tümü"
@@ -4032,6 +4034,7 @@ class MainActivity : Activity() {
                         showConnectionError(source.name, if (failed.isEmpty()) "Kataloglar alınamadı." else "Eksik katalog bölümleri/sayfaları: ${failed.joinToString()}")
                     } else {
                         hasLoadedSource = true
+                        markSourceCatalogCacheComplete(source)
                         updateLoadingMessage("${source.name}: yükleme tamamlandı")
                         render()
                         publishHomeChannel()
@@ -4117,6 +4120,36 @@ class MainActivity : Activity() {
         // with the same record count must not be mistaken for the latest snapshot.
         return expectedCount > 0 && cached.size == expectedCount &&
             parts[2] == xtreamCacheContentSignature(cached)
+    }
+
+    // M3U and Stalker use the same integrity check as Xtream. A non-empty cache alone
+    // is not proof of completion: Stalker writes partial checkpoints while paging.
+    private fun sourceCatalogStateKey(source: SavedSource): String =
+        "source_catalog_state_" + source.id
+
+    private fun sourceCatalogSignature(source: SavedSource): String {
+        val raw = listOf(source.mode, source.address.trim(), source.username, source.password).joinToString("\u001f")
+        return java.security.MessageDigest.getInstance("SHA-256")
+            .digest(raw.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+
+    private fun hasCompleteSourceCatalogCache(source: SavedSource, cached: List<MediaItem>): Boolean {
+        val state = prefs.getString(sourceCatalogStateKey(source), null) ?: return false
+        val parts = state.split(":", limit = 3)
+        if (parts.size != 3 || parts[0] != sourceCatalogSignature(source)) return false
+        val expectedCount = parts[1].toIntOrNull() ?: return false
+        return expectedCount > 0 && cached.size == expectedCount &&
+            parts[2] == xtreamCacheContentSignature(cached)
+    }
+
+    private fun markSourceCatalogCacheComplete(source: SavedSource) {
+        val sourceItems = items.filter { it.sourceId == source.id }
+        if (sourceItems.isEmpty()) return
+        prefs.edit().putString(
+            sourceCatalogStateKey(source),
+            "${sourceCatalogSignature(source)}:${sourceItems.size}:${xtreamCacheContentSignature(sourceItems)}"
+        ).apply()
     }
 
     private fun loadXtream(source: SavedSource, append: Boolean) {
@@ -7820,20 +7853,7 @@ class MainActivity : Activity() {
                         setPadding(0, 0, 0, dp(10))
                     })
                     val emailField = accountInput(accountText("E-posta"))
-                    val passwordField = accountInput("Şifre", true)
-                    val emailRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-                    emailRow.addView(emailField, LinearLayout.LayoutParams(0, dp(48), 1f))
-                    emailRow.addView(View(this), LinearLayout.LayoutParams(dp(90), dp(48)))
-                    form.addView(emailRow, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
-                    val passwordRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                    passwordRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(48), 1f))
-                    val passwordToggle = accountButton(accountText("Göster"), false) {
-                        val visible = passwordField.inputType == (android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD)
-                        passwordField.inputType = if (visible) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-                        passwordField.setSelection(passwordField.text?.length ?: 0)
-                    }
-                    passwordRow.addView(passwordToggle, LinearLayout.LayoutParams(dp(84), dp(46)).apply { leftMargin = dp(6) })
-                    form.addView(passwordRow, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(10) })
+                    val passwordField = accountInput(accountText("Şifre"), true)
 
                     fun submitEmailAccount(create: Boolean) {
                         val email = emailField.text.toString().trim()
@@ -7862,17 +7882,23 @@ class MainActivity : Activity() {
                             } catch (error: Exception) { accountMessage(error.localizedMessage ?: accountText("Giriş yapılamadı.")) }
                         }
                     }
-                    val accountActionRow = LinearLayout(this).apply {
+
+                    val credentialsRow = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+                    credentialsRow.addView(emailField, LinearLayout.LayoutParams(0, dp(48), 1.25f).apply { rightMargin = dp(6) })
+                    credentialsRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(48), 1.25f).apply { rightMargin = dp(6) })
+                    credentialsRow.addView(accountButton(accountText("Giriş yap"), true) {
+                        submitEmailAccount(false)
+                    }, LinearLayout.LayoutParams(0, dp(48), 0.8f))
+                    form.addView(credentialsRow, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+
+                    val secondaryActions = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER
                     }
-                    accountActionRow.addView(accountButton(accountText("Giriş yap"), true) {
-                        submitEmailAccount(false)
-                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(5) })
-                    accountActionRow.addView(accountButton(accountText("Kaydol"), false) {
-                        submitEmailAccount(true)
-                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(5); rightMargin = dp(5) })
-                    accountActionRow.addView(accountButton(accountText("Google"), false) {
+                    secondaryActions.addView(accountButton(accountText("Google"), false) {
                         try {
                             launchGoogleSignIn(
                                 accountRepository,
@@ -7886,16 +7912,18 @@ class MainActivity : Activity() {
                         } catch (error: Exception) {
                             accountMessage(error.localizedMessage ?: accountText("Google ile giriş başlatılamadı."))
                         }
-                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(5) })
-                    form.addView(accountActionRow, LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(6) })
-
-                    form.addView(accountButton(accountText("Şifremi unuttum"), false) {
+                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { rightMargin = dp(5) })
+                    secondaryActions.addView(accountButton(accountText("Kaydol"), false) {
+                        submitEmailAccount(true)
+                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(5); rightMargin = dp(5) })
+                    secondaryActions.addView(accountButton(accountText("Şifremi unuttum"), false) {
                         val email = emailField.text.toString().trim()
                         if (email.isBlank()) accountMessage(accountText("Şifre sıfırlamak için e-posta adresini yaz."))
                         else accountRepository.sendPasswordReset(email)
                             .addOnSuccessListener { accountMessage(accountText("Şifre sıfırlama bağlantısı gönderildi.")) }
                             .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
-                    }, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(5) })
+                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(5) })
+                    form.addView(secondaryActions, LinearLayout.LayoutParams(-1, dp(44)))
                     content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(dp(8), dp(8), dp(8), dp(12))
                     })
@@ -7943,8 +7971,8 @@ class MainActivity : Activity() {
                     val names = runCatching {
                         val array = JSONArray(prefs.getString(profilePrefsKey, JSONArray().put("Misafir").toString()))
                         MutableList(array.length()) { array.optString(it).trim() }.filter { it.isNotBlank() }.distinctBy { it.lowercase(java.util.Locale.ROOT) }.toMutableList()
-                    }.getOrElse { mutableListOf("Ana Profil") }
-                    if (names.isEmpty()) names.add("Ana Profil")
+                    }.getOrElse { mutableListOf("Misafir") }
+                    if (names.isEmpty()) names.add("Misafir")
                     return names
                 }
                 fun saveProfiles(names: List<String>) {
@@ -8112,111 +8140,160 @@ class MainActivity : Activity() {
                     dialog.show()
                 }
 
+                fun activateProfile(profileName: String) {
+                    if (profileName == activeProfile) return
+                    val savedHash = prefs.getString(pinKey(profileName), "").orEmpty()
+                    fun completeSwitch() {
+                        prefs.edit().putString(activeProfileKey, profileName).apply()
+                        // Recreate the activity so all profile-scoped state is reloaded cleanly.
+                        // The source catalogue remains cached and is restored without a rescan.
+                        recreate()
+                    }
+                    if (savedHash.isBlank()) {
+                        completeSwitch()
+                    } else {
+                        val pinField = EditText(this@MainActivity).apply {
+                            hint = t("Profil PIN kodu")
+                            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+                            setSingleLine(true)
+                            setTextColor(Color.WHITE)
+                            setHintTextColor(muted)
+                            background = roundedDrawable(bg, 12, accent)
+                            setPadding(dp(14), dp(10), dp(14), dp(10))
+                        }
+                        val pinBody = LinearLayout(this@MainActivity).apply {
+                            orientation = LinearLayout.VERTICAL
+                            addView(TextView(this@MainActivity).apply {
+                                text = t("Bu profile geçmek için PIN gir.")
+                                textSize = 15f; setTextColor(Color.WHITE); setPadding(0, 0, 0, dp(12))
+                            })
+                            addView(pinField, LinearLayout.LayoutParams(-1, dp(48)))
+                        }
+                        val pinDialog = themedDialog(profileName, pinBody)
+                        val actions = LinearLayout(this@MainActivity).apply {
+                            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END; setPadding(0, dp(12), 0, 0)
+                        }
+                        actions.addView(makeButton(t("İptal"), false) { pinDialog.dismiss() },
+                            LinearLayout.LayoutParams(dp(104), dp(44)))
+                        actions.addView(makeButton(t("Devam"), true) {
+                            val enteredHash = runCatching { profileHash(pinField.text.toString()) }.getOrDefault("")
+                            if (enteredHash == savedHash) {
+                                pinDialog.dismiss()
+                                completeSwitch()
+                            } else {
+                                pinField.error = t("PIN hatalı")
+                                pinField.text?.clear()
+                            }
+                        }, LinearLayout.LayoutParams(dp(104), dp(44)).apply { leftMargin = dp(8) })
+                        pinBody.addView(actions)
+                        pinDialog.show()
+                        pinDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                        pinDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.48f).toInt().coerceAtMost(dp(480)), ViewGroup.LayoutParams.WRAP_CONTENT)
+                        pinField.requestFocus()
+                    }
+                }
+
                 content.addView(TextView(this).apply {
                     text = t("Profil Yönetimi"); textSize = 22f
                     setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
                     setPadding(dp(10), dp(18), dp(10), dp(10))
                 }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                val activeCard = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER_HORIZONTAL
-                    setPadding(dp(16), dp(16), dp(16), dp(14))
-                    background = ColorDrawable(Color.TRANSPARENT)
-                }
-                val avatarLine = LinearLayout(this).apply {
+
+                val profileStrip = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER_VERTICAL
                 }
-                avatarLine.addView(avatarImage(prefs.getString(avatarKey(activeProfile), null), 76, true),
-                    LinearLayout.LayoutParams(dp(76), dp(76)))
-                avatarLine.addView(makeButton("+", true) { showProfileEditor() },
-                    LinearLayout.LayoutParams(dp(48), dp(48)).apply { leftMargin = dp(14) })
-                activeCard.addView(avatarLine)
-                activeCard.addView(TextView(this).apply {
-                    text = activeProfile
-                    textSize = 20f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE)
+                profileNames.forEach { profileName ->
+                    val isActive = profileName == activeProfile
+                    val tile = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER
+                        setPadding(dp(8), dp(8), dp(8), dp(8))
+                        isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+                        background = roundedDrawable(if (isActive) panel else Color.TRANSPARENT, 14,
+                            if (isActive) accent else Color.TRANSPARENT)
+                        setOnClickListener { activateProfile(profileName) }
+                        setOnFocusChangeListener { view, focused ->
+                            view.background = roundedDrawable(if (isActive || focused) panel else Color.TRANSPARENT, 14,
+                                if (isActive || focused) accentBright else Color.TRANSPARENT)
+                        }
+                    }
+                    val avatar = avatarImage(prefs.getString(avatarKey(profileName), null), 66, isActive).apply {
+                        isFocusable = false
+                        isClickable = false
+                    }
+                    tile.addView(avatar, LinearLayout.LayoutParams(dp(66), dp(66)))
+                    tile.addView(TextView(this@MainActivity).apply {
+                        text = profileName; textSize = 12f; maxLines = 1
+                        setTextColor(if (isActive) accentBright else Color.WHITE)
+                        gravity = Gravity.CENTER; setPadding(0, dp(6), 0, 0)
+                    }, LinearLayout.LayoutParams(dp(92), ViewGroup.LayoutParams.WRAP_CONTENT))
+                    profileStrip.addView(tile, LinearLayout.LayoutParams(dp(104), dp(112)).apply {
+                        setMargins(dp(3), dp(2), dp(3), dp(2))
+                    })
+                }
+                val addTile = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
-                    setPadding(0, dp(8), 0, dp(8))
+                    setPadding(dp(8), dp(8), dp(8), dp(8))
+                    isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+                    background = roundedDrawable(panel, 14)
+                    setOnClickListener { showProfileEditor() }
+                    setOnFocusChangeListener { view, focused ->
+                        view.background = roundedDrawable(panel, 14, if (focused) accentBright else Color.TRANSPARENT)
+                    }
+                }
+                addTile.addView(TextView(this@MainActivity).apply {
+                    text = "+"; textSize = 34f; setTextColor(accentBright); gravity = Gravity.CENTER
+                }, LinearLayout.LayoutParams(dp(66), dp(66)))
+                addTile.addView(TextView(this@MainActivity).apply {
+                    text = t("Profil Ekle"); textSize = 12f; setTextColor(Color.WHITE); gravity = Gravity.CENTER
+                }, LinearLayout.LayoutParams(dp(92), ViewGroup.LayoutParams.WRAP_CONTENT))
+                profileStrip.addView(addTile, LinearLayout.LayoutParams(dp(104), dp(112)).apply {
+                    setMargins(dp(3), dp(2), dp(3), dp(2))
                 })
-                content.addView(activeCard, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                val profileScroll = HorizontalScrollView(this).apply {
+                    isHorizontalScrollBarEnabled = false
+                    overScrollMode = View.OVER_SCROLL_NEVER
+                    addView(profileStrip, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                }
+                content.addView(profileScroll, LinearLayout.LayoutParams(-1, dp(122)).apply {
+                    setMargins(dp(4), 0, dp(4), dp(12))
+                })
+
+                val selectedProfilePanel = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(16), dp(14), dp(16), dp(14))
+                    background = roundedDrawable(panel, 18)
+                }
+                selectedProfilePanel.addView(TextView(this).apply {
+                    text = t("Seçili Profil Ayarları"); textSize = 16f
+                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(accentBright)
+                })
+                selectedProfilePanel.addView(TextView(this).apply {
+                    text = activeProfile; textSize = 20f
+                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                    setPadding(0, dp(8), 0, dp(4))
+                })
+                selectedProfilePanel.addView(TextView(this).apply {
+                    text = if (prefs.getString(pinKey(activeProfile), "").isNullOrBlank())
+                        t("PIN koruması kapalı") else t("PIN koruması açık")
+                    textSize = 13f; setTextColor(muted); setPadding(0, 0, 0, dp(12))
+                })
+                val profileActions = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.START
+                }
+                profileActions.addView(makeButton(t("Düzenle"), false) {
+                    showProfileEditor(activeProfile)
+                }, LinearLayout.LayoutParams(dp(112), dp(42)).apply { rightMargin = dp(8) })
+                profileActions.addView(makeButton(t("Sil"), false) {
+                    if (profileNames.size <= 1) Toast.makeText(this@MainActivity, t("En az bir profil kalmalı."), Toast.LENGTH_SHORT).show()
+                    else confirmDelete(activeProfile)
+                }, LinearLayout.LayoutParams(dp(88), dp(42)))
+                selectedProfilePanel.addView(profileActions)
+                content.addView(selectedProfilePanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(dp(6), 0, dp(6), dp(10))
                 })
-
-                profileNames.filter { it != activeProfile }.forEach { profileName ->
-                    val selected = profileName == activeProfile
-                    val row = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(12), dp(9), dp(10), dp(9)); background = roundedDrawable(panel, 14)
-                    }
-                    row.addView(avatarImage(prefs.getString(avatarKey(profileName), null), 50, selected),
-                        LinearLayout.LayoutParams(dp(50), dp(50)))
-                    val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                    details.addView(TextView(this).apply { text = profileName; textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
-                    details.addView(TextView(this).apply {
-                        text = (if (selected) t("Aktif") else t("Etkinleştir")) + if (prefs.getString(pinKey(profileName), "").isNullOrBlank()) "" else "  •  PIN"
-                        textSize = 12f; setTextColor(if (selected) accentBright else muted); setPadding(0, dp(3), 0, 0)
-                    })
-                    row.addView(details, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(10), 0, dp(6), 0) })
-                    if (!selected) {
-                        row.addView(makeButton(t("Etkinleştir"), true) {
-                            val savedHash = prefs.getString(pinKey(profileName), "").orEmpty()
-                            fun activate() {
-                                loadProfileLibrary(profileName)
-                                prefs.edit().putString(activeProfileKey, profileName).apply()
-                                render()
-                            }
-                            if (savedHash.isBlank()) activate() else {
-                                val pinField = EditText(this@MainActivity).apply {
-                                    hint = t("Profil PIN kodu")
-                                    inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
-                                    setSingleLine(true)
-                                    setTextColor(Color.WHITE)
-                                    setHintTextColor(muted)
-                                    background = roundedDrawable(bg, 12, accent)
-                                    setPadding(dp(14), dp(10), dp(14), dp(10))
-                                }
-                                val pinBody = LinearLayout(this@MainActivity).apply {
-                                    orientation = LinearLayout.VERTICAL
-                                    addView(TextView(this@MainActivity).apply {
-                                        text = t("Bu profile geçmek için PIN gir.")
-                                        textSize = 15f
-                                        setTextColor(Color.WHITE)
-                                        setPadding(0, 0, 0, dp(12))
-                                    })
-                                    addView(pinField, LinearLayout.LayoutParams(-1, dp(48)))
-                                }
-                                val pinDialog = themedDialog(profileName, pinBody)
-                                val pinActions = LinearLayout(this@MainActivity).apply {
-                                    orientation = LinearLayout.HORIZONTAL
-                                    gravity = Gravity.END
-                                    setPadding(0, dp(12), 0, 0)
-                                }
-                                pinActions.addView(makeButton(t("İptal"), false) { pinDialog.dismiss() }, LinearLayout.LayoutParams(dp(104), dp(44)))
-                                pinActions.addView(makeButton(t("Devam"), true) {
-                                    val enteredHash = runCatching { profileHash(pinField.text.toString()) }.getOrDefault("")
-                                    if (enteredHash == savedHash) {
-                                        pinDialog.dismiss()
-                                        activate()
-                                    } else {
-                                        pinField.error = t("PIN hatalı")
-                                        pinField.text?.clear()
-                                    }
-                                }, LinearLayout.LayoutParams(dp(104), dp(44)).apply { leftMargin = dp(8) })
-                                pinBody.addView(pinActions)
-                                pinDialog.show()
-                                pinDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                                pinDialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.48f).toInt().coerceAtMost(dp(480)), ViewGroup.LayoutParams.WRAP_CONTENT)
-                                pinField.requestFocus()
-                            }
-                        }, LinearLayout.LayoutParams(dp(104), dp(40)))
-                    }
-                    row.addView(makeButton(t("Sil"), false) { if (profileNames.size <= 1) Toast.makeText(this@MainActivity, t("En az bir profil kalmalı."), Toast.LENGTH_SHORT).show() else confirmDelete(profileName) },
-                        LinearLayout.LayoutParams(dp(68), dp(40)).apply { setMargins(dp(5), 0, 0, 0) })
-                    content.addView(row, LinearLayout.LayoutParams(-1, dp(70)).apply { setMargins(dp(6), dp(4), dp(6), dp(4)) })
-                }
-
             }
             "playback" -> {
                 heading(settingsPageText("Oynatma Ayarları"), settingsPageText("Video ve ses tercihlerini düzenle."))
