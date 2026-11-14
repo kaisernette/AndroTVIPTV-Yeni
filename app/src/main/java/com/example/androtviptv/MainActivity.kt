@@ -7314,7 +7314,7 @@ class MainActivity : Activity() {
             val language = if (selected == "system") java.util.Locale.getDefault().language else selected
             val dictionary = when (language) {
                 "en" -> mapOf(
-                    "Hesap Yönetimi" to "Account Management", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Sign in or create a KaiserTV+ account",
+                    "Hesap ve Profiller" to "Account & Profiles", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Sign in or create a KaiserTV+ account",
                     "KaiserTV+ Hesabı" to "KaiserTV+ Account", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Create your account, sign in and manage devices.",
                     "Hesap hizmeti henüz yapılandırılmadı. Firebase projesi ve app/google-services.json eklendiğinde giriş açılacak." to "Account service is not configured yet. Sign-in will be enabled after the Firebase project and app/google-services.json are added.",
                     "Giriş yapılmış hesap" to "Signed-in account", "E-posta doğrulandı" to "Email verified", "E-posta doğrulaması bekleniyor" to "Email verification pending",
@@ -7330,12 +7330,12 @@ class MainActivity : Activity() {
                     "Giriş başarılı." to "Signed in successfully.", "Giriş başarısız." to "Sign-in failed.", "Giriş yapılamadı." to "Could not sign in.",
                     "Hesap oluşturulamadı." to "Could not create account.", "İşlem başarısız." to "Operation failed."
                 )
-                "de" -> mapOf("Hesap Yönetimi" to "Kontoverwaltung", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Bei KaiserTV+ anmelden oder Konto erstellen", "KaiserTV+ Hesabı" to "KaiserTV+ Konto", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Konto erstellen, anmelden und Geräte verwalten.", "Giriş yapılmış hesap" to "Angemeldetes Konto", "Çıkış yap" to "Abmelden", "E-posta" to "E-Mail", "Şifre" to "Passwort", "Giriş yap" to "Anmelden", "Hesap oluştur" to "Konto erstellen", "Şifremi unuttum" to "Passwort vergessen", "Google ile devam et" to "Mit Google fortfahren")
-                "fr" -> mapOf("Hesap Yönetimi" to "Gestion du compte", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Connectez-vous ou créez un compte KaiserTV+", "KaiserTV+ Hesabı" to "Compte KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Créez votre compte, connectez-vous et gérez vos appareils.", "Giriş yapılmış hesap" to "Compte connecté", "Çıkış yap" to "Déconnexion", "E-posta" to "E-mail", "Şifre" to "Mot de passe", "Giriş yap" to "Connexion", "Hesap oluştur" to "Créer un compte", "Şifremi unuttum" to "Mot de passe oublié", "Google ile devam et" to "Continuer avec Google")
-                "it" -> mapOf("Hesap Yönetimi" to "Gestione account", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Accedi o crea un account KaiserTV+", "KaiserTV+ Hesabı" to "Account KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Crea il tuo account, accedi e gestisci i dispositivi.", "Giriş yapılmış hesap" to "Account connesso", "Çıkış yap" to "Esci", "E-posta" to "Email", "Şifre" to "Password", "Giriş yap" to "Accedi", "Hesap oluştur" to "Crea account", "Şifremi unuttum" to "Password dimenticata", "Google ile devam et" to "Continua con Google")
-                "es" -> mapOf("Hesap Yönetimi" to "Gestión de cuenta", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Inicia sesión o crea una cuenta KaiserTV+", "KaiserTV+ Hesabı" to "Cuenta KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Crea tu cuenta, inicia sesión y administra tus dispositivos.", "Giriş yapılmış hesap" to "Cuenta conectada", "Çıkış yap" to "Cerrar sesión", "E-posta" to "Correo electrónico", "Şifre" to "Contraseña", "Giriş yap" to "Iniciar sesión", "Hesap oluştur" to "Crear cuenta", "Şifremi unuttum" to "Olvidé mi contraseña", "Google ile devam et" to "Continuar con Google")
-                "ru" -> mapOf("Hesap Yönetimi" to "Управление аккаунтом", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Войдите или создайте аккаунт KaiserTV+", "KaiserTV+ Hesabı" to "Аккаунт KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Создайте аккаунт, войдите и управляйте устройствами.", "Giriş yapılmış hesap" to "Выполнен вход", "Çıkış yap" to "Выйти", "E-posta" to "Эл. почта", "Şifre" to "Пароль", "Giriş yap" to "Войти", "Hesap oluştur" to "Создать аккаунт", "Şifremi unuttum" to "Забыли пароль", "Google ile devam et" to "Продолжить с Google")
-                "ar" -> mapOf("Hesap Yönetimi" to "إدارة الحساب", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "سجّل الدخول أو أنشئ حساب KaiserTV+", "KaiserTV+ Hesabı" to "حساب KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "أنشئ حسابك وسجّل الدخول وأدر أجهزتك.", "Giriş yapılmış hesap" to "تم تسجيل الدخول", "Çıkış yap" to "تسجيل الخروج", "E-posta" to "البريد الإلكتروني", "Şifre" to "كلمة المرور", "Giriş yap" to "تسجيل الدخول", "Hesap oluştur" to "إنشاء حساب", "Şifremi unuttum" to "نسيت كلمة المرور", "Google ile devam et" to "المتابعة باستخدام Google")
+                "de" -> mapOf("Hesap ve Profiller" to "Konto & Profile", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Bei KaiserTV+ anmelden oder Konto erstellen", "KaiserTV+ Hesabı" to "KaiserTV+ Konto", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Konto erstellen, anmelden und Geräte verwalten.", "Giriş yapılmış hesap" to "Angemeldetes Konto", "Çıkış yap" to "Abmelden", "E-posta" to "E-Mail", "Şifre" to "Passwort", "Giriş yap" to "Anmelden", "Hesap oluştur" to "Konto erstellen", "Şifremi unuttum" to "Passwort vergessen", "Google ile devam et" to "Mit Google fortfahren")
+                "fr" -> mapOf("Hesap ve Profiller" to "Compte et profils", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Connectez-vous ou créez un compte KaiserTV+", "KaiserTV+ Hesabı" to "Compte KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Créez votre compte, connectez-vous et gérez vos appareils.", "Giriş yapılmış hesap" to "Compte connecté", "Çıkış yap" to "Déconnexion", "E-posta" to "E-mail", "Şifre" to "Mot de passe", "Giriş yap" to "Connexion", "Hesap oluştur" to "Créer un compte", "Şifremi unuttum" to "Mot de passe oublié", "Google ile devam et" to "Continuer avec Google")
+                "it" -> mapOf("Hesap ve Profiller" to "Account e profili", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Accedi o crea un account KaiserTV+", "KaiserTV+ Hesabı" to "Account KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Crea il tuo account, accedi e gestisci i dispositivi.", "Giriş yapılmış hesap" to "Account connesso", "Çıkış yap" to "Esci", "E-posta" to "Email", "Şifre" to "Password", "Giriş yap" to "Accedi", "Hesap oluştur" to "Crea account", "Şifremi unuttum" to "Password dimenticata", "Google ile devam et" to "Continua con Google")
+                "es" -> mapOf("Hesap ve Profiller" to "Cuenta y perfiles", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Inicia sesión o crea una cuenta KaiserTV+", "KaiserTV+ Hesabı" to "Cuenta KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Crea tu cuenta, inicia sesión y administra tus dispositivos.", "Giriş yapılmış hesap" to "Cuenta conectada", "Çıkış yap" to "Cerrar sesión", "E-posta" to "Correo electrónico", "Şifre" to "Contraseña", "Giriş yap" to "Iniciar sesión", "Hesap oluştur" to "Crear cuenta", "Şifremi unuttum" to "Olvidé mi contraseña", "Google ile devam et" to "Continuar con Google")
+                "ru" -> mapOf("Hesap ve Profiller" to "Аккаунт и профили", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Войдите или создайте аккаунт KaiserTV+", "KaiserTV+ Hesabı" to "Аккаунт KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Создайте аккаунт, войдите и управляйте устройствами.", "Giriş yapılmış hesap" to "Выполнен вход", "Çıkış yap" to "Выйти", "E-posta" to "Эл. почта", "Şifre" to "Пароль", "Giriş yap" to "Войти", "Hesap oluştur" to "Создать аккаунт", "Şifremi unuttum" to "Забыли пароль", "Google ile devam et" to "Продолжить с Google")
+                "ar" -> mapOf("Hesap ve Profiller" to "الحساب والملفات الشخصية", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "سجّل الدخول أو أنشئ حساب KaiserTV+", "KaiserTV+ Hesabı" to "حساب KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "أنشئ حسابك وسجّل الدخول وأدر أجهزتك.", "Giriş yapılmış hesap" to "تم تسجيل الدخول", "Çıkış yap" to "تسجيل الخروج", "E-posta" to "البريد الإلكتروني", "Şifre" to "كلمة المرور", "Giriş yap" to "تسجيل الدخول", "Hesap oluştur" to "إنشاء حساب", "Şifremi unuttum" to "نسيت كلمة المرور", "Google ile devam et" to "المتابعة باستخدام Google")
                 else -> emptyMap()
             }
             return dictionary[key] ?: key
@@ -7364,7 +7364,7 @@ class MainActivity : Activity() {
                 setOnClickListener { action() }
             }
             val contentIcon = when (title) {
-                "Hesap Yönetimi" -> "◎"
+                "Hesap ve Profiller" -> "◎"
                 "Profiller" -> "◉"
                 "Kaynak Yönetimi" -> "▤"
                 "Dil / Language" -> "文"
@@ -7384,7 +7384,7 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
             }
             textColumn.addView(TextView(this).apply {
-                text = if (title == "Hesap Yönetimi") accountText(title) else t(title); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                text = if (title == "Hesap ve Profiller") accountText(title) else t(title); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             })
             textColumn.addView(TextView(this).apply {
                 text = if (title == "Hesap Yönetimi") accountText(detail) else t(detail); textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
@@ -7413,12 +7413,12 @@ class MainActivity : Activity() {
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
-                option("Hesap Yönetimi", "KaiserTV+ hesabına giriş yap veya hesap oluştur") { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Hesap ve Profiller", "KaiserTV+ hesabını ve profillerini yönet") { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Kaynak Yönetimi", "M3U / Xtream kaynak ekle, düzenle") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Profiller", "Kullanıcı profillerini oluştur ve yönet") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                
                 option("Hakkında", "Uygulama sürümü ve teknik bilgiler") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
                     option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
@@ -7426,7 +7426,7 @@ class MainActivity : Activity() {
                 option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "account" -> {
-                heading("KaiserTV+ Hesabı", "Hesabını oluştur, giriş yap ve cihazlarını yönet.")
+                heading("Hesap ve Profiller", "Hesabını yönet, profillerini oluştur ve düzenle.")
                 val accountRepository = try { AccountRepository(this) } catch (_: Exception) { null }
                 val currentUser = try { accountRepository?.currentUser() } catch (_: Exception) { null }
 
@@ -7586,11 +7586,34 @@ class MainActivity : Activity() {
                         setPadding(dp(18), dp(8), dp(18), dp(18))
                     })
                 }
-            }
-            "profiles" -> {
                 val profilePrefsKey = "user_profiles"
                 val activeProfileKey = "active_user_profile"
-                val avatarChoices = listOf("👤", "😀", "😎", "🦊", "🐼", "🐱", "🐯", "🦁", "🐸", "🐨", "⚽", "🎮", "🎬", "🌟")
+                val avatarChoices = listOf(
+                    "anime_bearded", "anime_blonde_glasses", "anime_blue_headphones", "anime_brown_cap",
+                    "anime_dark_hair", "anime_ice_elf", "anime_masked_silver", "anime_pink_cat",
+                    "anime_purple_hair", "anime_red_beanie", "anime_silver_hair", "anime_yellow_hood"
+                )
+                val avatarSheet = runCatching {
+                    assets.open("avatars/anime_avatar_sheet.webp").use { BitmapFactory.decodeStream(it) }
+                }.getOrNull()
+                fun normalizedAvatar(value: String?): String =
+                    value?.takeIf { it in avatarChoices } ?: "anime_blue_headphones"
+                fun avatarImage(value: String?, sizeDp: Int, selected: Boolean = false): ImageView {
+                    val id = normalizedAvatar(value)
+                    val index = avatarChoices.indexOf(id).coerceAtLeast(0)
+                    val bitmap = avatarSheet?.let {
+                        runCatching { Bitmap.createBitmap(it, (index % 4) * 64, (index / 4) * 64, 64, 64) }.getOrNull()
+                    }
+                    return ImageView(this@MainActivity).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        setImageBitmap(bitmap)
+                        background = roundedDrawable(if (selected) accent else bg, dp(sizeDp / 2), if (selected) accentBright else Color.TRANSPARENT)
+                        clipToOutline = true
+                        contentDescription = id
+                        isFocusable = true
+                        isClickable = true
+                    }
+                }
                 fun avatarKey(name: String) = "profile_avatar_$name"
                 fun pinKey(name: String) = "profile_pin_$name"
                 fun profileHash(value: String): String = java.security.MessageDigest.getInstance("SHA-256")
@@ -7643,29 +7666,29 @@ class MainActivity : Activity() {
                 }
                 fun showProfileEditor(existingName: String? = null) {
                     val oldName = existingName
-                    val currentAvatar = oldName?.let { prefs.getString(avatarKey(it), "👤") } ?: "👤"
-                    var selectedAvatar = currentAvatar ?: "👤"
+                    val currentAvatar = oldName?.let { prefs.getString(avatarKey(it), null) }
+                    var selectedAvatar = normalizedAvatar(currentAvatar)
                     val form = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
                     val nameInput = field("Profil adı", oldName.orEmpty())
                     form.addView(nameInput, LinearLayout.LayoutParams(-1, dp(50)))
                     form.addView(TextView(this@MainActivity).apply {
                         text = t("Avatar seç"); textSize = 14f; setTextColor(muted); setPadding(0, dp(12), 0, dp(6))
                     })
-                    val avatarGrid = android.widget.GridLayout(this@MainActivity).apply { columnCount = 7 }
-                    val avatarViews = mutableListOf<TextView>()
-                    avatarChoices.forEach { emoji ->
-                        val avatarView = TextView(this@MainActivity).apply {
-                            text = emoji; textSize = 24f; gravity = Gravity.CENTER
-                            background = roundedDrawable(if (emoji == selectedAvatar) accent else bg, 12, if (emoji == selectedAvatar) accentBright else Color.TRANSPARENT)
-                            isFocusable = true; isClickable = true
+                    val avatarGrid = android.widget.GridLayout(this@MainActivity).apply { columnCount = 6 }
+                    val avatarViews = mutableListOf<Pair<String, ImageView>>()
+                    avatarChoices.forEach { avatarId ->
+                        val avatarView = avatarImage(avatarId, 48, avatarId == selectedAvatar).apply {
                             setOnClickListener {
-                                selectedAvatar = emoji
-                                avatarViews.forEach { it.background = roundedDrawable(if (it.text == emoji) accent else bg, 12, if (it.text == emoji) accentBright else Color.TRANSPARENT) }
+                                selectedAvatar = avatarId
+                                avatarViews.forEach { (id, view) ->
+                                    view.background = roundedDrawable(if (id == avatarId) accent else bg, dp(24),
+                                        if (id == avatarId) accentBright else Color.TRANSPARENT)
+                                }
                             }
                         }
-                        avatarViews.add(avatarView)
+                        avatarViews.add(avatarId to avatarView)
                         avatarGrid.addView(avatarView, android.widget.GridLayout.LayoutParams().apply {
-                            width = dp(42); height = dp(42); setMargins(dp(2), dp(2), dp(2), dp(2))
+                            width = dp(48); height = dp(48); setMargins(dp(3), dp(3), dp(3), dp(3))
                         })
                     }
                     form.addView(avatarGrid)
@@ -7766,15 +7789,16 @@ class MainActivity : Activity() {
                     dialog.show()
                 }
 
-                heading("Profil Yönetimi", "Kullanıcı profillerinizi oluşturun ve yönetin.")
+                content.addView(TextView(this).apply {
+                    text = t("Profil Yönetimi"); textSize = 22f
+                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                    setPadding(dp(10), dp(18), dp(10), dp(10))
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                 val activeCard = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
                     setPadding(dp(16), dp(12), dp(16), dp(12)); background = roundedDrawable(panel, 14)
                 }
-                val activeAvatar = TextView(this).apply {
-                    text = prefs.getString(avatarKey(activeProfile), "👤"); textSize = 27f; gravity = Gravity.CENTER
-                    background = roundedDrawable(accent, 50)
-                }
+                val activeAvatar = avatarImage(prefs.getString(avatarKey(activeProfile), null), 52, true)
                 activeCard.addView(activeAvatar, LinearLayout.LayoutParams(dp(52), dp(52)))
                 val activeText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
                 activeText.addView(TextView(this).apply { text = t("Aktif Profil"); textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
@@ -7788,10 +7812,8 @@ class MainActivity : Activity() {
                         orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
                         setPadding(dp(12), dp(9), dp(10), dp(9)); background = roundedDrawable(panel, 14)
                     }
-                    row.addView(TextView(this).apply {
-                        text = prefs.getString(avatarKey(profileName), "👤"); textSize = 25f; gravity = Gravity.CENTER
-                        background = roundedDrawable(if (selected) accent else bg, 50)
-                    }, LinearLayout.LayoutParams(dp(50), dp(50)))
+                    row.addView(avatarImage(prefs.getString(avatarKey(profileName), null), 50, selected),
+                        LinearLayout.LayoutParams(dp(50), dp(50)))
                     val details = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
                     details.addView(TextView(this).apply { text = profileName; textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE) })
                     details.addView(TextView(this).apply {
@@ -7806,7 +7828,9 @@ class MainActivity : Activity() {
                 }
                 content.addView(makeButton("+  ${t("Profil Ekle")}", true) { showProfileEditor() },
                     LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(6), dp(10), dp(6), dp(8)) })
+
             }
+            "profiles" -> { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             "language" -> {
                 val currentLanguage = prefs.getString("app_language", "system") ?: "system"
                 val languageOptions = listOf(
