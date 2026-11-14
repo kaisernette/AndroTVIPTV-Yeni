@@ -776,7 +776,129 @@ class MainActivity : Activity() {
             "ar" -> mapOf("Haftanın Filmleri" to "أفلام الأسبوع", "Haftanın Dizileri" to "مسلسلات الأسبوع", "Çıkış Yap" to "خروج", "Vazgeç" to "إلغاء")
             else -> emptyMap()
         }
-        return profileShortcutTranslations[value] ?: profileUiTranslations[value] ?: dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
+        val settingsSectionTranslations = when (language) {
+            "en" -> mapOf(
+                "Genel Ayarlar" to "General Settings", "Oynatma Ayarları" to "Playback Settings", "Görünüm ve Kişiselleştirme" to "Appearance & Personalization",
+                "Performans ve Depolama" to "Performance & Storage", "Kumanda ve Erişilebilirlik" to "Remote & Accessibility", "Sistem ve Tanılama" to "System & Diagnostics",
+                "İçerik Kontrolü" to "Content Controls", "Ana Ekranı Düzenle" to "Customize Home Screen", "Gelişmiş Altyazı" to "Advanced Subtitles",
+                "Uygulama davranışı, açılış ve dil" to "App behavior, startup and language", "Devam etme, sonraki bölüm ve ses" to "Resume, next episode and audio",
+                "Tema, kartlar ve arayüz düzeni" to "Themes, cards and interface layout", "Önbellek ve bellek kullanımı" to "Cache and memory usage",
+                "Odak, yazı boyutu ve hareketler" to "Focus, text size and motion", "Bağlantı, hata kayıtları ve sürüm" to "Connection, error logs and version",
+                "Yaş sınırı ve içerik PIN koruması" to "Age rating and content PIN protection", "Ana ekran bölümleri ve kategori sırası" to "Home sections and category order",
+                "Altyazı dili, boyutu ve görünümü" to "Subtitle language, size and appearance",
+                "Son bölüme devam et" to "Restore last section", "Çıkışta onay iste" to "Confirm before exit", "Saat ve tarihi göster" to "Show clock and date",
+                "Kaynak yenileme bildirimi" to "Source refresh notification", "Kaldığın yerden oynat" to "Resume playback", "Otomatik sonraki bölüm" to "Auto next episode",
+                "Oynatıcıyı otomatik aç" to "Auto-open player", "Altyazıları otomatik etkinleştir" to "Enable subtitles automatically",
+                "Varsayılan ses dili" to "Preferred audio language", "Tema seçimi" to "Choose theme", "Yumuşak animasyonlar" to "Smooth animations",
+                "Poster ön yükleme" to "Preload posters", "Yarı saydam menü" to "Translucent menu", "Kart boyutu" to "Card size",
+                "Görsel önbelleğini temizle" to "Clear image cache", "Bellek kullanımı" to "Memory usage", "Düşük bellek modu" to "Low-memory mode",
+                "Animasyonları azalt" to "Reduce animations", "Belirgin odak efekti" to "Highlight focused item", "Odak büyütme" to "Focus scaling",
+                "Yazı boyutu" to "Text size", "Odak geçiş hızı" to "Focus transition speed", "Uygulama bilgileri" to "App information",
+                "Kaynak bağlantıları" to "Source connections", "Stalker / MAC tanılama" to "Stalker / MAC diagnostics", "Bellek durumu" to "Memory status",
+                "Tanılama kayıtları" to "Diagnostic logs", "İçerik kontrolünü etkinleştir" to "Enable content controls", "İçerik yaş sınırı" to "Content age rating",
+                "Ebeveyn PIN'i oluştur / değiştir" to "Set / change parental PIN", "Canlı TV bölümü" to "Live TV section", "Filmler bölümü" to "Movies section",
+                "Diziler bölümü" to "Series section", "Belgeseller bölümü" to "Documentaries section", "Çizgi filmler bölümü" to "Cartoons section",
+                "Spor bölümü" to "Sports section", "Kategori gizleme ve sıralama" to "Category visibility and order", "Altyazı dili" to "Subtitle language",
+                "Altyazı boyutu" to "Subtitle size", "Altyazı konumu" to "Subtitle position", "Altyazı arka planı" to "Subtitle background",
+                "Poster önbelleği temizlensin mi?" to "Clear the poster cache?", "Görsel önbelleği temizlendi." to "Image cache cleared.",
+                "Kullanılan:" to "Used:", "Boş:" to "Free:", "Cihaz dili" to "Device language", "Otomatik" to "Automatic",
+                "Küçük" to "Small", "Normal" to "Normal", "Büyük" to "Large", "Çok büyük" to "Extra large",
+                "Yavaş" to "Slow", "Hızlı" to "Fast", "Alt" to "Bottom", "Orta" to "Middle", "Üst" to "Top",
+                "Tüm yaşlar" to "All ages", "Temizle" to "Clear", "Henüz tanılama kaydı yok." to "No diagnostic entries yet."
+            )
+            "de" -> mapOf(
+                "Genel Ayarlar" to "Allgemeine Einstellungen", "Oynatma Ayarları" to "Wiedergabeeinstellungen", "Görünüm ve Kişiselleştirme" to "Darstellung & Personalisierung",
+                "Performans ve Depolama" to "Leistung & Speicher", "Kumanda ve Erişilebilirlik" to "Fernbedienung & Barrierefreiheit", "Sistem ve Tanılama" to "System & Diagnose",
+                "İçerik Kontrolü" to "Inhaltskontrolle", "Ana Ekranı Düzenle" to "Startseite anpassen", "Gelişmiş Altyazı" to "Erweiterte Untertitel",
+                "Son bölüme devam et" to "Letzten Bereich wiederherstellen", "Çıkışta onay iste" to "Vor dem Beenden bestätigen", "Saat ve tarihi göster" to "Uhrzeit und Datum anzeigen",
+                "Kaldığın yerden oynat" to "Wiedergabe fortsetzen", "Otomatik sonraki bölüm" to "Nächste Folge automatisch", "Oynatıcıyı otomatik aç" to "Player automatisch öffnen",
+                "Yarı saydam menü" to "Transparentes Menü", "Görsel önbelleğini temizle" to "Bildcache leeren", "Bellek kullanımı" to "Speichernutzung",
+                "Düşük bellek modu" to "Speichersparmodus", "Belirgin odak efekti" to "Fokus hervorheben", "Odak büyütme" to "Fokusvergrößerung",
+                "Yazı boyutu" to "Textgröße", "Odak geçiş hızı" to "Fokusgeschwindigkeit", "Uygulama bilgileri" to "App-Informationen",
+                "Tanılama kayıtları" to "Diagnoseprotokolle", "İçerik kontrolünü etkinleştir" to "Inhaltskontrolle aktivieren", "İçerik yaş sınırı" to "Altersfreigabe",
+                "Altyazı dili" to "Untertitelsprache", "Altyazı boyutu" to "Untertitelgröße", "Altyazı konumu" to "Untertitelposition", "Altyazı arka planı" to "Untertitelhintergrund",
+                "Küçük" to "Klein", "Normal" to "Normal", "Büyük" to "Groß", "Çok büyük" to "Sehr groß", "Yavaş" to "Langsam", "Hızlı" to "Schnell",
+                "Alt" to "Unten", "Orta" to "Mitte", "Üst" to "Oben", "Tüm yaşlar" to "Alle Altersgruppen", "Otomatik" to "Automatisch",
+                "Temizle" to "Leeren", "Poster önbelleği temizlensin mi?" to "Poster-Cache leeren?", "Görsel önbelleği temizlendi." to "Bildcache geleert."
+            )
+            "fr" -> mapOf(
+                "Genel Ayarlar" to "Paramètres généraux", "Oynatma Ayarları" to "Paramètres de lecture", "Görünüm ve Kişiselleştirme" to "Apparence et personnalisation",
+                "Performans ve Depolama" to "Performances et stockage", "Kumanda ve Erişilebilirlik" to "Télécommande et accessibilité", "Sistem ve Tanılama" to "Système et diagnostic",
+                "İçerik Kontrolü" to "Contrôle du contenu", "Ana Ekranı Düzenle" to "Personnaliser l’accueil", "Gelişmiş Altyazı" to "Sous-titres avancés",
+                "Son bölüme devam et" to "Restaurer la dernière section", "Çıkışta onay iste" to "Confirmer avant de quitter", "Saat ve tarihi göster" to "Afficher l’heure et la date",
+                "Kaldığın yerden oynat" to "Reprendre la lecture", "Otomatik sonraki bölüm" to "Épisode suivant automatique", "Oynatıcıyı otomatik aç" to "Ouvrir le lecteur automatiquement",
+                "Yarı saydam menü" to "Menu translucide", "Görsel önbelleğini temizle" to "Vider le cache des images", "Bellek kullanımı" to "Utilisation mémoire",
+                "Düşük bellek modu" to "Mode mémoire réduite", "Belirgin odak efekti" to "Mettre l’élément sélectionné en évidence", "Odak büyütme" to "Agrandissement du focus",
+                "Yazı boyutu" to "Taille du texte", "Odak geçiş hızı" to "Vitesse du focus", "Uygulama bilgileri" to "Informations sur l’application",
+                "Tanılama kayıtları" to "Journaux de diagnostic", "İçerik kontrolünü etkinleştir" to "Activer le contrôle du contenu", "İçerik yaş sınırı" to "Limite d’âge",
+                "Altyazı dili" to "Langue des sous-titres", "Altyazı boyutu" to "Taille des sous-titres", "Altyazı konumu" to "Position des sous-titres", "Altyazı arka planı" to "Fond des sous-titres",
+                "Küçük" to "Petit", "Normal" to "Normal", "Büyük" to "Grand", "Çok büyük" to "Très grand", "Yavaş" to "Lent", "Hızlı" to "Rapide",
+                "Alt" to "Bas", "Orta" to "Milieu", "Üst" to "Haut", "Tüm yaşlar" to "Tous âges", "Otomatik" to "Automatique",
+                "Temizle" to "Effacer", "Poster önbelleği temizlensin mi?" to "Vider le cache des affiches ?", "Görsel önbelleği temizlendi." to "Cache des images vidé."
+            )
+            "it" -> mapOf(
+                "Genel Ayarlar" to "Impostazioni generali", "Oynatma Ayarları" to "Impostazioni di riproduzione", "Görünüm ve Kişiselleştirme" to "Aspetto e personalizzazione",
+                "Performans ve Depolama" to "Prestazioni e archiviazione", "Kumanda ve Erişilebilirlik" to "Telecomando e accessibilità", "Sistem ve Tanılama" to "Sistema e diagnostica",
+                "İçerik Kontrolü" to "Controllo contenuti", "Ana Ekranı Düzenle" to "Personalizza schermata iniziale", "Gelişmiş Altyazı" to "Sottotitoli avanzati",
+                "Son bölüme devam et" to "Ripristina ultima sezione", "Çıkışta onay iste" to "Conferma prima di uscire", "Saat ve tarihi göster" to "Mostra ora e data",
+                "Kaldığın yerden oynat" to "Riprendi riproduzione", "Otomatik sonraki bölüm" to "Episodio successivo automatico", "Oynatıcıyı otomatik aç" to "Apri automaticamente il lettore",
+                "Yarı saydam menü" to "Menu trasparente", "Görsel önbelleğini temizle" to "Svuota cache immagini", "Bellek kullanımı" to "Uso memoria",
+                "Düşük bellek modu" to "Modalità memoria ridotta", "Belirgin odak efekti" to "Evidenzia elemento selezionato", "Odak büyütme" to "Ingrandimento focus",
+                "Yazı boyutu" to "Dimensione testo", "Odak geçiş hızı" to "Velocità focus", "Uygulama bilgileri" to "Informazioni app",
+                "Tanılama kayıtları" to "Registri diagnostici", "İçerik kontrolünü etkinleştir" to "Attiva controllo contenuti", "İçerik yaş sınırı" to "Limite di età",
+                "Altyazı dili" to "Lingua sottotitoli", "Altyazı boyutu" to "Dimensione sottotitoli", "Altyazı konumu" to "Posizione sottotitoli", "Altyazı arka planı" to "Sfondo sottotitoli",
+                "Küçük" to "Piccolo", "Normal" to "Normale", "Büyük" to "Grande", "Çok büyük" to "Molto grande", "Yavaş" to "Lento", "Hızlı" to "Veloce",
+                "Alt" to "Basso", "Orta" to "Centro", "Üst" to "Alto", "Tüm yaşlar" to "Tutte le età", "Otomatik" to "Automatico",
+                "Temizle" to "Pulisci", "Poster önbelleği temizlensin mi?" to "Svuotare la cache dei poster?", "Görsel önbelleği temizlendi." to "Cache immagini svuotata."
+            )
+            "es" -> mapOf(
+                "Genel Ayarlar" to "Ajustes generales", "Oynatma Ayarları" to "Ajustes de reproducción", "Görünüm ve Kişiselleştirme" to "Apariencia y personalización",
+                "Performans ve Depolama" to "Rendimiento y almacenamiento", "Kumanda ve Erişilebilirlik" to "Mando y accesibilidad", "Sistem ve Tanılama" to "Sistema y diagnóstico",
+                "İçerik Kontrolü" to "Control de contenido", "Ana Ekranı Düzenle" to "Personalizar inicio", "Gelişmiş Altyazı" to "Subtítulos avanzados",
+                "Son bölüme devam et" to "Restaurar última sección", "Çıkışta onay iste" to "Confirmar antes de salir", "Saat ve tarihi göster" to "Mostrar hora y fecha",
+                "Kaldığın yerden oynat" to "Reanudar reproducción", "Otomatik sonraki bölüm" to "Siguiente episodio automático", "Oynatıcıyı otomatik aç" to "Abrir reproductor automáticamente",
+                "Yarı saydam menü" to "Menú translúcido", "Görsel önbelleğini temizle" to "Borrar caché de imágenes", "Bellek kullanımı" to "Uso de memoria",
+                "Düşük bellek modu" to "Modo de poca memoria", "Belirgin odak efekti" to "Resaltar elemento enfocado", "Odak büyütme" to "Ampliación del enfoque",
+                "Yazı boyutu" to "Tamaño de texto", "Odak geçiş hızı" to "Velocidad del enfoque", "Uygulama bilgileri" to "Información de la aplicación",
+                "Tanılama kayıtları" to "Registros de diagnóstico", "İçerik kontrolünü etkinleştir" to "Activar control de contenido", "İçerik yaş sınırı" to "Límite de edad",
+                "Altyazı dili" to "Idioma de subtítulos", "Altyazı boyutu" to "Tamaño de subtítulos", "Altyazı konumu" to "Posición de subtítulos", "Altyazı arka planı" to "Fondo de subtítulos",
+                "Küçük" to "Pequeño", "Normal" to "Normal", "Büyük" to "Grande", "Çok büyük" to "Muy grande", "Yavaş" to "Lento", "Hızlı" to "Rápido",
+                "Alt" to "Abajo", "Orta" to "Centro", "Üst" to "Arriba", "Tüm yaşlar" to "Todas las edades", "Otomatik" to "Automático",
+                "Temizle" to "Borrar", "Poster önbelleği temizlensin mi?" to "¿Borrar la caché de carteles?", "Görsel önbelleği temizlendi." to "Caché de imágenes borrada."
+            )
+            "ru" -> mapOf(
+                "Genel Ayarlar" to "Общие настройки", "Oynatma Ayarları" to "Настройки воспроизведения", "Görünüm ve Kişiselleştirme" to "Внешний вид и персонализация",
+                "Performans ve Depolama" to "Производительность и хранилище", "Kumanda ve Erişilebilirlik" to "Пульт и доступность", "Sistem ve Tanılama" to "Система и диагностика",
+                "İçerik Kontrolü" to "Контроль контента", "Ana Ekranı Düzenle" to "Настроить главный экран", "Gelişmiş Altyazı" to "Расширенные субтитры",
+                "Son bölüme devam et" to "Восстановить последний раздел", "Çıkışta onay iste" to "Подтверждать выход", "Saat ve tarihi göster" to "Показывать время и дату",
+                "Kaldığın yerden oynat" to "Продолжить просмотр", "Otomatik sonraki bölüm" to "Автоматически включать следующую серию", "Oynatıcıyı otomatik aç" to "Автоматически открывать плеер",
+                "Yarı saydam menü" to "Полупрозрачное меню", "Görsel önbelleğini temizle" to "Очистить кэш изображений", "Bellek kullanımı" to "Использование памяти",
+                "Düşük bellek modu" to "Режим экономии памяти", "Belirgin odak efekti" to "Выделять выбранный элемент", "Odak büyütme" to "Увеличение фокуса",
+                "Yazı boyutu" to "Размер текста", "Odak geçiş hızı" to "Скорость перемещения фокуса", "Uygulama bilgileri" to "Информация о приложении",
+                "Tanılama kayıtları" to "Журналы диагностики", "İçerik kontrolünü etkinleştir" to "Включить контроль контента", "İçerik yaş sınırı" to "Возрастное ограничение",
+                "Altyazı dili" to "Язык субтитров", "Altyazı boyutu" to "Размер субтитров", "Altyazı konumu" to "Положение субтитров", "Altyazı arka planı" to "Фон субтитров",
+                "Küçük" to "Маленький", "Normal" to "Обычный", "Büyük" to "Большой", "Çok büyük" to "Очень большой", "Yavaş" to "Медленно", "Hızlı" to "Быстро",
+                "Alt" to "Снизу", "Orta" to "По центру", "Üst" to "Сверху", "Tüm yaşlar" to "Для всех возрастов", "Otomatik" to "Автоматически",
+                "Temizle" to "Очистить", "Poster önbelleği temizlensin mi?" to "Очистить кэш постеров?", "Görsel önbelleği temizlendi." to "Кэш изображений очищен."
+            )
+            "ar" -> mapOf(
+                "Genel Ayarlar" to "الإعدادات العامة", "Oynatma Ayarları" to "إعدادات التشغيل", "Görünüm ve Kişiselleştirme" to "المظهر والتخصيص",
+                "Performans ve Depolama" to "الأداء والتخزين", "Kumanda ve Erişilebilirlik" to "جهاز التحكم وإمكانية الوصول", "Sistem ve Tanılama" to "النظام والتشخيص",
+                "İçerik Kontrolü" to "التحكم بالمحتوى", "Ana Ekranı Düzenle" to "تخصيص الشاشة الرئيسية", "Gelişmiş Altyazı" to "الترجمة المتقدمة",
+                "Son bölüme devam et" to "استعادة القسم الأخير", "Çıkışta onay iste" to "تأكيد قبل الخروج", "Saat ve tarihi göster" to "إظهار الوقت والتاريخ",
+                "Kaldığın yerden oynat" to "استئناف التشغيل", "Otomatik sonraki bölüm" to "تشغيل الحلقة التالية تلقائياً", "Oynatıcıyı otomatik aç" to "فتح المشغل تلقائياً",
+                "Yarı saydam menü" to "قائمة شبه شفافة", "Görsel önbelleğini temizle" to "مسح ذاكرة الصور المؤقتة", "Bellek kullanımı" to "استخدام الذاكرة",
+                "Düşük bellek modu" to "وضع الذاكرة المنخفضة", "Belirgin odak efekti" to "تمييز العنصر المحدد", "Odak büyütme" to "تكبير التركيز",
+                "Yazı boyutu" to "حجم النص", "Odak geçiş hızı" to "سرعة انتقال التركيز", "Uygulama bilgileri" to "معلومات التطبيق",
+                "Tanılama kayıtları" to "سجلات التشخيص", "İçerik kontrolünü etkinleştir" to "تفعيل التحكم بالمحتوى", "İçerik yaş sınırı" to "التصنيف العمري",
+                "Altyazı dili" to "لغة الترجمة", "Altyazı boyutu" to "حجم الترجمة", "Altyazı konumu" to "موضع الترجمة", "Altyazı arka planı" to "خلفية الترجمة",
+                "Küçük" to "صغير", "Normal" to "عادي", "Büyük" to "كبير", "Çok büyük" to "كبير جداً", "Yavaş" to "بطيء", "Hızlı" to "سريع",
+                "Alt" to "أسفل", "Orta" to "وسط", "Üst" to "أعلى", "Tüm yaşlar" to "كل الأعمار", "Otomatik" to "تلقائي",
+                "Temizle" to "مسح", "Poster önbelleği temizlensin mi?" to "هل تريد مسح ذاكرة الملصقات؟", "Görsel önbelleği temizlendi." to "تم مسح ذاكرة الصور المؤقتة."
+            )
+            else -> emptyMap()
+        }
+        return settingsSectionTranslations[value] ?: profileShortcutTranslations[value] ?: profileUiTranslations[value] ?: dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
     }
     // Android TV cihazlarında aynı anda daha az görsel işi yürüt; RAM'e göre güvenli bitmap bütçesi kullan.
     // Bound background poster work: an unbounded queue can exhaust small TV boxes.
