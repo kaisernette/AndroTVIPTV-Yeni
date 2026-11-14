@@ -7883,22 +7883,95 @@ class MainActivity : Activity() {
                         }
                     }
 
+                    // Keep the eye control inside the password outline; it remains
+                    // independently focusable for Android TV remote navigation.
+                    val passwordFrame = FrameLayout(this).apply {
+                        addView(passwordField, FrameLayout.LayoutParams(-1, dp(48)))
+                    }
+                    val passwordVisibility = TextView(this).apply {
+                        text = "◉"
+                        textSize = 19f
+                        gravity = Gravity.CENTER
+                        setTextColor(muted)
+                        isFocusable = true
+                        isClickable = true
+                        contentDescription = accountText("Şifreyi göster")
+                        background = roundedDrawable(Color.TRANSPARENT, 18)
+                        setOnClickListener {
+                            val visible = passwordField.inputType ==
+                                (android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD)
+                            passwordField.inputType = if (visible)
+                                android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                            else
+                                android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                            passwordField.setSelection(passwordField.text?.length ?: 0)
+                            text = if (visible) "◉" else "◎"
+                            contentDescription = accountText(if (visible) "Şifreyi göster" else "Şifreyi gizle")
+                        }
+                        setOnFocusChangeListener { view, focused ->
+                            view.background = roundedDrawable(if (focused) panel else Color.TRANSPARENT, 18,
+                                if (focused) accentBright else Color.TRANSPARENT)
+                            setTextColor(if (focused) accentBright else muted)
+                        }
+                    }
+                    passwordFrame.addView(passwordVisibility, FrameLayout.LayoutParams(dp(48), dp(46), Gravity.END or Gravity.CENTER_VERTICAL))
+                    passwordField.setPadding(dp(14), passwordField.paddingTop, dp(52), passwordField.paddingBottom)
+
                     val credentialsRow = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
                     }
                     credentialsRow.addView(emailField, LinearLayout.LayoutParams(0, dp(48), 1.25f).apply { rightMargin = dp(6) })
-                    credentialsRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(48), 1.25f).apply { rightMargin = dp(6) })
+                    credentialsRow.addView(passwordFrame, LinearLayout.LayoutParams(0, dp(48), 1.25f).apply { rightMargin = dp(6) })
                     credentialsRow.addView(accountButton(accountText("Giriş yap"), true) {
                         submitEmailAccount(false)
                     }, LinearLayout.LayoutParams(0, dp(48), 0.8f))
-                    form.addView(credentialsRow, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+                    form.addView(credentialsRow, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(4) })
 
-                    val secondaryActions = LinearLayout(this).apply {
+                    val linksRow = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.TOP
+                    }
+                    // The password column owns both account links, one below the other.
+                    linksRow.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1.25f).apply { rightMargin = dp(6) })
+                    val passwordLinks = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER
                     }
-                    secondaryActions.addView(accountButton(accountText("Google"), false) {
+                    fun accountTextLink(label: String, action: () -> Unit): TextView =
+                        TextView(this).apply {
+                            text = accountText(label)
+                            textSize = 14f
+                            gravity = Gravity.CENTER
+                            setTextColor(Color.WHITE)
+                            setPadding(dp(6), dp(7), dp(6), dp(7))
+                            isFocusable = true
+                            isClickable = true
+                            background = roundedDrawable(Color.TRANSPARENT, 10)
+                            setOnClickListener { action() }
+                            setOnFocusChangeListener { view, focused ->
+                                view.background = roundedDrawable(if (focused) panel else Color.TRANSPARENT, 10,
+                                    if (focused) accentBright else Color.TRANSPARENT)
+                                setTextColor(if (focused) accentBright else Color.WHITE)
+                            }
+                        }
+                    passwordLinks.addView(accountTextLink("Şifremi unuttum") {
+                        val email = emailField.text.toString().trim()
+                        if (email.isBlank()) accountMessage(accountText("Şifre sıfırlamak için e-posta adresini yaz."))
+                        else accountRepository.sendPasswordReset(email)
+                            .addOnSuccessListener { accountMessage(accountText("Şifre sıfırlama bağlantısı gönderildi.")) }
+                            .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
+                    }, LinearLayout.LayoutParams(-1, dp(36)))
+                    passwordLinks.addView(accountTextLink("Kaydol") {
+                        submitEmailAccount(true)
+                    }, LinearLayout.LayoutParams(-1, dp(36)))
+                    linksRow.addView(passwordLinks, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.25f).apply { rightMargin = dp(6) })
+
+                    val googleColumn = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    }
+                    googleColumn.addView(accountTextLink("Google") {
                         try {
                             launchGoogleSignIn(
                                 accountRepository,
@@ -7912,18 +7985,9 @@ class MainActivity : Activity() {
                         } catch (error: Exception) {
                             accountMessage(error.localizedMessage ?: accountText("Google ile giriş başlatılamadı."))
                         }
-                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { rightMargin = dp(5) })
-                    secondaryActions.addView(accountButton(accountText("Kaydol"), false) {
-                        submitEmailAccount(true)
-                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(5); rightMargin = dp(5) })
-                    secondaryActions.addView(accountButton(accountText("Şifremi unuttum"), false) {
-                        val email = emailField.text.toString().trim()
-                        if (email.isBlank()) accountMessage(accountText("Şifre sıfırlamak için e-posta adresini yaz."))
-                        else accountRepository.sendPasswordReset(email)
-                            .addOnSuccessListener { accountMessage(accountText("Şifre sıfırlama bağlantısı gönderildi.")) }
-                            .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
-                    }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(5) })
-                    form.addView(secondaryActions, LinearLayout.LayoutParams(-1, dp(44)))
+                    }, LinearLayout.LayoutParams(-1, dp(36)))
+                    linksRow.addView(googleColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.8f))
+                    form.addView(linksRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(dp(8), dp(8), dp(8), dp(12))
                     })
