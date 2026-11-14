@@ -3,6 +3,7 @@ package com.example.androtviptv
 // Stream Xtream catalogues in bounded batches; keep the original UI unchanged.
 
 import android.app.Activity
+import com.example.androtviptv.account.AccountRepository
 import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
@@ -7229,6 +7230,7 @@ class MainActivity : Activity() {
                 setOnClickListener { action() }
             }
             val contentIcon = when (title) {
+                "Hesap Yönetimi" -> "◎"
                 "Profiller" -> "◉"
                 "Kaynak Yönetimi" -> "▤"
                 "Dil / Language" -> "文"
@@ -7277,6 +7279,7 @@ class MainActivity : Activity() {
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
+                option("Hesap Yönetimi", "KaiserTV+ hesabına giriş yap veya hesap oluştur") { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Kaynak Yönetimi", "M3U / Xtream kaynak ekle, düzenle") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
@@ -7287,6 +7290,156 @@ class MainActivity : Activity() {
                     option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
                 }
                 option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
+            "account" -> {
+                heading("KaiserTV+ Hesabı", "Hesabını oluştur, giriş yap ve cihazlarını yönet.")
+                val accountRepository = try { AccountRepository(this) } catch (_: Exception) { null }
+                val currentUser = try { accountRepository?.currentUser() } catch (_: Exception) { null }
+
+                fun accountInput(hintText: String, isPassword: Boolean = false): EditText =
+                    EditText(this).apply {
+                        hint = hintText
+                        textSize = 16f
+                        setTextColor(Color.WHITE)
+                        setHintTextColor(muted)
+                        singleLine = true
+                        inputType = if (isPassword) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                            else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+                        background = GradientDrawable().apply {
+                            cornerRadius = dp(24).toFloat()
+                            setColor(Color.rgb(3, 7, 10))
+                            setStroke(dp(2), accent)
+                        }
+                        setPadding(dp(18), 0, dp(18), 0)
+                    }
+
+                fun accountMessage(message: String) {
+                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                }
+
+                if (accountRepository == null) {
+                    content.addView(TextView(this).apply {
+                        text = "Hesap hizmeti henüz yapılandırılmadı. Firebase projesi ve app/google-services.json eklendiğinde giriş açılacak."
+                        textSize = 16f
+                        setTextColor(muted)
+                        setPadding(dp(18), dp(18), dp(18), dp(18))
+                    }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                } else if (currentUser != null) {
+                    val accountPanel = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        background = roundedDrawable(panel, 22)
+                        setPadding(dp(22), dp(20), dp(22), dp(20))
+                    }
+                    accountPanel.addView(TextView(this).apply {
+                        text = "Giriş yapılmış hesap"
+                        textSize = 21f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE)
+                    })
+                    accountPanel.addView(TextView(this).apply {
+                        text = currentUser.email ?: currentUser.displayName ?: currentUser.uid
+                        textSize = 16f
+                        setTextColor(accentBright)
+                        setPadding(0, dp(8), 0, dp(18))
+                    })
+                    accountPanel.addView(TextView(this).apply {
+                        text = if (currentUser.isEmailVerified) "E-posta doğrulandı" else "E-posta doğrulaması bekleniyor"
+                        textSize = 14f
+                        setTextColor(if (currentUser.isEmailVerified) accentBright else muted)
+                    })
+                    accountPanel.addView(makeButton("Çıkış yap", false) {
+                        accountRepository.signOut()
+                        render()
+                    }, LinearLayout.LayoutParams(dp(180), dp(46)).apply { topMargin = dp(18) })
+                    content.addView(accountPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(dp(8), dp(8), dp(8), dp(12))
+                    })
+                    content.addView(TextView(this).apply {
+                        text = "Cihaz sınırı: Hesap başına en fazla 3 cihaz. Cihaz kaydı, Firebase App Check ve sunucu kurulumu tamamlandığında etkinleşecek."
+                        textSize = 14f
+                        setTextColor(muted)
+                        setPadding(dp(14), dp(12), dp(14), dp(12))
+                    })
+                } else {
+                    val form = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        background = roundedDrawable(panel, 22)
+                        setPadding(dp(22), dp(20), dp(22), dp(20))
+                    }
+                    form.addView(TextView(this).apply {
+                        text = "KaiserTV+ hesabına giriş yap"
+                        textSize = 22f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE)
+                    })
+                    form.addView(TextView(this).apply {
+                        text = "Telefonunda ve Android TV cihazlarında aynı hesabı kullan."
+                        textSize = 14f
+                        setTextColor(muted)
+                        setPadding(0, dp(6), 0, dp(16))
+                    })
+                    val emailField = accountInput("E-posta")
+                    val passwordField = accountInput("Şifre", true)
+                    form.addView(emailField, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(10) })
+                    form.addView(passwordField, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(14) })
+
+                    val emailActions = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+                    emailActions.addView(makeButton("Giriş yap", true) {
+                        val email = emailField.text.toString().trim()
+                        val passwordValue = passwordField.text.toString()
+                        if (email.isBlank() || passwordValue.isBlank()) {
+                            accountMessage("E-posta ve şifreyi doldur.")
+                        } else {
+                            try {
+                                accountRepository.signInWithEmail(email, passwordValue)
+                                    .addOnSuccessListener {
+                                        accountMessage("Giriş başarılı.")
+                                        settingsPage = "account"
+                                        render()
+                                    }
+                                    .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: "Giriş başarısız.") }
+                            } catch (error: Exception) { accountMessage(error.localizedMessage ?: "Giriş yapılamadı.") }
+                        }
+                    }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { rightMargin = dp(8) })
+                    emailActions.addView(makeButton("Hesap oluştur", false) {
+                        val email = emailField.text.toString().trim()
+                        val passwordValue = passwordField.text.toString()
+                        if (email.isBlank() || passwordValue.length < 6) {
+                            accountMessage("Geçerli e-posta gir ve en az 6 karakterli şifre belirle.")
+                        } else {
+                            try {
+                                accountRepository.createAccount(email, passwordValue)
+                                    .addOnSuccessListener { accountMessage("Doğrulama bağlantısı e-posta adresine gönderildi.") }
+                                    .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: "Hesap oluşturulamadı.") }
+                            } catch (error: Exception) { accountMessage(error.localizedMessage ?: "Hesap oluşturulamadı.") }
+                        }
+                    }, LinearLayout.LayoutParams(0, dp(48), 1f))
+                    form.addView(emailActions, LinearLayout.LayoutParams(-1, dp(48)))
+
+                    form.addView(makeButton("Şifremi unuttum", false) {
+                        val email = emailField.text.toString().trim()
+                        if (email.isBlank()) accountMessage("Şifre sıfırlamak için e-posta adresini yaz.")
+                        else accountRepository.sendPasswordReset(email)
+                            .addOnSuccessListener { accountMessage("Şifre sıfırlama bağlantısı gönderildi.") }
+                            .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: "İşlem başarısız.") }
+                    }, LinearLayout.LayoutParams(dp(210), dp(44)).apply { topMargin = dp(10) })
+
+                    form.addView(makeButton("Google ile devam et", false) {
+                        accountMessage("Google girişi için Firebase OAuth istemci kimliği ve Credential Manager bağlantısı henüz yapılandırılmadı.")
+                    }, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(16) })
+                    content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(dp(8), dp(8), dp(8), dp(12))
+                    })
+                    content.addView(TextView(this).apply {
+                        text = "Her hesap en fazla 3 cihazda kullanılacak. Favoriler, izleme geçmişi ve profil ayarları bulutla eşitlenecek."
+                        textSize = 14f
+                        setTextColor(muted)
+                        setPadding(dp(18), dp(8), dp(18), dp(18))
+                    })
+                }
             }
             "profiles" -> {
                 val profilePrefsKey = "user_profiles"
