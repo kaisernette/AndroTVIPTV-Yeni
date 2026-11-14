@@ -7350,6 +7350,28 @@ class MainActivity : Activity() {
             rebuildNavigation()
             render()
         }
+
+        fun showSettingsNotice(section: String) {
+            val message = when (section) {
+                "Oynatma Ayarları" -> settingsCopy("Video ve ses tercihlerini düzenle")
+                "Depolama" -> settingsCopy("Önbellek ve uygulama verileri")
+                else -> settingsCopy("Bildirim tercihlerini düzenle")
+            }
+            AlertDialog.Builder(this)
+                .setTitle(settingsCopy(section))
+                .setMessage(message + "\n\n" + when (prefs.getString("app_language", "system") ?: "system") {
+                    "en" -> "These controls will be available in a future update."
+                    "de" -> "Diese Einstellungen folgen in einem zukünftigen Update."
+                    "fr" -> "Ces options seront disponibles dans une prochaine mise à jour."
+                    "it" -> "Queste opzioni saranno disponibili in un prossimo aggiornamento."
+                    "es" -> "Estas opciones estarán disponibles en una próxima actualización."
+                    "ru" -> "Эти настройки появятся в следующем обновлении."
+                    "ar" -> "ستتوفر هذه الخيارات في تحديث قادم."
+                    else -> "Bu ayarlar sonraki güncellemede etkinleştirilecek."
+                })
+                .setPositiveButton(settingsCopy("Hakkında"), null)
+                .show()
+        }
         fun heading(title: String, subtitle: String) {
             val header = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -7404,6 +7426,120 @@ class MainActivity : Activity() {
             }
             return dictionary[key] ?: key
         }
+
+        fun settingsCopy(key: String): String {
+            val selected = prefs.getString("app_language", "system") ?: "system"
+            val language = if (selected == "system") java.util.Locale.getDefault().language else selected
+            val dictionaries = mapOf(
+                "en" to mapOf(
+                    "Hesap Yönetimi" to "Account Management", "Hesap ve oturum bilgileri" to "Account and sign-in details",
+                    "Profil Yönetimi" to "Profile Management", "Profilleri ve güvenlik ayarlarını düzenle" to "Manage profiles and security",
+                    "Kaynak Yönetimi" to "Source Management", "Yayın kaynaklarını ekle ve yönet" to "Add and manage streaming sources",
+                    "İçerik Ayarları" to "Content Settings", "Kategorileri ve içerikleri kişiselleştir" to "Customize categories and content",
+                    "Tema ve Görünüm" to "Theme & Appearance", "Arayüz tasarımını kişiselleştir" to "Customize the interface",
+                    "Dil Seçimi" to "Language", "Uygulama dilini değiştir" to "Change the app language",
+                    "İzleme Geçmişi" to "Watch History", "İzleme geçmişini görüntüle ve yönet" to "View and manage watch history",
+                    "Oynatma Ayarları" to "Playback Settings", "Video ve ses tercihlerini düzenle" to "Adjust video and audio preferences",
+                    "Depolama" to "Storage", "Önbellek ve uygulama verileri" to "Cache and app data",
+                    "Ebeveyn Kontrolü" to "Parental Controls", "İçerik erişimini sınırlandır" to "Set content access limits",
+                    "Bildirimler" to "Notifications", "Bildirim tercihlerini düzenle" to "Manage notification preferences",
+                    "Hakkında" to "About", "Sürüm ve uygulama bilgileri" to "Version and app information",
+                    "Bir bölümü seç; ayrı ekranda açılacak." to "Choose a section to open."
+                ),
+                "de" to mapOf(
+                    "Hesap Yönetimi" to "Kontoverwaltung", "Hesap ve oturum bilgileri" to "Konto- und Anmeldedaten",
+                    "Profil Yönetimi" to "Profilverwaltung", "Profilleri ve güvenlik ayarlarını düzenle" to "Profile und Sicherheit verwalten",
+                    "Kaynak Yönetimi" to "Quellenverwaltung", "Yayın kaynaklarını ekle ve yönet" to "Streamingquellen hinzufügen und verwalten",
+                    "İçerik Ayarları" to "Inhaltseinstellungen", "Kategorileri ve içerikleri kişiselleştir" to "Kategorien und Inhalte anpassen",
+                    "Tema ve Görünüm" to "Design & Darstellung", "Arayüz tasarımını kişiselleştir" to "Oberfläche anpassen",
+                    "Dil Seçimi" to "Sprache", "Uygulama dilini değiştir" to "App-Sprache ändern",
+                    "İzleme Geçmişi" to "Wiedergabeverlauf", "İzleme geçmişini görüntüle ve yönet" to "Wiedergabeverlauf anzeigen und verwalten",
+                    "Oynatma Ayarları" to "Wiedergabeeinstellungen", "Video ve ses tercihlerini düzenle" to "Video- und Audiooptionen anpassen",
+                    "Depolama" to "Speicher", "Önbellek ve uygulama verileri" to "Cache und App-Daten",
+                    "Ebeveyn Kontrolü" to "Jugendschutz", "İçerik erişimini sınırlandır" to "Zugriff auf Inhalte einschränken",
+                    "Bildirimler" to "Benachrichtigungen", "Bildirim tercihlerini düzenle" to "Benachrichtigungseinstellungen verwalten",
+                    "Hakkında" to "Über", "Sürüm ve uygulama bilgileri" to "Versions- und App-Informationen",
+                    "Bir bölümü seç; ayrı ekranda açılacak." to "Wähle einen Bereich aus."
+                ),
+                "fr" to mapOf(
+                    "Hesap Yönetimi" to "Gestion du compte", "Hesap ve oturum bilgileri" to "Compte et connexion",
+                    "Profil Yönetimi" to "Gestion des profils", "Profilleri ve güvenlik ayarlarını düzenle" to "Gérer les profils et la sécurité",
+                    "Kaynak Yönetimi" to "Gestion des sources", "Yayın kaynaklarını ekle ve yönet" to "Ajouter et gérer les sources",
+                    "İçerik Ayarları" to "Paramètres du contenu", "Kategorileri ve içerikleri kişiselleştir" to "Personnaliser catégories et contenus",
+                    "Tema ve Görünüm" to "Thème et apparence", "Arayüz tasarımını kişiselleştir" to "Personnaliser l’interface",
+                    "Dil Seçimi" to "Langue", "Uygulama dilini değiştir" to "Changer la langue de l’application",
+                    "İzleme Geçmişi" to "Historique", "İzleme geçmişini görüntüle ve yönet" to "Consulter et gérer l’historique",
+                    "Oynatma Ayarları" to "Paramètres de lecture", "Video ve ses tercihlerini düzenle" to "Régler les préférences audio et vidéo",
+                    "Depolama" to "Stockage", "Önbellek ve uygulama verileri" to "Cache et données de l’application",
+                    "Ebeveyn Kontrolü" to "Contrôle parental", "İçerik erişimini sınırlandır" to "Limiter l’accès aux contenus",
+                    "Bildirimler" to "Notifications", "Bildirim tercihlerini düzenle" to "Gérer les préférences de notification",
+                    "Hakkında" to "À propos", "Sürüm ve uygulama bilgileri" to "Version et informations de l’application",
+                    "Bir bölümü seç; ayrı ekranda açılacak." to "Choisissez une rubrique."
+                ),
+                "it" to mapOf(
+                    "Hesap Yönetimi" to "Gestione account", "Hesap ve oturum bilgileri" to "Account e accesso",
+                    "Profil Yönetimi" to "Gestione profili", "Profilleri ve güvenlik ayarlarını düzenle" to "Gestisci profili e sicurezza",
+                    "Kaynak Yönetimi" to "Gestione sorgenti", "Yayın kaynaklarını ekle ve yönet" to "Aggiungi e gestisci le sorgenti",
+                    "İçerik Ayarları" to "Impostazioni contenuti", "Kategorileri ve içerikleri kişiselleştir" to "Personalizza categorie e contenuti",
+                    "Tema ve Görünüm" to "Tema e aspetto", "Arayüz tasarımını kişiselleştir" to "Personalizza l’interfaccia",
+                    "Dil Seçimi" to "Lingua", "Uygulama dilini değiştir" to "Cambia la lingua dell’app",
+                    "İzleme Geçmişi" to "Cronologia", "İzleme geçmişini görüntüle ve yönet" to "Visualizza e gestisci la cronologia",
+                    "Oynatma Ayarları" to "Impostazioni riproduzione", "Video ve ses tercihlerini düzenle" to "Regola le preferenze audio e video",
+                    "Depolama" to "Archiviazione", "Önbellek ve uygulama verileri" to "Cache e dati dell’app",
+                    "Ebeveyn Kontrolü" to "Controllo genitori", "İçerik erişimini sınırlandır" to "Limita l’accesso ai contenuti",
+                    "Bildirimler" to "Notifiche", "Bildirim tercihlerini düzenle" to "Gestisci le preferenze delle notifiche",
+                    "Hakkında" to "Informazioni", "Sürüm ve uygulama bilgileri" to "Versione e informazioni app",
+                    "Bir bölümü seç; ayrı ekranda açılacak." to "Scegli una sezione."
+                ),
+                "es" to mapOf(
+                    "Hesap Yönetimi" to "Gestión de cuenta", "Hesap ve oturum bilgileri" to "Cuenta e inicio de sesión",
+                    "Profil Yönetimi" to "Gestión de perfiles", "Profilleri ve güvenlik ayarlarını düzenle" to "Administra perfiles y seguridad",
+                    "Kaynak Yönetimi" to "Gestión de fuentes", "Yayın kaynaklarını ekle ve yönet" to "Añade y administra fuentes",
+                    "İçerik Ayarları" to "Ajustes de contenido", "Kategorileri ve içerikleri kişiselleştir" to "Personaliza categorías y contenido",
+                    "Tema ve Görünüm" to "Tema y apariencia", "Arayüz tasarımını kişiselleştir" to "Personaliza la interfaz",
+                    "Dil Seçimi" to "Idioma", "Uygulama dilini değiştir" to "Cambia el idioma de la aplicación",
+                    "İzleme Geçmişi" to "Historial", "İzleme geçmişini görüntüle ve yönet" to "Consulta y administra el historial",
+                    "Oynatma Ayarları" to "Ajustes de reproducción", "Video ve ses tercihlerini düzenle" to "Ajusta las preferencias de audio y vídeo",
+                    "Depolama" to "Almacenamiento", "Önbellek ve uygulama verileri" to "Caché y datos de la aplicación",
+                    "Ebeveyn Kontrolü" to "Control parental", "İçerik erişimini sınırlandır" to "Limita el acceso al contenido",
+                    "Bildirimler" to "Notificaciones", "Bildirim tercihlerini düzenle" to "Administra las preferencias de notificación",
+                    "Hakkında" to "Acerca de", "Sürüm ve uygulama bilgileri" to "Versión e información de la aplicación",
+                    "Bir bölümü seç; ayrı ekranda açılacak." to "Elige una sección."
+                ),
+                "ru" to mapOf(
+                    "Hesap Yönetimi" to "Управление аккаунтом", "Hesap ve oturum bilgileri" to "Данные аккаунта и входа",
+                    "Profil Yönetimi" to "Управление профилями", "Profilleri ve güvenlik ayarlarını düzenle" to "Настройка профилей и безопасности",
+                    "Kaynak Yönetimi" to "Управление источниками", "Yayın kaynaklarını ekle ve yönet" to "Добавление и управление источниками",
+                    "İçerik Ayarları" to "Настройки контента", "Kategorileri ve içerikleri kişiselleştir" to "Настройка категорий и контента",
+                    "Tema ve Görünüm" to "Тема и оформление", "Arayüz tasarımını kişiselleştir" to "Настройка интерфейса",
+                    "Dil Seçimi" to "Язык", "Uygulama dilini değiştir" to "Изменить язык приложения",
+                    "İzleme Geçmişi" to "История просмотров", "İzleme geçmişini görüntüle ve yönet" to "Просмотр и управление историей",
+                    "Oynatma Ayarları" to "Настройки воспроизведения", "Video ve ses tercihlerini düzenle" to "Настройка видео и звука",
+                    "Depolama" to "Хранилище", "Önbellek ve uygulama verileri" to "Кэш и данные приложения",
+                    "Ebeveyn Kontrolü" to "Родительский контроль", "İçerik erişimini sınırlandır" to "Ограничение доступа к контенту",
+                    "Bildirimler" to "Уведомления", "Bildirim tercihlerini düzenle" to "Настройка уведомлений",
+                    "Hakkında" to "О приложении", "Sürüm ve uygulama bilgileri" to "Версия и информация о приложении",
+                    "Bir bölümü seç; ayrı ekranda açılacak." to "Выберите раздел."
+                ),
+                "ar" to mapOf(
+                    "Hesap Yönetimi" to "إدارة الحساب", "Hesap ve oturum bilgileri" to "معلومات الحساب وتسجيل الدخول",
+                    "Profil Yönetimi" to "إدارة الملفات الشخصية", "Profilleri ve güvenlik ayarlarını düzenle" to "إدارة الملفات الشخصية والأمان",
+                    "Kaynak Yönetimi" to "إدارة المصادر", "Yayın kaynaklarını ekle ve yönet" to "إضافة مصادر البث وإدارتها",
+                    "İçerik Ayarları" to "إعدادات المحتوى", "Kategorileri ve içerikleri kişiselleştir" to "تخصيص الفئات والمحتوى",
+                    "Tema ve Görünüm" to "المظهر والتصميم", "Arayüz tasarımını kişiselleştir" to "تخصيص واجهة التطبيق",
+                    "Dil Seçimi" to "اختيار اللغة", "Uygulama dilini değiştir" to "تغيير لغة التطبيق",
+                    "İzleme Geçmişi" to "سجل المشاهدة", "İzleme geçmişini görüntüle ve yönet" to "عرض سجل المشاهدة وإدارته",
+                    "Oynatma Ayarları" to "إعدادات التشغيل", "Video ve ses tercihlerini düzenle" to "ضبط تفضيلات الفيديو والصوت",
+                    "Depolama" to "التخزين", "Önbellek ve uygulama verileri" to "ذاكرة التخزين المؤقت وبيانات التطبيق",
+                    "Ebeveyn Kontrolü" to "الرقابة الأبوية", "İçerik erişimini sınırlandır" to "تقييد الوصول إلى المحتوى",
+                    "Bildirimler" to "الإشعارات", "Bildirim tercihlerini düzenle" to "إدارة تفضيلات الإشعارات",
+                    "Hakkında" to "حول التطبيق", "Sürüm ve uygulama bilgileri" to "الإصدار ومعلومات التطبيق",
+                    "Bir bölümü seç; ayrı ekranda açılacak." to "اختر قسماً."
+                )
+            )
+            return dictionaries[language]?.get(key) ?: key
+        }
+
         var settingsGridRow: LinearLayout? = null
         var settingsGridCount = 0
         fun option(title: String, detail: String, action: () -> Unit) {
@@ -7448,10 +7584,10 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
             }
             textColumn.addView(TextView(this).apply {
-                text = if (title == "KaiserTV+ Hesabı") accountText(title) else t(title); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                text = settingsCopy(title); textSize = 18f; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             })
             textColumn.addView(TextView(this).apply {
-                text = if (title == "KaiserTV+ Hesabı") accountText(detail) else t(detail); textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
+                text = settingsCopy(detail); textSize = 13f; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END; setTextColor(muted); setPadding(0, dp(6), 0, 0)
             })
             card.addView(textColumn)
             if (settingsPage == "main") {
@@ -7460,7 +7596,7 @@ class MainActivity : Activity() {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.TOP
                     }
-                    content.addView(settingsGridRow, LinearLayout.LayoutParams(-1, dp(142)).apply {
+                    content.addView(settingsGridRow, LinearLayout.LayoutParams(-1, dp(166)).apply {
                         setMargins(dp(6), dp(7), dp(6), dp(7))
                     })
                 }
@@ -7477,18 +7613,18 @@ class MainActivity : Activity() {
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
-                option("KaiserTV+ Hesabı", "Giriş yap, hesap bilgilerini ve cihazlarını yönet") { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Profil Yönetimi", "Anime avatarları, profiller ve PIN koruması") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Kaynak Yönetimi", "M3U / Xtream kaynak ekle, düzenle") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                
-                option("Hakkında", "Uygulama sürümü ve teknik bilgiler") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
-                    option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
-                }
-                option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Hesap Yönetimi", "Hesap ve oturum bilgileri") { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Profil Yönetimi", "Profilleri ve güvenlik ayarlarını düzenle") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Kaynak Yönetimi", "Yayın kaynaklarını ekle ve yönet") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("İçerik Ayarları", "Kategorileri ve içerikleri kişiselleştir") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Tema ve Görünüm", "Arayüz tasarımını kişiselleştir") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Dil Seçimi", "Uygulama dilini değiştir") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("İzleme Geçmişi", "İzleme geçmişini görüntüle ve yönet") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Oynatma Ayarları", "Video ve ses tercihlerini düzenle") { showSettingsNotice("Oynatma Ayarları") }
+                option("Depolama", "Önbellek ve uygulama verileri") { showSettingsNotice("Depolama") }
+                option("Ebeveyn Kontrolü", "İçerik erişimini sınırlandır") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Bildirimler", "Bildirim tercihlerini düzenle") { showSettingsNotice("Bildirimler") }
+                option("Hakkında", "Sürüm ve uygulama bilgileri") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "account" -> {
                 heading("KaiserTV+ Hesabı", "Hesabını oluştur, giriş yap ve cihazlarını yönet.")
