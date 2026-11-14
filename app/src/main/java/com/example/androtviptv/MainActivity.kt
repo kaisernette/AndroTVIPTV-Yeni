@@ -2414,6 +2414,13 @@ class MainActivity : Activity() {
                 if (editSource == null) {
                     settingsPage = "main"; sidebarMode = "main"; selectedType = "Tümü"
                     selectedGroup = "Tüm kategoriler"
+                    // A newly added M3U source is immediately the active source.
+                    // Keep the playback guard's enabled-source set in sync with the
+                    // source that was just loaded.
+                    prefs.edit()
+                        .putString("last_source_id", src.id)
+                        .putStringSet("selected_source_ids", setOf(src.id))
+                        .apply()
                 }
                 render(); loadM3u(src, editSource != null)
             }
@@ -5323,7 +5330,13 @@ class MainActivity : Activity() {
                             return@makeButton
                         }
                         val src = SavedSource(java.util.UUID.randomUUID().toString(), label.ifBlank { "M3U ${savedSources.size + 1}" }, "m3u", address)
-                        saveSource(src); hideKeyboard(); settingsPage = "main"; sidebarMode = "main"; selectedType = "Tümü"; render(); loadM3u(src, false)
+                        saveSource(src)
+                        // Newly added inline M3U sources must also be enabled for playback.
+                        prefs.edit()
+                            .putString("last_source_id", src.id)
+                            .putStringSet("selected_source_ids", setOf(src.id))
+                            .apply()
+                        hideKeyboard(); settingsPage = "main"; sidebarMode = "main"; selectedType = "Tümü"; render(); loadM3u(src, false)
                     }
                     inlineStalker.id -> {
                         val portal = server.text.toString().trim().trimEnd('/')
