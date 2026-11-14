@@ -7688,7 +7688,7 @@ class MainActivity : Activity() {
                         overScrollMode = View.OVER_SCROLL_NEVER
                         descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
                     }
-                    editorScroll.addView(form, ScrollView.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    editorScroll.addView(form, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     val editorBody = LinearLayout(this@MainActivity).apply {
                         orientation = LinearLayout.VERTICAL
                         addView(editorScroll, LinearLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.56f).toInt().coerceAtLeast(dp(220))))
