@@ -568,6 +568,16 @@ class MainActivity : Activity() {
             )
             else -> emptyMap()
         }
+        val profileShortcutTranslations = when (language) {
+            "en" -> mapOf("Profil" to "Profile", "Profil seç" to "Choose profile", "Profil Yönetimi" to "Profile Management", "Kapat" to "Close")
+            "de" -> mapOf("Profil" to "Profil", "Profil seç" to "Profil auswählen", "Profil Yönetimi" to "Profilverwaltung", "Kapat" to "Schließen")
+            "fr" -> mapOf("Profil" to "Profil", "Profil seç" to "Choisir un profil", "Profil Yönetimi" to "Gestion des profils", "Kapat" to "Fermer")
+            "it" -> mapOf("Profil" to "Profilo", "Profil seç" to "Scegli profilo", "Profil Yönetimi" to "Gestione profili", "Kapat" to "Chiudi")
+            "es" -> mapOf("Profil" to "Perfil", "Profil seç" to "Elegir perfil", "Profil Yönetimi" to "Administración de perfiles", "Kapat" to "Cerrar")
+            "ru" -> mapOf("Profil" to "Профиль", "Profil seç" to "Выбрать профиль", "Profil Yönetimi" to "Управление профилями", "Kapat" to "Закрыть")
+            "ar" -> mapOf("Profil" to "الملف الشخصي", "Profil seç" to "اختيار الملف الشخصي", "Profil Yönetimi" to "إدارة الملفات الشخصية", "Kapat" to "إغلاق")
+            else -> emptyMap()
+        }
         val profileUiTranslations = when (language) {
             "en" -> mapOf(
                 "Profiller" to "Profiles", "Kullanıcı profillerini oluştur ve yönet" to "Create and manage user profiles",
@@ -665,7 +675,7 @@ class MainActivity : Activity() {
             "ar" -> mapOf("Haftanın Filmleri" to "أفلام الأسبوع", "Haftanın Dizileri" to "مسلسلات الأسبوع", "Çıkış Yap" to "خروج", "Vazgeç" to "إلغاء")
             else -> emptyMap()
         }
-        return profileUiTranslations[value] ?: dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
+        return profileShortcutTranslations[value] ?: profileUiTranslations[value] ?: dynamicLabels[value] ?: translations[value] ?: common[language]?.get(value) ?: extraTranslations[language]?.get(value) ?: runtimeTranslations[language]?.get(value) ?: sharedUiTranslations[value] ?: value
     }
     // Android TV cihazlarında aynı anda daha az görsel işi yürüt; RAM'e göre güvenli bitmap bütçesi kullan.
     // Bound background poster work: an unbounded queue can exhaust small TV boxes.
@@ -1325,8 +1335,89 @@ class MainActivity : Activity() {
         })
         dateClockRow.addView(headerDateView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1))
         dateClockRow.addView(headerTimeView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1).apply {
-            setMargins(dp(14), 0, dp(22), 0)
+            setMargins(dp(14), 0, dp(10), 0)
         })
+
+        // Profile shortcut: visually matches the active theme and is the D-pad
+        // right-hand neighbour of Search. Date/time remain informational only.
+        val headerProfileButton = FrameLayout(this).apply {
+            id = View.generateViewId()
+            isFocusable = !isMobileLayout
+            isFocusableInTouchMode = !isMobileLayout
+            isClickable = true
+            contentDescription = t("Profil")
+            background = roundedDrawable(Color.TRANSPARENT, 16)
+            setPadding(dp(3), dp(3), dp(3), dp(3))
+            setOnFocusChangeListener { view, hasFocus ->
+                view.background = if (hasFocus) roundedDrawable(panel, 16, accentBright)
+                    else ColorDrawable(Color.TRANSPARENT)
+                view.scaleX = if (hasFocus) 1.08f else 1f
+                view.scaleY = if (hasFocus) 1.08f else 1f
+                view.elevation = if (hasFocus) dp(8).toFloat() else 0f
+            }
+            val avatar = object : View(this@MainActivity) {
+                private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                override fun onDraw(canvas: android.graphics.Canvas) {
+                    super.onDraw(canvas)
+                    val cx = width / 2f
+                    val cy = height / 2f
+                    val radius = (minOf(width, height) / 2f) - dp(2)
+                    paint.style = android.graphics.Paint.Style.FILL
+                    paint.color = accent
+                    canvas.drawCircle(cx, cy, radius, paint)
+                    paint.style = android.graphics.Paint.Style.STROKE
+                    paint.strokeWidth = dp(1.5f).toFloat()
+                    paint.color = accentBright
+                    canvas.drawCircle(cx, cy, radius, paint)
+                    paint.style = android.graphics.Paint.Style.FILL
+                    paint.color = Color.WHITE
+                    canvas.drawCircle(cx, cy - radius * 0.22f, radius * 0.25f, paint)
+                    val shoulders = android.graphics.RectF(
+                        cx - radius * 0.48f, cy + radius * 0.12f,
+                        cx + radius * 0.48f, cy + radius * 0.78f
+                    )
+                    canvas.drawRoundRect(shoulders, radius * 0.35f, radius * 0.35f, paint)
+                }
+            }
+            addView(avatar, FrameLayout.LayoutParams(dp(42), dp(42), Gravity.CENTER))
+            setOnClickListener {
+                val profileKey = "user_profiles"
+                val activeKey = "active_user_profile"
+                val names = runCatching {
+                    val json = org.json.JSONArray(prefs.getString(profileKey, null)
+                        ?: org.json.JSONArray().put("Ana Profil").toString())
+                    MutableList(json.length()) { index -> json.optString(index).trim() }
+                        .filter { it.isNotBlank() }
+                }.getOrElse { listOf("Ana Profil") }.ifEmpty { listOf("Ana Profil") }
+                val active = prefs.getString(activeKey, names.first()) ?: names.first()
+                val choices = names.map { name -> if (name == active) "✓  $name" else name }.toTypedArray()
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(t("Profil seç"))
+                    .setItems(choices) { _, which ->
+                        prefs.edit().putString(activeKey, names[which]).apply()
+                        render()
+                    }
+                    .setPositiveButton(t("Profil Yönetimi")) { _, _ ->
+                        settingsPage = "profiles"
+                        prefs.edit().putString("last_settings_page", settingsPage).apply()
+                        sidebarMode = "main"
+                        render()
+                    }
+                    .setNegativeButton(t("Kapat"), null)
+                    .show()
+            }
+            if (isMobileLayout) {
+                isFocusable = false
+                isFocusableInTouchMode = false
+            }
+        }
+        dateClockRow.addView(headerProfileButton, LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+            setMargins(dp(2), 0, dp(8), 0)
+        })
+        searchNavigationButton?.let { searchButton ->
+            searchButton.nextFocusRightId = headerProfileButton.id
+            headerProfileButton.nextFocusLeftId = searchButton.id
+        }
         headerClockHandler.removeCallbacks(headerClockRunnable)
         // The clock/date strip is attached later as an overlay above the scrolling viewport.
         // This keeps it fixed while every tab scrolls underneath it.
