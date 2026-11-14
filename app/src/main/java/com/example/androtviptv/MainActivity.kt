@@ -5120,22 +5120,37 @@ class MainActivity : Activity() {
                 clipChildren = false
                 clipToPadding = false
             }
-            val loadingArtwork = loadingArtworkBitmap ?: runCatching {
-                assets.open("kaisertv_loading_strip.jpg").use { BitmapFactory.decodeStream(it) }
-            }.getOrNull()?.also { loadingArtworkBitmap = it }
-            if (loadingArtwork != null) {
+            // Six independent bundled JPEG artworks: TV, film, series, cartoon, sports and documentary.
+            // Keep each poster as its own asset so the loading strip can be updated category by category.
+            val artworkAssets = listOf(
+                "loading_tv.jpg",
+                "loading_film.jpg",
+                "loading_series.jpg",
+                "loading_cartoon.jpg",
+                "loading_sports.jpg",
+                "loading_documentary.jpg"
+            )
+            val loadingArtworks = artworkAssets.mapNotNull { assetName ->
+                runCatching {
+                    assets.open(assetName).use { BitmapFactory.decodeStream(it) }
+                }.getOrNull()
+            }
+            if (loadingArtworks.isNotEmpty()) {
+                // Two identical groups allow a seamless, slow horizontal loop.
                 repeat(2) {
-                    posterTrack.addView(ImageView(this).apply {
-                        scaleType = ImageView.ScaleType.FIT_XY
-                        setBackgroundColor(Color.TRANSPARENT)
-                        setImageBitmap(loadingArtwork)
-                        clipToOutline = false
-                        contentDescription = null
-                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                    }, LinearLayout.LayoutParams(1, posterHeight))
+                    loadingArtworks.forEach { artwork ->
+                        posterTrack.addView(ImageView(this).apply {
+                            scaleType = ImageView.ScaleType.FIT_XY
+                            setBackgroundColor(Color.TRANSPARENT)
+                            setImageBitmap(artwork)
+                            clipToOutline = false
+                            contentDescription = null
+                            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                        }, LinearLayout.LayoutParams(1, posterHeight))
+                    }
                 }
                 posterStage.addView(posterTrack, FrameLayout.LayoutParams(-2, -1, Gravity.CENTER_VERTICAL))
-                // Soft horizontal edge fade blends the artwork into each theme.
+                // Soft horizontal edge fade blends the artwork into the active theme.
                 val edgeFade = object : View(this) {
                     private val fadePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
                     override fun onDraw(canvas: android.graphics.Canvas) {
@@ -5152,26 +5167,30 @@ class MainActivity : Activity() {
                 posterStage.addView(edgeFade, FrameLayout.LayoutParams(-1, -1))
                 posterStage.post posterStageLayout@{
                     if (posterStage.isAttachedToWindow) {
-                    val segmentWidth = posterStage.width
-                    if (segmentWidth > 0) {
-                        for (i in 0 until posterTrack.childCount) {
-                            posterTrack.getChildAt(i).layoutParams = LinearLayout.LayoutParams(segmentWidth, posterHeight)
-                        }
-                        posterTrack.requestLayout()
-                        posterTrack.post {
-                            if (posterTrack.isAttachedToWindow && posterTrack.width >= segmentWidth * 2) {
-                                android.animation.ValueAnimator.ofFloat(0f, -segmentWidth.toFloat()).apply {
-                                    duration = 24000L
-                                    repeatCount = android.animation.ValueAnimator.INFINITE
-                                    interpolator = android.view.animation.LinearInterpolator()
-                                    addUpdateListener { animator ->
-                                        if (posterTrack.isAttachedToWindow) posterTrack.translationX = animator.animatedValue as Float
+                        val viewportWidth = posterStage.width
+                        if (viewportWidth > 0) {
+                            val posterWidth = (viewportWidth / loadingArtworks.size).coerceAtLeast(1)
+                            for (i in 0 until posterTrack.childCount) {
+                                posterTrack.getChildAt(i).layoutParams =
+                                    LinearLayout.LayoutParams(posterWidth, posterHeight)
+                            }
+                            posterTrack.requestLayout()
+                            posterTrack.post {
+                                if (posterTrack.isAttachedToWindow && posterTrack.width > viewportWidth) {
+                                    android.animation.ValueAnimator.ofFloat(0f, -viewportWidth.toFloat()).apply {
+                                        duration = 24000L
+                                        repeatCount = android.animation.ValueAnimator.INFINITE
+                                        interpolator = android.view.animation.LinearInterpolator()
+                                        addUpdateListener { animator ->
+                                            if (posterTrack.isAttachedToWindow) {
+                                                posterTrack.translationX = animator.animatedValue as Float
+                                            }
+                                        }
+                                        start()
                                     }
-                                    start()
                                 }
                             }
                         }
-                    }
                     }
                 }
             }
