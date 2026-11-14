@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInAs(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if signedInAs(userId);
+      // Account root writes are reserved for trusted Cloud Functions.
+      allow write: if false;
+
+      match /devices/{deviceId} {
+        allow read: if signedInAs(userId);
+        // Device registration and removal must go through callable functions
+        // so the three-device limit is checked atomically on the server.
+        allow write: if false;
+      }
+
+      match /profiles/{profileId} {
+        allow read, create, update, delete: if signedInAs(userId);
+      }
+
+      match /preferences/{documentId} {
+        allow read, create, update, delete: if signedInAs(userId);
+      }
+
+      match /favorites/{contentId} {
+        allow read, create, update, delete: if signedInAs(userId);
+      }
+
+      match /watchHistory/{contentId} {
+        allow read, create, update, delete: if signedInAs(userId);
+      }
+
+      match /sources/{sourceId} {
+        // Do not sync passwords, MAC addresses, portal tokens, or raw URLs
+        // to Firestore. Source documents are metadata-only if enabled later.
+        allow read, create, update, delete: if signedInAs(userId)
+          && !request.resource.data.keys().hasAny([
+            'password', 'username', 'mac', 'token', 'portalUrl', 'playlistUrl'
+          ]);
+      }
+    }
+  }
+}
