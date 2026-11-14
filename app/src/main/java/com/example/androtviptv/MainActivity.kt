@@ -7206,6 +7206,37 @@ class MainActivity : Activity() {
                 LinearLayout.LayoutParams(dp(118), dp(42)).apply { gravity = Gravity.CENTER_VERTICAL })
             content.addView(header, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
+        fun accountText(key: String): String {
+            val selected = prefs.getString("app_language", "system") ?: "system"
+            val language = if (selected == "system") java.util.Locale.getDefault().language else selected
+            val dictionary = when (language) {
+                "en" -> mapOf(
+                    "Hesap Yönetimi" to "Account Management", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Sign in or create a KaiserTV+ account",
+                    "KaiserTV+ Hesabı" to "KaiserTV+ Account", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Create your account, sign in and manage devices.",
+                    "Hesap hizmeti henüz yapılandırılmadı. Firebase projesi ve app/google-services.json eklendiğinde giriş açılacak." to "Account service is not configured yet. Sign-in will be enabled after the Firebase project and app/google-services.json are added.",
+                    "Giriş yapılmış hesap" to "Signed-in account", "E-posta doğrulandı" to "Email verified", "E-posta doğrulaması bekleniyor" to "Email verification pending",
+                    "Çıkış yap" to "Sign out", "Cihaz sınırı: Hesap başına en fazla 3 cihaz. Cihaz kaydı, Firebase App Check ve sunucu kurulumu tamamlandığında etkinleşecek." to "Device limit: up to 3 devices per account. Device registration will be enabled after Firebase App Check and server setup.",
+                    "KaiserTV+ hesabına giriş yap" to "Sign in to KaiserTV+", "Telefonunda ve Android TV cihazlarında aynı hesabı kullan." to "Use the same account on your phone and Android TV.",
+                    "E-posta" to "Email", "Şifre" to "Password", "Giriş yap" to "Sign in", "Hesap oluştur" to "Create account",
+                    "E-posta ve şifreyi doldur." to "Enter your email and password.", "Geçerli e-posta gir ve en az 6 karakterli şifre belirle." to "Enter a valid email and choose a password with at least 6 characters.",
+                    "Doğrulama bağlantısı e-posta adresine gönderildi." to "A verification link was sent to your email address.",
+                    "Şifremi unuttum" to "Forgot password", "Şifre sıfırlamak için e-posta adresini yaz." to "Enter your email to reset your password.",
+                    "Şifre sıfırlama bağlantısı gönderildi." to "Password reset link sent.", "Google ile devam et" to "Continue with Google",
+                    "Google girişi için Firebase OAuth istemci kimliği ve Credential Manager bağlantısı henüz yapılandırılmadı." to "Google sign-in is not ready yet; Firebase OAuth client ID and Credential Manager still need configuration.",
+                    "Her hesap en fazla 3 cihazda kullanılacak. Favoriler, izleme geçmişi ve profil ayarları bulutla eşitlenecek." to "Each account can use up to 3 devices. Favorites, watch history and profile settings will sync to the cloud.",
+                    "Giriş başarılı." to "Signed in successfully.", "Giriş başarısız." to "Sign-in failed.", "Giriş yapılamadı." to "Could not sign in.",
+                    "Hesap oluşturulamadı." to "Could not create account.", "İşlem başarısız." to "Operation failed."
+                )
+                "de" -> mapOf("Hesap Yönetimi" to "Kontoverwaltung", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Bei KaiserTV+ anmelden oder Konto erstellen", "KaiserTV+ Hesabı" to "KaiserTV+ Konto", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Konto erstellen, anmelden und Geräte verwalten.", "Giriş yapılmış hesap" to "Angemeldetes Konto", "Çıkış yap" to "Abmelden", "E-posta" to "E-Mail", "Şifre" to "Passwort", "Giriş yap" to "Anmelden", "Hesap oluştur" to "Konto erstellen", "Şifremi unuttum" to "Passwort vergessen", "Google ile devam et" to "Mit Google fortfahren")
+                "fr" -> mapOf("Hesap Yönetimi" to "Gestion du compte", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Connectez-vous ou créez un compte KaiserTV+", "KaiserTV+ Hesabı" to "Compte KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Créez votre compte, connectez-vous et gérez vos appareils.", "Giriş yapılmış hesap" to "Compte connecté", "Çıkış yap" to "Déconnexion", "E-posta" to "E-mail", "Şifre" to "Mot de passe", "Giriş yap" to "Connexion", "Hesap oluştur" to "Créer un compte", "Şifremi unuttum" to "Mot de passe oublié", "Google ile devam et" to "Continuer avec Google")
+                "it" -> mapOf("Hesap Yönetimi" to "Gestione account", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Accedi o crea un account KaiserTV+", "KaiserTV+ Hesabı" to "Account KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Crea il tuo account, accedi e gestisci i dispositivi.", "Giriş yapılmış hesap" to "Account connesso", "Çıkış yap" to "Esci", "E-posta" to "Email", "Şifre" to "Password", "Giriş yap" to "Accedi", "Hesap oluştur" to "Crea account", "Şifremi unuttum" to "Password dimenticata", "Google ile devam et" to "Continua con Google")
+                "es" -> mapOf("Hesap Yönetimi" to "Gestión de cuenta", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Inicia sesión o crea una cuenta KaiserTV+", "KaiserTV+ Hesabı" to "Cuenta KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Crea tu cuenta, inicia sesión y administra tus dispositivos.", "Giriş yapılmış hesap" to "Cuenta conectada", "Çıkış yap" to "Cerrar sesión", "E-posta" to "Correo electrónico", "Şifre" to "Contraseña", "Giriş yap" to "Iniciar sesión", "Hesap oluştur" to "Crear cuenta", "Şifremi unuttum" to "Olvidé mi contraseña", "Google ile devam et" to "Continuar con Google")
+                "ru" -> mapOf("Hesap Yönetimi" to "Управление аккаунтом", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "Войдите или создайте аккаунт KaiserTV+", "KaiserTV+ Hesabı" to "Аккаунт KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "Создайте аккаунт, войдите и управляйте устройствами.", "Giriş yapılmış hesap" to "Выполнен вход", "Çıkış yap" to "Выйти", "E-posta" to "Эл. почта", "Şifre" to "Пароль", "Giriş yap" to "Войти", "Hesap oluştur" to "Создать аккаунт", "Şifremi unuttum" to "Забыли пароль", "Google ile devam et" to "Продолжить с Google")
+                "ar" -> mapOf("Hesap Yönetimi" to "إدارة الحساب", "KaiserTV+ hesabına giriş yap veya hesap oluştur" to "سجّل الدخول أو أنشئ حساب KaiserTV+", "KaiserTV+ Hesabı" to "حساب KaiserTV+", "Hesabını oluştur, giriş yap ve cihazlarını yönet." to "أنشئ حسابك وسجّل الدخول وأدر أجهزتك.", "Giriş yapılmış hesap" to "تم تسجيل الدخول", "Çıkış yap" to "تسجيل الخروج", "E-posta" to "البريد الإلكتروني", "Şifre" to "كلمة المرور", "Giriş yap" to "تسجيل الدخول", "Hesap oluştur" to "إنشاء حساب", "Şifremi unuttum" to "نسيت كلمة المرور", "Google ile devam et" to "المتابعة باستخدام Google")
+                else -> emptyMap()
+            }
+            return dictionary[key] ?: key
+        }
         var settingsGridRow: LinearLayout? = null
         var settingsGridCount = 0
         fun option(title: String, detail: String, action: () -> Unit) {
@@ -7250,10 +7281,10 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
             }
             textColumn.addView(TextView(this).apply {
-                text = t(title); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                text = if (title == "Hesap Yönetimi") accountText(title) else t(title); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             })
             textColumn.addView(TextView(this).apply {
-                text = t(detail); textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
+                text = if (title == "Hesap Yönetimi") accountText(detail) else t(detail); textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
             })
             card.addView(textColumn)
             if (settingsPage == "main") {
@@ -7319,7 +7350,7 @@ class MainActivity : Activity() {
 
                 if (accountRepository == null) {
                     content.addView(TextView(this).apply {
-                        text = "Hesap hizmeti henüz yapılandırılmadı. Firebase projesi ve app/google-services.json eklendiğinde giriş açılacak."
+                        text = accountText("Hesap hizmeti henüz yapılandırılmadı. Firebase projesi ve app/google-services.json eklendiğinde giriş açılacak.")
                         textSize = 16f
                         setTextColor(muted)
                         setPadding(dp(18), dp(18), dp(18), dp(18))
@@ -7331,7 +7362,7 @@ class MainActivity : Activity() {
                         setPadding(dp(22), dp(20), dp(22), dp(20))
                     }
                     accountPanel.addView(TextView(this).apply {
-                        text = "Giriş yapılmış hesap"
+                        text = accountText("Giriş yapılmış hesap")
                         textSize = 21f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(Color.WHITE)
@@ -7347,7 +7378,7 @@ class MainActivity : Activity() {
                         textSize = 14f
                         setTextColor(if (currentUser.isEmailVerified) accentBright else muted)
                     })
-                    accountPanel.addView(makeButton("Çıkış yap", false) {
+                    accountPanel.addView(makeButton(accountText("Çıkış yap"), false) {
                         accountRepository.signOut()
                         render()
                     }, LinearLayout.LayoutParams(dp(180), dp(46)).apply { topMargin = dp(18) })
@@ -7355,7 +7386,7 @@ class MainActivity : Activity() {
                         setMargins(dp(8), dp(8), dp(8), dp(12))
                     })
                     content.addView(TextView(this).apply {
-                        text = "Cihaz sınırı: Hesap başına en fazla 3 cihaz. Cihaz kaydı, Firebase App Check ve sunucu kurulumu tamamlandığında etkinleşecek."
+                        text = accountText("Cihaz sınırı: Hesap başına en fazla 3 cihaz. Cihaz kaydı, Firebase App Check ve sunucu kurulumu tamamlandığında etkinleşecek.")
                         textSize = 14f
                         setTextColor(muted)
                         setPadding(dp(14), dp(12), dp(14), dp(12))
@@ -7367,18 +7398,18 @@ class MainActivity : Activity() {
                         setPadding(dp(22), dp(20), dp(22), dp(20))
                     }
                     form.addView(TextView(this).apply {
-                        text = "KaiserTV+ hesabına giriş yap"
+                        text = accountText("KaiserTV+ hesabına giriş yap")
                         textSize = 22f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(Color.WHITE)
                     })
                     form.addView(TextView(this).apply {
-                        text = "Telefonunda ve Android TV cihazlarında aynı hesabı kullan."
+                        text = accountText("Telefonunda ve Android TV cihazlarında aynı hesabı kullan.")
                         textSize = 14f
                         setTextColor(muted)
                         setPadding(0, dp(6), 0, dp(16))
                     })
-                    val emailField = accountInput("E-posta")
+                    val emailField = accountInput(accountText("E-posta"))
                     val passwordField = accountInput("Şifre", true)
                     form.addView(emailField, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(10) })
                     form.addView(passwordField, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(14) })
@@ -7387,54 +7418,54 @@ class MainActivity : Activity() {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
                     }
-                    emailActions.addView(makeButton("Giriş yap", true) {
+                    emailActions.addView(makeButton(accountText("Giriş yap"), true) {
                         val email = emailField.text.toString().trim()
                         val passwordValue = passwordField.text.toString()
                         if (email.isBlank() || passwordValue.isBlank()) {
-                            accountMessage("E-posta ve şifreyi doldur.")
+                            accountMessage(accountText("E-posta ve şifreyi doldur."))
                         } else {
                             try {
                                 accountRepository.signInWithEmail(email, passwordValue)
                                     .addOnSuccessListener {
-                                        accountMessage("Giriş başarılı.")
+                                        accountMessage(accountText("Giriş başarılı."))
                                         settingsPage = "account"
                                         render()
                                     }
-                                    .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: "Giriş başarısız.") }
-                            } catch (error: Exception) { accountMessage(error.localizedMessage ?: "Giriş yapılamadı.") }
+                                    .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("Giriş başarısız.")) }
+                            } catch (error: Exception) { accountMessage(error.localizedMessage ?: accountText("Giriş yapılamadı.")) }
                         }
                     }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { rightMargin = dp(8) })
-                    emailActions.addView(makeButton("Hesap oluştur", false) {
+                    emailActions.addView(makeButton(accountText("Hesap oluştur"), false) {
                         val email = emailField.text.toString().trim()
                         val passwordValue = passwordField.text.toString()
                         if (email.isBlank() || passwordValue.length < 6) {
-                            accountMessage("Geçerli e-posta gir ve en az 6 karakterli şifre belirle.")
+                            accountMessage(accountText("Geçerli e-posta gir ve en az 6 karakterli şifre belirle."))
                         } else {
                             try {
                                 accountRepository.createAccount(email, passwordValue)
-                                    .addOnSuccessListener { accountMessage("Doğrulama bağlantısı e-posta adresine gönderildi.") }
-                                    .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: "Hesap oluşturulamadı.") }
-                            } catch (error: Exception) { accountMessage(error.localizedMessage ?: "Hesap oluşturulamadı.") }
+                                    .addOnSuccessListener { accountMessage(accountText("Doğrulama bağlantısı e-posta adresine gönderildi.")) }
+                                    .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("Hesap oluşturulamadı.")) }
+                            } catch (error: Exception) { accountMessage(error.localizedMessage ?: accountText("Hesap oluşturulamadı.")) }
                         }
                     }, LinearLayout.LayoutParams(0, dp(48), 1f))
                     form.addView(emailActions, LinearLayout.LayoutParams(-1, dp(48)))
 
-                    form.addView(makeButton("Şifremi unuttum", false) {
+                    form.addView(makeButton(accountText("Şifremi unuttum"), false) {
                         val email = emailField.text.toString().trim()
-                        if (email.isBlank()) accountMessage("Şifre sıfırlamak için e-posta adresini yaz.")
+                        if (email.isBlank()) accountMessage(accountText("Şifre sıfırlamak için e-posta adresini yaz."))
                         else accountRepository.sendPasswordReset(email)
-                            .addOnSuccessListener { accountMessage("Şifre sıfırlama bağlantısı gönderildi.") }
-                            .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: "İşlem başarısız.") }
+                            .addOnSuccessListener { accountMessage(accountText("Şifre sıfırlama bağlantısı gönderildi.")) }
+                            .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
                     }, LinearLayout.LayoutParams(dp(210), dp(44)).apply { topMargin = dp(10) })
 
-                    form.addView(makeButton("Google ile devam et", false) {
-                        accountMessage("Google girişi için Firebase OAuth istemci kimliği ve Credential Manager bağlantısı henüz yapılandırılmadı.")
+                    form.addView(makeButton(accountText("Google ile devam et"), false) {
+                        accountMessage(accountText("Google girişi için Firebase OAuth istemci kimliği ve Credential Manager bağlantısı henüz yapılandırılmadı."))
                     }, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(16) })
                     content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(dp(8), dp(8), dp(8), dp(12))
                     })
                     content.addView(TextView(this).apply {
-                        text = "Her hesap en fazla 3 cihazda kullanılacak. Favoriler, izleme geçmişi ve profil ayarları bulutla eşitlenecek."
+                        text = accountText("Her hesap en fazla 3 cihazda kullanılacak. Favoriler, izleme geçmişi ve profil ayarları bulutla eşitlenecek.")
                         textSize = 14f
                         setTextColor(muted)
                         setPadding(dp(18), dp(8), dp(18), dp(18))
