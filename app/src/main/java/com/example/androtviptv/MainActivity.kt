@@ -3372,19 +3372,38 @@ class MainActivity : Activity() {
                                     publishPartialSection(force = true)
 
                                     if (lastPage > 1) {
-                                        val pageExecutor = Executors.newFixedThreadPool(3)
+                                        // A bounded pool increases portal throughput without flooding it.
+                                        val tvPageWorkers = 6
+                                        val pageExecutor = Executors.newFixedThreadPool(tvPageWorkers)
+                                        val failedTvPages = java.util.concurrent.ConcurrentLinkedQueue<Int>()
                                         try {
                                             val nextPage = java.util.concurrent.atomic.AtomicInteger(2)
                                             val completedPages = java.util.concurrent.atomic.AtomicInteger(1)
-                                            val workers = (0 until 3).map {
+                                            val workers = (0 until tvPageWorkers).map {
                                                 pageExecutor.submit {
                                                     while (true) {
                                                         val page = nextPage.getAndIncrement()
                                                         if (page > lastPage) break
-                                                        val arr = requestList(categoryId, page)
+                                                        var arr = JSONArray()
+                                                        var attempt = 0
+                                                        while (attempt < 3 && arr.length() == 0) {
+                                                            try {
+                                                                arr = requestList(categoryId, page)
+                                                            } catch (e: Exception) {
+                                                                android.util.Log.w("KaiserTV", "Stalker TV page=$page retry=${attempt + 1}", e)
+                                                            }
+                                                            if (arr.length() == 0 && attempt < 2) {
+                                                                try { Thread.sleep(200L * (attempt + 1)) } catch (_: InterruptedException) {
+                                                                    Thread.currentThread().interrupt()
+                                                                    break
+                                                                }
+                                                            }
+                                                            attempt++
+                                                        }
                                                         if (arr.length() > 0) consumePage(arr, categoryName)
+                                                        else failedTvPages.add(page)
                                                         val completed = completedPages.incrementAndGet()
-                                                        if (completed % 10 == 0 || completed == lastPage) {
+                                                        if (completed % 6 == 0 || completed == lastPage) {
                                                             runOnUiThread {
                                                                 updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} kanal, $completed/$lastPage sayfa)")
                                                             }
@@ -3396,6 +3415,9 @@ class MainActivity : Activity() {
                                             workers.forEach { it.get() }
                                         } finally {
                                             pageExecutor.shutdownNow()
+                                        }
+                                        if (failedTvPages.isNotEmpty()) {
+                                            failed.add("$label eksik sayfalar: ${failedTvPages.sorted().joinToString(",")}")
                                         }
                                     }
                                 }
@@ -3639,14 +3661,13 @@ class MainActivity : Activity() {
 
                 runOnUiThread {
                     isLoadingSource = false
-                    if (!anySectionLoaded) {
-                        updateLoadingMessage( "${source.name}: katalog alınamadı.")
+                    if (!anySectionLoaded || failed.isNotEmpty()) {
+                        updateLoadingMessage("${source.name}: katalog eksik kaldı. Tekrar deneyin.")
                         render()
-                        showConnectionError(source.name, "Kataloglar alınamadı: ${failed.joinToString()}")
+                        showConnectionError(source.name, if (failed.isEmpty()) "Kataloglar alınamadı." else "Eksik katalog bölümleri/sayfaları: ${failed.joinToString()}")
                     } else {
                         hasLoadedSource = true
-                        updateLoadingMessage("${source.name}: yükleme tamamlandı" +
-                            if (failed.isNotEmpty()) " • Eksik: ${failed.joinToString()}" else "")
+                        updateLoadingMessage("${source.name}: yükleme tamamlandı")
                         render()
                         publishHomeChannel()
                         run {
@@ -3929,10 +3950,16 @@ class MainActivity : Activity() {
                         } else {
                             "${source.name}: ${totalLoaded} içerik yüklendi. Eksik yanıt: ${failedParts.distinct().joinToString()}."
                         }
-                        hasLoadedSource = true
-                        render()
-                        publishHomeChannel()
-                        tryOpenPendingTvHomeItem()
+                        if (failedParts.isEmpty()) {
+                            hasLoadedSource = true
+                            render()
+                            publishHomeChannel()
+                            tryOpenPendingTvHomeItem()
+                        } else {
+                            status.text = "${source.name}: katalog eksik kaldı. Tekrar deneyin: ${failedParts.distinct().joinToString()}"
+                            render()
+                            showConnectionError(source.name, "Eksik katalog bölümleri: ${failedParts.distinct().joinToString()}")
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -5078,74 +5105,102 @@ class MainActivity : Activity() {
                 bottomMargin = dp(if (isMobileLayout) 2 else 6)
             })
 
-            // Real poster ribbon: use artwork already present in the loaded source catalogue.
-            val loadingPosters = items.asSequence()
-                .filter { it.icon.startsWith("http://", true) || it.icon.startsWith("https://", true) }
-                .distinctBy { it.icon }
-                .take(7)
-                .toList()
-            if (loadingPosters.isNotEmpty()) {
-                val posterStage = FrameLayout(this).apply {
-                    clipChildren = false
-                    clipToPadding = false
-                    background = ColorDrawable(Color.TRANSPARENT)
-                }
-                // Edge-to-edge rectangular artwork; no circular crops, gaps, card fill or backlight.
-                val posterHeight = dp(if (isMobileLayout) 58 else 124)
-                val posterWidth = dp(if (isMobileLayout) 92 else 166)
-                val posterTrack = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    clipChildren = false
-                    clipToPadding = false
-                }
-                repeat(2) {
-                    loadingPosters.forEach { media ->
-                        val poster = ImageView(this).apply {
-                            scaleType = ImageView.ScaleType.CENTER_CROP
-                            setBackgroundColor(Color.TRANSPARENT)
-                            clipToOutline = false
-                            elevation = 0f
-                        }
-                        posterTrack.addView(poster, LinearLayout.LayoutParams(posterWidth, posterHeight))
-                        loadPoster(media.icon, poster)
-                    }
-                }
-                posterStage.addView(posterTrack, FrameLayout.LayoutParams(-2, -1, Gravity.CENTER_VERTICAL))
-                // Fade only the top and bottom edges into the active theme background.
-                val edgeFade = object : View(this) {
-                    private val fadePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                    override fun onDraw(canvas: android.graphics.Canvas) {
-                        super.onDraw(canvas)
-                        val h = height.toFloat()
-                        val fade = dp(if (isMobileLayout) 12 else 24).toFloat()
-                        fadePaint.shader = android.graphics.LinearGradient(0f, 0f, 0f, fade,
-                            bg, Color.TRANSPARENT, android.graphics.Shader.TileMode.CLAMP)
-                        canvas.drawRect(0f, 0f, width.toFloat(), fade, fadePaint)
-                        fadePaint.shader = android.graphics.LinearGradient(0f, h - fade, 0f, h,
-                            Color.TRANSPARENT, bg, android.graphics.Shader.TileMode.CLAMP)
-                        canvas.drawRect(0f, h - fade, width.toFloat(), h, fadePaint)
-                    }
-                }
-                posterStage.addView(edgeFade, FrameLayout.LayoutParams(-1, -1))
-                posterTrack.post {
-                    val cycleWidth = posterTrack.width / 2
-                    if (cycleWidth > 0 && posterTrack.isAttachedToWindow) {
-                        android.animation.ValueAnimator.ofFloat(0f, -cycleWidth.toFloat()).apply {
-                            duration = 22000L
-                            repeatCount = android.animation.ValueAnimator.INFINITE
-                            interpolator = android.view.animation.LinearInterpolator()
-                            addUpdateListener { animator ->
-                                if (posterTrack.isAttachedToWindow) posterTrack.translationX = animator.animatedValue as Float
-                            }
-                            start()
-                        }
-                    }
-                }
-                loadingPanel.addView(posterStage, LinearLayout.LayoutParams(-1, posterHeight).apply {
-                    topMargin = dp(if (isMobileLayout) 4 else 8)
-                })
+            // Built-in KaiserTV+ loading artwork; independent from source posters.
+            val posterStage = FrameLayout(this).apply {
+                clipChildren = false
+                clipToPadding = false
+                background = ColorDrawable(Color.TRANSPARENT)
             }
+            val posterHeight = dp(if (isMobileLayout) 58 else 124)
+            val posterWidth = dp(if (isMobileLayout) 92 else 166)
+            val posterTrack = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                clipChildren = false
+                clipToPadding = false
+            }
+            val builtInTiles = listOf(
+                Triple("▶", "CANLI TV", 0),
+                Triple("▣", "SİNEMA", 1),
+                Triple("◉", "DİZİLER", 2),
+                Triple("✦", "KAISERTV+", 0),
+                Triple("▤", "KEŞFET", 1),
+                Triple("◎", "FAVORİLER", 2),
+                Triple("▶", "CANLI TV", 0)
+            )
+            repeat(2) {
+                builtInTiles.forEach { tile ->
+                    val tileView = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER
+                        setPadding(dp(8), dp(5), dp(8), dp(5))
+                        val colors = when (tile.third) {
+                            1 -> intArrayOf(Color.rgb(24, 36, 76), accentBright)
+                            2 -> intArrayOf(Color.rgb(18, 66, 62), accentBright)
+                            else -> intArrayOf(Color.rgb(42, 25, 72), accentBright)
+                        }
+                        background = android.graphics.drawable.GradientDrawable(
+                            android.graphics.drawable.GradientDrawable.Orientation.TL_BR, colors
+                        ).apply { cornerRadius = dp(2).toFloat() }
+                    }
+                    tileView.addView(TextView(this).apply {
+                        text = "KaiserTV+"
+                        textSize = if (isMobileLayout) 7f else 10f
+                        setTypeface(null, android.graphics.Typeface.BOLD_ITALIC)
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                    })
+                    tileView.addView(TextView(this).apply {
+                        text = tile.first
+                        textSize = if (isMobileLayout) 20f else 34f
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                    }, LinearLayout.LayoutParams(-1, 0, 1f))
+                    tileView.addView(TextView(this).apply {
+                        text = tile.second
+                        textSize = if (isMobileLayout) 7f else 10f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                    })
+                    posterTrack.addView(tileView, LinearLayout.LayoutParams(posterWidth, posterHeight).apply {
+                        marginEnd = dp(2)
+                    })
+                }
+            }
+            posterStage.addView(posterTrack, FrameLayout.LayoutParams(-2, -1, Gravity.CENTER_VERTICAL))
+            val edgeFade = object : View(this) {
+                private val fadePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                override fun onDraw(canvas: android.graphics.Canvas) {
+                    super.onDraw(canvas)
+                    val h = height.toFloat()
+                    val fade = dp(if (isMobileLayout) 12 else 24).toFloat()
+                    fadePaint.shader = android.graphics.LinearGradient(0f, 0f, 0f, fade,
+                        bg, Color.TRANSPARENT, android.graphics.Shader.TileMode.CLAMP)
+                    canvas.drawRect(0f, 0f, width.toFloat(), fade, fadePaint)
+                    fadePaint.shader = android.graphics.LinearGradient(0f, h - fade, 0f, h,
+                        Color.TRANSPARENT, bg, android.graphics.Shader.TileMode.CLAMP)
+                    canvas.drawRect(0f, h - fade, width.toFloat(), h, fadePaint)
+                }
+            }
+            posterStage.addView(edgeFade, FrameLayout.LayoutParams(-1, -1))
+            posterTrack.post {
+                val cycleWidth = posterTrack.width / 2
+                if (cycleWidth > 0 && posterTrack.isAttachedToWindow) {
+                    android.animation.ValueAnimator.ofFloat(0f, -cycleWidth.toFloat()).apply {
+                        duration = 22000L
+                        repeatCount = android.animation.ValueAnimator.INFINITE
+                        interpolator = android.view.animation.LinearInterpolator()
+                        addUpdateListener { animator ->
+                            if (posterTrack.isAttachedToWindow) posterTrack.translationX = animator.animatedValue as Float
+                        }
+                        start()
+                    }
+                }
+            }
+            loadingPanel.addView(posterStage, LinearLayout.LayoutParams(-1, posterHeight).apply {
+                topMargin = dp(if (isMobileLayout) 4 else 8)
+            })
 
 
             // Fully transparent overall progress: no card, no filled container.
