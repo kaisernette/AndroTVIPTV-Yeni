@@ -8285,7 +8285,8 @@ class MainActivity : Activity() {
                             setTextColor(if (key == selectedCategory) Color.rgb(7, 18, 22) else Color.WHITE)
                             setOnClickListener {
                                 showAvatarCategory(key)
-                                categoryStrip.childrenSequence().filterIsInstance<TextView>().forEach { item ->
+                                for (index in 0 until categoryStrip.childCount) {
+                                    val item = categoryStrip.getChildAt(index) as? TextView ?: continue
                                     val active = item.tag == key
                                     item.background = roundedDrawable(if (active) accent else panel, 18,
                                         if (active) accentBright else Color.TRANSPARENT)
