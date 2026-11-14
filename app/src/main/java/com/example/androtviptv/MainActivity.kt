@@ -1439,30 +1439,12 @@ class MainActivity : Activity() {
             }
             addView(avatar, FrameLayout.LayoutParams(dp(42), dp(42), Gravity.CENTER))
             setOnClickListener {
-                val profileKey = "user_profiles"
-                val activeKey = "active_user_profile"
-                val names = runCatching {
-                    val json = org.json.JSONArray(prefs.getString(profileKey, null)
-                        ?: org.json.JSONArray().put("Ana Profil").toString())
-                    MutableList(json.length()) { index -> json.optString(index).trim() }
-                        .filter { it.isNotBlank() }
-                }.getOrElse { listOf("Ana Profil") }.ifEmpty { listOf("Ana Profil") }
-                val active = prefs.getString(activeKey, names.first()) ?: names.first()
-                val choices = names.map { name -> if (name == active) "✓  $name" else name }.toTypedArray()
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle(t("Profil seç"))
-                    .setItems(choices) { _, which ->
-                        prefs.edit().putString(activeKey, names[which]).apply()
-                        render()
-                    }
-                    .setPositiveButton(t("Profil Yönetimi")) { _, _ ->
-                        settingsPage = "profiles"
-                        prefs.edit().putString("last_settings_page", settingsPage).apply()
-                        sidebarMode = "main"
-                        render()
-                    }
-                    .setNegativeButton(t("Kapat"), null)
-                    .show()
+                // The top-right avatar is the single entry point for all profile actions.
+                // Open the profile hub directly instead of showing a second profile dialog.
+                settingsPage = "profiles"
+                prefs.edit().putString("last_settings_page", settingsPage).apply()
+                sidebarMode = "main"
+                render()
             }
             if (isMobileLayout) {
                 isFocusable = false
@@ -7397,7 +7379,6 @@ class MainActivity : Activity() {
                 option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İzleme Geçmişi", "Son izlenen içerikleri görüntüle") { settingsPage = "history"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Profiller", "Kullanıcı profillerini oluştur ve yönet") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Hakkında", "Uygulama sürümü ve teknik bilgiler") { settingsPage = "about"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 if (!prefs.getString("last_stalker_catalog_diagnostics", "").isNullOrBlank()) {
                     option("Stalker Tanılama", "Son MAC katalog sonucunu görüntüle ve kopyala") { showStalkerDiagnostics() }
