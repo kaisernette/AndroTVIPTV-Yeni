@@ -5221,6 +5221,81 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
             })
 
+            // Real poster ribbon: use artwork already present in the loaded source catalogue.
+            val loadingPosters = items.asSequence()
+                .filter { it.icon.startsWith("http://", true) || it.icon.startsWith("https://", true) }
+                .distinctBy { it.icon }
+                .take(7)
+                .toList()
+            if (loadingPosters.isNotEmpty()) {
+                val posterStage = FrameLayout(this).apply {
+                    clipChildren = false
+                    clipToPadding = false
+                    background = ColorDrawable(Color.TRANSPARENT)
+                }
+                val posterHeight = dp(if (isMobileLayout) 58 else 116)
+                val posterWidth = dp(if (isMobileLayout) 82 else 166)
+                val posterGap = dp(if (isMobileLayout) 7 else 14)
+                val posterTrack = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    clipChildren = false
+                    clipToPadding = false
+                }
+                repeat(2) {
+                    loadingPosters.forEach { media ->
+                        val poster = ImageView(this).apply {
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                            background = roundedDrawable(Color.rgb(5, 20, 42), 10, Color.argb(130, 0, 190, 255))
+                            clipToOutline = true
+                            elevation = 0f
+                        }
+                        posterTrack.addView(poster, LinearLayout.LayoutParams(posterWidth, posterHeight).apply {
+                            setMargins(0, 0, posterGap, 0)
+                        })
+                        loadPoster(media.icon, poster)
+                    }
+                }
+                val waveView = object : View(this) {
+                    private val wavePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        style = android.graphics.Paint.Style.STROKE
+                        strokeWidth = dp(2).toFloat()
+                        color = Color.rgb(0, 174, 255)
+                        alpha = 150
+                    }
+                    override fun onDraw(canvas: android.graphics.Canvas) {
+                        super.onDraw(canvas)
+                        val w = width.toFloat()
+                        val h = height.toFloat()
+                        val path = android.graphics.Path().apply {
+                            moveTo(0f, h * 0.18f)
+                            cubicTo(w * 0.18f, h * 0.02f, w * 0.28f, h * 0.92f, w * 0.50f, h * 0.62f)
+                            cubicTo(w * 0.72f, h * 0.30f, w * 0.84f, h * 0.08f, w, h * 0.36f)
+                        }
+                        canvas.drawPath(path, wavePaint)
+                    }
+                }
+                posterStage.addView(waveView, FrameLayout.LayoutParams(-1, -1))
+                posterStage.addView(posterTrack, FrameLayout.LayoutParams(-2, -1, Gravity.CENTER_VERTICAL))
+                posterTrack.post {
+                    val cycleWidth = posterTrack.width / 2
+                    if (cycleWidth > 0 && posterTrack.isAttachedToWindow) {
+                        android.animation.ValueAnimator.ofFloat(0f, -cycleWidth.toFloat()).apply {
+                            duration = 26000L
+                            repeatCount = android.animation.ValueAnimator.INFINITE
+                            interpolator = android.view.animation.LinearInterpolator()
+                            addUpdateListener { animator ->
+                                if (posterTrack.isAttachedToWindow) posterTrack.translationX = animator.animatedValue as Float
+                            }
+                            start()
+                        }
+                    }
+                }
+                loadingPanel.addView(posterStage, LinearLayout.LayoutParams(-1, posterHeight + dp(if (isMobileLayout) 14 else 28)).apply {
+                    topMargin = dp(if (isMobileLayout) 10 else 18)
+                })
+            }
+
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
             return
         }
