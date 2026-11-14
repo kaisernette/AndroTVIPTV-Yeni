@@ -34,12 +34,13 @@ service cloud.firestore {
       }
 
       match /sources/{sourceId} {
-        // Do not sync passwords, MAC addresses, portal tokens, or raw URLs
-        // to Firestore. Source documents are metadata-only if enabled later.
-        allow read, create, update, delete: if signedInAs(userId)
+        // Source metadata only. Do not store connection secrets in Firestore.
+        allow read: if signedInAs(userId);
+        allow create, update: if signedInAs(userId)
           && !request.resource.data.keys().hasAny([
             'password', 'username', 'mac', 'token', 'portalUrl', 'playlistUrl'
           ]);
+        allow delete: if signedInAs(userId);
       }
     }
   }
