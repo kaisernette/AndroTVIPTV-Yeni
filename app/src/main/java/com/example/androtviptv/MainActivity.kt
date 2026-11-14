@@ -1442,8 +1442,14 @@ class MainActivity : Activity() {
                 // The top-right avatar is the single entry point for all profile actions.
                 // Open the profile hub directly instead of showing a second profile dialog.
                 settingsPage = "profiles"
-                prefs.edit().putString("last_settings_page", settingsPage).apply()
-                sidebarMode = "main"
+                selectedType = "Ayarlar"
+                prefs.edit()
+                    .putString("last_settings_page", settingsPage)
+                    .putString("last_section", "Ayarlar")
+                    .apply()
+                selectedGroup = "Tüm kategoriler"
+                sidebarMode = "settings"
+                rebuildNavigation()
                 render()
             }
             if (isMobileLayout) {
