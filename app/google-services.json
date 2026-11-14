@@ -1,0 +1,28 @@
+{
+  "project_info": {
+    "project_number": "226485427266",
+    "project_id": "kaisertv-e6fd0",
+    "storage_bucket": "kaisertv-e6fd0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:226485427266:android:bd900991c2438193cb21db",
+        "android_client_info": {
+          "package_name": "com.example.androtviptv"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyCi8w5lctK5Kx3MubvfJpccS2vf91OgFJ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
