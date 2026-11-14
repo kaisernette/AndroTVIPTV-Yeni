@@ -7681,9 +7681,26 @@ class MainActivity : Activity() {
                         text = if (existingPin.isNotBlank()) t("PIN'i boş bırak mevcut PIN'i korur; kaldırmak için PIN'i temizle.") else t("PIN belirlemezsen profil PIN'siz açılır.")
                         textSize = 11f; setTextColor(muted); setPadding(dp(2), dp(6), dp(2), 0)
                     })
-                    val dialog = themedDialog(if (oldName == null) "Profil oluştur" else "Profil düzenle", form)
-                    val actions = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
-                    actions.addView(makeButton(t("İptal"), false) { dialog.dismiss() })
+                    // Keep the action row outside the scroll area so it is always reachable.
+                    val editorScroll = ScrollView(this@MainActivity).apply {
+                        isFillViewport = false
+                        isVerticalScrollBarEnabled = false
+                        overScrollMode = View.OVER_SCROLL_NEVER
+                        descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+                    }
+                    editorScroll.addView(form, ScrollView.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    val editorBody = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(editorScroll, LinearLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.56f).toInt().coerceAtLeast(dp(220))))
+                    }
+                    val dialog = themedDialog(if (oldName == null) "Profil oluştur" else "Profil düzenle", editorBody)
+                    val actions = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                        setPadding(0, dp(10), 0, 0)
+                    }
+                    actions.addView(makeButton(t("İptal"), false) { dialog.dismiss() },
+                        LinearLayout.LayoutParams(dp(104), dp(46)))
                     actions.addView(makeButton(t("Kaydet"), true) {
                         val newName = nameInput.text.toString().trim()
                         val pin = pinInput.text.toString()
@@ -7718,10 +7735,13 @@ class MainActivity : Activity() {
                             }
                         }
                     }, LinearLayout.LayoutParams(dp(104), dp(44)).apply { setMargins(dp(8), 0, 0, 0) })
-                    form.addView(actions, LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(0, dp(14), 0, 0) })
+                    editorBody.addView(actions, LinearLayout.LayoutParams(-1, dp(58)))
                     dialog.show()
                     dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                    dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.86f).toInt().coerceAtMost(dp(560)), ViewGroup.LayoutParams.WRAP_CONTENT)
+                    dialog.window?.setLayout(
+                        (resources.displayMetrics.widthPixels * 0.86f).toInt().coerceAtMost(dp(560)),
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
                     nameInput.requestFocus()
                 }
                 fun confirmDelete(name: String) {
