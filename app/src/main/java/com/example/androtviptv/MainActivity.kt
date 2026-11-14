@@ -5121,9 +5121,7 @@ class MainActivity : Activity() {
                 clipToPadding = false
             }
             val loadingArtwork = loadingArtworkBitmap ?: runCatching {
-                val encoded = assets.open("kaisertv_loading_strip.jpg.b64").bufferedReader().use { it.readText() }
-                val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                assets.open("kaisertv_loading_strip.jpg").use { BitmapFactory.decodeStream(it) }
             }.getOrNull()?.also { loadingArtworkBitmap = it }
             if (loadingArtwork != null) {
                 repeat(2) {
