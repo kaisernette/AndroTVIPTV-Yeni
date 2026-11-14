@@ -8091,9 +8091,11 @@ class MainActivity : Activity() {
                         }.getOrNull()
                     }
                     return ImageView(this@MainActivity).apply {
-                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        scaleType = ImageView.ScaleType.CENTER_CROP
                         setImageBitmap(bitmap)
-                        background = roundedDrawable(if (selected) accent else bg, dp(sizeDp / 2), if (selected) accentBright else Color.TRANSPARENT)
+                        background = roundedDrawable(bg, dp(sizeDp / 2))
+                        foreground = roundedDrawable(Color.TRANSPARENT, dp(sizeDp / 2),
+                            if (selected) accentBright else Color.TRANSPARENT)
                         clipToOutline = true
                         contentDescription = id
                         isFocusable = true
@@ -8174,6 +8176,7 @@ class MainActivity : Activity() {
                         gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(12))
                     })
                     val avatarPreview = avatarImage(selectedAvatar, 112, true).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
                         isFocusable = false
                         isClickable = false
                     }
@@ -8216,8 +8219,8 @@ class MainActivity : Activity() {
                     }
                     val avatarViews = mutableListOf<Pair<String, ImageView>>()
                     fun updateAvatarSelection() {
-                        avatarPreview.setImageDrawable(null)
                         avatarPreview.setImageDrawable(avatarImage(selectedAvatar, 112, true).drawable)
+                        avatarPreview.scaleType = ImageView.ScaleType.CENTER_CROP
                         avatarViews.forEach { (id, view) ->
                             val selected = id == selectedAvatar
                             view.background = roundedDrawable(
@@ -8246,6 +8249,7 @@ class MainActivity : Activity() {
                                 setOnClickListener {
                                     selectedAvatar = avatarId
                                     avatarPreview.setImageDrawable(avatarImage(selectedAvatar, 112, true).drawable)
+                                    avatarPreview.scaleType = ImageView.ScaleType.CENTER_CROP
                                     avatarViews.forEach { (id, view) ->
                                         val selected = id == selectedAvatar
                                         view.background = roundedDrawable(
@@ -8278,8 +8282,16 @@ class MainActivity : Activity() {
                     categories.forEach { (key, label) ->
                         val chip = TextView(this@MainActivity).apply {
                             text = t(label); textSize = 11f; gravity = Gravity.CENTER
-                            setPadding(dp(9), dp(8), dp(9), dp(8))
-                            isFocusable = true; isClickable = true
+                            maxLines = 2
+                            includeFontPadding = true
+                            setPadding(dp(7), dp(5), dp(7), dp(5))
+                            isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+                            setOnFocusChangeListener { view, focused ->
+                                val active = tag == selectedCategory
+                                view.background = roundedDrawable(if (active || focused) accent else panel, 18,
+                                    if (active || focused) accentBright else Color.TRANSPARENT)
+                                (view as TextView).setTextColor(if (active || focused) Color.rgb(7, 18, 22) else Color.WHITE)
+                            }
                             background = roundedDrawable(if (key == selectedCategory) accent else panel, 18,
                                 if (key == selectedCategory) accentBright else Color.TRANSPARENT)
                             setTextColor(if (key == selectedCategory) Color.rgb(7, 18, 22) else Color.WHITE)
@@ -8295,8 +8307,9 @@ class MainActivity : Activity() {
                             }
                             tag = key
                         }
-                        categoryStrip.addView(chip, LinearLayout.LayoutParams(0, dp(38), 1f).apply {
-                            setMargins(dp(2), 0, dp(2), 0)
+                        val chipWidth = if (key == "girl" || key == "boy") dp(104) else dp(82)
+                        categoryStrip.addView(chip, LinearLayout.LayoutParams(chipWidth, dp(46)).apply {
+                            setMargins(dp(3), 0, dp(3), 0)
                         })
                     }
                     val categoryScroll = HorizontalScrollView(this@MainActivity).apply {
@@ -8304,13 +8317,16 @@ class MainActivity : Activity() {
                         overScrollMode = View.OVER_SCROLL_NEVER
                         addView(categoryStrip, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     }
-                    rightColumn.addView(categoryScroll, LinearLayout.LayoutParams(-1, dp(42)))
+                    rightColumn.addView(categoryScroll, LinearLayout.LayoutParams(-1, dp(50)))
                     val avatarScroll = ScrollView(this@MainActivity).apply {
                         isVerticalScrollBarEnabled = false
                         overScrollMode = View.OVER_SCROLL_NEVER
+                        clipChildren = false
+                        clipToPadding = false
+                        setPadding(dp(3), dp(4), dp(3), dp(8))
                         addView(avatarGrid, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
-                    rightColumn.addView(avatarScroll, LinearLayout.LayoutParams(-1, dp(158)))
+                    rightColumn.addView(avatarScroll, LinearLayout.LayoutParams(-1, dp(184)))
                     showAvatarCategory("all")
                     rightColumn.addView(TextView(this@MainActivity).apply {
                         text = t("PIN koruması (isteğe bağlı)"); textSize = 13f; setTextColor(muted)
@@ -8984,22 +9000,54 @@ class MainActivity : Activity() {
                                         .forEach { hiddenCategories.remove(section.first + "|" + it) }
                                 }
                                 "Seçili dilin kategorilerini göster" -> {
-                                    val selectedLanguage = prefs.getString("app_language", "system") ?: "system"
-                                    val language = if (selectedLanguage == "system") java.util.Locale.getDefault().language else selectedLanguage
-                                    val languagePrefix = when (language.lowercase(java.util.Locale.ROOT)) {
-                                        "tr" -> "TR"; "en" -> "EN"; "de" -> "DE"; "fr" -> "FR"
-                                        "it" -> "IT"; "es" -> "ES"; "ru" -> "RU"; "ar" -> "AR"
-                                        else -> language.uppercase(java.util.Locale.ROOT)
+                                    val selectedLanguage = (prefs.getString("app_language", "system") ?: "system")
+                                        .let { if (it == "system") java.util.Locale.getDefault().language else it }
+                                        .lowercase(java.util.Locale.ROOT)
+                                    val languagePrefixes = mapOf(
+                                        "tr" to listOf("TR"), "en" to listOf("EN"), "de" to listOf("DE"),
+                                        "fr" to listOf("FR"), "it" to listOf("IT"), "es" to listOf("ES"),
+                                        "ru" to listOf("RU"), "ar" to listOf("AR")
+                                    )
+                                    val languageWords = mapOf(
+                                        "tr" to listOf("turk", "türk", "yerli", "yabanci", "yabancı", "canli", "canlı", "kanal", "haber", "spor", "belgesel", "cocuk", "çocuk", "dizi", "film", "muzik", "müzik", "eglence", "eğlence", "komedi", "aksiyon", "macera", "korku", "animasyon", "cizgi", "çizgi", "aile", "gerilim", "romantik", "tarihi", "polisiye"),
+                                        "en" to listOf("english", "united kingdom", "united states", "uk ", "us ", "movies", "movie", "series", "tv shows", "live tv", "documentary", "cartoon", "kids", "children", "news", "sports", "music", "comedy", "action", "adventure", "horror", "animation", "family", "thriller", "romance"),
+                                        "de" to listOf("deutsch", "german", "deutschland", "filme", "serien", "fernsehen", "kinder", "nachrichten", "sport", "musik", "dokumentation", "komödie", "krimi", "abenteuer", "horror", "familie", "liebe"),
+                                        "fr" to listOf("français", "francais", "france", "films", "séries", "series", "télévision", "television", "enfants", "actualités", "nouvelles", "sport", "musique", "documentaire", "comédie", "aventure", "horreur", "famille"),
+                                        "it" to listOf("italiano", "italia", "film", "serie tv", "televisione", "bambini", "notizie", "sport", "musica", "documentari", "commedia", "avventura", "orrore", "famiglia"),
+                                        "es" to listOf("español", "espanol", "españa", "películas", "peliculas", "series", "televisión", "television", "niños", "ninos", "noticias", "deportes", "música", "musica", "documentales", "comedia", "aventura", "terror", "familia"),
+                                        "ru" to listOf("русский", "россия", "фильмы", "сериалы", "телеканалы", "детские", "новости", "спорт", "музыка", "документальные", "комедия", "приключения", "ужасы", "семейные"),
+                                        "ar" to listOf("العربية", "عربي", "مصر", "السعودية", "أفلام", "مسلسلات", "قنوات", "أطفال", "أخبار", "رياضة", "موسيقى", "وثائقي", "كوميديا", "مغامرات", "رعب", "عائلة")
+                                    )
+                                    fun normalizedCategoryName(value: String): String =
+                                        java.text.Normalizer.normalize(value.lowercase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD)
+                                            .replace(Regex("\\p{Mn}+"), "")
+                                            .replace('ı', 'i')
+                                            .trim()
+                                    fun categoryMatchesLanguage(group: String): Boolean {
+                                        val normalized = normalizedCategoryName(group)
+                                        val prefix = languagePrefixes[selectedLanguage].orEmpty()
+                                        val hasLanguageCode = prefix.any { code ->
+                                            Regex("^" + Regex.escape(code) + "(?:$|[\\s|._-])", RegexOption.IGNORE_CASE)
+                                                .containsMatchIn(group.trim())
+                                        }
+                                        if (hasLanguageCode) return true
+                                        val selectedWords = languageWords[selectedLanguage].orEmpty()
+                                        val selectedMatch = selectedWords.any { word ->
+                                            normalized.contains(normalizedCategoryName(word))
+                                        }
+                                        val turkishWords = languageWords["tr"].orEmpty()
+                                        val turkishMatch = turkishWords.any { word ->
+                                            normalized.contains(normalizedCategoryName(word))
+                                        }
+                                        return selectedMatch || turkishMatch
                                     }
                                     sectionTypes.forEach { section ->
-                                        items.filter { it.type == section.first }.map { it.group.ifBlank { "Diğer" } }.distinct()
+                                        items.filter { it.type == section.first }
+                                            .map { it.group.ifBlank { "Diğer" } }.distinct()
                                             .forEach { group ->
-                                                val normalized = group.trim()
-                                                val matches = normalized.startsWith(languagePrefix, ignoreCase = true) &&
-                                                    (normalized.length == languagePrefix.length ||
-                                                     normalized[languagePrefix.length] in charArrayOf(' ', '|', '-', '_'))
                                                 val key = section.first + "|" + group
-                                                if (matches) hiddenCategories.remove(key) else hiddenCategories.add(key)
+                                                if (categoryMatchesLanguage(group)) hiddenCategories.remove(key)
+                                                else hiddenCategories.add(key)
                                             }
                                     }
                                 }
