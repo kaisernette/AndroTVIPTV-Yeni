@@ -7679,8 +7679,8 @@ class MainActivity : Activity() {
                 } else if (currentUser != null) {
                     val accountPanel = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
-                        background = roundedDrawable(panel, 22)
-                        setPadding(dp(22), dp(20), dp(22), dp(20))
+                        background = roundedDrawable(panel, 20)
+                        setPadding(dp(20), dp(18), dp(20), dp(18))
                     }
                     accountPanel.addView(TextView(this).apply {
                         text = accountText("Giriş yapılmış hesap")
@@ -7727,31 +7727,26 @@ class MainActivity : Activity() {
                     accountTabs.addView(makeButton(accountText("Hesap oluştur"), accountMode == "create") {
                         prefs.edit().putString(accountModeKey, "create").apply(); render()
                     }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(6) })
-                    form.addView(accountTabs, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(10) })
+                    form.addView(accountTabs, LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(14) })
                     form.addView(TextView(this).apply {
                         text = accountText(if (accountMode == "create") "KaiserTV+ hesabı oluştur" else "KaiserTV+ hesabına giriş yap")
-                        textSize = 22f
+                        textSize = 20f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(Color.WHITE)
-                    })
-                    form.addView(TextView(this).apply {
-                        text = accountText("Telefonunda ve Android TV cihazlarında aynı hesabı kullan.")
-                        textSize = 14f
-                        setTextColor(muted)
-                        setPadding(0, dp(6), 0, dp(16))
+                        setPadding(0, dp(2), 0, dp(14))
                     })
                     val emailField = accountInput(accountText("E-posta"))
                     val passwordField = accountInput("Şifre", true)
-                    form.addView(emailField, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(10) })
+                    form.addView(emailField, LinearLayout.LayoutParams(-1, dp(50)).apply { bottomMargin = dp(10) })
                     val passwordRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                    passwordRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(52), 1f))
+                    passwordRow.addView(passwordField, LinearLayout.LayoutParams(0, dp(50), 1f))
                     val passwordToggle = makeButton(accountText("Göster"), false) {
                         val visible = passwordField.inputType == (android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD)
                         passwordField.inputType = if (visible) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                         passwordField.setSelection(passwordField.text?.length ?: 0)
                     }
                     passwordRow.addView(passwordToggle, LinearLayout.LayoutParams(dp(92), dp(48)).apply { leftMargin = dp(8) })
-                    form.addView(passwordRow, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(14) })
+                    form.addView(passwordRow, LinearLayout.LayoutParams(-1, dp(50)).apply { bottomMargin = dp(12) })
 
                     val emailActions = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
@@ -7812,18 +7807,7 @@ class MainActivity : Activity() {
                     content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         setMargins(dp(8), dp(8), dp(8), dp(12))
                     })
-                    content.addView(TextView(this).apply {
-                        text = accountText("Her hesap en fazla 3 cihazda kullanılacak. Favoriler, izleme geçmişi ve profil ayarları bulutla eşitlenecek.")
-                        textSize = 14f
-                        setTextColor(muted)
-                        setPadding(dp(18), dp(8), dp(18), dp(18))
-                    })
                 }
-                content.addView(makeButton(t("Profil Yönetimi"), false) {
-                    settingsPage = "profiles"
-                    prefs.edit().putString("last_settings_page", settingsPage).apply()
-                    render()
-                }, LinearLayout.LayoutParams(-1, dp(50)).apply { setMargins(dp(8), dp(10), dp(8), dp(12)) })
             }
             "profiles" -> {
                 heading("Profil Yönetimi", "Kullanıcı profillerini ayrı ayrı yönet.")
