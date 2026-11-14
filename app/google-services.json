@@ -12,6 +12,20 @@
           "package_name": "com.example.androtviptv"
         }
       },
+      "oauth_client": [
+        {
+          "client_id": "226485427266-1m3rbejb9dgl37dqcenhcmd54eecj2j9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.androtviptv",
+            "certificate_hash": "d950b29f3573da57771f6d3060356068d11c48a8"
+          }
+        },
+        {
+          "client_id": "226485427266-nfmoav25f0h8bjvtgckjr04gm96ss0fc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCi8w5lctK5Kx3MubvfJpccS2vf91OgFJ0"
@@ -19,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "226485427266-nfmoav25f0h8bjvtgckjr04gm96ss0fc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
