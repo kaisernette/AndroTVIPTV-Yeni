@@ -39,7 +39,7 @@ dependencies {
     implementation("androidx.tvprovider:tvprovider:1.1.0")
 
     // Firebase services for the KaiserTV+ cloud account.
-    implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-functions")
