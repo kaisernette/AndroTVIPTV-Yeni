@@ -1469,7 +1469,48 @@ class MainActivity : Activity() {
                     val item = TextView(this@MainActivity).apply {
                         text = (if (active) "✓  " else "    ") + name; textSize = 16f; gravity = Gravity.CENTER_VERTICAL; setTextColor(if (active) Color.BLACK else Color.WHITE); setPadding(dp(14), 0, dp(12), 0); background = roundedDrawable(if (active) accent else Color.TRANSPARENT, 12); isFocusable = true; isClickable = true
                         setOnFocusChangeListener { v, focused -> v.background = roundedDrawable(if (focused || active) accent else Color.TRANSPARENT, 12); (v as TextView).setTextColor(if (focused || active) Color.BLACK else Color.WHITE) }
-                        setOnClickListener { popup.dismiss(); prefs.edit().putString("active_user_profile", name).apply(); render() }
+                        setOnClickListener {
+                            val savedPinHash = prefs.getString("profile_pin_$name", "").orEmpty()
+                            fun activateProfile() {
+                                popup.dismiss()
+                                prefs.edit().putString("active_user_profile", name).apply()
+                                render()
+                            }
+                            if (savedPinHash.isBlank()) {
+                                activateProfile()
+                            } else {
+                                val pinField = EditText(this@MainActivity).apply {
+                                    hint = t("Profil PIN kodu")
+                                    inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+                                    setSingleLine(true)
+                                }
+                                val pinDialog = AlertDialog.Builder(this@MainActivity)
+                                    .setTitle(name)
+                                    .setMessage(t("Bu profile geçmek için PIN gir."))
+                                    .setView(pinField)
+                                    .setNegativeButton(t("İptal"), null)
+                                    .setPositiveButton(t("Devam"), null)
+                                    .create()
+                                pinDialog.setOnShowListener {
+                                    pinDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                                        val enteredHash = runCatching {
+                                            java.security.MessageDigest.getInstance("SHA-256")
+                                                .digest(pinField.text.toString().toByteArray(Charsets.UTF_8))
+                                                .joinToString("") { "%02x".format(it) }
+                                        }.getOrDefault("")
+                                        if (enteredHash == savedPinHash) {
+                                            pinDialog.dismiss()
+                                            activateProfile()
+                                        } else {
+                                            pinField.error = t("PIN hatalı")
+                                            pinField.text?.clear()
+                                        }
+                                    }
+                                }
+                                pinDialog.show()
+                                pinField.requestFocus()
+                            }
+                        }
                     }
                     panelView.addView(item, LinearLayout.LayoutParams(-1, dp(46)).apply { setMargins(0, dp(3), 0, dp(3)) })
                 }
@@ -7436,7 +7477,8 @@ class MainActivity : Activity() {
         when (settingsPage) {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
-                option("Hesap ve Profiller", "KaiserTV+ hesabını ve profillerini yönet") { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("KaiserTV+ Hesabı", "Giriş yap, hesap bilgilerini ve cihazlarını yönet") { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+                option("Profil Yönetimi", "Anime avatarları, profiller ve PIN koruması") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Kaynak Yönetimi", "M3U / Xtream kaynak ekle, düzenle") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İçerik Ayarları", "Kategoriler, gizleme ve sıralama") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Tema ve Görünüm", "Renk, arka plan ve arayüz stili") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
@@ -7609,6 +7651,14 @@ class MainActivity : Activity() {
                         setPadding(dp(18), dp(8), dp(18), dp(18))
                     })
                 }
+                content.addView(makeButton(t("Profil Yönetimi"), false) {
+                    settingsPage = "profiles"
+                    prefs.edit().putString("last_settings_page", settingsPage).apply()
+                    render()
+                }, LinearLayout.LayoutParams(-1, dp(50)).apply { setMargins(dp(8), dp(10), dp(8), dp(12)) })
+            }
+            "profiles" -> {
+                heading("Profil Yönetimi", "Kullanıcı profillerini ayrı ayrı yönet.")
                 val profilePrefsKey = "user_profiles"
                 val activeProfileKey = "active_user_profile"
                 val avatarChoices = listOf(
@@ -7853,7 +7903,7 @@ class MainActivity : Activity() {
                     LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(6), dp(10), dp(6), dp(8)) })
 
             }
-            "profiles" -> { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
+            }
             "language" -> {
                 val currentLanguage = prefs.getString("app_language", "system") ?: "system"
                 val languageOptions = listOf(
