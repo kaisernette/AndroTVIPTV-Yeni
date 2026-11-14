@@ -1558,7 +1558,7 @@ class MainActivity : Activity() {
                                 val pinPanel = LinearLayout(this@MainActivity).apply {
                                     orientation = LinearLayout.VERTICAL
                                     setPadding(dp(22), dp(20), dp(22), dp(18))
-                                    background = roundedDrawable(panel, 20, accent)
+                                    background = roundedDrawable(Color.argb(238, Color.red(panel), Color.green(panel), Color.blue(panel)), 20, accent)
                                 }
                                 pinPanel.addView(TextView(this@MainActivity).apply {
                                     text = name
@@ -1603,11 +1603,12 @@ class MainActivity : Activity() {
                                 pinPanel.addView(pinActions)
                                 pinDialog.setContentView(pinPanel)
                                 pinDialog.show()
-                                pinDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                                pinDialog.window?.setLayout(
-                                    (resources.displayMetrics.widthPixels * 0.48f).toInt().coerceAtMost(dp(520)),
-                                    ViewGroup.LayoutParams.WRAP_CONTENT
-                                )
+                                pinDialog.window?.apply {
+                                    setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                                    addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                                    setDimAmount(0.68f)
+                                    setLayout((resources.displayMetrics.widthPixels * 0.48f).toInt().coerceAtMost(dp(520)), ViewGroup.LayoutParams.WRAP_CONTENT)
+                                }
                                 pinField.requestFocus()
                             }
                         }
@@ -7864,8 +7865,8 @@ class MainActivity : Activity() {
                     fun accountButton(label: String, primary: Boolean, action: () -> Unit): Button {
                         val button = makeButton(label, primary, action)
                         fun applyStyle(focused: Boolean) {
-                            button.background = buttonBackground(if (focused || primary) accent else panel)
-                            button.setTextColor(if (focused || primary) Color.rgb(7, 18, 22) else Color.WHITE)
+                            button.background = buttonBackground(if (focused) accent else panel)
+                            button.setTextColor(if (focused) Color.rgb(7, 18, 22) else Color.WHITE)
                         }
                         applyStyle(false)
                         button.setOnFocusChangeListener { _, focused -> applyStyle(focused) }
@@ -7978,10 +7979,12 @@ class MainActivity : Activity() {
                             text = accountText(label)
                             textSize = 12f
                             gravity = Gravity.CENTER
+                            setSingleLine(true)
                             maxLines = 1
-                            includeFontPadding = false
+                            includeFontPadding = true
+                            minWidth = dp(112)
                             setTextColor(Color.WHITE)
-                            setPadding(dp(2), dp(7), dp(2), dp(7))
+                            setPadding(dp(6), dp(8), dp(6), dp(8))
                             isFocusable = true
                             isFocusableInTouchMode = true
                             isClickable = true
@@ -7997,15 +8000,15 @@ class MainActivity : Activity() {
                         }
                     passwordLinks.addView(accountTextLink("Kaydol") {
                         submitEmailAccount(true)
-                    }, LinearLayout.LayoutParams(0, dp(40), 1f))
+                    }, LinearLayout.LayoutParams(0, dp(44), 0.82f))
                     passwordLinks.addView(accountTextLink("Şifremi unuttum") {
                         val email = emailField.text.toString().trim()
                         if (email.isBlank()) accountMessage(accountText("Şifre sıfırlamak için e-posta adresini yaz."))
                         else accountRepository.sendPasswordReset(email)
                             .addOnSuccessListener { accountMessage(accountText("Şifre sıfırlama bağlantısı gönderildi.")) }
                             .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("İşlem başarısız.")) }
-                    }, LinearLayout.LayoutParams(0, dp(40), 1f))
-                    linksRow.addView(passwordLinks, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.25f).apply { rightMargin = dp(6) })
+                    }, LinearLayout.LayoutParams(0, dp(44), 1.18f))
+                    linksRow.addView(passwordLinks, LinearLayout.LayoutParams(0, dp(48), 1.25f).apply { rightMargin = dp(6) })
 
                     val googleColumn = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -8017,7 +8020,7 @@ class MainActivity : Activity() {
                         isFocusable = true
                         isFocusableInTouchMode = true
                         isClickable = true
-                        background = buttonBackground(accent)
+                        background = buttonBackground(panel)
                         minimumHeight = dp(48)
                         setPadding(dp(8), dp(6), dp(8), dp(6))
                         setOnClickListener {
@@ -8036,7 +8039,10 @@ class MainActivity : Activity() {
                             }
                         }
                         setOnFocusChangeListener { view, focused ->
-                            view.background = buttonBackground(if (focused) accentBright else accent)
+                            view.background = buttonBackground(if (focused) accent else panel)
+                            (view as ViewGroup).getChildAt(1)?.let { child ->
+                                (child as? TextView)?.setTextColor(if (focused) Color.rgb(7, 18, 22) else Color.WHITE)
+                            }
                         }
                     }
                     googleButton.addView(TextView(this).apply {
@@ -8122,7 +8128,7 @@ class MainActivity : Activity() {
                     val shell = LinearLayout(this@MainActivity).apply {
                         orientation = LinearLayout.VERTICAL
                         setPadding(dp(22), dp(20), dp(22), dp(18))
-                        background = roundedDrawable(panel, 20, accent)
+                        background = roundedDrawable(Color.argb(238, Color.red(panel), Color.green(panel), Color.blue(panel)), 20, accent)
                     }
                     shell.addView(TextView(this@MainActivity).apply {
                         text = t(title); textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD)
@@ -8132,8 +8138,12 @@ class MainActivity : Activity() {
                     dialog.setContentView(shell)
                     dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                     dialog.setOnShowListener {
-                        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.62f).toInt().coerceAtMost(dp(620)), ViewGroup.LayoutParams.WRAP_CONTENT)
+                        dialog.window?.apply {
+                            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                            addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                            setDimAmount(0.68f)
+                            setLayout((resources.displayMetrics.widthPixels * 0.62f).toInt().coerceAtMost(dp(620)), ViewGroup.LayoutParams.WRAP_CONTENT)
+                        }
                     }
                     return dialog
                 }
