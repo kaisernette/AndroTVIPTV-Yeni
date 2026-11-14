@@ -7750,6 +7750,16 @@ class MainActivity : Activity() {
                         val passwordValue = passwordField.text.toString()
                         if (email.isBlank() || passwordValue.isBlank()) {
                             accountMessage(accountText("E-posta ve şifreyi doldur."))
+                        } else if (accountMode == "create") {
+                            if (passwordValue.length < 6) {
+                                accountMessage(accountText("Geçerli e-posta gir ve en az 6 karakterli şifre belirle."))
+                            } else {
+                                try {
+                                    accountRepository.createAccount(email, passwordValue)
+                                        .addOnSuccessListener { accountMessage(accountText("Doğrulama bağlantısı e-posta adresine gönderildi.")) }
+                                        .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("Hesap oluşturulamadı.")) }
+                                } catch (error: Exception) { accountMessage(error.localizedMessage ?: accountText("Hesap oluşturulamadı.")) }
+                            }
                         } else {
                             try {
                                 accountRepository.signInWithEmail(email, passwordValue)
@@ -7762,22 +7772,7 @@ class MainActivity : Activity() {
                             } catch (error: Exception) { accountMessage(error.localizedMessage ?: accountText("Giriş yapılamadı.")) }
                         }
                     }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { rightMargin = dp(8) })
-                    emailActions.addView(makeButton(accountText("Hesap oluştur"), false) {
-                        val email = emailField.text.toString().trim()
-                        val passwordValue = passwordField.text.toString()
-                        if (email.isBlank() || passwordValue.length < 6) {
-                            accountMessage(accountText("Geçerli e-posta gir ve en az 6 karakterli şifre belirle."))
-                        } else {
-                            try {
-                                accountRepository.createAccount(email, passwordValue)
-                                    .addOnSuccessListener { accountMessage(accountText("Doğrulama bağlantısı e-posta adresine gönderildi.")) }
-                                    .addOnFailureListener { error -> accountMessage(error.localizedMessage ?: accountText("Hesap oluşturulamadı.")) }
-                            } catch (error: Exception) { accountMessage(error.localizedMessage ?: accountText("Hesap oluşturulamadı.")) }
-                        }
-                    }, LinearLayout.LayoutParams(0, dp(48), 1f))
                     form.addView(emailActions, LinearLayout.LayoutParams(-1, dp(48)))
-                    if (accountMode == "create") emailActions.getChildAt(0).visibility = View.GONE
-                    else emailActions.getChildAt(1).visibility = View.GONE
 
                     form.addView(makeButton(accountText("Şifremi unuttum"), false) {
                         val email = emailField.text.toString().trim()
