@@ -7333,7 +7333,7 @@ class MainActivity : Activity() {
                         textSize = 16f
                         setTextColor(Color.WHITE)
                         setHintTextColor(muted)
-                        singleLine = true
+                        setSingleLine(true)
                         inputType = if (isPassword) android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                             else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
                         background = GradientDrawable().apply {
