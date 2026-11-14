@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "226485427266-pp7ep5hn9np380sepn0pag67r6jj6kss.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.androtviptv",
+            "certificate_hash": "4d64d858050e10e8b65c1d71a224baf132f645cb"
+          }
+        },
+        {
           "client_id": "226485427266-nfmoav25f0h8bjvtgckjr04gm96ss0fc.apps.googleusercontent.com",
           "client_type": 3
         }
