@@ -7428,7 +7428,7 @@ class MainActivity : Activity() {
                 setOnClickListener { action() }
             }
             val contentIcon = when (title) {
-                "Hesap ve Profiller" -> "◎"
+                "KaiserTV+ Hesabı" -> "◎"
                 "Profiller" -> "◉"
                 "Kaynak Yönetimi" -> "▤"
                 "Dil / Language" -> "文"
@@ -7448,10 +7448,10 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
             }
             textColumn.addView(TextView(this).apply {
-                text = if (title == "Hesap ve Profiller") accountText(title) else t(title); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
+                text = if (title == "KaiserTV+ Hesabı") accountText(title) else t(title); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
             })
             textColumn.addView(TextView(this).apply {
-                text = if (title == "Hesap Yönetimi") accountText(detail) else t(detail); textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
+                text = if (title == "KaiserTV+ Hesabı") accountText(detail) else t(detail); textSize = 14f; setTextColor(muted); setPadding(0, dp(8), 0, 0)
             })
             card.addView(textColumn)
             if (settingsPage == "main") {
@@ -7491,7 +7491,7 @@ class MainActivity : Activity() {
                 option("Dil / Language", "Uygulama dilini seç") { settingsPage = "language"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
             }
             "account" -> {
-                heading("Hesap ve Profiller", "Hesabını yönet, profillerini oluştur ve düzenle.")
+                heading("KaiserTV+ Hesabı", "Hesabını oluştur, giriş yap ve cihazlarını yönet.")
                 val accountRepository = try { AccountRepository(this) } catch (_: Exception) { null }
                 val currentUser = try { accountRepository?.currentUser() } catch (_: Exception) { null }
 
@@ -7894,6 +7894,43 @@ class MainActivity : Activity() {
                         textSize = 12f; setTextColor(if (selected) accentBright else muted); setPadding(0, dp(3), 0, 0)
                     })
                     row.addView(details, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(10), 0, dp(6), 0) })
+                    if (!selected) {
+                        row.addView(makeButton(t("Etkinleştir"), true) {
+                            val savedHash = prefs.getString(pinKey(profileName), "").orEmpty()
+                            fun activate() {
+                                prefs.edit().putString(activeProfileKey, profileName).apply()
+                                render()
+                            }
+                            if (savedHash.isBlank()) activate() else {
+                                val pinField = EditText(this@MainActivity).apply {
+                                    hint = t("Profil PIN kodu")
+                                    inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+                                    setSingleLine(true)
+                                }
+                                val pinDialog = AlertDialog.Builder(this@MainActivity)
+                                    .setTitle(profileName)
+                                    .setMessage(t("Bu profile geçmek için PIN gir."))
+                                    .setView(pinField)
+                                    .setNegativeButton(t("İptal"), null)
+                                    .setPositiveButton(t("Devam"), null)
+                                    .create()
+                                pinDialog.setOnShowListener {
+                                    pinDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                                        val enteredHash = runCatching { profileHash(pinField.text.toString()) }.getOrDefault("")
+                                        if (enteredHash == savedHash) {
+                                            pinDialog.dismiss()
+                                            activate()
+                                        } else {
+                                            pinField.error = t("PIN hatalı")
+                                            pinField.text?.clear()
+                                        }
+                                    }
+                                }
+                                pinDialog.show()
+                                pinField.requestFocus()
+                            }
+                        }, LinearLayout.LayoutParams(dp(104), dp(40)))
+                    }
                     row.addView(makeButton(t("Düzenle"), false) { showProfileEditor(profileName) }, LinearLayout.LayoutParams(dp(82), dp(40)))
                     row.addView(makeButton(t("Sil"), false) { if (profileNames.size <= 1) Toast.makeText(this@MainActivity, t("En az bir profil kalmalı."), Toast.LENGTH_SHORT).show() else confirmDelete(profileName) },
                         LinearLayout.LayoutParams(dp(68), dp(40)).apply { setMargins(dp(5), 0, 0, 0) })
@@ -7902,7 +7939,6 @@ class MainActivity : Activity() {
                 content.addView(makeButton("+  ${t("Profil Ekle")}", true) { showProfileEditor() },
                     LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(6), dp(10), dp(6), dp(8)) })
 
-            }
             }
             "language" -> {
                 val currentLanguage = prefs.getString("app_language", "system") ?: "system"
