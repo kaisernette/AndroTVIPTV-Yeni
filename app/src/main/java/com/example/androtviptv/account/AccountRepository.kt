@@ -1,7 +1,7 @@
 package com.example.androtviptv.account
 
 import android.content.Context
-import com.google.android.gms.auth.api.signin.GoogleAuthProvider
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
