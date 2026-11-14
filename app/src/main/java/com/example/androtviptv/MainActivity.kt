@@ -647,6 +647,7 @@ class MainActivity : Activity() {
     private var seriesEpisodesError = ""
     private lateinit var status: TextView
     private var loadingMessageView: TextView? = null
+    private var loadingArtworkBitmap: Bitmap? = null
 
     private fun updateLoadingMessage(message: String) {
         status.text = message
@@ -5013,13 +5014,13 @@ class MainActivity : Activity() {
             val activeLanguage = if (loadingLanguage == "system") java.util.Locale.getDefault().language else loadingLanguage
             fun loadingLabel(key: String): String {
                 val translations = when (activeLanguage) {
-                    "en" -> mapOf("Kütüphanen hazırlanıyor" to "Your library is getting ready", "İçeriklerin senin için düzenleniyor." to "Organizing your content for you.", "Canlı TV" to "Live TV", "Filmler" to "Movies", "Diziler" to "Series", "Hazırlanıyor" to "Preparing", "İpucu" to "TIP", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Quickly access the content you add to Favorites.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Your recent content is saved in Last Watched.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Use categories to filter content easily.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Add multiple sources and keep your content in one place.")
-                    "de" -> mapOf("Kütüphanen hazırlanıyor" to "Deine Mediathek wird vorbereitet", "İçeriklerin senin için düzenleniyor." to "Deine Inhalte werden organisiert.", "Canlı TV" to "Live-TV", "Filmler" to "Filme", "Diziler" to "Serien", "Hazırlanıyor" to "Wird vorbereitet", "İpucu" to "TIPP", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Greife schnell auf deine Favoriten zu.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Zuletzt angesehene Inhalte findest du unter Verlauf.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtere Inhalte einfach nach Kategorien.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Füge mehrere Quellen an einem Ort hinzu.")
-                    "fr" -> mapOf("Kütüphanen hazırlanıyor" to "Votre bibliothèque se prépare", "İçeriklerin senin için düzenleniyor." to "Organisation de vos contenus.", "Canlı TV" to "TV en direct", "Filmler" to "Films", "Diziler" to "Séries", "Hazırlanıyor" to "Préparation", "İpucu" to "ASTUCE", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Retrouvez facilement vos favoris.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Vos derniers contenus sont dans Historique.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtrez facilement avec les catégories.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Regroupez plusieurs sources au même endroit.")
-                    "it" -> mapOf("Kütüphanen hazırlanıyor" to "La tua libreria è in preparazione", "İçeriklerin senin için düzenleniyor." to "Stiamo organizzando i tuoi contenuti.", "Canlı TV" to "TV in diretta", "Filmler" to "Film", "Diziler" to "Serie", "Hazırlanıyor" to "Preparazione", "İpucu" to "SUGGERIMENTO", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Raggiungi facilmente i tuoi preferiti.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "I contenuti recenti sono in Cronologia.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtra facilmente i contenuti per categoria.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Aggiungi più sorgenti in un unico posto.")
-                    "es" -> mapOf("Kütüphanen hazırlanıyor" to "Tu biblioteca se está preparando", "İçeriklerin senin için düzenleniyor." to "Organizando tus contenidos.", "Canlı TV" to "TV en directo", "Filmler" to "Películas", "Diziler" to "Series", "Hazırlanıyor" to "Preparando", "İpucu" to "CONSEJO", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Accede fácilmente a tus favoritos.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Tus últimos contenidos están en Historial.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtra fácilmente por categorías.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Añade varias fuentes en un solo lugar.")
-                    "ru" -> mapOf("Kütüphanen hazırlanıyor" to "Подготавливаем вашу библиотеку", "İçeriklerin senin için düzenleniyor." to "Сортируем ваши материалы.", "Canlı TV" to "ТВ", "Filmler" to "Фильмы", "Diziler" to "Сериалы", "Hazırlanıyor" to "Подготовка", "İpucu" to "СОВЕТ", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Быстрый доступ к избранному.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Недавно просмотренное находится в истории.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Используйте категории для фильтрации.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Добавьте несколько источников в одном месте.")
-                    "ar" -> mapOf("Kütüphanen hazırlanıyor" to "يتم تجهيز مكتبتك", "İçeriklerin senin için düzenleniyor." to "نرتب المحتوى من أجلك.", "Canlı TV" to "بث مباشر", "Filmler" to "أفلام", "Diziler" to "مسلسلات", "Hazırlanıyor" to "قيد التجهيز", "İpucu" to "نصيحة", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "يمكنك الوصول بسهولة إلى المفضلة.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "تجد آخر ما شاهدته في سجل المشاهدة.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "استخدم التصنيفات لتصفية المحتوى.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "أضف مصادر متعددة في مكان واحد.")
+                    "en" -> mapOf("Kütüphanen hazırlanıyor" to "Your library is getting ready", "İçeriklerin senin için düzenleniyor." to "Organizing your content for you.", "Canlı TV" to "Live TV", "Filmler" to "Movies", "Diziler" to "Series", "Hazırlanıyor" to "Preparing", "İpucu" to "TIP", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Quickly access the content you add to Favorites.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Your recent content is saved in Last Watched.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Use categories to filter content easily.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Add multiple sources and keep your content in one place.", "Son izlediğin içerikleri İzlediklerim bölümünde bulabilirsin." to "Find your recently watched content in Last Watched.", "Sevdiğin kanalları Favoriler bölümüne ekleyebilirsin." to "Add your favorite channels to Favorites.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Use categories to filter content easily.", "Film ve dizilerini kategorilerine göre keşfedebilirsin." to "Explore movies and series by category.", "Arama özelliğiyle istediğin içeriği hızlıca bulabilirsin." to "Find any content quickly with Search.", "Birden fazla kaynağını Kaynaklar bölümünden yönetebilirsin." to "Manage multiple sources from the Sources section.", "İzlemeye kaldığın yerden devam edebilirsin." to "Continue watching where you left off.", "Ayarlar bölümünden uygulamanın temasını değiştirebilirsin." to "Change the app theme in Settings.", "Farklı renk temaları arasından kendi tarzına uygun olanı seçebilirsin." to "Choose a color theme that suits your style.", "Ayarlar bölümünden uygulama dilini değiştirebilirsin." to "Change the app language in Settings.", "Türkçe, İngilizce ve diğer desteklenen diller arasında seçim yapabilirsin." to "Choose from Turkish, English and other supported languages.")
+                    "de" -> mapOf("Kütüphanen hazırlanıyor" to "Deine Mediathek wird vorbereitet", "İçeriklerin senin için düzenleniyor." to "Deine Inhalte werden organisiert.", "Canlı TV" to "Live-TV", "Filmler" to "Filme", "Diziler" to "Serien", "Hazırlanıyor" to "Wird vorbereitet", "İpucu" to "TIPP", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Greife schnell auf deine Favoriten zu.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Zuletzt angesehene Inhalte findest du unter Verlauf.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtere Inhalte einfach nach Kategorien.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Füge mehrere Quellen an einem Ort hinzu.", "Son izlediğin içerikleri İzlediklerim bölümünde bulabilirsin." to "Finde zuletzt angesehene Inhalte unter Verlauf.", "Sevdiğin kanalları Favoriler bölümüne ekleyebilirsin." to "Füge deine Lieblingssender zu Favoriten hinzu.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtere Inhalte ganz einfach nach Kategorien.", "Film ve dizilerini kategorilerine göre keşfedebilirsin." to "Entdecke Filme und Serien nach Kategorien.", "Arama özelliğiyle istediğin içeriği hızlıca bulabilirsin." to "Finde Inhalte schnell über die Suche.", "Birden fazla kaynağını Kaynaklar bölümünden yönetebilirsin." to "Verwalte mehrere Quellen im Bereich Quellen.", "İzlemeye kaldığın yerden devam edebilirsin." to "Sieh dort weiter, wo du aufgehört hast.", "Ayarlar bölümünden uygulamanın temasını değiştirebilirsin." to "Ändere das App-Design in den Einstellungen.", "Farklı renk temaları arasından kendi tarzına uygun olanı seçebilirsin." to "Wähle ein Farbdesign, das zu dir passt.", "Ayarlar bölümünden uygulama dilini değiştirebilirsin." to "Ändere die App-Sprache in den Einstellungen.", "Türkçe, İngilizce ve diğer desteklenen diller arasında seçim yapabilirsin." to "Wähle Türkisch, Englisch und weitere unterstützte Sprachen.")
+                    "fr" -> mapOf("Kütüphanen hazırlanıyor" to "Votre bibliothèque se prépare", "İçeriklerin senin için düzenleniyor." to "Organisation de vos contenus.", "Canlı TV" to "TV en direct", "Filmler" to "Films", "Diziler" to "Séries", "Hazırlanıyor" to "Préparation", "İpucu" to "ASTUCE", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Retrouvez facilement vos favoris.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Vos derniers contenus sont dans Historique.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtrez facilement avec les catégories.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Regroupez plusieurs sources au même endroit.", "Son izlediğin içerikleri İzlediklerim bölümünde bulabilirsin." to "Retrouvez vos contenus récents dans Historique.", "Sevdiğin kanalları Favoriler bölümüne ekleyebilirsin." to "Ajoutez vos chaînes préférées aux Favoris.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtrez facilement les contenus par catégorie.", "Film ve dizilerini kategorilerine göre keşfedebilirsin." to "Explorez les films et séries par catégorie.", "Arama özelliğiyle istediğin içeriği hızlıca bulabilirsin." to "Trouvez rapidement un contenu avec la recherche.", "Birden fazla kaynağını Kaynaklar bölümünden yönetebilirsin." to "Gérez plusieurs sources dans la section Sources.", "İzlemeye kaldığın yerden devam edebilirsin." to "Reprenez la lecture là où vous vous êtes arrêté.", "Ayarlar bölümünden uygulamanın temasını değiştirebilirsin." to "Modifiez le thème de l’application dans Paramètres.", "Farklı renk temaları arasından kendi tarzına uygun olanı seçebilirsin." to "Choisissez un thème de couleurs à votre goût.", "Ayarlar bölümünden uygulama dilini değiştirebilirsin." to "Modifiez la langue de l’application dans Paramètres.", "Türkçe, İngilizce ve diğer desteklenen diller arasında seçim yapabilirsin." to "Choisissez le turc, l’anglais et d’autres langues disponibles.")
+                    "it" -> mapOf("Kütüphanen hazırlanıyor" to "La tua libreria è in preparazione", "İçeriklerin senin için düzenleniyor." to "Stiamo organizzando i tuoi contenuti.", "Canlı TV" to "TV in diretta", "Filmler" to "Film", "Diziler" to "Serie", "Hazırlanıyor" to "Preparazione", "İpucu" to "SUGGERIMENTO", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Raggiungi facilmente i tuoi preferiti.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "I contenuti recenti sono in Cronologia.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtra facilmente i contenuti per categoria.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Aggiungi più sorgenti in un unico posto.", "Son izlediğin içerikleri İzlediklerim bölümünde bulabilirsin." to "Trova i contenuti recenti nella Cronologia.", "Sevdiğin kanalları Favoriler bölümüne ekleyebilirsin." to "Aggiungi i tuoi canali preferiti ai Preferiti.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtra facilmente i contenuti per categoria.", "Film ve dizilerini kategorilerine göre keşfedebilirsin." to "Esplora film e serie per categoria.", "Arama özelliğiyle istediğin içeriği hızlıca bulabilirsin." to "Trova rapidamente i contenuti con la ricerca.", "Birden fazla kaynağını Kaynaklar bölümünden yönetebilirsin." to "Gestisci più sorgenti nella sezione Sorgenti.", "İzlemeye kaldığın yerden devam edebilirsin." to "Riprendi la visione da dove eri rimasto.", "Ayarlar bölümünden uygulamanın temasını değiştirebilirsin." to "Cambia il tema dell’app nelle Impostazioni.", "Farklı renk temaları arasından kendi tarzına uygun olanı seçebilirsin." to "Scegli il tema di colore che preferisci.", "Ayarlar bölümünden uygulama dilini değiştirebilirsin." to "Cambia la lingua dell’app nelle Impostazioni.", "Türkçe, İngilizce ve diğer desteklenen diller arasında seçim yapabilirsin." to "Scegli turco, inglese e altre lingue supportate.")
+                    "es" -> mapOf("Kütüphanen hazırlanıyor" to "Tu biblioteca se está preparando", "İçeriklerin senin için düzenleniyor." to "Organizando tus contenidos.", "Canlı TV" to "TV en directo", "Filmler" to "Películas", "Diziler" to "Series", "Hazırlanıyor" to "Preparando", "İpucu" to "CONSEJO", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Accede fácilmente a tus favoritos.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Tus últimos contenidos están en Historial.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtra fácilmente por categorías.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Añade varias fuentes en un solo lugar.", "Son izlediğin içerikleri İzlediklerim bölümünde bulabilirsin." to "Encuentra lo que viste recientemente en Historial.", "Sevdiğin kanalları Favoriler bölümüne ekleyebilirsin." to "Añade tus canales favoritos a Favoritos.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Filtra fácilmente el contenido por categorías.", "Film ve dizilerini kategorilerine göre keşfedebilirsin." to "Explora películas y series por categoría.", "Arama özelliğiyle istediğin içeriği hızlıca bulabilirsin." to "Encuentra contenido rápidamente con la búsqueda.", "Birden fazla kaynağını Kaynaklar bölümünden yönetebilirsin." to "Administra varias fuentes desde la sección Fuentes.", "İzlemeye kaldığın yerden devam edebilirsin." to "Continúa viendo desde donde lo dejaste.", "Ayarlar bölümünden uygulamanın temasını değiştirebilirsin." to "Cambia el tema de la aplicación en Ajustes.", "Farklı renk temaları arasından kendi tarzına uygun olanı seçebilirsin." to "Elige un tema de color que vaya contigo.", "Ayarlar bölümünden uygulama dilini değiştirebilirsin." to "Cambia el idioma de la aplicación en Ajustes.", "Türkçe, İngilizce ve diğer desteklenen diller arasında seçim yapabilirsin." to "Elige turco, inglés y otros idiomas disponibles.")
+                    "ru" -> mapOf("Kütüphanen hazırlanıyor" to "Подготавливаем вашу библиотеку", "İçeriklerin senin için düzenleniyor." to "Сортируем ваши материалы.", "Canlı TV" to "ТВ", "Filmler" to "Фильмы", "Diziler" to "Сериалы", "Hazırlanıyor" to "Подготовка", "İpucu" to "СОВЕТ", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "Быстрый доступ к избранному.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "Недавно просмотренное находится в истории.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Используйте категории для фильтрации.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "Добавьте несколько источников в одном месте.", "Son izlediğin içerikleri İzlediklerim bölümünde bulabilirsin." to "Недавно просмотренное находится в разделе истории.", "Sevdiğin kanalları Favoriler bölümüne ekleyebilirsin." to "Добавляйте любимые каналы в избранное.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "Легко фильтруйте контент по категориям.", "Film ve dizilerini kategorilerine göre keşfedebilirsin." to "Изучайте фильмы и сериалы по категориям.", "Arama özelliğiyle istediğin içeriği hızlıca bulabilirsin." to "Быстро находите контент с помощью поиска.", "Birden fazla kaynağını Kaynaklar bölümünden yönetebilirsin." to "Управляйте источниками в разделе «Источники».", "İzlemeye kaldığın yerden devam edebilirsin." to "Продолжайте просмотр с того места, где остановились.", "Ayarlar bölümünden uygulamanın temasını değiştirebilirsin." to "Измените тему приложения в настройках.", "Farklı renk temaları arasından kendi tarzına uygun olanı seçebilirsin." to "Выберите цветовую тему по своему вкусу.", "Ayarlar bölümünden uygulama dilini değiştirebilirsin." to "Измените язык приложения в настройках.", "Türkçe, İngilizce ve diğer desteklenen diller arasında seçim yapabilirsin." to "Выбирайте турецкий, английский и другие доступные языки.")
+                    "ar" -> mapOf("Kütüphanen hazırlanıyor" to "يتم تجهيز مكتبتك", "İçeriklerin senin için düzenleniyor." to "نرتب المحتوى من أجلك.", "Canlı TV" to "بث مباشر", "Filmler" to "أفلام", "Diziler" to "مسلسلات", "Hazırlanıyor" to "قيد التجهيز", "İpucu" to "نصيحة", "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin." to "يمكنك الوصول بسهولة إلى المفضلة.", "Son izlediğin içerikler İzlediklerim bölümünde saklanır." to "تجد آخر ما شاهدته في سجل المشاهدة.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "استخدم التصنيفات لتصفية المحتوى.", "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin." to "أضف مصادر متعددة في مكان واحد.", "Son izlediğin içerikleri İzlediklerim bölümünde bulabilirsin." to "اعثر على أحدث ما شاهدته في سجل المشاهدة.", "Sevdiğin kanalları Favoriler bölümüne ekleyebilirsin." to "أضف قنواتك المفضلة إلى المفضلة.", "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin." to "صفِّ المحتوى بسهولة حسب الفئات.", "Film ve dizilerini kategorilerine göre keşfedebilirsin." to "استكشف الأفلام والمسلسلات حسب الفئة.", "Arama özelliğiyle istediğin içeriği hızlıca bulabilirsin." to "اعثر على المحتوى بسرعة باستخدام البحث.", "Birden fazla kaynağını Kaynaklar bölümünden yönetebilirsin." to "أدر مصادر متعددة من قسم المصادر.", "İzlemeye kaldığın yerden devam edebilirsin." to "تابع المشاهدة من حيث توقفت.", "Ayarlar bölümünden uygulamanın temasını değiştirebilirsin." to "غيّر سمة التطبيق من الإعدادات.", "Farklı renk temaları arasından kendi tarzına uygun olanı seçebilirsin." to "اختر سمة ألوان تناسب ذوقك.", "Ayarlar bölümünden uygulama dilini değiştirebilirsin." to "غيّر لغة التطبيق من الإعدادات.", "Türkçe, İngilizce ve diğer desteklenen diller arasında seçim yapabilirsin." to "اختر التركية والإنجليزية ولغات أخرى مدعومة.")
                     else -> emptyMap()
                 }
                 return translations[key] ?: key
@@ -5105,103 +5106,79 @@ class MainActivity : Activity() {
                 bottomMargin = dp(if (isMobileLayout) 2 else 6)
             })
 
-            // Built-in KaiserTV+ loading artwork; independent from source posters.
+            // Built-in cinematic artwork strip. It is independent of source posters,
+            // contains no labels/icons, and fades into the active theme background.
             val posterStage = FrameLayout(this).apply {
                 clipChildren = false
                 clipToPadding = false
-                background = ColorDrawable(Color.TRANSPARENT)
+                setBackgroundColor(Color.TRANSPARENT)
             }
             val posterHeight = dp(if (isMobileLayout) 58 else 124)
-            val posterWidth = dp(if (isMobileLayout) 92 else 166)
             val posterTrack = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 clipChildren = false
                 clipToPadding = false
             }
-            val builtInTiles = listOf(
-                Triple("▶", "CANLI TV", 0),
-                Triple("▣", "SİNEMA", 1),
-                Triple("◉", "DİZİLER", 2),
-                Triple("✦", "KAISERTV+", 0),
-                Triple("▤", "KEŞFET", 1),
-                Triple("◎", "FAVORİLER", 2),
-                Triple("▶", "CANLI TV", 0)
-            )
-            repeat(2) {
-                builtInTiles.forEach { tile ->
-                    val tileView = LinearLayout(this).apply {
-                        orientation = LinearLayout.VERTICAL
-                        gravity = Gravity.CENTER
-                        setPadding(dp(8), dp(5), dp(8), dp(5))
-                        val colors = when (tile.third) {
-                            1 -> intArrayOf(Color.rgb(24, 36, 76), accentBright)
-                            2 -> intArrayOf(Color.rgb(18, 66, 62), accentBright)
-                            else -> intArrayOf(Color.rgb(42, 25, 72), accentBright)
-                        }
-                        background = android.graphics.drawable.GradientDrawable(
-                            android.graphics.drawable.GradientDrawable.Orientation.TL_BR, colors
-                        ).apply { cornerRadius = dp(2).toFloat() }
+            val loadingArtwork = loadingArtworkBitmap ?: runCatching {
+                val encoded = assets.open("kaisertv_loading_strip.jpg.b64").bufferedReader().use { it.readText() }
+                val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }.getOrNull()?.also { loadingArtworkBitmap = it }
+            if (loadingArtwork != null) {
+                repeat(2) {
+                    posterTrack.addView(ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.FIT_XY
+                        setBackgroundColor(Color.TRANSPARENT)
+                        setImageBitmap(loadingArtwork)
+                        clipToOutline = false
+                        contentDescription = null
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    }, LinearLayout.LayoutParams(1, posterHeight))
+                }
+                posterStage.addView(posterTrack, FrameLayout.LayoutParams(-2, -1, Gravity.CENTER_VERTICAL))
+                // Soft horizontal edge fade blends the artwork into each theme.
+                val edgeFade = object : View(this) {
+                    private val fadePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                    override fun onDraw(canvas: android.graphics.Canvas) {
+                        super.onDraw(canvas)
+                        val fade = dp(if (isMobileLayout) 18 else 34).toFloat()
+                        fadePaint.shader = android.graphics.LinearGradient(0f, 0f, fade, 0f,
+                            bg, Color.TRANSPARENT, android.graphics.Shader.TileMode.CLAMP)
+                        canvas.drawRect(0f, 0f, fade, height.toFloat(), fadePaint)
+                        fadePaint.shader = android.graphics.LinearGradient(width - fade, 0f, width.toFloat(), 0f,
+                            Color.TRANSPARENT, bg, android.graphics.Shader.TileMode.CLAMP)
+                        canvas.drawRect(width - fade, 0f, width.toFloat(), height.toFloat(), fadePaint)
                     }
-                    tileView.addView(TextView(this).apply {
-                        text = "KaiserTV+"
-                        textSize = if (isMobileLayout) 7f else 10f
-                        setTypeface(null, android.graphics.Typeface.BOLD_ITALIC)
-                        setTextColor(Color.WHITE)
-                        gravity = Gravity.CENTER
-                    })
-                    tileView.addView(TextView(this).apply {
-                        text = tile.first
-                        textSize = if (isMobileLayout) 20f else 34f
-                        setTextColor(Color.WHITE)
-                        gravity = Gravity.CENTER
-                    }, LinearLayout.LayoutParams(-1, 0, 1f))
-                    tileView.addView(TextView(this).apply {
-                        text = tile.second
-                        textSize = if (isMobileLayout) 7f else 10f
-                        setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(Color.WHITE)
-                        gravity = Gravity.CENTER
-                    })
-                    posterTrack.addView(tileView, LinearLayout.LayoutParams(posterWidth, posterHeight).apply {
-                        marginEnd = dp(2)
-                    })
                 }
-            }
-            posterStage.addView(posterTrack, FrameLayout.LayoutParams(-2, -1, Gravity.CENTER_VERTICAL))
-            val edgeFade = object : View(this) {
-                private val fadePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                override fun onDraw(canvas: android.graphics.Canvas) {
-                    super.onDraw(canvas)
-                    val h = height.toFloat()
-                    val fade = dp(if (isMobileLayout) 12 else 24).toFloat()
-                    fadePaint.shader = android.graphics.LinearGradient(0f, 0f, 0f, fade,
-                        bg, Color.TRANSPARENT, android.graphics.Shader.TileMode.CLAMP)
-                    canvas.drawRect(0f, 0f, width.toFloat(), fade, fadePaint)
-                    fadePaint.shader = android.graphics.LinearGradient(0f, h - fade, 0f, h,
-                        Color.TRANSPARENT, bg, android.graphics.Shader.TileMode.CLAMP)
-                    canvas.drawRect(0f, h - fade, width.toFloat(), h, fadePaint)
-                }
-            }
-            posterStage.addView(edgeFade, FrameLayout.LayoutParams(-1, -1))
-            posterTrack.post {
-                val cycleWidth = posterTrack.width / 2
-                if (cycleWidth > 0 && posterTrack.isAttachedToWindow) {
-                    android.animation.ValueAnimator.ofFloat(0f, -cycleWidth.toFloat()).apply {
-                        duration = 22000L
-                        repeatCount = android.animation.ValueAnimator.INFINITE
-                        interpolator = android.view.animation.LinearInterpolator()
-                        addUpdateListener { animator ->
-                            if (posterTrack.isAttachedToWindow) posterTrack.translationX = animator.animatedValue as Float
+                posterStage.addView(edgeFade, FrameLayout.LayoutParams(-1, -1))
+                posterStage.post {
+                    if (!posterStage.isAttachedToWindow) return@post
+                    val segmentWidth = posterStage.width
+                    if (segmentWidth > 0) {
+                        for (i in 0 until posterTrack.childCount) {
+                            posterTrack.getChildAt(i).layoutParams = LinearLayout.LayoutParams(segmentWidth, posterHeight)
                         }
-                        start()
+                        posterTrack.requestLayout()
+                        posterTrack.post {
+                            if (posterTrack.isAttachedToWindow && posterTrack.width >= segmentWidth * 2) {
+                                android.animation.ValueAnimator.ofFloat(0f, -segmentWidth.toFloat()).apply {
+                                    duration = 24000L
+                                    repeatCount = android.animation.ValueAnimator.INFINITE
+                                    interpolator = android.view.animation.LinearInterpolator()
+                                    addUpdateListener { animator ->
+                                        if (posterTrack.isAttachedToWindow) posterTrack.translationX = animator.animatedValue as Float
+                                    }
+                                    start()
+                                }
+                            }
+                        }
                     }
                 }
             }
             loadingPanel.addView(posterStage, LinearLayout.LayoutParams(-1, posterHeight).apply {
                 topMargin = dp(if (isMobileLayout) 4 else 8)
             })
-
 
             // Fully transparent overall progress: no card, no filled container.
             val overallRow = LinearLayout(this).apply {
@@ -5246,10 +5223,17 @@ class MainActivity : Activity() {
             loadingPanel.addView(loadingMessageView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
             val tips = listOf(
-                "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin.",
-                "Son izlediğin içerikler İzlediklerim bölümünde saklanır.",
+                "Son izlediğin içerikleri İzlediklerim bölümünde bulabilirsin.",
+                "Sevdiğin kanalları Favoriler bölümüne ekleyebilirsin.",
                 "Kategorileri kullanarak içerikleri kolayca filtreleyebilirsin.",
-                "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin."
+                "Film ve dizilerini kategorilerine göre keşfedebilirsin.",
+                "Arama özelliğiyle istediğin içeriği hızlıca bulabilirsin.",
+                "Birden fazla kaynağını Kaynaklar bölümünden yönetebilirsin.",
+                "İzlemeye kaldığın yerden devam edebilirsin.",
+                "Ayarlar bölümünden uygulamanın temasını değiştirebilirsin.",
+                "Farklı renk temaları arasından kendi tarzına uygun olanı seçebilirsin.",
+                "Ayarlar bölümünden uygulama dilini değiştirebilirsin.",
+                "Türkçe, İngilizce ve diğer desteklenen diller arasında seçim yapabilirsin."
             )
             val tipRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
