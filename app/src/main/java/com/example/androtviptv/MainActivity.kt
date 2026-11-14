@@ -7564,13 +7564,18 @@ class MainActivity : Activity() {
                 setOnClickListener { action() }
             }
             val contentIcon = when (title) {
-                "KaiserTV+ Hesabı" -> "◎"
-                "Profiller" -> "◉"
+                "Hesap Yönetimi" -> "◎"
+                "Profil Yönetimi" -> "◉"
                 "Kaynak Yönetimi" -> "▤"
-                "Dil / Language" -> "文"
+                "Dil Seçimi" -> "文"
                 "İçerik Ayarları" -> "▦"
                 "Tema ve Görünüm" -> "◈"
                 "İzleme Geçmişi" -> "◷"
+                "Oynatma Ayarları" -> "▷"
+                "Depolama" -> "▣"
+                "Ebeveyn Kontrolü" -> "◇"
+                "Bildirimler" -> "♢"
+                "Hakkında" -> "ⓘ"
                 else -> "◆"
             }
             card.addView(TextView(this).apply {
