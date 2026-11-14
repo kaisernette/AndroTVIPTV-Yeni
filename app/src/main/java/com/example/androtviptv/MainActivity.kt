@@ -8109,8 +8109,9 @@ class MainActivity : Activity() {
                         "anime_brown_cap" -> longArrayOf(0xff405e7b,0xffe7b48d,0xff70432b,0xffe0a13b,0xff4b3024)
                         else -> longArrayOf(0xff304c6c,0xffedc09e,0xff332c4b,0xff7055b8,0xff3a2b2c)
                     }
-                    val bgTop = color(palette[0]); val skin = color(palette[1]); val hair = color(palette[2])
-                    val shirt = color(palette[3]); val hairDark = color(palette[4])
+                    val bgTop = color(palette[0])
+                    val skin = palette[1]; val hair = palette[2]
+                    val shirt = palette[3]; val hairDark = palette[4]
                     paint.shader = android.graphics.LinearGradient(0f,0f,256f,256f,bgTop,color(0xff101c2a),android.graphics.Shader.TileMode.CLAMP)
                     canvas.drawRect(0f,0f,256f,256f,paint); paint.shader = null
                     // shoulders and upper body
@@ -8144,7 +8145,7 @@ class MainActivity : Activity() {
                             fill(hairDark); canvas.drawRoundRect(105f,162f,151f,184f,10f,10f,paint)
                         }
                         "anime_blonde_glasses" -> {
-                            paint.style=android.graphics.Paint.Style.STROKE; paint.strokeWidth=5f; paint.color=0xff302c36
+                            paint.style=android.graphics.Paint.Style.STROKE; paint.strokeWidth=5f; paint.color=0xff302c36.toInt()
                             canvas.drawRoundRect(77f,103f,116f,132f,9f,9f,paint); canvas.drawRoundRect(140f,103f,179f,132f,9f,9f,paint)
                             canvas.drawLine(116f,116f,140f,116f,paint); paint.style=android.graphics.Paint.Style.FILL
                         }
