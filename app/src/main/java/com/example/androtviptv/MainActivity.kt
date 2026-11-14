@@ -1554,30 +1554,60 @@ class MainActivity : Activity() {
                                     inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
                                     setSingleLine(true)
                                 }
-                                val pinDialog = AlertDialog.Builder(this@MainActivity)
-                                    .setTitle(name)
-                                    .setMessage(t("Bu profile geçmek için PIN gir."))
-                                    .setView(pinField)
-                                    .setNegativeButton(t("İptal"), null)
-                                    .setPositiveButton(t("Devam"), null)
-                                    .create()
-                                pinDialog.setOnShowListener {
-                                    pinDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                                        val enteredHash = runCatching {
-                                            java.security.MessageDigest.getInstance("SHA-256")
-                                                .digest(pinField.text.toString().toByteArray(Charsets.UTF_8))
-                                                .joinToString("") { "%02x".format(it) }
-                                        }.getOrDefault("")
-                                        if (enteredHash == savedPinHash) {
-                                            pinDialog.dismiss()
-                                            activateProfile()
-                                        } else {
-                                            pinField.error = t("PIN hatalı")
-                                            pinField.text?.clear()
-                                        }
-                                    }
+                                val pinDialog = android.app.Dialog(this@MainActivity)
+                                val pinPanel = LinearLayout(this@MainActivity).apply {
+                                    orientation = LinearLayout.VERTICAL
+                                    setPadding(dp(22), dp(20), dp(22), dp(18))
+                                    background = roundedDrawable(panel, 20, accent)
                                 }
+                                pinPanel.addView(TextView(this@MainActivity).apply {
+                                    text = name
+                                    textSize = 21f
+                                    setTypeface(null, android.graphics.Typeface.BOLD)
+                                    setTextColor(Color.WHITE)
+                                })
+                                pinPanel.addView(TextView(this@MainActivity).apply {
+                                    text = t("Bu profile geçmek için PIN gir.")
+                                    textSize = 15f
+                                    setTextColor(muted)
+                                    setPadding(0, dp(6), 0, dp(14))
+                                })
+                                pinField.setTextColor(Color.WHITE)
+                                pinField.setHintTextColor(muted)
+                                pinField.background = roundedDrawable(
+                                    Color.argb(100, Color.red(bg), Color.green(bg), Color.blue(bg)), 12, accent
+                                )
+                                pinField.setPadding(dp(14), dp(10), dp(14), dp(10))
+                                pinPanel.addView(pinField, LinearLayout.LayoutParams(-1, dp(50)))
+                                val pinActions = LinearLayout(this@MainActivity).apply {
+                                    orientation = LinearLayout.HORIZONTAL
+                                    gravity = Gravity.END
+                                    setPadding(0, dp(14), 0, 0)
+                                }
+                                pinActions.addView(makeButton(t("İptal"), false) { pinDialog.dismiss() },
+                                    LinearLayout.LayoutParams(dp(112), dp(44)))
+                                pinActions.addView(makeButton(t("Devam"), true) {
+                                    val enteredHash = runCatching {
+                                        java.security.MessageDigest.getInstance("SHA-256")
+                                            .digest(pinField.text.toString().toByteArray(Charsets.UTF_8))
+                                            .joinToString("") { "%02x".format(it) }
+                                    }.getOrDefault("")
+                                    if (enteredHash == savedPinHash) {
+                                        pinDialog.dismiss()
+                                        activateProfile()
+                                    } else {
+                                        pinField.error = t("PIN hatalı")
+                                        pinField.text?.clear()
+                                    }
+                                }, LinearLayout.LayoutParams(dp(112), dp(44)).apply { leftMargin = dp(8) })
+                                pinPanel.addView(pinActions)
+                                pinDialog.setContentView(pinPanel)
                                 pinDialog.show()
+                                pinDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                                pinDialog.window?.setLayout(
+                                    (resources.displayMetrics.widthPixels * 0.48f).toInt().coerceAtMost(dp(520)),
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                )
                                 pinField.requestFocus()
                             }
                         }
@@ -7946,10 +7976,12 @@ class MainActivity : Activity() {
                     fun accountTextLink(label: String, action: () -> Unit): TextView =
                         TextView(this).apply {
                             text = accountText(label)
-                            textSize = 14f
+                            textSize = 12f
                             gravity = Gravity.CENTER
+                            maxLines = 1
+                            includeFontPadding = false
                             setTextColor(Color.WHITE)
-                            setPadding(dp(10), dp(7), dp(10), dp(7))
+                            setPadding(dp(2), dp(7), dp(2), dp(7))
                             isFocusable = true
                             isFocusableInTouchMode = true
                             isClickable = true
@@ -7985,8 +8017,9 @@ class MainActivity : Activity() {
                         isFocusable = true
                         isFocusableInTouchMode = true
                         isClickable = true
-                        background = roundedDrawable(Color.TRANSPARENT, 12)
-                        setPadding(dp(10), dp(7), dp(10), dp(7))
+                        background = buttonBackground(accent)
+                        minimumHeight = dp(48)
+                        setPadding(dp(8), dp(6), dp(8), dp(6))
                         setOnClickListener {
                             try {
                                 launchGoogleSignIn(
@@ -8003,10 +8036,7 @@ class MainActivity : Activity() {
                             }
                         }
                         setOnFocusChangeListener { view, focused ->
-                            view.background = roundedDrawable(
-                                if (focused) Color.argb(105, Color.red(accent), Color.green(accent), Color.blue(accent)) else Color.TRANSPARENT,
-                                12, if (focused) accentBright else Color.TRANSPARENT
-                            )
+                            view.background = buttonBackground(if (focused) accentBright else accent)
                         }
                     }
                     googleButton.addView(TextView(this).apply {
@@ -8022,7 +8052,7 @@ class MainActivity : Activity() {
                         setTextColor(Color.WHITE)
                         gravity = Gravity.CENTER
                     })
-                    googleColumn.addView(googleButton, LinearLayout.LayoutParams(-1, dp(40)))
+                    googleColumn.addView(googleButton, LinearLayout.LayoutParams(-1, dp(48)))
                     linksRow.addView(googleColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.8f))
                     form.addView(linksRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     content.addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
