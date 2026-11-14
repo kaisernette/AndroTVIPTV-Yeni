@@ -5003,22 +5003,87 @@ class MainActivity : Activity() {
             val loadingPanel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(28), dp(14), dp(28), dp(10))
+                setPadding(dp(if (isMobileLayout) 10 else 24), dp(12), dp(if (isMobileLayout) 10 else 24), dp(12))
             }
-            loadingPanel.addView(TextView(this).apply {
+
+            val loadingCard = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(if (isMobileLayout) 14 else 28), dp(if (isMobileLayout) 18 else 26), dp(if (isMobileLayout) 14 else 28), dp(18))
+                background = roundedDrawable(panel, 22)
+            }
+            loadingCard.addView(TextView(this).apply {
                 text = loadingLabel("Kütüphanen hazırlanıyor")
-                textSize = 29f
+                textSize = if (isMobileLayout) 21f else 28f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-            loadingPanel.addView(TextView(this).apply {
+
+            loadingCard.addView(TextView(this).apply {
                 text = loadingLabel("İçeriklerin senin için düzenleniyor.")
-                textSize = 16f
+                textSize = if (isMobileLayout) 13f else 16f
                 setTextColor(muted)
                 gravity = Gravity.CENTER
-                setPadding(0, dp(7), 0, dp(10))
+                setPadding(0, dp(7), 0, dp(if (isMobileLayout) 14 else 22))
             }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+            val mainSpinner = android.widget.ProgressBar(this).apply {
+                isIndeterminate = true
+                indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
+            }
+            loadingCard.addView(mainSpinner, LinearLayout.LayoutParams(dp(if (isMobileLayout) 42 else 54), dp(if (isMobileLayout) 42 else 54)).apply {
+                gravity = Gravity.CENTER
+                bottomMargin = dp(if (isMobileLayout) 14 else 24)
+            })
+
+            val categoryRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+            listOf("Canlı TV", "Filmler", "Diziler").forEach { label ->
+                val tile = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(if (isMobileLayout) 5 else 12), dp(12), dp(if (isMobileLayout) 5 else 12), dp(12))
+                    background = roundedDrawable(Color.argb(30, 255, 255, 255), 14)
+                }
+                tile.addView(TextView(this).apply {
+                    text = loadingLabel(label)
+                    textSize = if (isMobileLayout) 11f else 15f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                val categoryProgress = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                    isIndeterminate = true
+                    indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
+                    progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.argb(48, 255, 255, 255))
+                }
+                tile.addView(categoryProgress, LinearLayout.LayoutParams(-1, dp(4)).apply {
+                    topMargin = dp(12)
+                })
+                categoryRow.addView(tile, LinearLayout.LayoutParams(0, dp(if (isMobileLayout) 62 else 82), 1f).apply {
+                    setMargins(dp(if (isMobileLayout) 3 else 8), 0, dp(if (isMobileLayout) 3 else 8), 0)
+                })
+            }
+            loadingCard.addView(categoryRow, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+            loadingMessageView = TextView(this).apply {
+                text = status.text.toString()
+                textSize = if (isMobileLayout) 12f else 15f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(dp(14), dp(12), dp(14), dp(12))
+                background = roundedDrawable(Color.argb(34, 255, 255, 255), 16)
+            }
+            loadingCard.addView(loadingMessageView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(if (isMobileLayout) 14 else 26)
+            })
 
             val tips = listOf(
                 "Favorilerine eklediğin içeriklere kolayca ulaşabilirsin.",
@@ -5027,94 +5092,47 @@ class MainActivity : Activity() {
                 "Birden fazla kaynak ekleyerek içeriklerini tek yerde toplayabilirsin."
             )
             val tipPanel = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
+                orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
-                setPadding(dp(12), dp(4), dp(12), dp(12))
+                setPadding(dp(8), dp(14), dp(8), 0)
             }
             tipPanel.addView(TextView(this).apply {
-                text = loadingLabel("İpucu")
-                textSize = 13f
+                text = loadingLabel("İpucu") + "  ·  "
+                textSize = if (isMobileLayout) 11f else 13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(accentBright)
-                gravity = Gravity.CENTER
             })
             val tipText = TextView(this).apply {
                 text = loadingLabel(tips[0])
-                textSize = 15f
-                setTextColor(Color.WHITE)
+                textSize = if (isMobileLayout) 11f else 13f
+                setTextColor(muted)
                 gravity = Gravity.CENTER
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                setPadding(dp(8), dp(3), dp(8), dp(3))
             }
-            tipPanel.addView(tipText, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            tipPanel.addView(tipText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             var tipIndex = 0
             val tipRunnable = object : Runnable {
                 override fun run() {
                     if (!tipPanel.isAttachedToWindow) return
                     tipIndex = (tipIndex + 1) % tips.size
-                    tipText.animate().alpha(0f).setDuration(180L).withEndAction {
+                    tipText.animate().alpha(0f).setDuration(160L).withEndAction {
                         tipText.text = loadingLabel(tips[tipIndex])
-                        tipText.animate().alpha(1f).setDuration(220L).start()
+                        tipText.animate().alpha(1f).setDuration(200L).start()
                     }.start()
                     tipPanel.postDelayed(this, 4200L)
                 }
             }
             tipPanel.postDelayed(tipRunnable, 4200L)
-            loadingPanel.addView(tipPanel, LinearLayout.LayoutParams(dp(680), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                gravity = Gravity.CENTER
-                setMargins(0, 0, 0, dp(12))
-            })
 
-            val rings = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
+            loadingPanel.addView(loadingCard, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                width = if (isMobileLayout) ViewGroup.LayoutParams.MATCH_PARENT else dp(760)
                 gravity = Gravity.CENTER
-            }
-            listOf("Canlı TV", "Filmler", "Diziler").forEach { label ->
-                val ring = FrameLayout(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(dp(142), dp(142)).apply {
-                        setMargins(dp(18), dp(4), dp(18), dp(4))
-                    }
-                }
-                val spinner = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
-                    isIndeterminate = true
-                    indeterminateTintList = android.content.res.ColorStateList.valueOf(accentBright)
-                }
-                ring.addView(spinner, FrameLayout.LayoutParams(-1, -1))
-                val ringLabel = TextView(this).apply {
-                    text = loadingLabel(label) + "\n" + loadingLabel("Hazırlanıyor")
-                    textSize = 15f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE)
-                    gravity = Gravity.CENTER
-                    maxLines = 2
-                }
-                ring.addView(ringLabel, FrameLayout.LayoutParams(-1, -1).apply {
-                    setMargins(dp(18), dp(18), dp(18), dp(18))
-                })
-                rings.addView(ring)
-            }
-            loadingPanel.addView(rings, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(0, dp(2), 0, dp(8))
             })
-
-            loadingMessageView = TextView(this).apply {
-                text = status.text.toString()
-                textSize = 16f
-                setTextColor(muted)
+            loadingPanel.addView(tipPanel, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                width = if (isMobileLayout) ViewGroup.LayoutParams.MATCH_PARENT else dp(760)
                 gravity = Gravity.CENTER
-                maxLines = 2
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                setPadding(0, dp(2), 0, dp(8))
-            }
-            loadingPanel.addView(loadingMessageView, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-            loadingPanel.addView(TextView(this).apply {
-                text = "© Kaisernet · 2026"
-                textSize = 12f
-                setTextColor(muted)
-                gravity = Gravity.CENTER
-                setPadding(0, dp(2), 0, 0)
-            }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            })
             content.addView(loadingPanel, LinearLayout.LayoutParams(-1, -1))
             return
         }
