@@ -2417,7 +2417,12 @@ class MainActivity : Activity() {
             // catalogue snapshot instead of requiring at least one record in every section.
             val cacheNeedsRepair = sourceToRestore?.mode == "xtream" &&
                 !hasCompleteXtreamCache(sourceToRestore, restoredSourceItems)
-            if (items.isNotEmpty() && !cacheNeedsRepair) {
+            // Only trust a source-specific completed Xtream snapshot. M3U and Stalker
+            // do not yet persist a verifiable completion manifest, so refresh them fully
+            // instead of exposing a possibly partial/stale cache at startup.
+            val canOpenCompletedCache = sourceToRestore?.mode == "xtream" &&
+                restoredSourceItems.isNotEmpty() && !cacheNeedsRepair
+            if (canOpenCompletedCache) {
                 val availableGroups = items.map { it.group.ifBlank { "Diğer" } }.toSet()
                 if (selectedGroup != "Tüm kategoriler" && selectedGroup !in availableGroups) {
                     selectedGroup = "Tüm kategoriler"
@@ -3221,9 +3226,10 @@ class MainActivity : Activity() {
                             if (publishItems.isEmpty()) return
                             runOnUiThread {
                                 if (catalogueUiReleased.compareAndSet(false, true)) {
-                                    isLoadingSource = false
+                                    // Partial pages are checkpointed to cache, but the app stays
+                                    // on the loading screen until every Stalker section completes.
                                     status.visibility = View.VISIBLE
-                                    status.text = "${source.name}: içerikler açıldı, kalan katalog arka planda yükleniyor…"
+                                    status.text = "${source.name}: katalog indiriliyor…"
                                 }
                                 if (splitVodSeries) {
                                     // VOD and dedicated Series now load concurrently. A VOD
@@ -3600,7 +3606,8 @@ class MainActivity : Activity() {
                     }
                 }
 
-                // PHASE 1: Load Live TV alone, then publish it and open the app.
+                // PHASE 1: Load TV first to preserve the portal's known-working
+                // request pattern, but do not open the app until VOD and Series finish.
                 val tvTask = thread(name = "kaiser-stalker-tv") {
                     loadSection("itv", "Canlı TV", "get_genres")
                 }
@@ -3608,16 +3615,7 @@ class MainActivity : Activity() {
 
                 val tvPublished = java.util.concurrent.CountDownLatch(1)
                 runOnUiThread {
-                    if (items.any { it.sourceId == source.id && it.type == "Canlı TV" }) {
-                        hasLoadedSource = true
-                        isLoadingSource = false
-                        selectedType = "Canlı TV"
-                        selectedGroup = "Tüm kategoriler"
-                        sidebarMode = "main"
-                        render()
-                        publishHomeChannel()
-                    }
-                    updateLoadingMessage("${source.name}: TV hazır. Film ve dizi kategorileri alınıyor…")
+                    updateLoadingMessage("${source.name}: TV tamamlandı. Film ve dizi kategorileri alınıyor…")
                     tvPublished.countDown()
                 }
                 tvPublished.await()
@@ -3831,12 +3829,8 @@ class MainActivity : Activity() {
                                 if (finalBatch) saveCachedItems()
 
                                 if (type == "Canlı TV" && finalBatch) {
-                                    // Make TV available as soon as its streamed catalogue is complete.
-                                    isLoadingSource = false
-                                    hasLoadedSource = true
-                                    render()
-                                    publishHomeChannel()
-                                    tryOpenPendingTvHomeItem()
+                                    // Keep the startup gate closed until TV, Movies and Series
+                                    // have all completed; the final completion block opens the UI.
                                 } else if (finalBatch && published.isNotEmpty() && (selectedType == type || selectedType == "Tümü")) {
                                     render()
                                 }
@@ -3935,7 +3929,10 @@ class MainActivity : Activity() {
                         } else {
                             "${source.name}: ${totalLoaded} içerik yüklendi. Eksik yanıt: ${failedParts.distinct().joinToString()}."
                         }
-                        if (selectedType == "Tümü") render()
+                        hasLoadedSource = true
+                        render()
+                        publishHomeChannel()
+                        tryOpenPendingTvHomeItem()
                     }
                 }
             } catch (e: Exception) {
