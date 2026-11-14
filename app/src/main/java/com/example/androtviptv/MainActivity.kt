@@ -7351,27 +7351,6 @@ class MainActivity : Activity() {
             render()
         }
 
-        fun showSettingsNotice(section: String) {
-            val message = when (section) {
-                "Oynatma Ayarları" -> settingsCopy("Video ve ses tercihlerini düzenle")
-                "Depolama" -> settingsCopy("Önbellek ve uygulama verileri")
-                else -> settingsCopy("Bildirim tercihlerini düzenle")
-            }
-            AlertDialog.Builder(this)
-                .setTitle(settingsCopy(section))
-                .setMessage(message + "\n\n" + when (prefs.getString("app_language", "system") ?: "system") {
-                    "en" -> "These controls will be available in a future update."
-                    "de" -> "Diese Einstellungen folgen in einem zukünftigen Update."
-                    "fr" -> "Ces options seront disponibles dans une prochaine mise à jour."
-                    "it" -> "Queste opzioni saranno disponibili in un prossimo aggiornamento."
-                    "es" -> "Estas opciones estarán disponibles en una próxima actualización."
-                    "ru" -> "Эти настройки появятся в следующем обновлении."
-                    "ar" -> "ستتوفر هذه الخيارات في تحديث قادم."
-                    else -> "Bu ayarlar sonraki güncellemede etkinleştirilecek."
-                })
-                .setPositiveButton(settingsCopy("Hakkında"), null)
-                .show()
-        }
         fun heading(title: String, subtitle: String) {
             val header = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -7540,6 +7519,27 @@ class MainActivity : Activity() {
             return dictionaries[language]?.get(key) ?: key
         }
 
+        fun showSettingsNotice(section: String) {
+            val message = when (section) {
+                "Oynatma Ayarları" -> settingsCopy("Video ve ses tercihlerini düzenle")
+                "Depolama" -> settingsCopy("Önbellek ve uygulama verileri")
+                else -> settingsCopy("Bildirim tercihlerini düzenle")
+            }
+            AlertDialog.Builder(this)
+                .setTitle(settingsCopy(section))
+                .setMessage(message + "\n\n" + when (prefs.getString("app_language", "system") ?: "system") {
+                    "en" -> "These controls will be available in a future update."
+                    "de" -> "Diese Einstellungen folgen in einem zukünftigen Update."
+                    "fr" -> "Ces options seront disponibles dans une prochaine mise à jour."
+                    "it" -> "Queste opzioni saranno disponibili in un prossimo aggiornamento."
+                    "es" -> "Estas opciones estarán disponibles en una próxima actualización."
+                    "ru" -> "Эти настройки появятся в следующем обновлении."
+                    "ar" -> "ستتوفر هذه الخيارات في تحديث قادم."
+                    else -> "Bu ayarlar sonraki güncellemede etkinleştirilecek."
+                })
+                .setPositiveButton(settingsCopy("Hakkında"), null)
+                .show()
+        }
         var settingsGridRow: LinearLayout? = null
         var settingsGridCount = 0
         fun option(title: String, detail: String, action: () -> Unit) {
