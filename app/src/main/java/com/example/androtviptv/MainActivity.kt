@@ -855,6 +855,79 @@ class MainActivity : Activity() {
     private var xtreamPass = ""
     private var xtreamBase = ""
     private val prefs by lazy { getSharedPreferences("androtv", MODE_PRIVATE) }
+
+    private fun profileDataToken(profileName: String): String =
+        java.security.MessageDigest.getInstance("SHA-256")
+            .digest(profileName.trim().lowercase(java.util.Locale.ROOT).toByteArray(Charsets.UTF_8))
+            .take(12).joinToString("") { "%02x".format(it) }
+
+    private fun profileFavoritesKey(profileName: String = prefs.getString("active_user_profile", "Misafir") ?: "Misafir") =
+        "favorites_profile_${profileDataToken(profileName)}"
+
+    private fun profileRecentKey(profileName: String = prefs.getString("active_user_profile", "Misafir") ?: "Misafir") =
+        "recent_profile_${profileDataToken(profileName)}"
+
+    private fun loadProfileLibrary(profileName: String) {
+        favorites.clear()
+        favorites.addAll(prefs.getStringSet(profileFavoritesKey(profileName), emptySet()) ?: emptySet())
+        recent.clear()
+        runCatching {
+            val saved = JSONArray(prefs.getString(profileRecentKey(profileName), "[]"))
+            for (i in 0 until saved.length()) {
+                val o = saved.optJSONObject(i) ?: continue
+                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors"), o.optString("rating"), o.optString("releaseDate"), o.optString("genre")))
+            }
+        }
+    }
+
+    private fun persistProfileFavorites() {
+        prefs.edit().putStringSet(profileFavoritesKey(), favorites.toSet()).apply()
+    }
+
+    private fun moveProfileLibrary(oldName: String, newName: String) {
+        if (oldName == newName) return
+        val oldFavoritesKey = profileFavoritesKey(oldName)
+        val oldRecentKey = profileRecentKey(oldName)
+        val editor = prefs.edit()
+        prefs.getStringSet(oldFavoritesKey, null)?.let { editor.putStringSet(profileFavoritesKey(newName), it.toSet()) }
+        prefs.getString(oldRecentKey, null)?.let { editor.putString(profileRecentKey(newName), it) }
+        editor.remove(oldFavoritesKey).remove(oldRecentKey).apply()
+    }
+
+    private fun removeProfileLibrary(profileName: String) {
+        prefs.edit().remove(profileFavoritesKey(profileName)).remove(profileRecentKey(profileName)).apply()
+    }
+
+    private fun migrateDefaultProfileAndLibrary() {
+        val stored = runCatching {
+            val json = JSONArray(prefs.getString("user_profiles", JSONArray().put("Ana Profil").toString()))
+            MutableList(json.length()) { json.optString(it).trim() }.filter { it.isNotBlank() }.toMutableList()
+        }.getOrElse { mutableListOf("Ana Profil") }
+        val names = if (stored.isEmpty()) mutableListOf("Misafir") else stored
+        if ("Ana Profil" in names && "Misafir" !in names) {
+            val index = names.indexOf("Ana Profil")
+            names[index] = "Misafir"
+            val editor = prefs.edit()
+            val profilesJson = JSONArray().apply { names.forEach { put(it) } }
+            editor.putString("user_profiles", profilesJson.toString())
+            if (prefs.getString("active_user_profile", "Ana Profil") == "Ana Profil") editor.putString("active_user_profile", "Misafir")
+            prefs.getString("profile_avatar_Ana Profil", null)?.let { editor.putString("profile_avatar_Misafir", it) }
+            prefs.getString("profile_pin_Ana Profil", null)?.let { editor.putString("profile_pin_Misafir", it) }
+            editor.remove("profile_avatar_Ana Profil").remove("profile_pin_Ana Profil").apply()
+        } else if (!prefs.contains("user_profiles")) {
+            prefs.edit().putString("user_profiles", JSONArray().put("Misafir").toString())
+                .putString("active_user_profile", "Misafir").apply()
+        }
+        val active = prefs.getString("active_user_profile", names.first()) ?: names.first()
+        if (!prefs.getBoolean("profile_library_migrated_v1", false)) {
+            val editor = prefs.edit()
+            val legacyFavorites = prefs.getStringSet("favorites", null)
+            val legacyRecent = prefs.getString("recent", null)
+            if (legacyFavorites != null) editor.putStringSet(profileFavoritesKey(active), legacyFavorites.toSet())
+            if (legacyRecent != null) editor.putString(profileRecentKey(active), legacyRecent)
+            editor.remove("favorites").remove("recent").putBoolean("profile_library_migrated_v1", true).apply()
+        }
+    }
     private var bg = Color.rgb(17, 20, 25)
     // Shared cinematic anthracite surface used consistently across the app.
     private var panel = Color.rgb(8, 10, 14)
@@ -958,14 +1031,9 @@ class MainActivity : Activity() {
         }
         panel = themePanelColor(prefs.getString("theme_name", "Gece • Buzul") ?: "Gece • Buzul")
         window.statusBarColor = bg; window.navigationBarColor = bg
-        favorites.addAll(getSharedPreferences("androtv", MODE_PRIVATE).getStringSet("favorites", emptySet()) ?: emptySet())
-        try {
-            val saved = JSONArray(getSharedPreferences("androtv", MODE_PRIVATE).getString("recent", "[]"))
-            for (i in 0 until saved.length()) {
-                val o = saved.optJSONObject(i) ?: continue
-                recent.add(MediaItem(o.optString("id"), o.optString("name"), o.optString("url"), o.optString("group"), o.optString("type"), o.optString("icon"), o.optString("extension"), o.optString("seriesId"), o.optString("sourceId"), o.optString("plot"), o.optString("actors"), o.optString("rating"), o.optString("releaseDate"), o.optString("genre")))
-            }
-        } catch (_: Exception) { }
+        migrateDefaultProfileAndLibrary()
+        val startupProfile = prefs.getString("active_user_profile", "Misafir") ?: "Misafir"
+        loadProfileLibrary(startupProfile)
         hiddenCategories.addAll(prefs.getStringSet("hidden_categories", emptySet()) ?: emptySet())
         // Show the app's own loading UI immediately. Disk cache parsing can be expensive
         // on low-memory Android TV devices, so never perform it on the main thread.
@@ -2606,7 +2674,7 @@ class MainActivity : Activity() {
         }
         return makeButton("Favori", false) {
             if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+            persistProfileFavorites()
             render()
         }.apply {
             updateFavoriteStyle(this, false)
@@ -4912,7 +4980,7 @@ class MainActivity : Activity() {
         metaScroll.addView(meta)
         info.addView(metaScroll, LinearLayout.LayoutParams(-1, 125))
         info.addView(makeButton("▶  İZLE", true) { (body.tag as? AlertDialog)?.dismiss(); play(item) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 44))
-        info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); prefs.edit().putStringSet("favorites", favorites.toSet()).apply() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
+        info.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★ Favorilerden çıkar" else "☆ Favorilere ekle", false) { if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey); persistProfileFavorites() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 40).apply { setMargins(0, 8, 0, 0) })
         body.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val dialog = AlertDialog.Builder(this).setView(body).setNegativeButton("Kapat", null).create(); body.tag = dialog
         dialog.show()
@@ -6139,7 +6207,7 @@ class MainActivity : Activity() {
                                 favorites.add(item.favoriteKey)
                                 true
                             }
-                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            persistProfileFavorites()
                             Toast.makeText(this@MainActivity,
                                 if (added) "${item.name} favorilere eklendi" else "${item.name} favorilerden çıkarıldı",
                                 Toast.LENGTH_SHORT).show()
@@ -6198,7 +6266,7 @@ class MainActivity : Activity() {
                     if (sidebarMode != "search") {
                         actions.addView(makeButton(if (favorites.contains(item.favoriteKey)) "★" else "☆", false) {
                             if (!favorites.add(item.favoriteKey)) favorites.remove(item.favoriteKey)
-                            prefs.edit().putStringSet("favorites", favorites.toSet()).apply()
+                            persistProfileFavorites()
                             render()
                         }, LinearLayout.LayoutParams(43, 36).apply { setMargins(4, 7, 0, 0) })
                     }
@@ -7974,6 +8042,7 @@ class MainActivity : Activity() {
                                             prefs.getString(from, null)?.let { editor.putString(to, it) }
                                             editor.remove(from)
                                         }
+                                        moveProfileLibrary(oldName, newName)
                                         if (activeProfile == oldName) { activeProfile = newName; editor.putString(activeProfileKey, newName) }
                                     }
                                 }
@@ -8007,6 +8076,7 @@ class MainActivity : Activity() {
                             profileNames.remove(name)
                             saveProfiles(profileNames)
                             prefs.edit().remove(avatarKey(name)).remove(pinKey(name)).apply()
+                            removeProfileLibrary(name)
                             if (activeProfile == name) {
                                 activeProfile = profileNames.first()
                                 prefs.edit().putString(activeProfileKey, activeProfile).apply()
@@ -8054,6 +8124,7 @@ class MainActivity : Activity() {
                         row.addView(makeButton(t("Etkinleştir"), true) {
                             val savedHash = prefs.getString(pinKey(profileName), "").orEmpty()
                             fun activate() {
+                                loadProfileLibrary(profileName)
                                 prefs.edit().putString(activeProfileKey, profileName).apply()
                                 render()
                             }
@@ -9251,7 +9322,7 @@ class MainActivity : Activity() {
     private fun persistRecentHistory() {
         val arr = JSONArray()
         recent.forEach { r -> arr.put(JSONObject().put("id", r.id).put("name", r.name).put("url", r.url).put("group", r.group).put("type", r.type).put("icon", r.icon).put("extension", r.extension).put("seriesId", r.seriesId).put("sourceId", r.sourceId)) }
-        getSharedPreferences("androtv", MODE_PRIVATE).edit().putString("recent", arr.toString()).apply()
+        prefs.edit().putString(profileRecentKey(), arr.toString()).apply()
     }
 
     private fun saveRecent(item: MediaItem) {
