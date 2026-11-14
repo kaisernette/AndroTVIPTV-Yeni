@@ -1431,11 +1431,34 @@ class MainActivity : Activity() {
         dateClockRow.addView(headerTimeView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, -1).apply {
             setMargins(dp(14), 0, dp(22), 0)
         })
-        val headerProfileButton = TextView(this).apply {
-            text = "●"; textSize = 30f; gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(accent); setStroke(dp(2), accentBright) }
-            isFocusable = !isMobileLayout; isClickable = true; contentDescription = t("Profil")
+        val headerActiveProfile = prefs.getString("active_user_profile", "Ana Profil") ?: "Ana Profil"
+        val headerAvatarChoices = listOf(
+            "anime_bearded", "anime_blonde_glasses", "anime_blue_headphones", "anime_brown_cap",
+            "anime_dark_hair", "anime_ice_elf", "anime_masked_silver", "anime_pink_cat",
+            "anime_purple_hair", "anime_red_beanie", "anime_silver_hair", "anime_yellow_hood"
+        )
+        val headerAvatarId = prefs.getString("profile_avatar_$headerActiveProfile", null)
+            ?.takeIf { it in headerAvatarChoices } ?: "anime_blue_headphones"
+        val headerAvatarIndex = headerAvatarChoices.indexOf(headerAvatarId).coerceAtLeast(0)
+        val headerAvatarBitmap = runCatching {
+            assets.open("avatars/anime_avatar_sheet.webp").use { stream ->
+                BitmapFactory.decodeStream(stream)?.let { sheet ->
+                    Bitmap.createBitmap(sheet, (headerAvatarIndex % 4) * 64, (headerAvatarIndex / 4) * 64, 64, 64)
+                }
+            }
+        }.getOrNull()
+        val headerProfileButton = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setImageBitmap(headerAvatarBitmap)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(accent)
+                setStroke(dp(2), accentBright)
+            }
+            clipToOutline = true
+            isFocusable = !isMobileLayout
+            isClickable = true
+            contentDescription = "${t("Profil")}: $headerActiveProfile"
             setOnClickListener { anchorView ->
                 val names = runCatching { val j = JSONArray(prefs.getString("user_profiles", JSONArray().put("Ana Profil").toString())); MutableList(j.length()) { j.optString(it) }.filter { it.isNotBlank() } }.getOrElse { listOf("Ana Profil") }
                 lateinit var popup: android.widget.PopupWindow
