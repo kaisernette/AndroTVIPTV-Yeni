@@ -1854,6 +1854,9 @@ class MainActivity : Activity() {
     private fun classify(name: String, group: String): String {
         val s = "$name $group".lowercase()
         return when {
+            // This playlist labels its live channel groups with a TR: prefix.
+            // Check this before generic words such as "Dizi" or "Movie" in provider names.
+            name.trim().startsWith("TR:", ignoreCase = true) -> "Canlı TV"
             listOf("series", "dizi", "tv show", "season", "sezon", "episode", "bölüm").any { it in s } -> "Diziler"
             listOf("movie", "film", "cinema", "vod", "4k film").any { it in s } -> "Filmler"
             else -> "Canlı TV"
