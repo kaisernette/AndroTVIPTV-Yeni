@@ -1065,6 +1065,24 @@ class MainActivity : Activity() {
                         focusedCategoryName = null
                         expandedCategory = null
                         selectedType = key
+                        if (key in listOf("Canlı TV", "Filmler", "Diziler")) {
+                            val activeSourceId = prefs.getString("last_source_id", "") ?: ""
+                            val firstItem = items.firstOrNull {
+                                it.type == key &&
+                                    (activeSourceId.isBlank() || it.sourceId == activeSourceId) &&
+                                    !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
+                            }
+                            if (firstItem != null) {
+                                val firstGroup = firstItem.group.ifBlank { "Diğer" }
+                                selectedGroup = firstGroup
+                                expandedCategory = firstGroup to items.filter {
+                                    it.type == key &&
+                                        it.group.ifBlank { "Diğer" } == firstGroup &&
+                                        (activeSourceId.isBlank() || it.sourceId == activeSourceId)
+                                }
+                                focusedCategoryName = firstGroup
+                            }
+                        }
                         sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
                         prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
                         rebuildNavigation()
