@@ -2167,7 +2167,7 @@ class MainActivity : Activity() {
                 grouped.forEachIndexed { categoryIndex, (name, entries) ->
                     val selected = name == (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                     val button = TextView(this).apply {
-                        text = name
+                        text = "$name  ·  ${entries.size}"
                         textSize = 13f
                         maxLines = 2
                         setTextColor(if (selected) Color.WHITE else muted)
@@ -2186,8 +2186,9 @@ class MainActivity : Activity() {
                             val highlighted = if (hasFocus) name else (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                             for (i in 0 until categoryPanel.childCount) {
                                 val sibling = categoryPanel.getChildAt(i) as? TextView ?: continue
-                                if (grouped.any { it.first == sibling.text.toString() }) {
-                                    val active = sibling.text.toString() == highlighted
+                                val siblingName = sibling.text.toString().substringBefore("  ·  ")
+                                if (grouped.any { it.first == siblingName }) {
+                                    val active = siblingName == highlighted
                                     sibling.background = if (active) roundedDrawable(accent, if (ovalButtons) 14 else 6) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                                     sibling.setTextColor(if (active) Color.WHITE else muted)
                                 }
@@ -4162,16 +4163,23 @@ class MainActivity : Activity() {
             parts[2] == xtreamCacheContentSignature(cached)
     }
 
-    private fun xtreamCompletedSectionsKey(source: SavedSource): String =
+        private fun xtreamCompletedSectionsKey(source: SavedSource): String =
         "xtream_completed_sections_" + source.id
 
-    private fun completedXtreamSections(source: SavedSource): MutableSet<String> =
-        (prefs.getStringSet(xtreamCompletedSectionsKey(source), emptySet()) ?: emptySet()).toMutableSet()
+    private fun completedXtreamSections(source: SavedSource): MutableSet<String> {
+        val stored = prefs.getString(xtreamCompletedSectionsKey(source), "").orEmpty()
+        val signature = xtreamCacheSignature(source)
+        if (!stored.startsWith("$signature|")) return mutableSetOf()
+        return stored.removePrefix("$signature|").split("|").filter { it.isNotBlank() }.toMutableSet()
+    }
 
     private fun markXtreamSectionComplete(source: SavedSource, section: String) {
         val completed = completedXtreamSections(source)
         completed.add(section)
-        prefs.edit().putStringSet(xtreamCompletedSectionsKey(source), completed).apply()
+        prefs.edit().putString(
+            xtreamCompletedSectionsKey(source),
+            xtreamCacheSignature(source) + "|" + completed.joinToString("|")
+        ).apply()
     }
 
     private fun selectFirstCategoryForType(type: String) {
