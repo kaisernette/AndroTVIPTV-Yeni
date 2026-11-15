@@ -2925,7 +2925,8 @@ class MainActivity : Activity() {
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
-            val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")            val liveTvEightColumnGrid = selectedType == "Canlı TV"
+            val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")
+            val liveTvEightColumnGrid = selectedType == "Canlı TV"
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, dp(4), 2, dp(6))
             }
