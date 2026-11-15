@@ -3200,7 +3200,8 @@ class MainActivity : Activity() {
                                     )
                                 }
                                 mainHandler.post {
-                    if (loadGeneration != sourceSwitchGeneration) return@post publishNextBatch() }
+                    if (loadGeneration != sourceSwitchGeneration) return@post
+                                    publishNextBatch() }
                                 return
                             }
 
@@ -3516,11 +3517,13 @@ class MainActivity : Activity() {
             val catalogueUiReleased = java.util.concurrent.atomic.AtomicBoolean(false)
             try {
                 runOnUiThread {
-                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: Portal yanıtı bekleniyor…") }
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
+                        updateLoadingMessage( "${source.name}: Portal yanıtı bekleniyor…") }
                 val token = stalkerHandshake(source)
                 android.util.Log.i("KaiserTV", "Stalker handshake completed for ${source.name}")
                 runOnUiThread {
-                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: Oturum açıldı, TV kategorileri alınıyor…") }
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
+                        updateLoadingMessage( "${source.name}: Oturum açıldı, TV kategorileri alınıyor…") }
 
                 fun extractArray(response: JSONObject): JSONArray {
                     val direct = stalkerArray(response, "data", "categories", "genres", "channels", "items", "results")
@@ -3579,7 +3582,8 @@ class MainActivity : Activity() {
                 ) {
                     try {
                         runOnUiThread {
-                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: $label kategorileri alınıyor…") }
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
+                        updateLoadingMessage( "${source.name}: $label kategorileri alınıyor…") }
                         val categories = preloadedCategories ?: if (type == "itv") {
                             val response = stalkerRequest(source, token, mapOf("type" to "itv", "action" to "get_genres"))
                             val arr = extractArray(response)
@@ -3599,10 +3603,12 @@ class MainActivity : Activity() {
                             providerCategoryNames[uiCategoryType] = categories.map { it.second }.distinct()
                         }
                         runOnUiThread {
-                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread render() }
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
+                        render() }
 
                         runOnUiThread {
-                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: $label yükleniyor…") }
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
+                        updateLoadingMessage( "${source.name}: $label yükleniyor…") }
                         val collected = ConcurrentHashMap<String, MediaItem>()
                         val categoryOrder = categories.mapIndexed { index, pair -> pair.second to index }.toMap()
                         fun orderedSnapshot(): List<MediaItem> = collected.values.sortedWith(
@@ -4079,7 +4085,8 @@ class MainActivity : Activity() {
                             if (sectionItems.isEmpty()) {
                                 failed.add("Filmler")
                                 runOnUiThread {
-                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage("${source.name}: VOD listesi boş döndü; alternatif dizi kataloğu denenecek…") }
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
+                        updateLoadingMessage("${source.name}: VOD listesi boş döndü; alternatif dizi kataloğu denenecek…") }
                                 return
                             }
                             if (movieItems.isEmpty()) failed.add("Filmler")
@@ -4108,7 +4115,8 @@ class MainActivity : Activity() {
                         if (sectionItems.isEmpty()) {
                             failed.add(label)
                             runOnUiThread {
-                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: $label boş döndü; sonraki bölüm yükleniyor…") }
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
+                        updateLoadingMessage( "${source.name}: $label boş döndü; sonraki bölüm yükleniyor…") }
                             return
                         }
                         runOnUiThread {
@@ -4142,7 +4150,8 @@ class MainActivity : Activity() {
                         failed.add(label)
                         android.util.Log.e("KaiserTV", "Stalker $label failed", e)
                         runOnUiThread {
-                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: $label alınamadı; sonraki bölüm deneniyor…") }
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
+                        updateLoadingMessage( "${source.name}: $label alınamadı; sonraki bölüm deneniyor…") }
                     }
                 }
 
