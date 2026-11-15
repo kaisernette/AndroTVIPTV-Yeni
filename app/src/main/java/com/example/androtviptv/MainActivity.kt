@@ -3061,14 +3061,29 @@ class MainActivity : Activity() {
                     return result
                 }
 
-                val moviePosters = HashMap<String, Pair<String, String>>(2048)
+                val sourceSnapshot = synchronized(items) {
+                    items.filter { it.sourceId == source.id && it.type in setOf("Filmler", "Diziler") }
+                }
+                val wantedMovieTitles = sourceSnapshot.asSequence()
+                    .filter { it.type == "Filmler" }
+                    .map { normalizePosterMatchName(it.name) }
+                    .filter { it.length >= 3 }
+                    .toHashSet()
+                val wantedSeriesTitles = sourceSnapshot.asSequence()
+                    .filter { it.type == "Diziler" }
+                    .map { normalizePosterMatchName(it.name) }
+                    .filter { it.length >= 3 }
+                    .toHashSet()
+                if (wantedMovieTitles.isEmpty() && wantedSeriesTitles.isEmpty()) return@thread
+
+                val moviePosters = HashMap<String, Pair<String, String>>(minOf(wantedMovieTitles.size, 2048))
                 forEachXtreamJsonObject("$api&action=get_vod_streams") { item ->
                     val title = item.optString("name").ifBlank { item.optString("title") }
                     val poster = item.optString("movie_image").ifBlank {
                         item.optString("cover_big").ifBlank { item.optString("cover") }
                     }.ifBlank { item.optString("stream_icon") }
                     val key = normalizePosterMatchName(title)
-                    if (key.length >= 3 && poster.startsWith("http", true)) {
+                    if (key in wantedMovieTitles && poster.startsWith("http", true)) {
                         val category = item.optString("category_name").ifBlank { item.optString("category_id") }
                         moviePosters.putIfAbsent(key, poster to category)
                     }
@@ -3078,7 +3093,7 @@ class MainActivity : Activity() {
                     android.util.Log.w("KaiserTV", "Optional M3U series categories unavailable.", e)
                     emptyMap()
                 }
-                val seriesMetadata = HashMap<String, Pair<String, String>>(1024)
+                val seriesMetadata = HashMap<String, Pair<String, String>>(minOf(wantedSeriesTitles.size, 1024))
                 try {
                     forEachXtreamJsonObject("$api&action=get_series") { item ->
                         val title = item.optString("name").ifBlank { item.optString("title") }
@@ -3086,7 +3101,7 @@ class MainActivity : Activity() {
                             item.optString("cover_big").ifBlank { item.optString("movie_image") }
                         }
                         val key = normalizePosterMatchName(title)
-                        if (key.length >= 3) {
+                        if (key in wantedSeriesTitles) {
                             val category = item.optString("category_name").ifBlank {
                                 seriesCategories[item.optString("category_id")].orEmpty()
                             }
@@ -3142,7 +3157,7 @@ class MainActivity : Activity() {
         thread {
             try {
                 // Stream large M3U playlists line-by-line to avoid allocating one huge response String.
-                val parsed = requestM3uWithAutoPlus(source.address).map { it.copy(sourceId = source.id) }
+                val parsed = requestM3uWithAutoPlus(source.address, source.id)
                 runOnUiThread {
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
@@ -3755,7 +3770,7 @@ class MainActivity : Activity() {
                         // Two category workers per VOD/series section; with three sections this caps concurrent portal requests at about six.
                         // Keep Stalker session traffic conservative; four concurrent
                         // category workers can overload portals and cause missing categories.
-                        val categoryExecutor = Executors.newFixedThreadPool(if (type == "itv") 1 else 3)
+                        val categoryExecutor = Executors.newFixedThreadPool(1)
                         try {
                             val categoryTasks = ArrayList<java.util.concurrent.Future<*>>()
                             for ((categoryId, categoryName) in targets) {
@@ -3783,7 +3798,7 @@ class MainActivity : Activity() {
 
                                     if (lastPage > 1) {
                                         // A bounded pool increases portal throughput without flooding it.
-                                        val tvPageWorkers = 6
+                                        val tvPageWorkers = 2
                                         val pageExecutor = Executors.newFixedThreadPool(tvPageWorkers)
                                         val failedTvPages = java.util.concurrent.ConcurrentLinkedQueue<Int>()
                                         try {
@@ -3875,9 +3890,9 @@ class MainActivity : Activity() {
                                 seenPageKeys.addAll(firstPageKeys)
                                 val successfulPages = java.util.concurrent.atomic.AtomicInteger(1)
                                 val failedPages = java.util.concurrent.ConcurrentLinkedQueue<Int>()
-                                val pageExecutor = Executors.newFixedThreadPool(3)
+                                val pageExecutor = Executors.newFixedThreadPool(2)
                                 try {
-                                    val pageWorkers = (0 until 3).map {
+                                    val pageWorkers = (0 until 2).map {
                                         pageExecutor.submit {
                                             while (true) {
                                                 val page = nextPageToFetch.getAndIncrement()
@@ -4060,14 +4075,11 @@ class MainActivity : Activity() {
                 }
 
                 // PHASE 3: Load the contents using the already-fetched category lists.
-                val vodTask = thread(name = "kaiser-stalker-vod") {
-                    loadSection("vod", "Filmler", "get_categories", splitVodSeries = true, preloadedCategories = vodCategories)
-                }
-                val seriesTask = thread(name = "kaiser-stalker-series") {
-                    loadSection("series", "Diziler", "get_categories", preloadedCategories = seriesCategories)
-                }
-                vodTask.join()
-                seriesTask.join()
+                // Run VOD and Series one after another. Each section still pages in a
+                // small bounded pool, avoiding two full catalogue pipelines competing
+                // for Android TV memory and portal sessions at the same time.
+                loadSection("vod", "Filmler", "get_categories", splitVodSeries = true, preloadedCategories = vodCategories)
+                loadSection("series", "Diziler", "get_categories", preloadedCategories = seriesCategories)
 
                 runOnUiThread {
                     isLoadingSource = false
@@ -4240,6 +4252,9 @@ class MainActivity : Activity() {
             .putStringSet("selected_source_ids", setOf(source.id))
             .apply()
         selectedCategorySourceId = source.id
+        xtreamBase = base
+        xtreamUser = user
+        xtreamPass = pass
         val cachedForSource = items.filter { it.sourceId == source.id }
         if (hasCompleteXtreamCache(source, cachedForSource)) {
             isLoadingSource = false
@@ -4279,7 +4294,6 @@ class MainActivity : Activity() {
                     throw Exception("Giriş bilgileri kabul edilmedi.")
                 }
 
-                val loaded = mutableListOf<MediaItem>()
                 val failedParts = mutableListOf<String>()
 
                 var firstBatchApplied = cachedForSource.isNotEmpty()
@@ -4598,19 +4612,19 @@ class MainActivity : Activity() {
      * Try the richer m3u_plus variant for URLs explicitly using type=m3u.
      * If the provider rejects m3u_plus, fall back to the original URL.
      */
-    private fun requestM3uWithAutoPlus(address: String): List<MediaItem> {
+    private fun requestM3uWithAutoPlus(address: String, sourceId: String = ""): List<MediaItem> {
         val typePattern = Regex("([?&]type=)m3u(?=(&|#|$))", RegexOption.IGNORE_CASE)
-        val match = typePattern.find(address) ?: return requestM3u(address)
+        val match = typePattern.find(address) ?: return requestM3u(address, sourceId)
         val plusAddress = address.replaceRange(
             match.range,
             match.value.replace(Regex("m3u$", RegexOption.IGNORE_CASE), "m3u_plus")
         )
         return try {
-            requestM3u(plusAddress)
+            requestM3u(plusAddress, sourceId)
         } catch (plusError: Exception) {
             android.util.Log.w("KaiserTV", "M3U+ endpoint unavailable; falling back to original M3U URL")
             try {
-                requestM3u(address)
+                requestM3u(address, sourceId)
             } catch (fallbackError: Exception) {
                 throw Exception(
                     "M3U+ denemesi başarısız (" + plusError.message + "); normal M3U denemesi de başarısız (" + fallbackError.message + ").",
@@ -4620,7 +4634,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun requestM3u(address: String): List<MediaItem> {
+    private fun requestM3u(address: String, sourceId: String = ""): List<MediaItem> {
         var lastError: Exception? = null
         for (attempt in 0..2) {
             var conn: HttpURLConnection? = null
@@ -4638,7 +4652,7 @@ class MainActivity : Activity() {
                     if (code == 429 || code >= 500) throw Exception("HTTP $code (yeniden denenecek)")
                     throw Exception("HTTP $code" + (message?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: ""))
                 }
-                val parsed = conn.inputStream.bufferedReader(Charsets.UTF_8).use { parseM3u(it) }
+                val parsed = conn.inputStream.bufferedReader(Charsets.UTF_8).use { parseM3u(it, sourceId) }
                 if (parsed.isEmpty()) throw Exception("M3U listesi boş veya desteklenmeyen biçimde.")
                 return parsed
             } catch (e: Exception) {
@@ -4656,7 +4670,7 @@ class MainActivity : Activity() {
         throw Exception("M3U listesi alınamadı: " + (lastError?.message ?: "bağlantı hatası"))
     }
 
-    private fun parseM3u(reader: java.io.BufferedReader): List<MediaItem> {
+    private fun parseM3u(reader: java.io.BufferedReader, sourceId: String = ""): List<MediaItem> {
         val out = mutableListOf<MediaItem>()
         var name = "İçerik"
         var group = "Diğer"
@@ -4745,7 +4759,7 @@ class MainActivity : Activity() {
                     }
                     val type = classify(name, group, streamUrl)
                     val headerJson = if (headers.isEmpty()) "" else JSONObject(headers as Map<*, *>).toString()
-                    out.add(MediaItem(streamUrl, name, streamUrl, group, type, icon, requestHeaders = headerJson))
+                    out.add(MediaItem(streamUrl, name, streamUrl, group, type, icon, sourceId = sourceId, requestHeaders = headerJson))
                     name = "İçerik"
                     group = "Diğer"
                     icon = ""
