@@ -2021,6 +2021,7 @@ class MainActivity : Activity() {
                         focusedCategoryName = null
                         expandedCategory = null
                         selectedType = key
+                        if (key in listOf("Canlı TV", "Filmler", "Diziler")) selectFirstCategoryForType(key)
                         sidebarMode = if (normalizedTab == "TV" || normalizedTab == "Filmler" || normalizedTab == "Diziler") "context" else "main"
                         contextNavigationStage = if (key in listOf("Canlı TV", "Filmler", "Diziler")) 1 else 0
                         prefs.edit().putString("last_section", key).putString("last_group", "Tüm kategoriler").apply()
@@ -2101,6 +2102,7 @@ class MainActivity : Activity() {
                             selectedGroup = "Tüm kategoriler"
                             focusedCategoryName = null
                             expandedCategory = null
+                            if (key in listOf("Canlı TV", "Filmler", "Diziler")) selectFirstCategoryForType(key)
                             sidebarMode = if (key in listOf("Canlı TV", "Filmler", "Diziler")) "context" else "main"
                             contextNavigationStage = if (key in listOf("Canlı TV", "Filmler", "Diziler")) 1 else 0
                             prefs.edit().putString("last_section", key).putString("last_group", selectedGroup).apply()
@@ -2122,8 +2124,14 @@ class MainActivity : Activity() {
                     !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
                 }
                 val grouped = categoryItems.groupBy { it.group.ifBlank { "Diğer" } }.toList()
-                // Keep category navigation separate from the content grid.
-                // The first category receives focus, but opens only after explicit selection.
+                // Open the first available category automatically when entering a section.
+                if (expandedCategory == null && selectedGroup == "Tüm kategoriler" && grouped.isNotEmpty()) {
+                    val first = grouped.first()
+                    selectedGroup = first.first
+                    expandedCategory = first.first to first.second
+                    focusedCategoryName = first.first
+                    mediaItemsLimit = first.second.size
+                }
                 val selectedName = expandedCategory?.first ?: grouped.firstOrNull()?.first
                 categoryPanel.addView(TextView(this).apply {
                     text = "←  ${t("Geri")}"
@@ -4150,10 +4158,34 @@ class MainActivity : Activity() {
         val parts = state.split(":", limit = 3)
         if (parts.size != 3 || parts[0] != xtreamCacheSignature(source)) return false
         val expectedCount = parts[1].toIntOrNull() ?: return false
-        // Compare the actual restored catalogue too: a stale asynchronous disk write
-        // with the same record count must not be mistaken for the latest snapshot.
         return expectedCount > 0 && cached.size == expectedCount &&
             parts[2] == xtreamCacheContentSignature(cached)
+    }
+
+    private fun xtreamCompletedSectionsKey(source: SavedSource): String =
+        "xtream_completed_sections_" + source.id
+
+    private fun completedXtreamSections(source: SavedSource): MutableSet<String> =
+        (prefs.getStringSet(xtreamCompletedSectionsKey(source), emptySet()) ?: emptySet()).toMutableSet()
+
+    private fun markXtreamSectionComplete(source: SavedSource, section: String) {
+        val completed = completedXtreamSections(source)
+        completed.add(section)
+        prefs.edit().putStringSet(xtreamCompletedSectionsKey(source), completed).apply()
+    }
+
+    private fun selectFirstCategoryForType(type: String) {
+        val sourceId = selectedCategorySourceId.ifBlank { prefs.getString("last_source_id", "").orEmpty() }
+        val sectionItems = items.filter {
+            it.type == type && (sourceId.isBlank() || it.sourceId == sourceId) &&
+                (type != "Canlı TV" || it.url.isNotBlank()) &&
+                !hiddenCategories.contains(it.type + "|" + it.group.ifBlank { "Diğer" })
+        }
+        val first = sectionItems.groupBy { it.group.ifBlank { "Diğer" } }.entries.firstOrNull()
+        selectedGroup = first?.key ?: "Tüm kategoriler"
+        expandedCategory = first?.let { it.key to it.value }
+        focusedCategoryName = first?.key
+        mediaItemsLimit = first?.value?.size ?: 12
     }
 
     // M3U and Stalker use the same integrity check as Xtream. A non-empty cache alone
@@ -4197,11 +4229,36 @@ class MainActivity : Activity() {
         }
         prefs.edit()
             .putString("last_source_id", source.id)
-            .remove(xtreamCacheStateKey(source))
+            .putStringSet("selected_source_ids", setOf(source.id))
             .apply()
-        isLoadingSource = true
+        selectedCategorySourceId = source.id
+        val cachedForSource = items.filter { it.sourceId == source.id }
+        if (hasCompleteXtreamCache(source, cachedForSource)) {
+            isLoadingSource = false
+            hasLoadedSource = true
+            selectedType = "Tümü"
+            selectedGroup = "Tüm kategoriler"
+            expandedCategory = null
+            sidebarMode = "main"
+            status.text = "${source.name}: kayıtlı katalog hazır (${cachedForSource.size} içerik)."
+            render()
+            publishHomeChannel()
+            tryOpenPendingTvHomeItem()
+            return
+        }
+        val alreadyCompletedSections = completedXtreamSections(source)
+        isLoadingSource = false
+        hasLoadedSource = cachedForSource.isNotEmpty()
         loadProgress = 0
-        status.text = "${source.name}: ${t("TV, filmler ve diziler yükleniyor…")}"
+        selectedType = "Tümü"
+        selectedGroup = "Tüm kategoriler"
+        expandedCategory = null
+        sidebarMode = "main"
+        status.text = if (cachedForSource.isNotEmpty()) {
+            "${source.name}: kayıtlı içerikler açıldı; eksikler arka planda tamamlanıyor…"
+        } else {
+            "${source.name}: ana ekran açıldı; katalog arka planda yükleniyor…"
+        }
         render()
         thread(name = "kaiser-xtream-load") {
             try {
@@ -4217,7 +4274,7 @@ class MainActivity : Activity() {
                 val loaded = mutableListOf<MediaItem>()
                 val failedParts = mutableListOf<String>()
 
-                var firstBatchApplied = false
+                var firstBatchApplied = cachedForSource.isNotEmpty()
                 var totalLoaded = 0
 
                 // Fetch and publish one catalogue section at a time. Once Live TV is ready,
@@ -4245,6 +4302,10 @@ class MainActivity : Activity() {
                 )
 
                 sections.forEachIndexed { sectionIndex, (action, type, categorySpec) ->
+                    if (type in alreadyCompletedSections) {
+                        android.util.Log.i("KaiserTV", "Xtream $type restored from local cache; skipping network.")
+                        return@forEachIndexed
+                    }
                     try {
                         val sectionStart = 12 + sectionIndex * 29
                         runOnUiThread {
@@ -4269,28 +4330,28 @@ class MainActivity : Activity() {
                             val loadedInSection = sectionCount
                             runOnUiThread {
                                 if (isFirstBatch) {
-                                    items.removeAll { it.sourceId == source.id }
-                                    selectedType = "Tümü"
-                                    selectedGroup = "Tüm kategoriler"
-                                    expandedCategory = null
-                                    sidebarMode = "main"
                                     xtreamBase = base
                                     xtreamUser = user
                                     xtreamPass = pass
                                 }
-                                if (published.isNotEmpty()) items.addAll(published)
-                                if (finalBatch) saveCachedItems()
-
-                                if (type == "Canlı TV" && finalBatch) {
-                                    // Keep the startup gate closed until TV, Movies and Series
-                                    // have all completed; the final completion block opens the UI.
-                                } else if (finalBatch && published.isNotEmpty() && (selectedType == type || selectedType == "Tümü")) {
-                                    render()
+                                if (published.isNotEmpty()) {
+                                    val incomingIds = published.mapTo(HashSet()) { it.type + "|" + it.id }
+                                    items.removeAll { it.sourceId == source.id && (it.type + "|" + it.id) in incomingIds }
+                                    items.addAll(published)
                                 }
                                 if (finalBatch) {
-                                    status.text = "${source.name}: $type hazır (${sectionCount} içerik)."
+                                    saveCachedItems()
+                                    markXtreamSectionComplete(source, type)
+                                }
+                                if (published.isNotEmpty() && !hasLoadedSource) hasLoadedSource = true
+                                if (selectedType == type && selectedGroup == "Tüm kategoriler" && expandedCategory == null) {
+                                    selectFirstCategoryForType(type)
+                                }
+                                if (finalBatch && (selectedType == type || selectedType == "Tümü")) render()
+                                status.text = if (finalBatch) {
+                                    "${source.name}: $type hazır (${sectionCount} içerik). Diğer kataloglar arka planda devam ediyor."
                                 } else {
-                                    status.text = "${source.name}: $type yükleniyor… ${loadedInSection} içerik"
+                                    "${source.name}: $type yükleniyor… ${loadedInSection} içerik"
                                 }
                             }
                         }
@@ -4384,13 +4445,21 @@ class MainActivity : Activity() {
                         }
                         if (failedParts.isEmpty()) {
                             hasLoadedSource = true
+                            isLoadingSource = false
+                            val allSourceItems = items.filter { it.sourceId == source.id }
+                            if (allSourceItems.isNotEmpty()) {
+                                prefs.edit().putString(
+                                    xtreamCacheStateKey(source),
+                                    "${xtreamCacheSignature(source)}:${allSourceItems.size}:${xtreamCacheContentSignature(allSourceItems)}"
+                                ).apply()
+                            }
                             render()
                             publishHomeChannel()
                             tryOpenPendingTvHomeItem()
                         } else {
-                            status.text = "${source.name}: katalog eksik kaldı. Tekrar deneyin: ${failedParts.distinct().joinToString()}"
+                            status.text = "${source.name}: katalog eksik kaldı. Hazır içerikler kullanılabilir; eksikler tekrar denenebilir: ${failedParts.distinct().joinToString()}"
                             render()
-                            showConnectionError(source.name, "Eksik katalog bölümleri: ${failedParts.distinct().joinToString()}")
+                            if (!hasLoadedSource) showConnectionError(source.name, "Eksik katalog bölümleri: ${failedParts.distinct().joinToString()}")
                         }
                     }
                 }
