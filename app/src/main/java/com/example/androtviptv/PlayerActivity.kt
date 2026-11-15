@@ -63,6 +63,8 @@ class PlayerActivity : Activity() {
     private var lastObservedPositionMs = -1L
     private var positionStalledSinceMs = 0L
     private val playbackHandler = Handler(Looper.getMainLooper())
+    @Vol
+tile private var playbackLifecycleActive = false
     private val playbackWatchdog = object : Runnable {
         override fun run() {
             val exo = player
@@ -99,7 +101,9 @@ class PlayerActivity : Activity() {
                 positionStalledSinceMs = 0L
                 lastObservedPositionMs = -1L
             }
-            playbackHandler.postDelayed(this, 5000L)
+            if (playbackLifecycleActive && !isFinishing && !isDestroyed) {
+                playbackHandler.postDelayed(this, 5000L)
+            }
         }
     }
     private var playerView: PlayerView? = null
@@ -1399,7 +1403,52 @@ class PlayerActivity : Activity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    override fun onPause() { savePlaybackPosition(); super.onPause() }
-    override fun onStop() { savePlaybackPosition(); playerView?.keepScreenOn = false; window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); player?.pause(); super.onStop() }
-    override fun onDestroy() { episodeTransitionHandler.removeCallbacksAndMessages(null); clearEpisodeCountdown(); uiHandler.removeCallbacksAndMessages(null); playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
+    override fun onResume() {
+        super.onResume()
+        playbackLifecycleActive = true
+        applyPlayerImmersiveMode()
+        playerView?.player = player
+        player?.let {
+            playbackHandler.removeCallbacks(playbackWatchdog)
+            playbackHandler.postDelayed(playbackWatchdog, 5000L)
+        }
+    }
+
+    override fun onPause() {
+        // Stop audio as soon as this screen loses foreground; do not wait for onStop.
+        playbackLifecycleActive = false
+        playbackHandler.removeCallbacks(playbackWatchdog)
+        episodeTransitionHandler.removeCallbacks(episodeCountdownRunnable)
+        savePlaybackPosition()
+        player?.playWhenReady = false
+        player?.pause()
+        super.onPause()
+    }
+
+    override fun onStop() {
+        playbackLifecycleActive = false
+        playbackHandler.removeCallbacksAndMessages(null)
+        episodeTransitionHandler.removeCallbacksAndMessages(null)
+        savePlaybackPosition()
+        player?.playWhenReady = false
+        player?.stop()
+        playerView?.player = null
+        playerView?.keepScreenOn = false
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        playbackLifecycleActive = false
+        episodeTransitionHandler.removeCallbacksAndMessages(null)
+        clearEpisodeCountdown()
+        uiHandler.removeCallbacksAndMessages(null)
+        playbackHandler.removeCallbacksAndMessages(null)
+        savePlaybackPosition()
+        playerView?.player = null
+        player?.release()
+        player = null
+        playerView = null
+        super.onDestroy()
+    }
 }
