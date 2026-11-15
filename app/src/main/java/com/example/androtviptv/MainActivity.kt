@@ -3219,8 +3219,13 @@ class MainActivity : Activity() {
                             thread(name = "kaiser-m3u-cache") {
                                 val cacheStartedAt = android.os.SystemClock.elapsedRealtime()
                                 try {
-                                    saveCachedItems()
-                                    markSourceCatalogCacheComplete(source)
+                                    saveCachedItemsAndThen {
+                                        // Persist the completion marker only after the JSON cache
+                                        // file has been fully written. Otherwise a fast app restart
+                                        // can see a valid marker beside an old/partial cache and
+                                        // download the entire M3U playlist again.
+                                        markSourceCatalogCacheComplete(source)
+                                    }
                                     android.util.Log.i(
                                         "KaiserTV-M3U",
                                         "stage=cache_signature_done elapsedMs=${android.os.SystemClock.elapsedRealtime() - cacheStartedAt}"
@@ -4954,6 +4959,23 @@ class MainActivity : Activity() {
         } catch (e: Exception) {
             synchronized(cacheWriteLock) { cacheWriterRunning = false }
             android.util.Log.e("KaiserTV", "Media cache writer could not start", e)
+        }
+    }
+
+    // Queue a completion action behind the coalescing cache writer. Because cacheExecutor
+    // is single-threaded, this runs only after the latest queued snapshot has been written.
+    private fun saveCachedItemsAndThen(onSaved: () -> Unit) {
+        saveCachedItems()
+        try {
+            cacheExecutor.execute {
+                try {
+                    onSaved()
+                } catch (e: Exception) {
+                    android.util.Log.e("KaiserTV", "Post-cache action failed", e)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("KaiserTV", "Could not queue post-cache action", e)
         }
     }
 
