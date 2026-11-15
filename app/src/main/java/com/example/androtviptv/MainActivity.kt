@@ -581,8 +581,7 @@ class MainActivity : Activity() {
                 val (fx, fy) = centerOnScreen(focused)
                 val candidates = ArrayList<View>()
                 fun collect(parent: ViewGroup) {
-                    for (i in 0 until parent.childCount) {
-                        val child = parent.getChildAt(i)
+                    for (i in 0 until parent.childCount) {                        val child = parent.getChildAt(i)
                         if (child.isShown && child.isEnabled && child.isFocusable &&
                             child.width > 0 && child.height > 0 && child !== focused) {
                             val inSidebar = ::sidebar.isInitialized && isDescendantView(sidebar, child)
@@ -1165,8 +1164,7 @@ class MainActivity : Activity() {
                 })
                 grouped.forEachIndexed { categoryIndex, (name, entries) ->
                     val selected = name == (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
-                    val button = TextView(this).apply {
-                        text = name
+                    val button = TextView(this).apply {                        text = name
                         textSize = 13f
                         maxLines = 2
                         setTextColor(if (selected) Color.WHITE else muted)
@@ -1749,8 +1747,7 @@ class MainActivity : Activity() {
                                 val within = if (count == 0) 0 else (i * 16 / count)
                                 val progress = (40 + actionIndex * 18 + within).coerceIn(1, 98)
                                 runOnUiThread {
-                                    loadProgress = progress
-                                    status.text = "${source.name}: $type yükleniyor… %$progress"
+                                    loadProgress = progress                                    status.text = "${source.name}: $type yükleniyor… %$progress"
                                 }
                             }
                         }
@@ -2333,8 +2330,7 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
             }
             inlineCredentials.addView(username, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
-                setMargins(0, 0, dp(4), 0)
-            })
+                setMargins(0, 0, dp(4), 0)            })
             inlineCredentials.addView(password, LinearLayout.LayoutParams(0, dp(48), 1f).apply {
                 setMargins(dp(4), 0, 0, 0)
             })
@@ -2913,12 +2909,22 @@ class MainActivity : Activity() {
         // 12 category rows on screen; every category remains accessible from the sidebar
         // and selecting one shows that category's items.
         val groupsToRender = expandedCategory?.let { listOf(it.first to it.second) }
-            ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups
+            ?: if (selectedType in listOf("Filmler", "Diziler")) {
+                if (selectedGroup == "Tüm kategoriler") emptyList() else groups.take(1)
+            } else groups
+        if (selectedType in listOf("Filmler", "Diziler") &&
+            selectedGroup == "Tüm kategoriler" && expandedCategory == null && groups.isNotEmpty()) {
+            content.addView(TextView(this).apply {
+                text = t("İçerikleri görmek için bir kategori seç.")
+                textSize = 14f
+                setTextColor(muted)
+                setPadding(dp(8), dp(14), dp(8), dp(14))
+            })
+        }
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
             val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
-            val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")
-            val liveTvEightColumnGrid = selectedType == "Canlı TV"
+            val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")            val liveTvEightColumnGrid = selectedType == "Canlı TV"
             val sectionHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(2, dp(4), 2, dp(6))
             }
@@ -3501,8 +3507,7 @@ class MainActivity : Activity() {
         watchButton.post { if (detailMovie?.favoriteKey == movie.favoriteKey) watchButton.requestFocus() }
     }
 
-    private fun showSeriesDropdown(
-        panel: LinearLayout,
+    private fun showSeriesDropdown(        panel: LinearLayout,
         options: List<String>,
         selectedIndex: Int,
         onSelected: (Int) -> Unit
@@ -4085,8 +4090,7 @@ class MainActivity : Activity() {
                                         "en" -> "EN"
                                         "de" -> "DE"
                                         "fr" -> "FR"
-                                        "it" -> "IT"
-                                        "es" -> "ES"
+                                        "it" -> "IT"                                        "es" -> "ES"
                                         "ru" -> "RU"
                                         "ar" -> "AR"
                                         else -> language.uppercase(java.util.Locale.ROOT)
