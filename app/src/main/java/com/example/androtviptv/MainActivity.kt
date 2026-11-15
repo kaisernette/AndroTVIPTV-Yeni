@@ -3150,6 +3150,8 @@ class MainActivity : Activity() {
     }
 
     private fun loadM3u(source: SavedSource, append: Boolean) {
+        // Invalidate callbacks from any previous source load before starting this one.
+        val loadGeneration = ++sourceSwitchGeneration
         applySourceTheme(source)
         prefs.edit().putString("last_source_id", source.id).remove(sourceCatalogStateKey(source)).apply()
         isLoadingSource = true
@@ -3161,6 +3163,7 @@ class MainActivity : Activity() {
             try {
                 android.util.Log.i("KaiserTV-M3U", "stage=download_parse_start source=${source.id}")
                 val parsed = requestM3uWithAutoPlus(source.address, source.id)
+                if (loadGeneration != sourceSwitchGeneration) return@thread
                 android.util.Log.i(
                     "KaiserTV-M3U",
                     "stage=download_parse_done count=${parsed.size} elapsedMs=${android.os.SystemClock.elapsedRealtime() - startedAt}"
@@ -3172,6 +3175,7 @@ class MainActivity : Activity() {
                 val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
                 val batchSize = 400
                 mainHandler.post {
+                    if (loadGeneration != sourceSwitchGeneration) return@post
                     try {
                         items.removeAll { it.sourceId == source.id }
                         selectedGroup = "Tüm kategoriler"
@@ -3195,7 +3199,8 @@ class MainActivity : Activity() {
                                             "usedMb=${(runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)}"
                                     )
                                 }
-                                mainHandler.post { publishNextBatch() }
+                                mainHandler.post {
+                    if (loadGeneration != sourceSwitchGeneration) return@post publishNextBatch() }
                                 return
                             }
 
@@ -3246,6 +3251,7 @@ class MainActivity : Activity() {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                     loadProgress = 0
                     isLoadingSource = false
                     status.text = "${source.name}: ${friendlyLoadError(e)}"
@@ -3481,6 +3487,8 @@ class MainActivity : Activity() {
     }
 
     private fun loadStalker(source: SavedSource, append: Boolean) {
+        // Invalidate callbacks from any previous source load before starting this one.
+        val loadGeneration = ++sourceSwitchGeneration
         applySourceTheme(source)
         // Pin every screen/filter to the newly activated source before loading starts.
         // Keep other sources cached in memory, but never let their categories leak into this view.
@@ -3507,10 +3515,12 @@ class MainActivity : Activity() {
             // Remaining Stalker pages continue downloading in the background.
             val catalogueUiReleased = java.util.concurrent.atomic.AtomicBoolean(false)
             try {
-                runOnUiThread { updateLoadingMessage( "${source.name}: Portal yanıtı bekleniyor…") }
+                runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: Portal yanıtı bekleniyor…") }
                 val token = stalkerHandshake(source)
                 android.util.Log.i("KaiserTV", "Stalker handshake completed for ${source.name}")
-                runOnUiThread { updateLoadingMessage( "${source.name}: Oturum açıldı, TV kategorileri alınıyor…") }
+                runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: Oturum açıldı, TV kategorileri alınıyor…") }
 
                 fun extractArray(response: JSONObject): JSONArray {
                     val direct = stalkerArray(response, "data", "categories", "genres", "channels", "items", "results")
@@ -3568,7 +3578,8 @@ class MainActivity : Activity() {
                     preloadedCategories: List<Pair<String, String>>? = null
                 ) {
                     try {
-                        runOnUiThread { updateLoadingMessage( "${source.name}: $label kategorileri alınıyor…") }
+                        runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: $label kategorileri alınıyor…") }
                         val categories = preloadedCategories ?: if (type == "itv") {
                             val response = stalkerRequest(source, token, mapOf("type" to "itv", "action" to "get_genres"))
                             val arr = extractArray(response)
@@ -3587,9 +3598,11 @@ class MainActivity : Activity() {
                         synchronized(providerCategoryNames) {
                             providerCategoryNames[uiCategoryType] = categories.map { it.second }.distinct()
                         }
-                        runOnUiThread { render() }
+                        runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread render() }
 
-                        runOnUiThread { updateLoadingMessage( "${source.name}: $label yükleniyor…") }
+                        runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: $label yükleniyor…") }
                         val collected = ConcurrentHashMap<String, MediaItem>()
                         val categoryOrder = categories.mapIndexed { index, pair -> pair.second to index }.toMap()
                         fun orderedSnapshot(): List<MediaItem> = collected.values.sortedWith(
@@ -3722,6 +3735,7 @@ class MainActivity : Activity() {
                             val publishItems = snapshot.filter { it.type in publishTypes }
                             if (publishItems.isEmpty()) return
                             runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                                 if (catalogueUiReleased.compareAndSet(false, true)) {
                                     // Partial pages are checkpointed to cache, but the app stays
                                     // on the loading screen until every Stalker section completes.
@@ -3902,6 +3916,7 @@ class MainActivity : Activity() {
                                                         val completed = completedPages.incrementAndGet()
                                                         if (completed % 6 == 0 || completed == lastPage) {
                                                             runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                                                                 updateLoadingMessage("${source.name}: $label yükleniyor… (${collected.size} kanal, $completed/$lastPage sayfa)")
                                                             }
                                                             publishPartialSection()
@@ -4021,6 +4036,7 @@ class MainActivity : Activity() {
                                                 val lastUi = lastProgressUpdateAt.get()
                                                 if (now - lastUi >= 1500L && lastProgressUpdateAt.compareAndSet(lastUi, now)) {
                                                     runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                                                         updateLoadingMessage(
                                                             "${source.name}: $label yükleniyor… (${collected.size} içerik, $completed sayfa)"
                                                         )
@@ -4062,11 +4078,13 @@ class MainActivity : Activity() {
                             android.util.Log.i("KaiserTV", "Stalker $diagnostic")
                             if (sectionItems.isEmpty()) {
                                 failed.add("Filmler")
-                                runOnUiThread { updateLoadingMessage("${source.name}: VOD listesi boş döndü; alternatif dizi kataloğu denenecek…") }
+                                runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage("${source.name}: VOD listesi boş döndü; alternatif dizi kataloğu denenecek…") }
                                 return
                             }
                             if (movieItems.isEmpty()) failed.add("Filmler")
                             runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                                 // Preserve series from the dedicated "series" loader;
                                 // this VOD result may contain movies only or partial series.
                                 val currentSeries = items.filter { it.sourceId == source.id && it.type == "Diziler" }
@@ -4089,10 +4107,12 @@ class MainActivity : Activity() {
                         android.util.Log.i("KaiserTV", "Stalker $diagnostic")
                         if (sectionItems.isEmpty()) {
                             failed.add(label)
-                            runOnUiThread { updateLoadingMessage( "${source.name}: $label boş döndü; sonraki bölüm yükleniyor…") }
+                            runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: $label boş döndü; sonraki bölüm yükleniyor…") }
                             return
                         }
                         runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                             if (type == "series") {
                                 // Merge the dedicated Series catalogue with any series
                                 // already discovered in VOD; prefer the dedicated endpoint
@@ -4121,7 +4141,8 @@ class MainActivity : Activity() {
                     } catch (e: Exception) {
                         failed.add(label)
                         android.util.Log.e("KaiserTV", "Stalker $label failed", e)
-                        runOnUiThread { updateLoadingMessage( "${source.name}: $label alınamadı; sonraki bölüm deneniyor…") }
+                        runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread updateLoadingMessage( "${source.name}: $label alınamadı; sonraki bölüm deneniyor…") }
                     }
                 }
 
@@ -4134,6 +4155,7 @@ class MainActivity : Activity() {
 
                 val tvPublished = java.util.concurrent.CountDownLatch(1)
                 runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                     updateLoadingMessage("${source.name}: TV tamamlandı. Film ve dizi kategorileri alınıyor…")
                     tvPublished.countDown()
                 }
@@ -4143,6 +4165,7 @@ class MainActivity : Activity() {
                 val vodCategories = readCategories("vod")
                 val seriesCategories = readCategories("series")
                 runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                     updateLoadingMessage("${source.name}: ${vodCategories.size} film ve ${seriesCategories.size} dizi kategorisi hazır. İçerikler yükleniyor…")
                 }
 
@@ -4154,6 +4177,7 @@ class MainActivity : Activity() {
                 loadSection("series", "Diziler", "get_categories", preloadedCategories = seriesCategories)
 
                 runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                     isLoadingSource = false
                     if (!anySectionLoaded || failed.isNotEmpty()) {
                         updateLoadingMessage("${source.name}: katalog eksik kaldı. Tekrar deneyin.")
@@ -4176,6 +4200,7 @@ class MainActivity : Activity() {
                             prefs.edit().putString("last_stalker_catalog_diagnostics", diagnosticText).apply()
                             android.util.Log.w("KaiserTV", "Stalker catalogue diagnostics: $diagnosticText")
                             runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                                 updateLoadingMessage("Stalker tanılama kaydedildi. Ayrıntılar Ayarlar bölümünde.")
                             }
                         }
@@ -4184,6 +4209,7 @@ class MainActivity : Activity() {
             } catch (e: Exception) {
                 android.util.Log.e("KaiserTV", "Stalker Portal load failed", e)
                 runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                     isLoadingSource = false
                     updateLoadingMessage( "${source.name}: ${friendlyLoadError(e)}")
                     render()
@@ -4311,6 +4337,8 @@ class MainActivity : Activity() {
     }
 
     private fun loadXtream(source: SavedSource, append: Boolean) {
+        // Invalidate callbacks from any previous source load before starting this one.
+        val loadGeneration = ++sourceSwitchGeneration
         applySourceTheme(source)
         val base = source.address.trimEnd('/')
         val user = source.username
@@ -4396,6 +4424,7 @@ class MainActivity : Activity() {
                 )
 
                 sections.forEachIndexed { sectionIndex, (action, type, categorySpec) ->
+                    if (loadGeneration != sourceSwitchGeneration) return@forEachIndexed
                     if (type in alreadyCompletedSections) {
                         android.util.Log.i("KaiserTV", "Xtream $type restored from local cache; skipping network.")
                         return@forEachIndexed
@@ -4403,11 +4432,13 @@ class MainActivity : Activity() {
                     try {
                         val sectionStart = 12 + sectionIndex * 29
                         runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                             loadProgress = sectionStart
                             status.text = "${source.name}: $type kategorileri alınıyor…"
                         }
                         val categories = categoryMap(categorySpec.first, categorySpec.second)
                         runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                             loadProgress = sectionStart + 8
                             status.text = "${source.name}: $type yükleniyor…"
                         }
@@ -4423,6 +4454,7 @@ class MainActivity : Activity() {
                             totalLoaded += published.size
                             val loadedInSection = sectionCount
                             runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                                 if (isFirstBatch) {
                                     xtreamBase = base
                                     xtreamUser = user
@@ -4451,6 +4483,7 @@ class MainActivity : Activity() {
                         }
 
                         forEachXtreamJsonObject("$api&action=$action") { o ->
+                            if (loadGeneration != sourceSwitchGeneration) throw InterruptedException("Source load superseded")
                             val id = o.optString(
                                 if (action == "get_series") "series_id" else "stream_id", ""
                             ).trim()
@@ -4500,6 +4533,7 @@ class MainActivity : Activity() {
                                     val progress = (sectionStart + 8 + (sectionCount / 1500))
                                         .coerceIn(sectionStart + 8, sectionStart + 27)
                                     runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                                         loadProgress = progress
                                         status.text = "${source.name}: $type yükleniyor… ${sectionCount} içerik"
                                     }
@@ -4515,6 +4549,7 @@ class MainActivity : Activity() {
                 }
 
                 runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                     isLoadingSource = false
                     if (!firstBatchApplied) {
                         loadProgress = 0
@@ -4559,6 +4594,7 @@ class MainActivity : Activity() {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
+                    if (loadGeneration != sourceSwitchGeneration) return@runOnUiThread
                     loadProgress = 0
                     isLoadingSource = false
                     status.visibility = View.VISIBLE
