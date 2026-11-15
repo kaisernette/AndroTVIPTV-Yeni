@@ -2734,8 +2734,16 @@ class MainActivity : Activity() {
                 setPadding(12, 0, 12, 0)
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36).apply { setMargins(0, 2, 8, 2) })
         }
-        val visible = if (selectedGroup == "Tüm kategoriler" || sidebarMode == "search") baseVisible
-            else baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
+        // On first entry to TV, show only the first category's first channel row.
+        // Selecting a category explicitly restores that category's normal item list.
+        val firstTvCategory = groupsAvailable.firstOrNull()
+        val visible = when {
+            sidebarMode == "search" -> baseVisible
+            selectedGroup == "Tüm kategoriler" && selectedType == "Canlı TV" ->
+                if (firstTvCategory == null) emptyList() else baseVisible.filter { it.group.ifBlank { "Diğer" } == firstTvCategory }
+            selectedGroup == "Tüm kategoriler" -> baseVisible
+            else -> baseVisible.filter { it.group.ifBlank { it.type } == selectedGroup }
+        }
 
         // Live TV category content: compact logo/name grid; OK opens the channel fullscreen.
         if (selectedType == "Canlı TV" && sidebarMode == "context") {
@@ -2748,7 +2756,9 @@ class MainActivity : Activity() {
                 setPadding(dp(8), dp(10), dp(8), dp(12))
             })
             val tvChannels = visible.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
-            val displayedTvChannels = tvChannels.take(liveChannelsLimit)
+            // Initial TV tab entry renders one compact row (8 channels); category selection
+            // continues to use the existing channel limit and playback behavior.
+            val displayedTvChannels = tvChannels.take(if (selectedGroup == "Tüm kategoriler") 8 else liveChannelsLimit)
             if (tvChannels.isEmpty()) {
                 content.addView(TextView(this).apply {
                     text = t("Bu kategoride kanal bulunamadı.")
@@ -2962,7 +2972,9 @@ class MainActivity : Activity() {
             ?: if (selectedType in listOf("Filmler", "Diziler")) groups.take(1) else groups
         groupsToRender.forEach { (groupName, entries) ->
             val showingExpandedCategory = expandedCategory?.first == groupName
-            val posterGridMode = showingExpandedCategory || selectedType == "Filmler" || selectedType == "Diziler" || selectedType == "Canlı TV"
+            // Default Movies/Series entry is a lightweight horizontal preview row.
+            // The full poster grid is built only after the user opens a category.
+            val posterGridMode = showingExpandedCategory || selectedType == "Canlı TV"
             val fiveColumnMediaGrid = selectedType in listOf("Filmler", "Diziler")
             val liveTvEightColumnGrid = selectedType == "Canlı TV"
             val sectionHeader = LinearLayout(this).apply {
@@ -2995,7 +3007,11 @@ class MainActivity : Activity() {
             // Ana ekranda haftanın filmleri tek tek geniş, afiş odaklı kartlar olarak gösterilir.
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(140) // Kart genişliği afişle aynı
-            val displayedEntries = if (posterGridMode || weeklyMovieFeature) entries else entries.take(5)
+            val displayedEntries = when {
+                showingExpandedCategory || weeklyMovieFeature -> entries
+                selectedType in listOf("Filmler", "Diziler") -> entries.take(3)
+                else -> entries.take(5)
+            }
             var expandedPosterRow: LinearLayout? = null
             var expandedPosterCount = 0
             displayedEntries.forEachIndexed { itemIndex, item ->
