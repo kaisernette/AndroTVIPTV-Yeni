@@ -4768,24 +4768,28 @@ class MainActivity : Activity() {
             }
         }
         // M3U playlists often expose each episode as a flat stream entry.
-        // Build series parents from SxxExx / 1x02 names, retaining child URLs.
+        // Compact the original list in place instead of building multiple full-size
+        // ordinary/episode/result lists, which caused avoidable memory spikes on TVs.
         val episodePattern = Regex("(?i)^(.+?)\\s*(?:[-_. ]?S(\\d{1,2})\\s*E(\\d{1,3})|\\b(\\d{1,2})x(\\d{1,3})\\b)(?:\\s*[-_. ].*)?$")
         val seriesParents = LinkedHashMap<String, MediaItem>()
         val seriesEpisodes = ArrayList<MediaItem>()
-        val ordinaryItems = ArrayList<MediaItem>()
-        for (entry in out) {
-            val match = episodePattern.matchEntire(entry.name.trim())
-            if (entry.type != "Diziler" || match == null) {
-                ordinaryItems.add(entry)
+        var writeIndex = 0
+        for (readIndex in out.indices) {
+            val entry = out[readIndex]
+            val match = if (entry.type == "Diziler") episodePattern.matchEntire(entry.name.trim()) else null
+            if (match == null) {
+                if (writeIndex != readIndex) out[writeIndex] = entry
+                writeIndex++
                 continue
             }
             val seriesName = match.groupValues[1].trim().trimEnd('-', '_', '.', ' ')
-            val seasonNumber = match.groupValues[2].ifBlank { match.groupValues[4] }.toIntOrNull() ?: 1
-            val episodeNumber = match.groupValues[3].ifBlank { match.groupValues[5] }.toIntOrNull() ?: 1
             if (seriesName.isBlank()) {
-                ordinaryItems.add(entry)
+                if (writeIndex != readIndex) out[writeIndex] = entry
+                writeIndex++
                 continue
             }
+            val seasonNumber = match.groupValues[2].ifBlank { match.groupValues[4] }.toIntOrNull() ?: 1
+            val episodeNumber = match.groupValues[3].ifBlank { match.groupValues[5] }.toIntOrNull() ?: 1
             val stableKey = (entry.group + "|" + seriesName).lowercase(java.util.Locale.ROOT)
                 .replace(Regex("\\s+"), " ").trim()
             val parentId = "m3u-series:" + stableKey.hashCode().toUInt().toString(16)
@@ -4803,7 +4807,10 @@ class MainActivity : Activity() {
                 seriesId = parentId
             ))
         }
-        return ordinaryItems + seriesParents.values + seriesEpisodes
+        while (out.size > writeIndex) out.removeAt(out.lastIndex)
+        out.addAll(seriesParents.values)
+        out.addAll(seriesEpisodes)
+        return out
     }
     private fun isLanguagePrefixedChannel(name: String): Boolean =
         Regex("""^\s*[A-Za-z]{2,3}\s*:""").containsMatchIn(name)
