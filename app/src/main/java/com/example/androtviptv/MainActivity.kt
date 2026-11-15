@@ -3154,26 +3154,51 @@ class MainActivity : Activity() {
         loadProgress = 0
         status.text = "${source.name}: ${t("TV, filmler ve diziler yükleniyor…")}"
         render()
-        thread {
+        thread(name = "kaiser-m3u-load") {
+            val startedAt = android.os.SystemClock.elapsedRealtime()
             try {
-                // Stream large M3U playlists line-by-line to avoid allocating one huge response String.
+                android.util.Log.i("KaiserTV-M3U", "stage=download_parse_start source=${source.id}")
+                // Stream large M3U playlists line-by-line; parsing and series compaction stay off the UI thread.
                 val parsed = requestM3uWithAutoPlus(source.address, source.id)
+                android.util.Log.i(
+                    "KaiserTV-M3U",
+                    "stage=download_parse_done count=${parsed.size} elapsedMs=${android.os.SystemClock.elapsedRealtime() - startedAt}"
+                )
                 runOnUiThread {
+                    val uiStartedAt = android.os.SystemClock.elapsedRealtime()
                     items.removeAll { it.sourceId == source.id }
                     items.addAll(parsed)
-                    saveCachedItems()
-                    markSourceCatalogCacheComplete(source)
                     selectedGroup = "Tüm kategoriler"
                     status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."
                     isLoadingSource = false
                     hasLoadedSource = true
                     sidebarMode = "main"
                     render()
-                    publishHomeChannel()
                     tryOpenPendingTvHomeItem()
-                    // Artwork lookup runs after the playlist is already usable so
-                    // it cannot delay TV/Movies/Series startup.
-                    enrichM3uMetadata(source)
+                    android.util.Log.i(
+                        "KaiserTV-M3U",
+                        "stage=ui_publish_done total=${items.size} elapsedMs=${android.os.SystemClock.elapsedRealtime() - uiStartedAt}"
+                    )
+
+                    // Expensive cache snapshotting and catalogue hashing must not run on Android's UI thread.
+                    // Keep this single background task ordered after the list has been published.
+                    thread(name = "kaiser-m3u-cache") {
+                        val cacheStartedAt = android.os.SystemClock.elapsedRealtime()
+                        try {
+                            saveCachedItems()
+                            markSourceCatalogCacheComplete(source)
+                            android.util.Log.i(
+                                "KaiserTV-M3U",
+                                "stage=cache_signature_done elapsedMs=${android.os.SystemClock.elapsedRealtime() - cacheStartedAt}"
+                            )
+                        } catch (cacheError: Exception) {
+                            android.util.Log.e("KaiserTV-M3U", "stage=cache_signature_failed", cacheError)
+                        }
+                    }
+
+                    // The Android TV home-channel preparation and optional Xtream metadata scan are
+                    // intentionally skipped in this diagnostic build to isolate the M3U load path.
+                    android.util.Log.i("KaiserTV-M3U", "stage=metadata_enrichment_skipped")
                 }
             } catch (e: Exception) { runOnUiThread {
                 loadProgress = 0
@@ -3181,6 +3206,7 @@ class MainActivity : Activity() {
                 status.text = "${source.name}: ${friendlyLoadError(e)}"
                 render()
                 showConnectionError(source.name, friendlyLoadError(e))
+                android.util.Log.e("KaiserTV-M3U", "stage=download_parse_failed", e)
             } }
         }
     }
@@ -4151,9 +4177,9 @@ class MainActivity : Activity() {
 
     private fun xtreamCacheContentSignature(cached: List<MediaItem>): String {
         val digest = java.security.MessageDigest.getInstance("SHA-256")
-        cached.asSequence()
-            .sortedWith(compareBy<MediaItem> { it.sourceId }.thenBy { it.type }.thenBy { it.id })
-            .forEach { item ->
+        // Preserve the catalogue's existing order; sorting a huge playlist creates
+        // another full-size temporary array and can spike memory on Android TV.
+        cached.asSequence().forEach { item ->
                 digest.update(item.sourceId.toByteArray(Charsets.UTF_8))
                 digest.update(0.toByte())
                 digest.update(item.type.toByteArray(Charsets.UTF_8))
