@@ -5446,6 +5446,9 @@ class MainActivity : Activity() {
             sidebarMenuScroll.visibility = View.VISIBLE
         }
         if (isLoadingSource) {
+            // Snapshot the selected theme accent for the entire loading session.
+            // Async catalogue updates must not mutate loading-screen colors.
+            val loadingAccent = accentBright
             loadingMessageView = null
             val loadingLanguage = prefs.getString("app_language", "system") ?: "system"
             val activeLanguage = if (loadingLanguage == "system") java.util.Locale.getDefault().language else loadingLanguage
@@ -5492,15 +5495,15 @@ class MainActivity : Activity() {
                 private val basePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     style = android.graphics.Paint.Style.STROKE
                     strokeWidth = dp(if (isMobileLayout) 1 else 2).toFloat()
-                    color = accentBright
+                    color = loadingAccent
                     alpha = 190
                 }
                 private val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     style = android.graphics.Paint.Style.STROKE
                     strokeCap = android.graphics.Paint.Cap.ROUND
                     strokeWidth = dp(if (isMobileLayout) 3 else 4).toFloat()
-                    color = accentBright
-                    setShadowLayer(dp(8).toFloat(), 0f, 0f, accentBright)
+                    color = loadingAccent
+                    setShadowLayer(dp(8).toFloat(), 0f, 0f, loadingAccent)
                 }
                 private var angle = -90f
                 override fun onDraw(canvas: android.graphics.Canvas) {
@@ -8442,8 +8445,16 @@ class MainActivity : Activity() {
 
                     val editorBody = LinearLayout(this@MainActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(form, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
+                    // Keep the save/cancel actions visible while the editor content scrolls.
+                    val editorScroll = ScrollView(this@MainActivity).apply {
+                        isVerticalScrollBarEnabled = false
+                        overScrollMode = View.OVER_SCROLL_NEVER
+                        clipToPadding = false
+                        addView(form, ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    }
+                    val editorMaxHeight = minOf(dp(520), (resources.displayMetrics.heightPixels * 0.58f).toInt())
+                    editorBody.addView(editorScroll, LinearLayout.LayoutParams(-1, editorMaxHeight))
                     val dialog = themedDialog(if (oldName == null) "Yeni Profil Oluştur" else "Profili Düzenle", editorBody)
                     val actions = LinearLayout(this@MainActivity).apply {
                         orientation = LinearLayout.HORIZONTAL
@@ -8571,12 +8582,6 @@ class MainActivity : Activity() {
                         pinField.requestFocus()
                     }
                 }
-
-                content.addView(TextView(this).apply {
-                    text = t("Profil Yönetimi"); textSize = 22f
-                    setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(Color.WHITE)
-                    setPadding(dp(10), dp(18), dp(10), dp(10))
-                }, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
 
                 val profileStrip = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
