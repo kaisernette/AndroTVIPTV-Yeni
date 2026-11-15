@@ -963,30 +963,24 @@ class MainActivity : Activity() {
     }
 
     private fun applySourceTheme(source: SavedSource, persist: Boolean = true) {
-        accent = sourceAccent(source.mode)
-        accentBright = when (source.mode) {
-            "xtream" -> Color.rgb(72, 190, 255)
-            "m3u" -> Color.rgb(83, 225, 177)
-            "mac" -> Color.rgb(196, 145, 255)
-            else -> accent
+        // A source protocol must never replace the user's visual theme.
+        // Keep this method name for existing call sites, but derive all colors
+        // from the explicitly selected theme rather than M3U/Xtream/Stalker mode.
+        val themeName = prefs.getString("theme_name", "Gece • Buzul") ?: "Gece • Buzul"
+        when (themeName) {
+            "Gece • Altın" -> { bg = Color.rgb(15, 16, 20); accent = Color.rgb(224, 184, 95); accentBright = accent }
+            "Gece • Buzul" -> { bg = Color.rgb(0, 0, 0); accent = Color.rgb(84, 198, 217); accentBright = accent }
+            "Orman • Zümrüt" -> { bg = Color.rgb(16, 27, 24); accent = Color.rgb(32, 201, 151); accentBright = accent }
+            "Gece • Yakut" -> { bg = Color.rgb(25, 20, 23); accent = Color.rgb(240, 100, 121); accentBright = accent }
+            "Gece • Lavanta", "Koyu • Mor" -> { bg = Color.rgb(23, 21, 29); accent = Color.rgb(167, 139, 250); accentBright = accent }
+            "Lacivert • Turkuaz" -> { bg = Color.rgb(16, 24, 32); accent = Color.rgb(84, 198, 217); accentBright = accent }
+            else -> { bg = Color.rgb(17, 20, 25); accent = Color.rgb(0, 166, 255); accentBright = accent }
         }
-        bg = when (source.mode) {
-            "m3u" -> Color.rgb(16, 27, 24)
-            "mac" -> Color.rgb(23, 21, 29)
-            else -> Color.rgb(17, 20, 25)
-        }
-        val sourceThemeName = when (source.mode) {
-            "m3u" -> "Orman • Zümrüt"
-            "mac" -> "Koyu • Mor"
-            else -> "Antrasit • Mavi"
-        }
-        panel = themePanelColor(sourceThemeName)
+        panel = themePanelColor(themeName)
         window.statusBarColor = bg
         window.navigationBarColor = bg
         if (persist) {
-            val name = sourceThemeName
-            prefs.edit().putString("theme_name", name)
-                .putString("active_source_theme_mode", source.mode).apply()
+            prefs.edit().putString("active_source_theme_mode", source.mode).apply()
         }
     }
 
@@ -3646,7 +3640,7 @@ class MainActivity : Activity() {
                         fun publishPartialSection(force: Boolean = false) {
                             val currentCount = collected.size
                             val previousCheckpoint = lastCheckpointCount.get()
-                            if (!force && currentCount - previousCheckpoint < 1000) return
+                            if (!force && currentCount - previousCheckpoint < 3000) return
                             if (!lastCheckpointCount.compareAndSet(previousCheckpoint, currentCount)) return
                             val snapshot = orderedSnapshot()
                             if (snapshot.isEmpty()) return
@@ -3677,7 +3671,8 @@ class MainActivity : Activity() {
                                 }
                                 saveCachedItems()
                                 anySectionLoaded = true
-                                if (selectedType in publishTypes || selectedType == "Tümü") render()
+                                // Avoid rebuilding thousands of TV views while catalogue pages are still arriving.
+                                // The completed catalogue is rendered once by the final completion path.
                                 updateLoadingMessage("${source.name}: ${label} yükleniyor… (${publishItems.size} içerik hazır)")
                             }
                         }
