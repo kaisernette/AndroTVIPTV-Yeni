@@ -2736,7 +2736,7 @@ class MainActivity : Activity() {
         }
         // On first entry to TV, show only the first category's first channel row.
         // Selecting a category explicitly restores that category's normal item list.
-        val firstTvCategory = groupsAvailable.firstOrNull()
+        val firstTvCategory = baseVisible.map { it.group.ifBlank { "Diğer" } }.distinct().firstOrNull()
         val visible = when {
             sidebarMode == "search" -> baseVisible
             selectedGroup == "Tüm kategoriler" && selectedType == "Canlı TV" ->
@@ -2749,7 +2749,7 @@ class MainActivity : Activity() {
         if (selectedType == "Canlı TV" && sidebarMode == "context") {
             content.removeAllViews()
             content.addView(TextView(this).apply {
-                text = if (selectedGroup == "Tüm kategoriler") t("Tüm Kanallar") else selectedGroup
+                text = if (selectedGroup == "Tüm kategoriler") (firstTvCategory ?: t("Tüm Kanallar")) else selectedGroup
                 textSize = 21f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -2758,7 +2758,7 @@ class MainActivity : Activity() {
             val tvChannels = visible.filter { it.type == "Canlı TV" && it.url.isNotBlank() }
             // Initial TV tab entry renders one compact row (8 channels); category selection
             // continues to use the existing channel limit and playback behavior.
-            val displayedTvChannels = tvChannels.take(if (selectedGroup == "Tüm kategoriler") 8 else liveChannelsLimit)
+            val displayedTvChannels = tvChannels.take(if (selectedGroup == "Tüm kategoriler") 4 else liveChannelsLimit)
             if (tvChannels.isEmpty()) {
                 content.addView(TextView(this).apply {
                     text = t("Bu kategoride kanal bulunamadı.")
