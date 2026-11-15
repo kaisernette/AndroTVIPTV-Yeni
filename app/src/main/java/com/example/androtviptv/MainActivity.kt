@@ -1616,14 +1616,42 @@ class MainActivity : Activity() {
                     panelView.addView(item, LinearLayout.LayoutParams(-1, dp(46)).apply { setMargins(0, dp(3), 0, dp(3)) })
                 }
                 panelView.addView(View(this@MainActivity).apply { setBackgroundColor(0x554C5B70) }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(9), 0, dp(9)) })
+                val manageProfiles = TextView(this@MainActivity).apply {
+                    text = "⚙  " + t("Profil Yönetimi")
+                    textSize = 16f
+                    gravity = Gravity.CENTER_VERTICAL
+                    setTextColor(Color.WHITE)
+                    setPadding(dp(14), 0, dp(12), 0)
+                    isFocusable = true
+                    isClickable = true
+                    setOnFocusChangeListener { v, focused ->
+                        v.background = roundedDrawable(if (focused) accent else Color.TRANSPARENT, 12)
+                        (v as TextView).setTextColor(if (focused) Color.BLACK else Color.WHITE)
+                    }
+                    setOnClickListener {
+                        popup.dismiss()
+                        settingsPage = "profiles"
+                        sidebarMode = "settings"
+                        selectedType = "Ayarlar"
+                        prefs.edit().putString("last_settings_page", "profiles").putString("last_section", "Ayarlar").apply()
+                        rebuildNavigation()
+                        render()
+                    }
+                }
+                panelView.addView(manageProfiles, LinearLayout.LayoutParams(-1, dp(48)))
                 val settings = TextView(this@MainActivity).apply {
                     text = "⚙  " + t("Ayarlar"); textSize = 16f; gravity = Gravity.CENTER_VERTICAL; setTextColor(Color.WHITE); setPadding(dp(14), 0, dp(12), 0); isFocusable = true; isClickable = true
                     setOnFocusChangeListener { v, focused -> v.background = roundedDrawable(if (focused) accent else Color.TRANSPARENT, 12); (v as TextView).setTextColor(if (focused) Color.BLACK else Color.WHITE) }
                     setOnClickListener { popup.dismiss(); settingsPage = "main"; sidebarMode = "settings"; selectedType = "Ayarlar"; prefs.edit().putString("last_settings_page", "main").putString("last_section", "Ayarlar").apply(); rebuildNavigation(); render() }
                 }
                 panelView.addView(settings, LinearLayout.LayoutParams(-1, dp(48)))
-                popup = android.widget.PopupWindow(panelView, dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, true).apply { isOutsideTouchable = true; setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)); elevation = dp(18).toFloat() }
-                popup.showAsDropDown(anchorView as View, 0, dp(8), Gravity.END)
+                val panelWidth = (resources.displayMetrics.widthPixels * 0.38f).toInt().coerceIn(dp(300), dp(520))
+                popup = android.widget.PopupWindow(panelView, panelWidth, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+                    isOutsideTouchable = true
+                    setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                    elevation = dp(18).toFloat()
+                }
+                popup.showAtLocation(rootLayout, Gravity.END or Gravity.CENTER_VERTICAL, dp(18), 0)
                 panelView.post { panelView.getChildAt(1)?.requestFocus() }
             }
         }
@@ -7794,7 +7822,6 @@ class MainActivity : Activity() {
             "main" -> {
                 heading("Ayarlar", "Bir bölümü seç; ayrı ekranda açılacak.")
                 option("Hesap Yönetimi", "Hesap ve oturum bilgileri") { settingsPage = "account"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
-                option("Profil Yönetimi", "Profilleri ve güvenlik ayarlarını düzenle") { settingsPage = "profiles"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Kaynak Yönetimi", "Yayın kaynaklarını ekle ve yönet") { settingsPage = "sources"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("İçerik Ayarları", "Kategorileri ve içerikleri kişiselleştir") { settingsPage = "categories"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
                 option("Görünüm", "Arayüz tasarımını kişiselleştir") { settingsPage = "themes"; prefs.edit().putString("last_settings_page", settingsPage).apply(); render() }
