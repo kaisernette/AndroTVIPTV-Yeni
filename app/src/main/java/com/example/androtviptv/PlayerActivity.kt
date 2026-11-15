@@ -50,11 +50,14 @@ class PlayerActivity : Activity() {
     private var bufferMode: String = "normal"
     private var aspectMode: String = "fit"
     private var resumeEnabled: Boolean = true
+    private var startOverRequested: Boolean = false
     private var retryCount = 0
     private var bufferingSinceMs = 0L
     private var lastStablePlaybackMs = 0L
     private var lastObservedPositionMs = -1L
     private var positionStalledSinceMs = 0L
+    private var reconnectPending = false
+    private var idleSinceMs = 0L
     private val playbackHandler = Handler(Looper.getMainLooper())
     private val playbackWatchdog = object : Runnable {
         override fun run() {
@@ -63,7 +66,7 @@ class PlayerActivity : Activity() {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (exo.playbackState == Player.STATE_BUFFERING) {
                     if (bufferingSinceMs == 0L) bufferingSinceMs = now
-                    if (now - bufferingSinceMs >= 18000L) {
+                    if (now - bufferingSinceMs >= 12000L && !reconnectPending) {
                         restartCurrentStream("Yayın akışı 18 saniyeden uzun süre bekledi.")
                     }
                 } else if (exo.playbackState == Player.STATE_READY) {
@@ -71,7 +74,7 @@ class PlayerActivity : Activity() {
                     val position = exo.currentPosition
                     if (lastObservedPositionMs >= 0L && position <= lastObservedPositionMs) {
                         if (positionStalledSinceMs == 0L) positionStalledSinceMs = now
-                        if (now - positionStalledSinceMs >= 12000L) {
+                        if (now - positionStalledSinceMs >= 8000L && !reconnectPending) {
                             restartCurrentStream("Oynatma konumu 12 saniyedir ilerlemiyor.")
                         }
                     } else {
@@ -83,12 +86,19 @@ class PlayerActivity : Activity() {
                         retryCount = 0
                         lastStablePlaybackMs = now
                     }
+                } else if (exo.playbackState == Player.STATE_IDLE && isLiveStream) {
+                    if (idleSinceMs == 0L) idleSinceMs = now
+                    if (now - idleSinceMs >= 8000L && !reconnectPending) {
+                        restartCurrentStream("Canlı yayın oynatıcı boşta kaldı.")
+                    }
                 } else {
+                    idleSinceMs = 0L
                     bufferingSinceMs = 0L
                     positionStalledSinceMs = 0L
                     lastObservedPositionMs = -1L
                 }
             } else {
+                idleSinceMs = 0L
                 positionStalledSinceMs = 0L
                 lastObservedPositionMs = -1L
             }
@@ -117,14 +127,8 @@ class PlayerActivity : Activity() {
     private fun createStreamMediaItem(url: String): MediaItem {
         val cleanUrl = url.substringBefore("?").lowercase()
         val builder = MediaItem.Builder().setUri(url)
-        when {
-            cleanUrl.endsWith(".m3u8") || cleanUrl.endsWith(".m3u8/") ->
-                builder.setMimeType(MimeTypes.APPLICATION_M3U8)
-            cleanUrl.endsWith(".mp3") -> builder.setMimeType(MimeTypes.AUDIO_MPEG)
-            cleanUrl.endsWith(".aac") -> builder.setMimeType(MimeTypes.AUDIO_AAC)
-            cleanUrl.endsWith(".m4a") -> builder.setMimeType(MimeTypes.AUDIO_MP4)
-            cleanUrl.endsWith(".ogg") || cleanUrl.endsWith(".opus") ->
-                builder.setMimeType(MimeTypes.AUDIO_OGG)
+        if (cleanUrl.endsWith(".m3u8") || cleanUrl.endsWith(".m3u8/")) {
+            builder.setMimeType(MimeTypes.APPLICATION_M3U8)
         }
         return builder.build()
     }
@@ -188,8 +192,9 @@ class PlayerActivity : Activity() {
         bufferMode = intent.getStringExtra("bufferMode") ?: "normal"
         aspectMode = intent.getStringExtra("aspectMode") ?: "fit"
         resumeEnabled = intent.getBooleanExtra("resumeEnabled", true)
+        startOverRequested = intent.getBooleanExtra("startOver", false)
         resumeKey = "position_" + url.hashCode().toString()
-        if (isLiveStream || !resumeEnabled) playbackPrefs.edit().remove(resumeKey).apply()
+        if (isLiveStream || !resumeEnabled || startOverRequested) playbackPrefs.edit().remove(resumeKey).apply()
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
@@ -221,15 +226,20 @@ class PlayerActivity : Activity() {
                 control.setOnFocusChangeListener { focusedView, hasFocus ->
                     focusedView.background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = 0f
-                        setColor(if (hasFocus) playerAccentColor() else Color.TRANSPARENT)
+                        cornerRadius = dp(10).toFloat()
+                        setColor(if (hasFocus) 0x553399FF else Color.TRANSPARENT)
+                        if (hasFocus) setStroke(dp(3), playerAccentColor())
                     }
-                    focusedView.elevation = if (hasFocus) dp(6).toFloat() else 0f
+                    focusedView.scaleX = if (hasFocus) 1.12f else 1f
+                    focusedView.scaleY = if (hasFocus) 1.12f else 1f
+                    focusedView.elevation = if (hasFocus) dp(14).toFloat() else 0f
                 }
             }
             (view.findViewById<View>(androidx.media3.ui.R.id.exo_progress) as? androidx.media3.ui.DefaultTimeBar)?.let { bar ->
                 bar.setPlayedColor(playerAccentColor())
                 bar.setScrubberColor(playerAccentColor())
+                bar.setBufferedColor(0xAAFFFFFF.toInt())
+                bar.setUnplayedColor(0x665B6472)
             }
         }
         setContentView(root)
@@ -241,18 +251,19 @@ class PlayerActivity : Activity() {
         try {
             val httpFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent("KaiserTv+/3.0 (Android TV)")
-                .setConnectTimeoutMs(15000)
-                .setReadTimeoutMs(30000)
+                .setConnectTimeoutMs(10000)
+                .setReadTimeoutMs(18000)
                 .setAllowCrossProtocolRedirects(true)
             val mediaSourceFactory = DefaultMediaSourceFactory(this)
                 .setDataSourceFactory(httpFactory)
             val mediaItem = createStreamMediaItem(currentStreamUrl)
             val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
                 .setEnableDecoderFallback(true)
+            // Moderate live-TV buffering balances resilience, startup delay and memory use.
             val bufferDurations = when (bufferMode) {
-                "low" -> intArrayOf(12000, 35000, 1500, 4000)
-                "high" -> intArrayOf(45000, 120000, 3000, 9000)
-                else -> intArrayOf(30000, 90000, 2500, 7000)
+                "low" -> intArrayOf(8000, 30000, 1000, 3500)
+                "high" -> intArrayOf(25000, 60000, 2500, 7000)
+                else -> intArrayOf(15000, 45000, 1500, 5000)
             }
             val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
                 .setBufferDurationsMs(bufferDurations[0], bufferDurations[1], bufferDurations[2], bufferDurations[3])
@@ -281,10 +292,10 @@ class PlayerActivity : Activity() {
                                     currentStreamUrl = toHlsFallbackUrl(currentStreamUrl) ?: currentStreamUrl
                                     retryCount = 0
                                     android.util.Log.w("KaiserTVPlayer", "Live TS stream ended; trying HLS URL")
-                                    restartCurrentStream("Canlı yayın için alternatif akış deneniyor.")
+                                    restartCurrentStream("Canlı yayın için alternatif akış deneniyor.", force = true)
                                 } else {
-                                    android.util.Log.w("KaiserTVPlayer", "Live stream ended unexpectedly; reconnecting")
-                                    restartCurrentStream("Canlı yayın sona erdi gibi görünüyor.")
+                                    android.util.Log.w("KaiserTVPlayer", "Live stream reported ended; forcing reconnect")
+                                    restartCurrentStream("Canlı yayın akışı sona ermiş göründü; yeniden bağlanılıyor.", force = true)
                                 }
                                 return
                             }
@@ -292,7 +303,10 @@ class PlayerActivity : Activity() {
                                 if (bufferingSinceMs == 0L) bufferingSinceMs = android.os.SystemClock.elapsedRealtime()
                             } else if (playbackState == Player.STATE_READY) {
                                 bufferingSinceMs = 0L
+                                idleSinceMs = 0L
                                 if (lastStablePlaybackMs == 0L) lastStablePlaybackMs = android.os.SystemClock.elapsedRealtime()
+                            } else if (playbackState == Player.STATE_IDLE) {
+                                if (idleSinceMs == 0L) idleSinceMs = android.os.SystemClock.elapsedRealtime()
                             }
                         }
                         override fun onPlayerError(error: PlaybackException) {
@@ -312,7 +326,7 @@ class PlayerActivity : Activity() {
                     } else {
                         exo.setMediaItem(mediaItem)
                     }
-                    val resumePosition = if (isLiveStream) 0L else playbackPrefs.getLong(resumeKey, 0L)
+                    val resumePosition = if (isLiveStream || startOverRequested) 0L else playbackPrefs.getLong(resumeKey, 0L)
                     exo.prepare()
                     if (resumePosition > 5000L) exo.seekTo(resumePosition)
                     exo.playWhenReady = true
@@ -429,33 +443,43 @@ class PlayerActivity : Activity() {
         if (highlighted) setStroke(dp(1), 0xFFDEB55B.toInt())
     }
 
-    private fun restartCurrentStream(reason: String) {
+    private fun restartCurrentStream(reason: String, force: Boolean = false) {
         val exo = player ?: return
-        if (currentStreamUrl.isBlank() || isFinishing || retryCount >= 3) {
-            if (retryCount >= 3) {
-                android.widget.Toast.makeText(this, "Yayın birkaç kez yeniden bağlanamadı. Kanalı tekrar seçmeyi dene.", android.widget.Toast.LENGTH_LONG).show()
-            }
-            return
-        }
-        retryCount++
+        if (currentStreamUrl.isBlank() || isFinishing || !isLiveStream ||
+            (!exo.playWhenReady && !force) || reconnectPending) return
+
+        // A live stream may be incorrectly reported as ENDED (for example, a short TS segment).
+        // In that case force playback intent back on and reconnect even if ExoPlayer cleared it.
+        val shouldResume = exo.playWhenReady || force
+
+        // Retry automatically with capped backoff; do not stop after three attempts.
+        retryCount = (retryCount + 1).coerceAtMost(10)
+        reconnectPending = true
         bufferingSinceMs = android.os.SystemClock.elapsedRealtime()
+        idleSinceMs = 0L
         positionStalledSinceMs = 0L
         lastObservedPositionMs = -1L
-        android.util.Log.w("KaiserTVPlayer", "$reason Yeniden bağlanma denemesi $retryCount/3")
-        android.widget.Toast.makeText(this, "Yayın yeniden bağlanıyor… ($retryCount/3)", android.widget.Toast.LENGTH_SHORT).show()
+        val delayMs = (1500L * (1L shl (retryCount - 1).coerceAtMost(4))).coerceAtMost(20000L)
+        android.util.Log.w("KaiserTVPlayer", "$reason Otomatik yeniden bağlanma denemesi $retryCount")
+        if (retryCount == 1 || retryCount % 3 == 0) {
+            android.widget.Toast.makeText(this, "Yayın yeniden bağlanıyor…", android.widget.Toast.LENGTH_SHORT).show()
+        }
         playbackHandler.postDelayed({
-            if (!isFinishing && player === exo) {
+            reconnectPending = false
+            if (!isFinishing && player === exo && shouldResume && isLiveStream) {
                 try {
+                    exo.playWhenReady = true
+                    exo.stop()
                     exo.setMediaItem(createStreamMediaItem(currentStreamUrl))
                     exo.prepare()
                     exo.playWhenReady = true
                 } catch (e: Exception) {
                     android.util.Log.e("KaiserTVPlayer", "Reconnect failed", e)
+                    restartCurrentStream("Yeniden bağlantı başlatılamadı.")
                 }
             }
-        }, 1200L)
+        }, delayMs)
     }
-
     private fun tuneChannel(index: Int) {
         if (index !in channelUrls.indices) return
         val url = channelUrls[index]
@@ -465,7 +489,9 @@ class PlayerActivity : Activity() {
         triedHlsFallback = false
         usingHlsFallback = false
         retryCount = 0
+        reconnectPending = false
         bufferingSinceMs = 0L
+        idleSinceMs = 0L
         lastStablePlaybackMs = 0L
         resumeKey = "position_" + url.hashCode().toString()
         player?.let { exo -> exo.setMediaItem(createStreamMediaItem(url)); exo.prepare(); exo.playWhenReady = true }
@@ -499,7 +525,15 @@ class PlayerActivity : Activity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    override fun onPause() { savePlaybackPosition(); super.onPause() }
+    override fun onResume() {
+        super.onResume()
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+    override fun onPause() {
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        savePlaybackPosition()
+        super.onPause()
+    }
     override fun onStop() { savePlaybackPosition(); player?.pause(); super.onStop() }
     override fun onDestroy() { playbackHandler.removeCallbacksAndMessages(null); savePlaybackPosition(); player?.release(); player = null; super.onDestroy() }
 }
