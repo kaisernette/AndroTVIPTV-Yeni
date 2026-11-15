@@ -2247,7 +2247,8 @@ class MainActivity : Activity() {
                             selectedGroup = name
                             // Keep the complete category snapshot; never apply the old 12-card preview cap.
                             expandedCategory = name to entries
-                            mediaItemsLimit = entries.size
+                            // Keep the full catalogue, but create poster views in pages.
+                            mediaItemsLimit = 24
                             focusFirstContentOnRender = true
                             render()
                         }
@@ -6315,10 +6316,10 @@ class MainActivity : Activity() {
             // Yatay kaydırma ile bir sonraki tam genişlikte afişe geçilir.
             val featureCardWidth = dp(if (isMobileLayout) 137 else 122) // 5% smaller weekly posters
             val displayedEntries = when {
-                // When a user opens a category from the sidebar, show its entire catalogue.
-                // The old 12-item cap had no "more" control in this view, hiding the rest.
-                showingExpandedCategory -> entries
-                selectedType in listOf("Filmler", "Diziler") -> entries
+                // Large VOD categories can contain thousands of items. Keep every
+                // record available, but only inflate one page of poster views at once.
+                selectedType in listOf("Filmler", "Diziler") || showingExpandedCategory ->
+                    entries.take(mediaItemsLimit.coerceAtLeast(24))
                 posterGridMode -> entries.take(if (selectedType == "Canlı TV") 8 else mediaItemsLimit)
                 weeklyMovieFeature -> entries.take(8)
                 else -> entries
@@ -6472,12 +6473,11 @@ class MainActivity : Activity() {
 
             if (posterGridMode) {
                 content.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
-                if (selectedType !in listOf("Filmler", "Diziler") &&
-                    selectedGroup == "Tüm kategoriler" && expandedCategory == null && displayedEntries.size < entries.size) {
+                if (displayedEntries.size < entries.size) {
                     content.addView(makeButton(
                         "Daha fazla içerik göster  (${displayedEntries.size}/${entries.size})", false
                     ) {
-                        mediaItemsLimit = (mediaItemsLimit + 12).coerceAtMost(entries.size)
+                        mediaItemsLimit = (mediaItemsLimit + 24).coerceAtMost(entries.size)
                         render()
                     }, LinearLayout.LayoutParams(-1, dp(48)).apply {
                         setMargins(dp(8), dp(4), dp(8), dp(16))
