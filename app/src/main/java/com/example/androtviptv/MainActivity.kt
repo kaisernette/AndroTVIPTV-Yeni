@@ -3797,7 +3797,9 @@ class MainActivity : Activity() {
 
                                     if (lastPage > 1) {
                                         // A bounded pool increases portal throughput without flooding it.
-                                        val tvPageWorkers = 6
+                                        // Android TV SoCs often have fewer CPU cores and less memory than phones.
+                                        // Fewer simultaneous JSON parses reduce CPU contention and GC pauses.
+                                        val tvPageWorkers = if (isTelevisionDevice) 4 else 6
                                         val pageExecutor = Executors.newFixedThreadPool(tvPageWorkers)
                                         val failedTvPages = java.util.concurrent.ConcurrentLinkedQueue<Int>()
                                         try {
@@ -9861,8 +9863,18 @@ class MainActivity : Activity() {
         super.onTrimMemory(level)
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
             posterCache.evictAll()
-            android.util.Log.i("KaiserTV", "Poster memory cache cleared; trim level=" + level)
+            posterRequests.clear()
+            posterExecutor.queue.clear()
+            android.util.Log.i("KaiserTV", "Poster bitmap cache and pending poster queue cleared; trim level=" + level)
         }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        posterCache.evictAll()
+        posterRequests.clear()
+        posterExecutor.queue.clear()
+        android.util.Log.w("KaiserTV", "Low-memory callback: poster resources released")
     }
 
     override fun onDestroy() {
@@ -9893,6 +9905,7 @@ class MainActivity : Activity() {
     private var pendingSeriesEpisodes: List<MediaItem> = emptyList()
 
     private var openingPlayer = false
+    private var restoreUiAfterPlayback = false
     private var fullscreenPoster: MediaItem? = null
 
 
@@ -9955,6 +9968,16 @@ class MainActivity : Activity() {
         setIntent(intent)
         pendingTvHomeItemKey = intent.getStringExtra(EXTRA_TV_HOME_ITEM_KEY)
         tryOpenPendingTvHomeItem()
+    }
+
+    private fun releaseBrowseUiForPlayback() {
+        // Keep catalogue data/state in memory, but release the large Android View tree
+        // and poster bitmaps before ExoPlayer allocates video buffers and decoders.
+        restoreUiAfterPlayback = true
+        if (::content.isInitialized) content.removeAllViews()
+        posterCache.evictAll()
+        posterRequests.clear()
+        posterExecutor.queue.clear()
     }
 
     private fun play(item: MediaItem, startOver: Boolean = false) {
@@ -10122,10 +10145,13 @@ class MainActivity : Activity() {
                 PlayerActivity.pendingRecentChannelUrls = recentChannels.map { it.url }
                 PlayerActivity.pendingRecentChannelHeaders = recentChannels.map { it.requestHeaders }
             }
+            releaseBrowseUiForPlayback()
             try {
                 startActivity(intent)
             } catch (e: Exception) {
                 openingPlayer = false
+                restoreUiAfterPlayback = false
+                render()
                 android.widget.Toast.makeText(this, "Tam ekran oynatıcı açılamadı. Tekrar deneyin.", android.widget.Toast.LENGTH_LONG).show()
             }
         } catch (e: Exception) {
@@ -10140,6 +10166,7 @@ class MainActivity : Activity() {
         openingPlayer = false
         if (openTvTabOnResume) {
             openTvTabOnResume = false
+            restoreUiAfterPlayback = false
             detailSeries = null
             detailMovie = null
             seriesEpisodeRows = emptyList()
@@ -10148,6 +10175,11 @@ class MainActivity : Activity() {
             sidebarMode = "main"
             searchQuery = ""
             prefs.edit().putString("last_section", "Canlı TV").apply()
+            render()
+        } else if (restoreUiAfterPlayback) {
+            restoreUiAfterPlayback = false
+            // Recreate the previous page after the player has released its decoder.
+            posterCache.evictAll()
             render()
         }
     }
