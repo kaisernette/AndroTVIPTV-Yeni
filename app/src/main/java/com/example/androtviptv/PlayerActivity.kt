@@ -1414,13 +1414,15 @@ class PlayerActivity : Activity() {
     }
 
     override fun onPause() {
-        // Stop audio as soon as this screen loses foreground; do not wait for onStop.
+        // Stop playback immediately when the player screen loses foreground.
+        // Do not leave an active ExoPlayer instance producing background audio.
         playbackLifecycleActive = false
         playbackHandler.removeCallbacks(playbackWatchdog)
         episodeTransitionHandler.removeCallbacks(episodeCountdownRunnable)
         savePlaybackPosition()
         player?.playWhenReady = false
         player?.pause()
+        player?.stop()
         super.onPause()
     }
 
