@@ -790,6 +790,7 @@ class MainActivity : Activity() {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     private val items = mutableListOf<MediaItem>()
+    @Volatile private var m3uLoadGeneration: Int = 0
     // Provider category names are kept independently from loaded media so every
     // category can be shown immediately, before its first content page arrives.
     private val providerCategoryNames = mutableMapOf<String, List<String>>()
@@ -3154,38 +3155,81 @@ class MainActivity : Activity() {
     private fun loadM3u(source: SavedSource, append: Boolean) {
         applySourceTheme(source)
         prefs.edit().putString("last_source_id", source.id).remove(sourceCatalogStateKey(source)).apply()
+        val generation = ++m3uLoadGeneration
         isLoadingSource = true
         loadProgress = 0
         status.text = "${source.name}: ${t("TV, filmler ve diziler yükleniyor…")}"
         render()
-        thread {
+
+        thread(name = "kaiser-m3u-download") {
             try {
-                // Stream large M3U playlists line-by-line to avoid allocating one huge response String.
+                // Keep network I/O and parsing off the UI thread. Large playlists can
+                // contain tens of thousands of entries on Android TV devices.
                 val parsed = requestM3uWithAutoPlus(source.address).map { it.copy(sourceId = source.id) }
                 runOnUiThread {
+                    if (generation != m3uLoadGeneration || isFinishing || isDestroyed) return@runOnUiThread
+
+                    // Replace the source once, then attach bounded batches. A single
+                    // addAll() of a huge catalogue can monopolize the TV main thread
+                    // and make the remote appear frozen.
                     items.removeAll { it.sourceId == source.id }
-                    items.addAll(parsed)
-                    saveCachedItems()
-                    markSourceCatalogCacheComplete(source)
-                    selectedGroup = "Tüm kategoriler"
-                    status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."
-                    isLoadingSource = false
-                    hasLoadedSource = true
-                    sidebarMode = "main"
-                    render()
-                    publishHomeChannel()
-                    tryOpenPendingTvHomeItem()
-                    // Artwork lookup runs after the playlist is already usable so
-                    // it cannot delay TV/Movies/Series startup.
-                    enrichM3uMetadata(source)
+                    val batchSize = 400
+                    var offset = 0
+
+                    fun appendNextBatch() {
+                        if (generation != m3uLoadGeneration || isFinishing || isDestroyed) return
+                        val end = minOf(offset + batchSize, parsed.size)
+                        if (offset < end) {
+                            items.addAll(parsed.subList(offset, end))
+                            offset = end
+                        }
+                        if (offset < parsed.size) {
+                            loadProgress = ((offset.toFloat() / parsed.size.coerceAtLeast(1)) * 90f).toInt()
+                            status.text = "${source.name}: ${offset} / ${parsed.size} içerik hazırlanıyor…"
+                            android.os.Handler(mainLooper).postDelayed({ appendNextBatch() }, 12L)
+                            return
+                        }
+
+                        // Expensive cache snapshot, category grouping and view creation
+                        // happen only after the final batch, never between batches.
+                        saveCachedItems()
+                        markSourceCatalogCacheComplete(source)
+                        selectedGroup = "Tüm kategoriler"
+                        loadProgress = 100
+                        status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."
+                        isLoadingSource = false
+                        hasLoadedSource = true
+                        sidebarMode = "main"
+                        render()
+                        publishHomeChannel()
+                        tryOpenPendingTvHomeItem()
+
+                        // Optional artwork/category enrichment is deliberately delayed
+                        // so it cannot compete with the initial TV navigation/render.
+                        thread(name = "kaiser-m3u-metadata", priority = Thread.MIN_PRIORITY) {
+                            try {
+                                Thread.sleep(5000L)
+                                if (generation == m3uLoadGeneration && !isFinishing && !isDestroyed) {
+                                    enrichM3uMetadata(source)
+                                }
+                            } catch (_: InterruptedException) {
+                                Thread.currentThread().interrupt()
+                            }
+                        }
+                    }
+
+                    appendNextBatch()
                 }
-            } catch (e: Exception) { runOnUiThread {
-                loadProgress = 0
-                isLoadingSource = false
-                status.text = "${source.name}: ${friendlyLoadError(e)}"
-                render()
-                showConnectionError(source.name, friendlyLoadError(e))
-            } }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    if (generation != m3uLoadGeneration || isFinishing || isDestroyed) return@runOnUiThread
+                    loadProgress = 0
+                    isLoadingSource = false
+                    status.text = "${source.name}: ${friendlyLoadError(e)}"
+                    render()
+                    showConnectionError(source.name, friendlyLoadError(e))
+                }
+            }
         }
     }
 
