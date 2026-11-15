@@ -3158,56 +3158,95 @@ class MainActivity : Activity() {
             val startedAt = android.os.SystemClock.elapsedRealtime()
             try {
                 android.util.Log.i("KaiserTV-M3U", "stage=download_parse_start source=${source.id}")
-                // Stream large M3U playlists line-by-line; parsing and series compaction stay off the UI thread.
                 val parsed = requestM3uWithAutoPlus(source.address, source.id)
                 android.util.Log.i(
                     "KaiserTV-M3U",
                     "stage=download_parse_done count=${parsed.size} elapsedMs=${android.os.SystemClock.elapsedRealtime() - startedAt}"
                 )
-                runOnUiThread {
-                    val uiStartedAt = android.os.SystemClock.elapsedRealtime()
-                    items.removeAll { it.sourceId == source.id }
-                    items.addAll(parsed)
-                    selectedGroup = "Tüm kategoriler"
-                    status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."
-                    isLoadingSource = false
-                    hasLoadedSource = true
-                    sidebarMode = "main"
-                    render()
-                    tryOpenPendingTvHomeItem()
-                    android.util.Log.i(
-                        "KaiserTV-M3U",
-                        "stage=ui_publish_done total=${items.size} elapsedMs=${android.os.SystemClock.elapsedRealtime() - uiStartedAt}"
-                    )
 
-                    // Expensive cache snapshotting and catalogue hashing must not run on Android's UI thread.
-                    // Keep this single background task ordered after the list has been published.
-                    thread(name = "kaiser-m3u-cache") {
-                        val cacheStartedAt = android.os.SystemClock.elapsedRealtime()
-                        try {
-                            saveCachedItems()
-                            markSourceCatalogCacheComplete(source)
+                // Do not push a huge playlist into the UI thread in one addAll().
+                // Publish bounded batches and yield between them so Android TV can
+                // continue processing input, layout and frame callbacks.
+                val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+                val batchSize = 400
+                mainHandler.post {
+                    try {
+                        items.removeAll { it.sourceId == source.id }
+                        selectedGroup = "Tüm kategoriler"
+                        hasLoadedSource = parsed.isNotEmpty() || items.isNotEmpty()
+                        sidebarMode = "main"
+                        var offset = 0
+
+                        fun publishNextBatch() {
+                            val batchStartedAt = android.os.SystemClock.elapsedRealtime()
+                            val end = minOf(offset + batchSize, parsed.size)
+                            if (offset < end) {
+                                items.addAll(parsed.subList(offset, end))
+                                offset = end
+                            }
+                            if (offset < parsed.size) {
+                                if (offset % 4000 == 0) {
+                                    val runtime = Runtime.getRuntime()
+                                    android.util.Log.i(
+                                        "KaiserTV-M3U",
+                                        "stage=publish_progress count=$offset total=${parsed.size} " +
+                                            "usedMb=${(runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)}"
+                                    )
+                                }
+                                mainHandler.post { publishNextBatch() }
+                                return
+                            }
+
+                            isLoadingSource = false
+                            status.text = "${source.name}: ${parsed.size} içerik yüklendi. ${items.size} toplam içerik."
                             android.util.Log.i(
                                 "KaiserTV-M3U",
-                                "stage=cache_signature_done elapsedMs=${android.os.SystemClock.elapsedRealtime() - cacheStartedAt}"
+                                "stage=publish_complete count=${items.size} elapsedMs=${android.os.SystemClock.elapsedRealtime() - startedAt} " +
+                                    "lastBatchMs=${android.os.SystemClock.elapsedRealtime() - batchStartedAt}"
                             )
-                        } catch (cacheError: Exception) {
-                            android.util.Log.e("KaiserTV-M3U", "stage=cache_signature_failed", cacheError)
-                        }
-                    }
+                            try {
+                                render()
+                                tryOpenPendingTvHomeItem()
+                                android.util.Log.i("KaiserTV-M3U", "stage=render_complete")
+                            } catch (uiError: Exception) {
+                                android.util.Log.e("KaiserTV-M3U", "stage=render_failed", uiError)
+                                throw uiError
+                            }
 
-                    // The Android TV home-channel preparation and optional Xtream metadata scan are
-                    // intentionally skipped in this diagnostic build to isolate the M3U load path.
-                    android.util.Log.i("KaiserTV-M3U", "stage=metadata_enrichment_skipped")
+                            // Cache serialization and integrity hashing are background-only.
+                            thread(name = "kaiser-m3u-cache") {
+                                val cacheStartedAt = android.os.SystemClock.elapsedRealtime()
+                                try {
+                                    saveCachedItems()
+                                    markSourceCatalogCacheComplete(source)
+                                    android.util.Log.i(
+                                        "KaiserTV-M3U",
+                                        "stage=cache_signature_done elapsedMs=${android.os.SystemClock.elapsedRealtime() - cacheStartedAt}"
+                                    )
+                                } catch (cacheError: Exception) {
+                                    android.util.Log.e("KaiserTV-M3U", "stage=cache_signature_failed", cacheError)
+                                }
+                            }
+                            android.util.Log.i("KaiserTV-M3U", "stage=metadata_enrichment_skipped")
+                        }
+                        publishNextBatch()
+                    } catch (uiError: Exception) {
+                        isLoadingSource = false
+                        status.text = "${source.name}: ${friendlyLoadError(uiError)}"
+                        render()
+                        android.util.Log.e("KaiserTV-M3U", "stage=publish_failed", uiError)
+                    }
                 }
-            } catch (e: Exception) { runOnUiThread {
-                loadProgress = 0
-                isLoadingSource = false
-                status.text = "${source.name}: ${friendlyLoadError(e)}"
-                render()
-                showConnectionError(source.name, friendlyLoadError(e))
+            } catch (e: Exception) {
+                runOnUiThread {
+                    loadProgress = 0
+                    isLoadingSource = false
+                    status.text = "${source.name}: ${friendlyLoadError(e)}"
+                    render()
+                    showConnectionError(source.name, friendlyLoadError(e))
+                }
                 android.util.Log.e("KaiserTV-M3U", "stage=download_parse_failed", e)
-            } }
+            }
         }
     }
 
