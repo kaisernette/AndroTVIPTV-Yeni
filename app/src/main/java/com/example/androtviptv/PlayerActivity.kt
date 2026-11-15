@@ -63,8 +63,7 @@ class PlayerActivity : Activity() {
     private var lastObservedPositionMs = -1L
     private var positionStalledSinceMs = 0L
     private val playbackHandler = Handler(Looper.getMainLooper())
-    @Vol
-tile private var playbackLifecycleActive = false
+    @Volatile private var playbackLifecycleActive = false
     private val playbackWatchdog = object : Runnable {
         override fun run() {
             val exo = player
