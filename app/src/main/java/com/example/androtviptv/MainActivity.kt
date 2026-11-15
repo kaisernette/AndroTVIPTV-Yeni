@@ -2164,6 +2164,8 @@ class MainActivity : Activity() {
                         selectedSidebarFocusView?.post { selectedSidebarFocusView?.requestFocus() }
                     }
                 })
+                // Cache category names for O(1) membership checks during D-pad focus changes.
+                val groupedCategoryNames = grouped.mapTo(HashSet(grouped.size)) { it.first }
                 grouped.forEachIndexed { categoryIndex, (name, entries) ->
                     val selected = name == (focusedCategoryName ?: expandedCategory?.first ?: selectedGroup)
                     val button = TextView(this).apply {
@@ -2187,7 +2189,7 @@ class MainActivity : Activity() {
                             for (i in 0 until categoryPanel.childCount) {
                                 val sibling = categoryPanel.getChildAt(i) as? TextView ?: continue
                                 val siblingName = sibling.text.toString().substringBefore("  ·  ")
-                                if (grouped.any { it.first == siblingName }) {
+                                if (siblingName in groupedCategoryNames) {
                                     val active = siblingName == highlighted
                                     sibling.background = if (active) roundedDrawable(accent, if (ovalButtons) 14 else 6) else android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                                     sibling.setTextColor(if (active) Color.WHITE else muted)
