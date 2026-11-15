@@ -1747,7 +1747,8 @@ class MainActivity : Activity() {
                                 val within = if (count == 0) 0 else (i * 16 / count)
                                 val progress = (40 + actionIndex * 18 + within).coerceIn(1, 98)
                                 runOnUiThread {
-                                    loadProgress = progress                                    status.text = "${source.name}: $type yükleniyor… %$progress"
+                                    loadProgress = progress
+                                    status.text = "${source.name}: $type yükleniyor… %$progress"
                                 }
                             }
                         }
