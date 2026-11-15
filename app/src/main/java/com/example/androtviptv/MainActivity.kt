@@ -1840,26 +1840,61 @@ class MainActivity : Activity() {
     }
 
     private fun parseM3u(text: String): List<MediaItem> {
-        val out = mutableListOf<MediaItem>(); var name = "İçerik"; var group = "Diğer"; var icon = ""
+        val out = mutableListOf<MediaItem>()
+        var name = "İçerik"
+        var group = "Diğer"
+        var icon = ""
+        var declaredType = ""
+
         text.lineSequence().map { it.trim() }.forEach { line ->
-            if (line.startsWith("#EXTINF", true)) {
-                name = line.substringAfterLast(',', "İçerik").trim().ifBlank { "İçerik" }
-                group = Regex("group-title=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: "Diğer"
-                icon = Regex("tvg-logo=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: ""
-            } else if ((line.startsWith("http://") || line.startsWith("https://")) && line.isNotBlank()) {
-                val type = classify(name, group)
-                out.add(MediaItem(line, name, line, group, type, icon)); name = "İçerik"; group = "Diğer"; icon = ""
+            when {
+                line.startsWith("#EXTINF", true) -> {
+                    name = line.substringAfterLast(',', "İçerik").trim().ifBlank { "İçerik" }
+                    group = Regex("group-title=\"([^\"]*)\"", RegexOption.IGNORE_CASE)
+                        .find(line)?.groupValues?.getOrNull(1) ?: "Diğer"
+                    icon = Regex("tvg-logo=\"([^\"]*)\"", RegexOption.IGNORE_CASE)
+                        .find(line)?.groupValues?.getOrNull(1) ?: ""
+                    declaredType = Regex("tvg-type=\"([^\"]*)\"", RegexOption.IGNORE_CASE)
+                        .find(line)?.groupValues?.getOrNull(1).orEmpty()
+                }
+                line.startsWith("#EXTGRP:", true) -> {
+                    group = line.substringAfter(':').trim().ifBlank { group }
+                }
+                line.startsWith("#") || line.isBlank() -> Unit
+                line.startsWith("http://", true) || line.startsWith("https://", true) -> {
+                    val type = classify(name, group, declaredType, line)
+                    out.add(MediaItem(line, name, line, group, type, icon))
+                    name = "İçerik"
+                    group = "Diğer"
+                    icon = ""
+                    declaredType = ""
+                }
             }
         }
         return out
     }
-    private fun classify(name: String, group: String): String {
-        val s = "$name $group".lowercase()
-        return when {
-            listOf("series", "dizi", "tv show", "season", "sezon", "episode", "bölüm").any { it in s } -> "Diziler"
-            listOf("movie", "film", "cinema", "vod", "4k film").any { it in s } -> "Filmler"
-            else -> "Canlı TV"
-        }
+
+    private fun classify(name: String, group: String, declaredType: String = "", streamUrl: String = ""): String {
+        val explicit = declaredType.lowercase()
+        if (explicit.contains("series") || explicit.contains("episode") || explicit.contains("show")) return "Diziler"
+        if (explicit.contains("movie") || explicit.contains("film") || explicit.contains("vod")) return "Filmler"
+        if (explicit.contains("live") || explicit.contains("channel")) return "Canlı TV"
+
+        val category = group.lowercase()
+        val title = name.lowercase()
+        val url = streamUrl.lowercase()
+
+        val seriesTerms = listOf("series", "tv series", "tv show", "shows", "dizi", "diziler", "season", "sezon", "episode", "bölüm", "bolum")
+        val movieTerms = listOf("movie", "movies", "film", "filmler", "cinema", "vod", "4k film", "1080p film", "720p film")
+        val liveTerms = listOf("live tv", "canlı tv", "canli tv", "tv channels", "channels", "kanallar", "haber", "news", "sports live", "radyo", "radio")
+
+        if (seriesTerms.any { it in category } || seriesTerms.any { it in title }) return "Diziler"
+        if (movieTerms.any { it in category } || movieTerms.any { it in title }) return "Filmler"
+        if (liveTerms.any { it in category }) return "Canlı TV"
+        if ("/series/" in url) return "Diziler"
+        if ("/movie/" in url || "/vod/" in url) return "Filmler"
+        if ("/live/" in url) return "Canlı TV"
+        return "Canlı TV"
     }
 
     private fun cachedItemsFile() = java.io.File(filesDir, "kaisertv_media_cache.json")
