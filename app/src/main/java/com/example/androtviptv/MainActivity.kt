@@ -1843,7 +1843,7 @@ class MainActivity : Activity() {
             if (line.startsWith("#EXTINF", true)) {
                 name = line.substringAfterLast(',', "İçerik").trim().ifBlank { "İçerik" }
                 group = Regex("group-title=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: "Diğer"
-                icon = Regex("tvg-logo=\"([^\"]*)\"", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: ""
+                icon = Regex("tvg-logo\\s*=\\s*['\"]([^'\"]*)['\"]", RegexOption.IGNORE_CASE).find(line)?.groupValues?.getOrNull(1) ?: ""
             } else if ((line.startsWith("http://") || line.startsWith("https://")) && line.isNotBlank()) {
                 val type = classify(name, group)
                 out.add(MediaItem(line, name, line, group, type, icon)); name = "İçerik"; group = "Diğer"; icon = ""
